@@ -1,0 +1,8 @@
+Page has any number of questions
+Page can have restriction (only show if)
+question types:
+  boolean (na/refused)
+  predefined list (na/refused, other ___, single or multiple choice)
+  number (na/refused, min/max)
+  string (na/refused)
+  text (na/refused)

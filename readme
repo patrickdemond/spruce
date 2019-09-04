@@ -1,0 +1,35 @@
+Linden
+=====
+
+Questionnaire software.
+
+src/
+  This is where the source code belongs.
+  This includes all packages, classes, functions, settings, etc.
+
+aux/
+  Any auxiliary files which are needed by the software go here.
+
+web/
+  This is the public web directory that a web server links to.
+
+web/api/
+  The root of the restful web API
+
+web/app/
+  This is where the client-side source code goes.
+
+web/app/
+  Application-specific extensions to the Angular-based web application
+
+doc/
+  All documentation for the application is found here including the apigen generated
+  API documentation and design documents.
+
+doc/report/
+  Spreadsheet-based report templates are stored here
+
+db/
+  This is where all sql needed to install the application belongs.
+  This includes database schemas, default data and script to upgrade from older
+  versions.

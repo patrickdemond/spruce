@@ -1,0 +1,19 @@
+<?php
+/**
+ * settings.local.ini.php
+ *
+ * Defines local initialization settings for the application, overriding default settings found in
+ * settings.ini.php
+ */
+
+global $SETTINGS;
+
+// the file path to the framework and application
+$SETTINGS['path']['CENOZO'] = '/path/to/cenozo';
+
+// the path to the log file
+$SETTINGS['path']['LOG_FILE'] = $SETTINGS['path']['APPLICATION'].'/log';
+
+// database settings (the driver, server and prefixes are set in the framework's settings)
+$SETTINGS['db']['username'] = 'put your database username here';
+$SETTINGS['db']['password'] = 'put your database password here';
