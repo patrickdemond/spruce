@@ -126,8 +126,8 @@ INSERT INTO service ( subject, method, resource, restricted ) VALUES
 ( 'response_attribute', 'GET', 1, 0 ),
 ( 'response_attribute', 'PATCH', 1, 1 ),
 ( 'response_attribute', 'POST', 0, 1 ),
-( 'survey', 'DELETE', 1, 1 ),
-( 'survey', 'GET', 0, 0 ),
-( 'survey', 'GET', 1, 0 ),
-( 'survey', 'PATCH', 1, 1 ),
-( 'survey', 'POST', 0, 1 );
+( 'qnaire', 'DELETE', 1, 1 ),
+( 'qnaire', 'GET', 0, 0 ),
+( 'qnaire', 'GET', 1, 0 ),
+( 'qnaire', 'PATCH', 1, 1 ),
+( 'qnaire', 'POST', 0, 1 );

@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS question_answer (
   create_timestamp TIMESTAMP NOT NULL,
   question_id INT UNSIGNED NOT NULL,
   rank INT UNSIGNED NOT NULL,
-  name VARCHAR(127) NULL,
+  name VARCHAR(127) NOT NULL,
   value VARCHAR(127) NULL,
   PRIMARY KEY (id),
   INDEX fk_question_id (question_id ASC),

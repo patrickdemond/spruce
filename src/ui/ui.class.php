@@ -21,7 +21,40 @@ class ui extends \cenozo\ui\ui
   {
     parent::build_module_list();
 
-    // make changes to modules here
+    $module = $this->get_module( 'qnaire' );
+    if( !is_null( $module ) )
+    {
+      $module->add_child( 'attribute' );
+      $module->add_child( 'module' );
+    }
+
+    $module = $this->get_module( 'module' );
+    if( !is_null( $module ) )
+    {
+      $module->add_child( 'page' );
+      $module->add_child( 'requisite_group' );
+    }
+
+    $module = $this->get_module( 'page' );
+    if( !is_null( $module ) )
+    {
+      $module->add_child( 'question' );
+      $module->add_child( 'requisite_group' );
+    }
+
+    $module = $this->get_module( 'question' );
+    if( !is_null( $module ) )
+    {
+      $module->add_child( 'question_answer' );
+      $module->add_child( 'requisite_group' );
+    }
+
+    $module = $this->get_module( 'requisite_group' );
+    if( !is_null( $module ) )
+    {
+      $module->add_child( 'requisite' );
+      $module->add_child( 'requisite_group' );
+    }
   }
 
   /**
@@ -31,6 +64,6 @@ class ui extends \cenozo\ui\ui
   {
     parent::build_listitem_list();
 
-    // make changes to list items here
+    $this->add_listitem( 'Questionnaires', 'qnaire' );
   }
 }

@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS question (
   create_timestamp TIMESTAMP NOT NULL,
   page_id INT UNSIGNED NOT NULL,
   rank INT UNSIGNED NOT NULL,
-  name VARCHAR(127) NULL,
+  name VARCHAR(127) NOT NULL,
   type ENUM('boolean', 'list', 'number', 'string', 'text', 'comment') NOT NULL,
   minimum FLOAT NULL DEFAULT NULL,
   maximum FLOAT NULL DEFAULT NULL,

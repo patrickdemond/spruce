@@ -13,7 +13,7 @@ SOURCE role_has_service.sql
 SOURCE setting.sql
 SOURCE writelog.sql
 
-SOURCE survey.sql
+SOURCE qnaire.sql
 SOURCE attribute.sql
 SOURCE module.sql
 SOURCE page.sql
