@@ -40,6 +40,7 @@ class ui extends \cenozo\ui\ui
     {
       $module->add_child( 'question' );
       $module->add_child( 'requisite_group' );
+      $module->add_action( 'render', '/{identifier}' );
     }
 
     $module = $this->get_module( 'question' );
