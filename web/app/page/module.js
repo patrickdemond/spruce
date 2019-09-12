@@ -66,22 +66,12 @@ define( function() {
 
   module.addExtraOperation( 'view', {
     title: 'Preview',
-    operation: function( $state, model ) { $state.go( 'page.render', { identifier: model.viewModel.record.getIdentifier() } ); }
-  } );
-
-  module.addExtraOperation( 'view', {
-    title: 'Previous Page',
-    isDisabled: function( $state, model ) { return null == model.viewModel.record.previous_page_id; },
     operation: function( $state, model ) {
-      model.transitionToViewState( { getIdentifier: function() { return model.viewModel.record.previous_page_id; } } );
-    }
-  } );
-
-  module.addExtraOperation( 'view', {
-    title: 'Next Page',
-    isDisabled: function( $state, model ) { return null == model.viewModel.record.next_page_id; },
-    operation: function( $state, model ) {
-      model.transitionToViewState( { getIdentifier: function() { return model.viewModel.record.next_page_id; } } );
+      $state.go(
+        'page.render',
+        { identifier: model.viewModel.record.getIdentifier() },
+        { reload: true }
+      );
     }
   } );
 
@@ -187,11 +177,12 @@ define( function() {
               self.questionList = response.data;
             } );
           },
-          back: function() {
-            $state.go( 'page.render', { identifier: this.parentModel.viewModel.record.previous_page_id } );
-          },
-          next: function() {
-            $state.go( 'page.render', { identifier: this.parentModel.viewModel.record.next_page_id } );
+          viewPage: function() {
+            $state.go(
+              'page.view',
+              { identifier: this.parentModel.viewModel.record.getIdentifier() },
+              { reload: true }
+            );
           }
         } );
       }

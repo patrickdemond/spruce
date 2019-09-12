@@ -24,7 +24,7 @@ class page extends \cenozo\database\has_rank
   /**
    * TODO: document
    */
-  public function is_last_page()
+  public function is_last()
   {
     $select = lib::create( 'database\select' );
     $select->from( static::get_table_name() );

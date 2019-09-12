@@ -24,21 +24,38 @@ class module extends \cenozo\service\module
     $db_page = $this->get_resource();
     if( !is_null( $db_page ) )
     {
+      $db_module = $db_page->get_module();
+
+      // module details
+      if( $select->has_column( 'previous_module_id' ) )
+      {
+        $db_previous_module = $db_module->get_previous_module();
+        $select->add_constant( is_null( $db_previous_module ) ? NULL : $db_previous_module->id, 'previous_module_id', 'integer' );
+      }
+      if( $select->has_column( 'next_module_id' ) )
+      {
+        $db_next_module = $db_module->get_next_module();
+        $select->add_constant( is_null( $db_next_module ) ? NULL : $db_next_module->id, 'next_module_id', 'integer' );
+      }
+      if( $select->has_column( 'last_module' ) )
+      {
+        $select->add_constant( $db_module->is_last(), 'last_module', 'boolean' );
+      }
+
+      // page details
       if( $select->has_column( 'previous_page_id' ) )
       {
         $db_previous_page = $db_page->get_previous_page();
         $select->add_constant( is_null( $db_previous_page ) ? NULL : $db_previous_page->id, 'previous_page_id', 'integer' );
       }
-      
       if( $select->has_column( 'next_page_id' ) )
       {
         $db_next_page = $db_page->get_next_page();
         $select->add_constant( is_null( $db_next_page ) ? NULL : $db_next_page->id, 'next_page_id', 'integer' );
       }
-
       if( $select->has_column( 'last_page' ) )
       {
-        $select->add_constant( $db_page->is_last_page(), 'last_page', 'boolean' );
+        $select->add_constant( $db_page->is_last(), 'last_page', 'boolean' );
       }
     }
   }

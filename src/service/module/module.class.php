@@ -19,5 +19,25 @@ class module extends \cenozo\service\module
   public function prepare_read( $select, $modifier )
   {
     $modifier->join( 'qnaire', 'module.qnaire_id', 'qnaire.id' );
+
+    $db_module = $this->get_resource();
+    if( !is_null( $db_module ) )
+    {
+      // module details
+      if( $select->has_column( 'previous_module_id' ) )
+      {
+        $db_previous_module = $db_module->get_previous_module();
+        $select->add_constant( is_null( $db_previous_module ) ? NULL : $db_previous_module->id, 'previous_module_id', 'integer' );
+      }
+      if( $select->has_column( 'next_module_id' ) )
+      {
+        $db_next_module = $db_module->get_next_module();
+        $select->add_constant( is_null( $db_next_module ) ? NULL : $db_next_module->id, 'next_module_id', 'integer' );
+      }
+      if( $select->has_column( 'last_module' ) )
+      {
+        $select->add_constant( $db_module->is_last(), 'last_module', 'boolean' );
+      }
+    }
   }
 }
