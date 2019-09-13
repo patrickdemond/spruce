@@ -24,17 +24,6 @@ class question extends \cenozo\database\has_rank
   /**
    * TODO: document
    */
-  public function is_last()
-  {
-    $select = lib::create( 'database\select' );
-    $select->from( static::get_table_name() );
-    $select->add_column( 'MAX( rank )', 'max_rank', false );
-    return $this->rank == static::db()->get_one( $select->get_sql() );
-  }
-
-  /**
-   * TODO: document
-   */
   public function get_previous_question()
   {
     return static::get_unique_record(

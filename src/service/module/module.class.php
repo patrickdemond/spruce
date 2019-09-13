@@ -34,10 +34,6 @@ class module extends \cenozo\service\module
         $db_next_module = $db_module->get_next_module();
         $select->add_constant( is_null( $db_next_module ) ? NULL : $db_next_module->id, 'next_module_id', 'integer' );
       }
-      if( $select->has_column( 'last_module' ) )
-      {
-        $select->add_constant( $db_module->is_last(), 'last_module', 'boolean' );
-      }
     }
   }
 }

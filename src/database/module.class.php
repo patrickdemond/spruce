@@ -24,17 +24,6 @@ class module extends \cenozo\database\has_rank
   /**
    * TODO: document
    */
-  public function is_last()
-  {
-    $select = lib::create( 'database\select' );
-    $select->from( static::get_table_name() );
-    $select->add_column( 'MAX( rank )', 'max_rank', false );
-    return $this->rank == static::db()->get_one( $select->get_sql() );
-  }
-
-  /**
-   * TODO: document
-   */
   public function get_previous_module()
   {
     return static::get_unique_record(
@@ -51,6 +40,30 @@ class module extends \cenozo\database\has_rank
     return static::get_unique_record(
       array( 'qnaire_id', 'rank' ),
       array( $this->qnaire_id, $this->rank + 1 )
+    );
+  }
+
+  /**
+   * TODO: document
+   */
+  public function get_first_page()
+  {
+    $page_class_name = lib::get_class_name( 'database\page' );
+    return $page_class_name::get_unique_record(
+      array( 'module_id', 'rank' ),
+      array( $this->id, 1 )
+    );
+  }
+
+  /**
+   * TODO: document
+   */
+  public function get_last_page()
+  {
+    $page_class_name = lib::get_class_name( 'database\page' );
+    return $page_class_name::get_unique_record(
+      array( 'module_id', 'rank' ),
+      array( $this->id, $this->get_page_count() )
     );
   }
 }

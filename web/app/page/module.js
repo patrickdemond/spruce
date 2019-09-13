@@ -50,18 +50,24 @@ define( function() {
       title: 'Note',
       type: 'text'
     },
-    previous_page_id: {
-      type: 'string',
-      exclude: true
-    },
-    next_page_id: {
-      type: 'string',
-      exclude: true
-    },
-    last_page: {
-      type: 'boolean',
-      exclude: true
-    }
+
+    module_id: { exclude: true },
+    previous_page_id: { exclude: true },
+    next_page_id: { exclude: true }
+  } );
+
+  module.addExtraOperation( 'view', {
+    title: '<i class="glyphicon glyphicon-chevron-left"></i>',
+    classes: 'btn-info',
+    operation: function( $state, model ) { model.viewModel.viewPreviousPage(); },
+    isDisabled: function( $state, model ) { return null == model.viewModel.record.previous_page_id; }
+  } );
+
+  module.addExtraOperation( 'view', {
+    title: '<i class="glyphicon glyphicon-chevron-right"></i>',
+    classes: 'btn-info',
+    operation: function( $state, model ) { model.viewModel.viewNextPage(); },
+    isDisabled: function( $state, model ) { return null == model.viewModel.record.next_page_id; }
   } );
 
   module.addExtraOperation( 'view', {
@@ -183,6 +189,20 @@ define( function() {
               { identifier: this.parentModel.viewModel.record.getIdentifier() },
               { reload: true }
             );
+          },
+          renderPreviousPage: function() {
+            $state.go(
+              'page.render',
+              { identifier: this.parentModel.viewModel.record.previous_page_id },
+              { reload: true }
+            );
+          },
+          renderNextPage: function() {
+            $state.go(
+              'page.render',
+              { identifier: this.parentModel.viewModel.record.next_page_id },
+              { reload: true }
+            );
           }
         } );
       }
@@ -192,9 +212,29 @@ define( function() {
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnPageViewFactory', [
-    'CnBaseViewFactory',
-    function( CnBaseViewFactory ) {
-      var object = function( parentModel, root ) { CnBaseViewFactory.construct( this, parentModel, root ); }
+    'CnBaseViewFactory', 'CnHttpFactory', '$state',
+    function( CnBaseViewFactory, CnHttpFactory, $state ) {
+      var object = function( parentModel, root ) {
+        var self = this;
+        CnBaseViewFactory.construct( this, parentModel, root );
+
+        angular.extend( this, {
+          viewPreviousPage: function() {
+            $state.go(
+              'page.view',
+              { identifier: this.record.previous_page_id },
+              { reload: true }
+            );
+          },
+          viewNextPage: function() {
+            $state.go(
+              'page.view',
+              { identifier: this.record.next_page_id },
+              { reload: true }
+            );
+          }
+        } );
+      }
       return { instance: function( parentModel, root ) { return new object( parentModel, root ); } };
     }
   ] );

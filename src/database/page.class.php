@@ -24,23 +24,21 @@ class page extends \cenozo\database\has_rank
   /**
    * TODO: document
    */
-  public function is_last()
-  {
-    $select = lib::create( 'database\select' );
-    $select->from( static::get_table_name() );
-    $select->add_column( 'MAX( rank )', 'max_rank', false );
-    return $this->rank == static::db()->get_one( $select->get_sql() );
-  }
-
-  /**
-   * TODO: document
-   */
   public function get_previous_page()
   {
-    return static::get_unique_record(
+    $db_previous_page = static::get_unique_record(
       array( 'module_id', 'rank' ),
       array( $this->module_id, $this->rank - 1 )
     );
+
+    if( is_null( $db_previous_page ) )
+    {
+      // check if there is a previous module
+      $db_previous_module = $this->get_module()->get_previous_module();
+      if( !is_null( $db_previous_module ) ) $db_previous_page = $db_previous_module->get_last_page();
+    }
+
+    return $db_previous_page;
   }
 
   /**
@@ -48,9 +46,18 @@ class page extends \cenozo\database\has_rank
    */
   public function get_next_page()
   {
-    return static::get_unique_record(
+    $db_next_page = static::get_unique_record(
       array( 'module_id', 'rank' ),
       array( $this->module_id, $this->rank + 1 )
     );
+
+    if( is_null( $db_next_page ) )
+    {
+      // check if there is a next module
+      $db_next_module = $this->get_module()->get_next_module();
+      if( !is_null( $db_next_module ) ) $db_next_page = $db_next_module->get_first_page();
+    }
+
+    return $db_next_page;
   }
 }

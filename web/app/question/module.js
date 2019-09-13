@@ -72,7 +72,24 @@ define( function() {
     note: {
       title: 'Note',
       type: 'text'
-    }
+    },
+
+    previous_question_id: { exclude: true },
+    next_question_id: { exclude: true }
+  } );
+
+  module.addExtraOperation( 'view', {
+    title: '<i class="glyphicon glyphicon-chevron-left"></i>',
+    classes: 'btn-info',
+    operation: function( $state, model ) { model.viewModel.viewPreviousQuestion(); },
+    isDisabled: function( $state, model ) { return null == model.viewModel.record.previous_question_id; }
+  } );
+
+  module.addExtraOperation( 'view', {
+    title: '<i class="glyphicon glyphicon-chevron-right"></i>',
+    classes: 'btn-info',
+    operation: function( $state, model ) { model.viewModel.viewNextQuestion(); },
+    isDisabled: function( $state, model ) { return null == model.viewModel.record.next_question_id; }
   } );
 
   /* ######################################################################################################## */
@@ -140,9 +157,29 @@ define( function() {
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnQuestionViewFactory', [
-    'CnBaseViewFactory',
-    function( CnBaseViewFactory ) {
-      var object = function( parentModel, root ) { CnBaseViewFactory.construct( this, parentModel, root ); }
+    'CnBaseViewFactory', '$state',
+    function( CnBaseViewFactory, $state ) {
+      var object = function( parentModel, root ) {
+        var self = this;
+        CnBaseViewFactory.construct( this, parentModel, root );
+
+        angular.extend( this, {
+          viewPreviousQuestion: function() {
+            $state.go(
+              'question.view',
+              { identifier: this.record.previous_question_id },
+              { reload: true }
+            );
+          },
+          viewNextQuestion: function() {
+            $state.go(
+              'question.view',
+              { identifier: this.record.next_question_id },
+              { reload: true }
+            );
+          }
+        } );
+      }
       return { instance: function( parentModel, root ) { return new object( parentModel, root ); } };
     }
   ] );

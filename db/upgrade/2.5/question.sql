@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS question (
   rank INT UNSIGNED NOT NULL,
   name VARCHAR(127) NOT NULL,
   type ENUM('boolean', 'list', 'number', 'string', 'text', 'comment') NOT NULL,
+  multiple TINYINT(1) NULL DEFAULT NULL,
   minimum FLOAT NULL DEFAULT NULL,
   maximum FLOAT NULL DEFAULT NULL,
   description TEXT NULL,

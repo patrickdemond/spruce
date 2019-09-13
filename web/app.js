@@ -22,17 +22,9 @@ cenozo.directive( 'cnQnaireNavigator', [
           loading: true,
           subject: $state.current.name.split( '.' )[0],
           currentQnaire: null,
-          previousQnaireId: null,
-          nextQnaireId: null,
           currentModule: null,
-          previousModuleId: null,
-          nextModuleId: null,
           currentPage: null,
-          previousPageId: null,
-          nextPageId: null,
           currentQuestion: null,
-          previousQuestionId: null,
-          nextQuestionId: null,
           moduleList: [],
           pageList: [],
           questionList: [],
@@ -63,22 +55,24 @@ cenozo.directive( 'cnQnaireNavigator', [
         // fill in the qnaire, module, page and question data
         var columnList = [
           { table: 'qnaire', column: 'id', alias: 'qnaire_id' },
-          { table: 'qnaire', column: 'name', alias: 'qnaire_name' },
-          { table: 'module', column: 'id', alias: 'module_id' },
-          { table: 'module', column: 'rank', alias: 'module_rank' },
-          { table: 'module', column: 'name', alias: 'module_name' },
-          'previous_module_id',
-          'next_module_id'
+          { table: 'qnaire', column: 'name', alias: 'qnaire_name' }
         ];
 
+        // if we're looking at a module, page or question then get the module's details
+        if( ['module', 'page', 'question'].includes( $scope.subject ) ) {
+          columnList.push(
+            { table: 'module', column: 'id', alias: 'module_id' },
+            { table: 'module', column: 'rank', alias: 'module_rank' },
+            { table: 'module', column: 'name', alias: 'module_name' }
+          );
+        };
+
         // if we're looking at a page or question then get the page's details
-        if( ['page','question'].includes( $scope.subject ) ) {
+        if( ['page', 'question'].includes( $scope.subject ) ) {
           columnList.push(
             { table: 'page', column: 'id', alias: 'page_id' },
             { table: 'page', column: 'rank', alias: 'page_rank' },
-            { table: 'page', column: 'name', alias: 'page_name' },
-            'previous_page_id',
-            'next_page_id'
+            { table: 'page', column: 'name', alias: 'page_name' }
           );
         }
         
@@ -87,9 +81,7 @@ cenozo.directive( 'cnQnaireNavigator', [
           columnList.push(
             { table: 'question', column: 'id', alias: 'question_id' },
             { table: 'question', column: 'rank', alias: 'question_rank' },
-            { table: 'question', column: 'name', alias: 'question_name' },
-            'previous_question_id',
-            'next_question_id'
+            { table: 'question', column: 'name', alias: 'question_name' }
           );
         }
 
@@ -98,25 +90,24 @@ cenozo.directive( 'cnQnaireNavigator', [
           data: { select: { column: columnList } }
         } ).get().then( function( response ) {
           $scope.currentQnaire = {
-            id: response.data.qnaire_id,
-            name: response.data.qnaire_name
+            id: response.data.qnaire_id ? response.data.qnaire_id : response.data.id,
+            name: response.data.qnaire_name ? response.data.qnaire_name : response.data.name
           };
-          $scope.currentModule = {
-            id: response.data.module_id,
-            rank: response.data.module_rank,
-            name: response.data.module_name
-          };
-          $scope.previousModuleId = response.data.previous_module_id;
-          $scope.nextModuleId = response.data.next_module_id;
 
-          if( ['page','question'].includes( $scope.subject ) ) {
+          if( ['module', 'page', 'question'].includes( $scope.subject ) ) {
+            $scope.currentModule = {
+              id: response.data.module_id,
+              rank: response.data.module_rank,
+              name: response.data.module_name
+            };
+          }
+
+          if( ['page', 'question'].includes( $scope.subject ) ) {
             $scope.currentPage = {
               id: response.data.page_id,
               rank: response.data.page_rank,
               name: response.data.page_name
             };
-            $scope.previousPageId = response.data.previous_page_id;
-            $scope.nextPageId = response.data.next_page_id;
           }
 
           if ( 'question' == $scope.subject ) {
@@ -125,8 +116,6 @@ cenozo.directive( 'cnQnaireNavigator', [
               rank: response.data.question_rank,
               name: response.data.question_name
             };
-            $scope.previousQuestionId = response.data.previous_question_id;
-            $scope.nextQuestionId = response.data.next_question_id;
           }
 
           // get the list of modules, pages and questions (depending on what we're looking at)
@@ -142,7 +131,7 @@ cenozo.directive( 'cnQnaireNavigator', [
             } )
           ];
 
-          promiseList.push(
+          if( $scope.currentModule ) promiseList.push(
             CnHttpFactory.instance( {
               path: [ 'module', $scope.currentModule.id, 'page' ].join( '/' ),
               data: {
