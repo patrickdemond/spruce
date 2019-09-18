@@ -1,3 +1,5 @@
+SELECT "Creating new qnaire table" AS "";
+
 CREATE TABLE IF NOT EXISTS qnaire (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   update_timestamp TIMESTAMP NOT NULL,

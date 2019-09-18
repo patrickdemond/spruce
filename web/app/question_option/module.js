@@ -1,7 +1,7 @@
 define( function() {
   'use strict';
 
-  try { var module = cenozoApp.module( 'question_answer', true ); } catch( err ) { console.warn( err ); return; }
+  try { var module = cenozoApp.module( 'question_option', true ); } catch( err ) { console.warn( err ); return; }
   angular.extend( module, {
     identifier: {
       parent: {
@@ -10,9 +10,9 @@ define( function() {
       }
     },
     name: {
-      singular: 'question answer',
-      plural: 'question answers',
-      possessive: 'question answer\'s'
+      singular: 'question option',
+      plural: 'question options',
+      possessive: 'question option\'s'
     },
     columnList: {
       rank: {
@@ -24,6 +24,10 @@ define( function() {
       },
       value: {
         title: 'Value'
+      },
+      exclusive: {
+        title: 'Exclusive',
+        type: 'boolean'
       }
     },
     defaultOrder: {
@@ -44,56 +48,60 @@ define( function() {
     value: {
       title: 'Value',
       type: 'string'
+    },
+    exclusive: {
+      title: 'Exclusive',
+      type: 'boolean'
     }
   } );
 
   /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnQuestionAnswerAdd', [
-    'CnQuestionAnswerModelFactory',
-    function( CnQuestionAnswerModelFactory ) {
+  cenozo.providers.directive( 'cnQuestionOptionAdd', [
+    'CnQuestionOptionModelFactory',
+    function( CnQuestionOptionModelFactory ) {
       return {
         templateUrl: module.getFileUrl( 'add.tpl.html' ),
         restrict: 'E',
         scope: { model: '=?' },
         controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQuestionAnswerModelFactory.root;
+          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQuestionOptionModelFactory.root;
         }
       };
     }
   ] );
 
   /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnQuestionAnswerList', [
-    'CnQuestionAnswerModelFactory',
-    function( CnQuestionAnswerModelFactory ) {
+  cenozo.providers.directive( 'cnQuestionOptionList', [
+    'CnQuestionOptionModelFactory',
+    function( CnQuestionOptionModelFactory ) {
       return {
         templateUrl: module.getFileUrl( 'list.tpl.html' ),
         restrict: 'E',
         scope: { model: '=?' },
         controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQuestionAnswerModelFactory.root;
+          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQuestionOptionModelFactory.root;
         }
       };
     }
   ] );
 
   /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnQuestionAnswerView', [
-    'CnQuestionAnswerModelFactory',
-    function( CnQuestionAnswerModelFactory ) {
+  cenozo.providers.directive( 'cnQuestionOptionView', [
+    'CnQuestionOptionModelFactory',
+    function( CnQuestionOptionModelFactory ) {
       return {
         templateUrl: module.getFileUrl( 'view.tpl.html' ),
         restrict: 'E',
         scope: { model: '=?' },
         controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQuestionAnswerModelFactory.root;
+          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQuestionOptionModelFactory.root;
         }
       };
     }
   ] );
 
   /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnQuestionAnswerAddFactory', [
+  cenozo.providers.factory( 'CnQuestionOptionAddFactory', [
     'CnBaseAddFactory',
     function( CnBaseAddFactory ) {
       var object = function( parentModel ) { CnBaseAddFactory.construct( this, parentModel ); };
@@ -102,7 +110,7 @@ define( function() {
   ] );
 
   /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnQuestionAnswerListFactory', [
+  cenozo.providers.factory( 'CnQuestionOptionListFactory', [
     'CnBaseListFactory',
     function( CnBaseListFactory ) {
       var object = function( parentModel ) { CnBaseListFactory.construct( this, parentModel ); };
@@ -111,7 +119,7 @@ define( function() {
   ] );
 
   /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnQuestionAnswerViewFactory', [
+  cenozo.providers.factory( 'CnQuestionOptionViewFactory', [
     'CnBaseViewFactory',
     function( CnBaseViewFactory ) {
       var object = function( parentModel, root ) { CnBaseViewFactory.construct( this, parentModel, root ); }
@@ -120,15 +128,15 @@ define( function() {
   ] );
 
   /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnQuestionAnswerModelFactory', [
-    'CnBaseModelFactory', 'CnQuestionAnswerAddFactory', 'CnQuestionAnswerListFactory', 'CnQuestionAnswerViewFactory',
-    function( CnBaseModelFactory, CnQuestionAnswerAddFactory, CnQuestionAnswerListFactory, CnQuestionAnswerViewFactory ) {
+  cenozo.providers.factory( 'CnQuestionOptionModelFactory', [
+    'CnBaseModelFactory', 'CnQuestionOptionAddFactory', 'CnQuestionOptionListFactory', 'CnQuestionOptionViewFactory',
+    function( CnBaseModelFactory, CnQuestionOptionAddFactory, CnQuestionOptionListFactory, CnQuestionOptionViewFactory ) {
       var object = function( root ) {
         var self = this;
         CnBaseModelFactory.construct( this, module );
-        this.addModel = CnQuestionAnswerAddFactory.instance( this );
-        this.listModel = CnQuestionAnswerListFactory.instance( this );
-        this.viewModel = CnQuestionAnswerViewFactory.instance( this, root );
+        this.addModel = CnQuestionOptionAddFactory.instance( this );
+        this.listModel = CnQuestionOptionListFactory.instance( this );
+        this.viewModel = CnQuestionOptionViewFactory.instance( this, root );
       };
 
       return {

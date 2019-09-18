@@ -1,3 +1,5 @@
+SELECT "Creating new attribute table" AS "";
+
 CREATE TABLE IF NOT EXISTS attribute (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   update_timestamp TIMESTAMP NOT NULL,

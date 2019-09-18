@@ -1,3 +1,5 @@
+SELECT "Creating new answer table" AS "";
+
 CREATE TABLE IF NOT EXISTS answer (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   update_timestamp TIMESTAMP NOT NULL,

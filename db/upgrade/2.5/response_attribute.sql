@@ -1,3 +1,5 @@
+SELECT "Creating new response_attribute table" AS "";
+
 CREATE TABLE IF NOT EXISTS response_attribute (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   update_timestamp TIMESTAMP NOT NULL,

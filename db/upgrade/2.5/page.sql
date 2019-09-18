@@ -1,3 +1,5 @@
+SELECT "Creating new page table" AS "";
+
 CREATE TABLE IF NOT EXISTS page (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   update_timestamp TIMESTAMP NOT NULL,

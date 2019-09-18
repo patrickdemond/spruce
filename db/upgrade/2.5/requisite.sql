@@ -1,3 +1,5 @@
+SELECT "Creating new requisite table" AS "";
+
 CREATE TABLE IF NOT EXISTS requisite (
   id INT UNSIGNED NOT NULL,
   update_timestamp TIMESTAMP NOT NULL,

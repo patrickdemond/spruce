@@ -1,3 +1,5 @@
+SELECT "Creating new module table" AS "";
+
 CREATE TABLE IF NOT EXISTS module (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   update_timestamp TIMESTAMP NOT NULL,

@@ -17,19 +17,36 @@
                  for="{{ question.id }}"
                  class="control-label"
                  ng-bind-html="question.description | cnNewlines"></label>
-          <div ng-if="'comment' != question" ng-switch="question.type">
-            <select ng-switch-when="boolean"
-                    ng-attr-id="question{{ question.id }}"
-                    class="form-control"
-                    ng-model="answers[question.id]"
-                    ng-options="item.value as item.name for item in question.enumList">
-            </select>
-            <select ng-switch-when="list"
-                    ng-attr-id="question{{ question.id }}"
-                    class="form-control"
-                    ng-model="answers[question.id]"
-                    ng-options="item.value as item.name for item in question.enumList">
-            </select>
+          <div class="horizontal-spacer" ng-if="'comment' != question" ng-switch="question.type">
+            <div ng-switch-when="boolean">
+              <label class="btn btn-default full-width"
+                     ng-model="model.renderModel.data[question.id].yes"
+                     ng-click="model.renderModel.setAnswer( question, true )"
+                     uib-btn-checkbox>
+                <i class="glyphicon"
+                   ng-class="model.renderModel.data[question.id].yes ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
+                <em>Yes</em>
+              </label>
+              <label class="btn btn-default full-width"
+                     ng-model="model.renderModel.data[question.id].no"
+                     ng-click="model.renderModel.setAnswer( question, false )"
+                     uib-btn-checkbox>
+                <i class="glyphicon"
+                   ng-class="model.renderModel.data[question.id].no ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
+                <em>No</em>
+              </label>
+            </div>
+            <div ng-switch-when="list" ng-repeat="option in question.optionList">
+              <label class="btn btn-default full-width"
+                     ng-model="model.renderModel.data[question.id][option.id]"
+                     ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal' }"
+                     ng-click="model.renderModel.setAnswer( question, option )"
+                     uib-btn-checkbox>
+                <i class="glyphicon"
+                   ng-class="model.renderModel.data[question.id][option.id] ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
+                {{ option.name }}
+              </label>
+            </div>
             <input ng-switch-when="number"
                    ng-attr-id="question{{ question.id }}"
                    class="form-control"
@@ -50,6 +67,24 @@
                       ng-model="answers[question.id]"
                       class="form-control">
             </textarea>
+            <div class="btn-group full-width">
+              <label class="btn btn-default col-xs-6"
+                     ng-model="model.renderModel.data[question.id].dkna"
+                     ng-click="model.renderModel.setAnswer( question, 'dkna' )"
+                     uib-btn-checkbox>
+                <i class="glyphicon"
+                   ng-class="model.renderModel.data[question.id].dkna ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
+                <em>Don't Know / No Answer</em>
+              </label>
+              <label class="btn btn-default col-xs-6"
+                     ng-model="model.renderModel.data[question.id].refuse"
+                     ng-click="model.renderModel.setAnswer( question, 'refuse' )"
+                     uib-btn-checkbox>
+                <i class="glyphicon"
+                   ng-class="model.renderModel.data[question.id].refuse ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
+                <em>Refuse</em>
+              </label>
+            </div>
           </div>
         </div>
       </div>

@@ -176,12 +176,84 @@ define( function() {
         angular.extend( this, {
           parentModel: parentModel,
           questionList: [],
+          data: {},
           onLoad: function() {
             return CnHttpFactory.instance( {
               path: this.parentModel.getServiceResourcePath() + '/question'
             } ).query().then( function( response ) {
               self.questionList = response.data;
+              self.questionList.forEach( function( question ) {
+                // all questions may have no answer
+                self.data[question.id] = { dkna: false, refuse: false };
+
+                if( 'boolean' == question.type ) {
+                  angular.extend( self.data[question.id], { yes: false, no: false } );
+                } else if( 'list' == question.type ) {
+                  CnHttpFactory.instance( {
+                    path: ['question', question.id, 'question_option' ].join( '/' ),
+                    data: {
+                      select: { column: [ 'name', 'value', 'exclusive' ] },
+                      modifier: { order: 'question_option.rank' }
+                    }
+                  } ).query().then( function( response ) {
+                    question.optionList = response.data;
+                    question.optionList.forEach( function( option ) {
+                      self.data[question.id][option.id] = false;
+                    } );
+                  } );
+                }
+              } );
             } );
+          },
+          setAnswer: function( question, value ) {
+            if( 'dkna' == value ) {
+              if( self.data[question.id].dkna ) {
+                // unselect all values
+                for( var property in self.data[question.id] ) {
+                  if( self.data[question.id].hasOwnProperty( property ) ) {
+                    if( 'dkna' != property ) self.data[question.id][property] = false;
+                  }
+                }
+              }
+            } else if( 'refuse' == value ) {
+              if( self.data[question.id].refuse ) {
+                for( var property in self.data[question.id] ) {
+                  if( self.data[question.id].hasOwnProperty( property ) ) {
+                    if( 'refuse' != property ) self.data[question.id][property] = false;
+                  }
+                }
+              }
+            } else {
+              // handle each question type
+              if( 'boolean' == question.type ) {
+                // unselect all other values
+                for( var property in self.data[question.id] ) {
+                  if( self.data[question.id].hasOwnProperty( property ) ) {
+                    if( ( value ? 'yes' : 'no' ) != property ) self.data[question.id][property] = false;
+                  }
+                }
+
+              } else if( 'list' == question.type ) {
+                // unselect certain values if we're checking this option
+                if( self.data[question.id][value.id] ) {
+                  if( value.exclusive ) {
+                    // unselect all other values
+                    for( var property in self.data[question.id] ) {
+                      if( self.data[question.id].hasOwnProperty( property ) ) {
+                        if( value.id != property ) self.data[question.id][property] = false;
+                      }
+                    }
+                  } else {
+                    // unselect all no-answer and exclusive values
+                    self.data[question.id].dkna = false;
+                    self.data[question.id].refuse = false;
+                    question.optionList.filter( option => option.exclusive ).forEach( function( option ) {
+                      self.data[question.id][option.id] = false;
+                    } );
+                  }
+                }
+              }
+            }
           },
           viewPage: function() {
             $state.go(

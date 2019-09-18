@@ -5,7 +5,7 @@
  * @author Patrick Emond <emondpd@mcmaster.ca>
  */
 
-namespace linden\service\question_answer;
+namespace linden\service\question_option;
 use cenozo\lib, cenozo\log, linden\util;
 
 /**

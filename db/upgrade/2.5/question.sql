@@ -1,3 +1,5 @@
+SELECT "Creating new question table" AS "";
+
 CREATE TABLE IF NOT EXISTS question (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   update_timestamp TIMESTAMP NOT NULL,

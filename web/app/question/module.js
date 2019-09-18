@@ -25,12 +25,6 @@ define( function() {
       type: {
         title: 'Type'
       },
-      minimum: {
-        title: 'Minimum'
-      },
-      maximum: {
-        title: 'Maximum'
-      },
       description: {
         title: 'Description',
         align: 'left'
@@ -157,8 +151,8 @@ define( function() {
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnQuestionViewFactory', [
-    'CnBaseViewFactory', '$state',
-    function( CnBaseViewFactory, $state ) {
+    'CnBaseViewFactory', 'CnHttpFactory', '$state',
+    function( CnBaseViewFactory, CnHttpFactory, $state ) {
       var object = function( parentModel, root ) {
         var self = this;
         CnBaseViewFactory.construct( this, parentModel, root );

@@ -18,12 +18,13 @@ SOURCE attribute.sql
 SOURCE module.sql
 SOURCE page.sql
 SOURCE question.sql
-SOURCE question_answer.sql
+SOURCE question_option.sql
 SOURCE requisite_group.sql
 SOURCE requisite.sql
 SOURCE response.sql
 SOURCE response_attribute.sql
 SOURCE answer.sql
+SOURCE answer_option.sql
 
 SOURCE update_version_number.sql
 
