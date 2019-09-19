@@ -37,15 +37,25 @@
               </label>
             </div>
             <div ng-switch-when="list" ng-repeat="option in question.optionList">
-              <label class="btn btn-default full-width"
-                     ng-model="model.renderModel.data[question.id][option.id]"
-                     ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal' }"
-                     ng-click="model.renderModel.setAnswer( question, option )"
-                     uib-btn-checkbox>
-                <i class="glyphicon"
-                   ng-class="model.renderModel.data[question.id][option.id] ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
-                {{ option.name }}
-              </label>
+              <div ng-class="{ 'col-xs-3 col-slim': 'OTHER' == option.value }">
+                <label class="btn btn-default full-width"
+                       ng-class="{ 'rounded-bottom-left rounded-top-left': 'OTHER' == option.value }"
+                       ng-model="model.renderModel.data[question.id][option.id]"
+                       ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal' }"
+                       ng-click="model.renderModel.setAnswer( question, option )"
+                       uib-btn-checkbox>
+                  <i class="glyphicon"
+                     ng-class="model.renderModel.data[question.id][option.id] ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
+                  {{ option.name }}
+                </label>
+              </div>
+              <div ng-if="'OTHER' == option.value" class="col-xs-9 col-slim">
+                <input type="string"
+                       id="other{{ option.id }}"
+                       class="form-control rounded-bottom-left rounded-bottom-right"
+                       ng-model="model.renderModel.data[question.id].other"
+                       ng-disabled="!model.renderModel.data[question.id][option.id]"></input>
+              </div>
             </div>
             <input ng-switch-when="number"
                    ng-attr-id="question{{ question.id }}"
