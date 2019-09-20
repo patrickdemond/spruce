@@ -134,17 +134,32 @@ define( function() {
               var rank = event.which - 96;
               var question = renderModel.keyQuestionList[renderModel.keyQuestionIndex];
 
-              // check if the key's rank is within the option list or the 2 dkna/refuse options
-              if( rank <= question.optionList.length ) {
-                var answer = question.optionList[rank-1];
-                renderModel.data[question.id][answer.id] = !renderModel.data[question.id][answer.id];
-                renderModel.setAnswer( question, answer );
-              } else if( rank == question.optionList.length + 1 ) {
-                renderModel.data[question.id].dkna = !renderModel.data[question.id].dkna;
-                renderModel.setAnswer( question, 'dkna' );
-              } else if( rank == question.optionList.length + 2 ) {
-                renderModel.data[question.id].refuse = !renderModel.data[question.id].refuse;
-                renderModel.setAnswer( question, 'refuse' );
+              if( 'boolean' == question.type ) {
+                // 1 is yes, 2 is no, 3 is dkna and 4 is refuse
+                var answer = 1 == rank ? true
+                           : 2 == rank ? false
+                           : 3 == rank ? 'dkna'
+                           : 4 == rank ? 'refuse'
+                           : null;
+                
+                if( null != answer ) {
+                  var property = angular.isString( answer ) ? answer : answer ? 'yes' : 'no';
+                  renderModel.data[question.id][property] = !renderModel.data[question.id][property];
+                  renderModel.setAnswer( question, answer );
+                }
+              } else {
+                // check if the key's rank is within the option list or the 2 dkna/refuse options
+                if( rank <= question.optionList.length ) {
+                  var answer = question.optionList[rank-1];
+                  renderModel.data[question.id][answer.id] = !renderModel.data[question.id][answer.id];
+                  renderModel.setAnswer( question, answer );
+                } else if( rank == question.optionList.length + 1 ) {
+                  renderModel.data[question.id].dkna = !renderModel.data[question.id].dkna;
+                  renderModel.setAnswer( question, 'dkna' );
+                } else if( rank == question.optionList.length + 2 ) {
+                  renderModel.data[question.id].refuse = !renderModel.data[question.id].refuse;
+                  renderModel.setAnswer( question, 'refuse' );
+                }
               }
               $scope.$apply();
 
@@ -235,6 +250,7 @@ define( function() {
                 self.data[question.id] = { dkna: false, refuse: false };
 
                 if( 'boolean' == question.type ) {
+                  self.keyQuestionList.push( question );
                   angular.extend( self.data[question.id], { yes: false, no: false } );
                 } else if( 'list' == question.type ) {
                   self.keyQuestionList.push( question );
@@ -267,7 +283,6 @@ define( function() {
                     if( ( value ? 'yes' : 'no' ) != property ) self.data[question.id][property] = false;
                   }
                 }
-
               } else if( 'list' == question.type ) {
                 // unselect certain values if we're checking this option
                 if( self.data[question.id][value.id] ) {
