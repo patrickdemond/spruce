@@ -13,10 +13,7 @@
                class="vertical-spacer text-info"
                ng-bind-html="question.description | cnNewlines">
           </div>
-          <label ng-if="'comment' != question.type"
-                 for="{{ question.id }}"
-                 class="control-label"
-                 ng-bind-html="question.description | cnNewlines"></label>
+          <div ng-if="'comment' != question.type" ng-bind-html="question.description | cnNewlines"></div>
           <div class="horizontal-spacer" ng-if="'comment' != question" ng-switch="question.type">
             <div ng-switch-when="boolean">
               <label class="btn btn-default full-width"
@@ -62,24 +59,30 @@
             <input ng-switch-when="number"
                    ng-attr-id="question{{ question.id }}"
                    class="form-control"
-                   type="text"
-                   ng-model="answers[question.id]"
+                   type="number"
+                   ng-model="model.renderModel.data[question.id].value"
+                   ng-disabled="model.renderModel.data[question.id].dkna || model.renderModel.data[question.id].refuse"
+                   cn-autofocus
                    autocomplete="off">
             </input>
             <input ng-switch-when="string"
                    ng-attr-id="question{{ question.id }}"
                    class="form-control"
                    type="text"
-                   ng-model="answers[question.id]"
+                   ng-model="model.renderModel.data[question.id].value"
+                   ng-disabled="model.renderModel.data[question.id].dkna || model.renderModel.data[question.id].refuse"
+                   cn-autofocus
                    autocomplete="off">
             </input>
             <textarea ng-switch-when="text"
                       cn-elastic
                       ng-attr-id="question{{ question.id }}"
-                      ng-model="answers[question.id]"
+                      ng-model="model.renderModel.data[question.id].value"
+                      ng-disabled="model.renderModel.data[question.id].dkna || model.renderModel.data[question.id].refuse"
+                      cn-autofocus
                       class="form-control">
             </textarea>
-            <div class="btn-group full-width">
+            <div class="btn-group full-width" ng-if="'comment' != question.type">
               <label class="btn btn-default col-xs-6"
                      style="font-style: italic; font-weight: normal"
                      ng-model="model.renderModel.data[question.id].dkna"

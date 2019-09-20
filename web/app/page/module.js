@@ -126,46 +126,10 @@ define( function() {
           // bind keypresses (first unbind to prevent duplicates)
           $document.unbind( 'keydown.render' );
           $document.bind( 'keydown.render', function( event ) {
-            var renderModel = $scope.model.renderModel;
-            if( 'render' == $scope.model.getActionFromState() &&
-                0 < renderModel.keyQuestionList.length &&
-                angular.isUndefined( event.target.type ) &&
-                96 <= event.which && event.which <= 105 ) {
-              var rank = event.which - 96;
-              var question = renderModel.keyQuestionList[renderModel.keyQuestionIndex];
-
-              if( 'boolean' == question.type ) {
-                // 1 is yes, 2 is no, 3 is dkna and 4 is refuse
-                var answer = 1 == rank ? true
-                           : 2 == rank ? false
-                           : 3 == rank ? 'dkna'
-                           : 4 == rank ? 'refuse'
-                           : null;
-                
-                if( null != answer ) {
-                  var property = angular.isString( answer ) ? answer : answer ? 'yes' : 'no';
-                  renderModel.data[question.id][property] = !renderModel.data[question.id][property];
-                  renderModel.setAnswer( question, answer );
-                }
-              } else {
-                // check if the key's rank is within the option list or the 2 dkna/refuse options
-                if( rank <= question.optionList.length ) {
-                  var answer = question.optionList[rank-1];
-                  renderModel.data[question.id][answer.id] = !renderModel.data[question.id][answer.id];
-                  renderModel.setAnswer( question, answer );
-                } else if( rank == question.optionList.length + 1 ) {
-                  renderModel.data[question.id].dkna = !renderModel.data[question.id].dkna;
-                  renderModel.setAnswer( question, 'dkna' );
-                } else if( rank == question.optionList.length + 2 ) {
-                  renderModel.data[question.id].refuse = !renderModel.data[question.id].refuse;
-                  renderModel.setAnswer( question, 'refuse' );
-                }
-              }
+            // only send keydown events when on the render page and the key is a numpad number
+            if( 'render' == $scope.model.getActionFromState() && 96 <= event.which && event.which <= 105 ) {
+              $scope.model.renderModel.onKeydown( event.which - 96 );
               $scope.$apply();
-
-              // advance to the next question, looping back to the first when we're at the end of the list
-              renderModel.keyQuestionIndex++;
-              if( renderModel.keyQuestionIndex >= renderModel.keyQuestionList.length ) renderModel.keyQuestionIndex = 0;
             }
           } );
 
@@ -235,24 +199,19 @@ define( function() {
           parentModel: parentModel,
           questionList: [],
           data: {},
-          keyQuestionList: null,
           keyQuestionIndex: null,
           onLoad: function() {
-            this.keyQuestionList = [];
-            this.keyQuestionIndex = 0;
             return CnHttpFactory.instance( {
               path: this.parentModel.getServiceResourcePath() + '/question'
             } ).query().then( function( response ) {
               self.questionList = response.data;
-              self.questionList.forEach( function( question ) {
+              self.questionList.forEach( function( question, index ) {
                 // all questions may have no answer
                 self.data[question.id] = { dkna: false, refuse: false };
 
                 if( 'boolean' == question.type ) {
-                  self.keyQuestionList.push( question );
                   angular.extend( self.data[question.id], { yes: false, no: false } );
                 } else if( 'list' == question.type ) {
-                  self.keyQuestionList.push( question );
                   CnHttpFactory.instance( {
                     path: ['question', question.id, 'question_option' ].join( '/' ),
                     data: {
@@ -268,10 +227,67 @@ define( function() {
                       }
                     } );
                   } );
+                } else if( 'comment' != question.type ) {
+                  self.data[question.id].value = null;
                 }
+
+                // make sure we have the first non-comment question set as the first key question
+                if( null == self.keyQuestionIndex && 'comment' != question.type ) self.keyQuestionIndex = index;
               } );
             } );
           },
+
+          onKeydown: function( key ) {
+            // do nothing if we have no key question index (which means the page only has comments)
+            if( null == self.keyQuestionIndex ) return;
+
+            var question = self.questionList[self.keyQuestionIndex];
+
+            if( 'boolean' == question.type ) {
+              // 1 is yes, 2 is no, 3 is dkna and 4 is refuse
+              var answer = 1 == key ? true
+                         : 2 == key ? false
+                         : 3 == key ? 'dkna'
+                         : 4 == key ? 'refuse'
+                         : null;
+
+              if( null != answer ) {
+                var property = angular.isString( answer ) ? answer : answer ? 'yes' : 'no';
+                self.data[question.id][property] = !self.data[question.id][property];
+                self.setAnswer( question, answer );
+              }
+            } else if( 'list' == question.type ) {
+              // check if the key is within the option list or the 2 dkna/refuse options
+              if( key <= question.optionList.length ) {
+                var answer = question.optionList[key-1];
+                self.data[question.id][answer.id] = !self.data[question.id][answer.id];
+                self.setAnswer( question, answer );
+              } else if( key == question.optionList.length + 1 ) {
+                self.data[question.id].dkna = !self.data[question.id].dkna;
+                self.setAnswer( question, 'dkna' );
+              } else if( key == question.optionList.length + 2 ) {
+                self.data[question.id].refuse = !self.data[question.id].refuse;
+                self.setAnswer( question, 'refuse' );
+              }
+            } else {
+              // 1 is dkna and 2 is refuse
+              var answer = 1 == key ? 'dkna'
+                         : 2 == key ? 'refuse'
+                         : null;
+
+              if( null != answer ) {
+                self.data[question.id][answer] = !self.data[question.id][answer];
+                self.setAnswer( question, answer );
+              }
+            }
+
+            // advance to the next non-comment question, looping back to the first when we're at the end of the list
+            do {
+              self.keyQuestionIndex++;
+              if( self.keyQuestionIndex == self.questionList.length ) self.keyQuestionIndex = 0;
+            } while( 'comment' == self.questionList[self.keyQuestionIndex].type );
+          },
+
           setAnswer: function( question, value ) {
             if( 'dkna' == value || 'refuse' == value ) {
               if( self.data[question.id][value] ) setExclusiveAnswer( question.id, value );
@@ -307,6 +323,7 @@ define( function() {
               }
             }
           },
+
           viewPage: function() {
             $state.go(
               'page.view',
@@ -314,6 +331,7 @@ define( function() {
               { reload: true }
             );
           },
+
           renderPreviousPage: function() {
             $state.go(
               'page.render',
@@ -321,6 +339,7 @@ define( function() {
               { reload: true }
             );
           },
+
           renderNextPage: function() {
             $state.go(
               'page.render',
