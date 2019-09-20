@@ -20,40 +20,42 @@
           <div class="horizontal-spacer" ng-if="'comment' != question" ng-switch="question.type">
             <div ng-switch-when="boolean">
               <label class="btn btn-default full-width"
+                     style="font-style: 'italic'; font-weight: 'normal'"
                      ng-model="model.renderModel.data[question.id].yes"
                      ng-click="model.renderModel.setAnswer( question, true )"
                      uib-btn-checkbox>
                 <i class="glyphicon"
                    ng-class="model.renderModel.data[question.id].yes ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
-                <em>Yes</em>
+                Yes
               </label>
               <label class="btn btn-default full-width"
+                     style="font-style: 'italic'; font-weight: 'normal'"
                      ng-model="model.renderModel.data[question.id].no"
                      ng-click="model.renderModel.setAnswer( question, false )"
                      uib-btn-checkbox>
                 <i class="glyphicon"
                    ng-class="model.renderModel.data[question.id].no ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
-                <em>No</em>
+                No
               </label>
             </div>
             <div ng-switch-when="list" ng-repeat="option in question.optionList">
-              <div ng-class="{ 'col-xs-3 col-slim': 'OTHER' == option.value }">
+              <div ng-class="{ 'col-xs-3 col-slim': null != option.extra }">
                 <label class="btn btn-default full-width"
-                       ng-class="{ 'rounded-bottom-left rounded-top-left': 'OTHER' == option.value }"
+                       ng-class="{ 'rounded-bottom-left rounded-top-left': null != option.extra }"
                        ng-model="model.renderModel.data[question.id][option.id]"
-                       ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal' }"
+                       ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal', 'font-weight': 'normal' }"
                        ng-click="model.renderModel.setAnswer( question, option )"
+                       ng-bind-html="'<i class=\'glyphicon ' + (
+                         model.renderModel.data[question.id][option.id] ? 'glyphicon-check' : 'glyphicon-unchecked'
+                       ) + '\'></i> ' + option.name"
                        uib-btn-checkbox>
-                  <i class="glyphicon"
-                     ng-class="model.renderModel.data[question.id][option.id] ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
-                  {{ option.name }}
                 </label>
               </div>
-              <div ng-if="'OTHER' == option.value" class="col-xs-9 col-slim">
+              <div ng-if="null != option.extra" class="col-xs-9 col-slim">
                 <input type="string"
                        id="other{{ option.id }}"
                        class="form-control rounded-bottom-left rounded-bottom-right"
-                       ng-model="model.renderModel.data[question.id].other"
+                       ng-model="model.renderModel.data[question.id]['other'+option.id]"
                        ng-disabled="!model.renderModel.data[question.id][option.id]"></input>
               </div>
             </div>
@@ -79,20 +81,22 @@
             </textarea>
             <div class="btn-group full-width">
               <label class="btn btn-default col-xs-6"
+                     style="font-style: italic; font-weight: normal"
                      ng-model="model.renderModel.data[question.id].dkna"
                      ng-click="model.renderModel.setAnswer( question, 'dkna' )"
                      uib-btn-checkbox>
                 <i class="glyphicon"
                    ng-class="model.renderModel.data[question.id].dkna ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
-                <em>Don't Know / No Answer</em>
+                Don't Know / No Answer
               </label>
               <label class="btn btn-default col-xs-6"
+                     style="font-style: italic; font-weight: normal"
                      ng-model="model.renderModel.data[question.id].refuse"
                      ng-click="model.renderModel.setAnswer( question, 'refuse' )"
                      uib-btn-checkbox>
                 <i class="glyphicon"
                    ng-class="model.renderModel.data[question.id].refuse ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
-                <em>Refuse</em>
+                Refuse
               </label>
             </div>
           </div>
@@ -102,11 +106,13 @@
     <div class="form-footer text-right rounded-bottom bg-info">
       <div class="btn-group pull-left">
         <button type="button"
+                ng-disabled="null == model.viewModel.record.previous_page_id"
                 ng-click="model.renderModel.renderPreviousPage()"
                 class="btn btn-info">
           <i class="glyphicon glyphicon-chevron-left"></i>
         </button>
         <button type="button"
+                ng-disabled="null == model.viewModel.record.next_page_id"
                 ng-click="model.renderModel.renderNextPage()"
                 class="btn btn-info">
           <i class="glyphicon glyphicon-chevron-right"></i>

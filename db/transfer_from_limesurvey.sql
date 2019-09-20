@@ -56,16 +56,16 @@ GROUP BY questions.qid
 ORDER BY group_order, question_order;
 
 -- add all question_options to the questions
-INSERT IGNORE INTO question_option( question_id, rank, name, value, exclusive )
-SELECT question.id, sortorder, answer, code, 1
+INSERT IGNORE INTO question_option( question_id, rank, name, value, exclusive, extra )
+SELECT question.id, sortorder, answer, code, 1, IF( answer = "Other" OR code = "OTHER", "string", NULL ) 
 FROM patrick_linden.question
 JOIN patrick_limesurvey.answers USING( qid )
 WHERE answers.language = "en"
 AND code NOT IN( "DK_NA", "REFUSED" )
 ORDER BY qid, sortorder;
 
-INSERT IGNORE INTO question_option( question_id, rank, name, value )
-SELECT question.id, question_order, question, title
+INSERT IGNORE INTO question_option( question_id, rank, name, value, extra )
+SELECT question.id, question_order, question, title, IF( question = "Other" OR title LIKE "%\_OT\_%", "string", NULL )
 FROM patrick_linden.question
 JOIN patrick_limesurvey.questions subquestions ON question.qid = subquestions.parent_qid
 WHERE subquestions.language = "en"

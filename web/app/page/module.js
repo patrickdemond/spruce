@@ -220,16 +220,15 @@ define( function() {
       var object = function( parentModel ) {
         var self = this;
 
-        function setExclusiveAnswer( questionId, value ) {
-          // unselect all other values
+        function setExclusiveAnswer( questionId, selectedProperty ) {
+          // unselect all values other than the selected one
           for( var property in self.data[questionId] ) {
             if( self.data[questionId].hasOwnProperty( property ) ) {
-              if( 'other' != property && value != property ) self.data[questionId][property] = false;
+              if( selectedProperty != property && self.data[questionId][property] ) {
+                self.data[questionId][property] = angular.isString( self.data[questionId][property] ) ? null : false;
+              }
             }
           }
-
-          // unset the other value
-          if( angular.isDefined( self.data[questionId].other ) ) self.data[questionId].other = null;
         }
 
         angular.extend( this, {
@@ -257,14 +256,16 @@ define( function() {
                   CnHttpFactory.instance( {
                     path: ['question', question.id, 'question_option' ].join( '/' ),
                     data: {
-                      select: { column: [ 'name', 'value', 'exclusive' ] },
+                      select: { column: [ 'name', 'value', 'exclusive', 'extra' ] },
                       modifier: { order: 'question_option.rank' }
                     }
                   } ).query().then( function( response ) {
                     question.optionList = response.data;
                     question.optionList.forEach( function( option ) {
                       self.data[question.id][option.id] = false;
-                      if( 'OTHER' == option.value ) self.data[question.id].other = null;
+                      if( null != option.extra ) {
+                        self.data[question.id]['other' + option.id] = null;
+                      }
                     } );
                   } );
                 }
@@ -298,10 +299,10 @@ define( function() {
                   }
                 }
 
-                // handle the special circumstance when clicking the other option
-                if( 'OTHER' == value.value ) {
+                // handle the special circumstance when clicking an option with an extra added input
+                if( null != value.extra ) {
                   if( self.data[question.id][value.id] ) document.getElementById( 'other' + value.id ).focus();
-                  else self.data[question.id].other = null;
+                  else self.data[question.id]['other' + value.id] = null;
                 }
               }
             }
