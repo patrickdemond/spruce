@@ -223,6 +223,8 @@ define( function() {
             return CnHttpFactory.instance( {
               path: this.parentModel.getServiceResourcePath() + '/question'
             } ).query().then( function( response ) {
+              var promiseList = [];
+
               self.questionList = response.data;
               self.questionList.forEach( function( question, index ) {
                 // all questions may have no answer
@@ -236,7 +238,12 @@ define( function() {
                 } else if( ['number', 'string', 'text'].includes( question.type ) ) {
                   self.data[question.id].value = question.value;
                 } else if( 'list' == question.type ) {
-                  CnHttpFactory.instance( {
+                  // parse the answer option list
+                  question.question_option_list = null != question.question_option_list
+                                              ? question.question_option_list.split( ',' ).map( v => parseInt( v ) )
+                                              : [];
+
+                  promiseList.push( CnHttpFactory.instance( {
                     path: ['question', question.id, 'question_option' ].join( '/' ),
                     data: {
                       select: { column: [ 'name', 'value', 'exclusive', 'extra' ] },
@@ -245,12 +252,10 @@ define( function() {
                   } ).query().then( function( response ) {
                     question.optionList = response.data;
                     question.optionList.forEach( function( option ) {
-                      self.data[question.id][option.id] = false;
-                      if( null != option.extra ) {
-                        self.data[question.id]['other' + option.id] = null;
-                      }
+                      self.data[question.id][option.id] = question.question_option_list.includes( option.id );
+                      if( null != option.extra ) self.data[question.id]['other' + option.id] = null;
                     } );
-                  } );
+                  } ) );
                 } else if( 'comment' != question.type ) {
                   self.data[question.id].value = null;
                 }
@@ -259,8 +264,10 @@ define( function() {
                 if( null == self.keyQuestionIndex && 'comment' != question.type ) self.keyQuestionIndex = index;
               } );
 
-              self.backupData = angular.copy( self.data );
-              self.pageComplete = isPageComplete();
+              return $q.all( promiseList ).then( function() {
+                self.backupData = angular.copy( self.data );
+                self.pageComplete = isPageComplete();
+              } );
             } );
           },
 
@@ -318,23 +325,46 @@ define( function() {
           setAnswer: function( question, value ) {
             var promiseList = [];
             if( 'response' == this.parentModel.getSubjectFromState() ) {
-              var patchData = {};
-              if( ['dkna', 'refuse'].includes( value ) ) {
-                patchData[value] = self.data[question.id][value];
-              } else if( 'boolean' == question.type ) {
-                patchData.value_boolean = self.data[question.id][value ? 'yes' : 'no'] ? value : null;
-              }
+              var identifier = 'response_id=' + $state.params.identifier + ';question_id=' + question.id;
 
-              promiseList.push(
-                CnHttpFactory.instance( {
-                  path: 'answer/response_id=' + $state.params.identifier + ';question_id=' + question.id,
-                  data: patchData,
-                  onError: function( response ) {
-                    self.data[question.id] = angular.copy( self.backupData[question.id] );
-                    CnModalMessageFactory.httpError( response );
-                  }
-                } ).patch()
-              );
+              if( ['dkna', 'refuse'].includes( value ) || 'boolean' == question.type ) {
+                var patchData = {};
+                if( ['dkna', 'refuse'].includes( value ) ) {
+                  patchData[value] = self.data[question.id][value];
+                } else if( 'boolean' == question.type ) {
+                  patchData.value_boolean = self.data[question.id][value ? 'yes' : 'no'] ? value : null;
+                }
+
+                promiseList.push(
+                  CnHttpFactory.instance( {
+                    path: ['answer', identifier].join( '/' ),
+                    data: patchData,
+                    onError: function( response ) {
+                      self.data[question.id] = angular.copy( self.backupData[question.id] );
+                      CnModalMessageFactory.httpError( response );
+                    }
+                  } ).patch()
+                );
+              } else if( 'list' == question.type ) {
+                promiseList.push(
+                  self.data[question.id][value.id] ?
+                  CnHttpFactory.instance( {
+                    path: ['answer', identifier, 'question_option'].join( '/' ),
+                    data: value.id,
+                    onError: function( response ) {
+                      self.data[question.id] = angular.copy( self.backupData[question.id] );
+                      CnModalMessageFactory.httpError( response );
+                    }
+                  } ).post() :
+                  CnHttpFactory.instance( {
+                    path: ['answer', identifier, 'question_option', value.id].join( '/' ),
+                    onError: function( response ) {
+                      self.data[question.id] = angular.copy( self.backupData[question.id] );
+                      CnModalMessageFactory.httpError( response );
+                    }
+                  } ).delete()
+                );
+              }
             }
 
             $q.all( promiseList ).then( function() {
@@ -406,11 +436,11 @@ define( function() {
 
           proceed: function() {
             // proceed to the response's next valid page
-            $state.go(
-              'page.render',
-              { identifier: this.parentModel.viewModel.record.next_page_id },
-              { reload: true }
-            );
+            CnHttpFactory.instance( {
+              path: 'response/' + $state.params.identifier + '?action=proceed'
+            } ).patch().then( function() {
+              $state.reload();
+            } );
           }
         } );
       }

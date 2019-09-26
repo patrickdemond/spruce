@@ -26,6 +26,8 @@ class query extends \cenozo\service\query
       $join_mod->where( 'question.id', '=', 'answer.question_id', false );
       $join_mod->where( 'answer.response_id', '=', $response_id );
       $this->modifier->join_modifier( 'answer', $join_mod, 'left' );
+      $this->modifier->left_join( 'answer_has_question_option', 'answer.id', 'answer_has_question_option.answer_id' );
+      $this->modifier->group( 'question.id' );
 
       $this->select->add_table_column( 'answer', 'dkna', NULL, true, 'boolean' );
       $this->select->add_table_column( 'answer', 'refuse', NULL, true, 'boolean' );
@@ -37,6 +39,12 @@ class query extends \cenozo\service\query
           'WHEN "text" THEN value_text '.
         'END',
         'value',
+        false
+      );
+
+      $this->select->add_column(
+        'GROUP_CONCAT( answer_has_question_option.question_option_id )',
+        'question_option_list',
         false
       );
     }

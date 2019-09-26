@@ -24,7 +24,7 @@ SOURCE requisite.sql
 SOURCE response.sql
 SOURCE response_attribute.sql
 SOURCE answer.sql
-SOURCE answer_option.sql
+SOURCE answer_has_question_option.sql
 
 SOURCE update_version_number.sql
 

@@ -31,6 +31,19 @@ class response extends \cenozo\database\record
   }
 
   /**
+   * Moves the response to the next valid page
+   * 
+   * TODO: page restriction logic still needs to be applied here
+   * @access public
+   */
+   public function move_to_next_page()
+   {
+     $db_next_page = $this->get_page()->get_next_page();
+     $this->page_id = is_null( $db_next_page ) ? NULL : $db_next_page->id;
+     $this->save();
+   }
+
+  /**
    * Creates a unique token to be used for identifying a response
    * 
    * @access private
@@ -56,5 +69,4 @@ class response extends \cenozo\database\record
     // if we get here then something is wrong
     if( !$created ) throw lib::create( 'exception\runtime', 'Unable to create unique response token.', __METHOD__ );
   }
-
 }
