@@ -33,6 +33,8 @@ INSERT INTO service ( subject, method, resource, restricted ) VALUES
 ( 'language', 'GET', 1, 0 ),
 ( 'overview', 'GET', 0, 0 ),
 ( 'overview', 'GET', 1, 0 ),
+( 'participant', 'GET', 0, 1 ),
+( 'participant', 'GET', 1, 1 ),
 ( 'report', 'DELETE', 1, 1 ),
 ( 'report', 'GET', 0, 1 ),
 ( 'report', 'GET', 1, 1 ),

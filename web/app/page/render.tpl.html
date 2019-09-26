@@ -1,4 +1,4 @@
-<cn-qnaire-navigator></cn-qnaire-navigator>
+<cn-qnaire-navigator ng-if="'page' == model.getSubjectFromState()"></cn-qnaire-navigator>
 <div class="utility-view rounded">
   <div class="container-fluid bg-primary rounded-top">
     <h4>{{ model.viewModel.record.name ? model.viewModel.record.name : 'Loading...' }}</h4>
@@ -107,7 +107,7 @@
       </div>
     </div>
     <div class="form-footer text-right rounded-bottom bg-info">
-      <div class="btn-group pull-left">
+      <div ng-if="'page' == model.getSubjectFromState()" class="btn-group pull-left">
         <button type="button"
                 ng-disabled="null == model.viewModel.record.previous_page_id"
                 ng-click="model.renderModel.renderPreviousPage()"
@@ -123,9 +123,17 @@
       </div>
       <div class="btn-group">
         <button type="button"
+                ng-if="'page' == model.getSubjectFromState()"
                 ng-click="model.renderModel.viewPage()"
                 class="btn btn-default">
           View Page
+        </button>
+        <button type="button"
+                ng-if="'response' == model.getSubjectFromState()"
+                ng-disabled="!model.renderModel.pageComplete"
+                ng-click="model.renderModel.proceed()"
+                class="btn btn-default">
+          Proceed
         </button>
       </div>
     </div>

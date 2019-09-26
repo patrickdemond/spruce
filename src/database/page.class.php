@@ -22,6 +22,20 @@ class page extends \cenozo\database\has_rank
   protected static $rank_parent = 'module';
 
   /**
+   * Override parent method
+   */
+  public static function get_record_from_identifier( $identifier )
+  {
+    if( 1 == preg_match( '/^response=([0-9]+)/', $identifier, $parts ) )
+    {
+      // return the current page for the provided response
+      $db_response = lib::create( 'database\response', $parts[1] );
+      return lib::create( 'database\page', $db_response->page_id );
+    }
+    else return parent::get_record_from_identifier( $identifier );
+  }
+
+  /**
    * TODO: document
    */
   public function get_previous_page()

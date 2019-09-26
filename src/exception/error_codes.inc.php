@@ -44,6 +44,8 @@ define( 'SYSTEM_LINDEN_BASE_ERRNO',     730000 );
 /**
  * "runtime" error codes
  */
+define( 'RUNTIME__LINDEN_DATABASE_RESPONSE__GENERATE_TOKEN__ERRNO',
+        RUNTIME_LINDEN_BASE_ERRNO + 1 );
 
 /**
  * "system" error codes

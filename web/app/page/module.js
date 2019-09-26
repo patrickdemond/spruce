@@ -127,14 +127,14 @@ define( function() {
           $document.unbind( 'keydown.render' );
           $document.bind( 'keydown.render', function( event ) {
             // only send keydown events when on the render page and the key is a numpad number
-            if( 'render' == $scope.model.getActionFromState() && 96 <= event.which && event.which <= 105 ) {
+            if( ['render','run'].includes( $scope.model.getActionFromState() ) && 96 <= event.which && event.which <= 105 ) {
               $scope.model.renderModel.onKeydown( event.which - 96 );
               $scope.$apply();
             }
           } );
 
           $q.all( [
-            $scope.model.viewModel.onView(),
+            $scope.model.viewModel.onView( true ),
             $scope.model.renderModel.onLoad()
           ] ).then( function() {
             $scope.isComplete = true;
@@ -179,8 +179,8 @@ define( function() {
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnPageRenderFactory', [
-    'CnHttpFactory', '$state', '$document', '$transitions',
-    function( CnHttpFactory, $state, $document, $transitions ) {
+    'CnHttpFactory', 'CnModalMessageFactory', '$q', '$state', '$document', '$transitions',
+    function( CnHttpFactory, CnModalMessageFactory, $q, $state, $document, $transitions ) {
       var object = function( parentModel ) {
         var self = this;
 
@@ -195,11 +195,30 @@ define( function() {
           }
         }
 
+        function isPageComplete() {
+          for( var questionId in self.data ) {
+            var questionComplete = false;
+            for( var property in self.data[questionId] ) {
+              if( self.data[questionId][property] ) {
+                questionComplete = true;
+                break;
+              }
+            }
+            if( !questionComplete ) {
+              return false;
+            }
+          }
+
+          return true;
+        }
+
         angular.extend( this, {
           parentModel: parentModel,
           questionList: [],
           data: {},
+          backupData: {},
           keyQuestionIndex: null,
+          pageComplete: false,
           onLoad: function() {
             return CnHttpFactory.instance( {
               path: this.parentModel.getServiceResourcePath() + '/question'
@@ -207,10 +226,15 @@ define( function() {
               self.questionList = response.data;
               self.questionList.forEach( function( question, index ) {
                 // all questions may have no answer
-                self.data[question.id] = { dkna: false, refuse: false };
+                self.data[question.id] = { dkna: question.dkna, refuse: question.refuse };
 
                 if( 'boolean' == question.type ) {
-                  angular.extend( self.data[question.id], { yes: false, no: false } );
+                  angular.extend( self.data[question.id], {
+                    yes: 1 === parseInt( question.value ),
+                    no: 0 === parseInt( question.value )
+                  } );
+                } else if( ['number', 'string', 'text'].includes( question.type ) ) {
+                  self.data[question.id].value = question.value;
                 } else if( 'list' == question.type ) {
                   CnHttpFactory.instance( {
                     path: ['question', question.id, 'question_option' ].join( '/' ),
@@ -234,6 +258,9 @@ define( function() {
                 // make sure we have the first non-comment question set as the first key question
                 if( null == self.keyQuestionIndex && 'comment' != question.type ) self.keyQuestionIndex = index;
               } );
+
+              self.backupData = angular.copy( self.data );
+              self.pageComplete = isPageComplete();
             } );
           },
 
@@ -289,39 +316,68 @@ define( function() {
           },
 
           setAnswer: function( question, value ) {
-            if( 'dkna' == value || 'refuse' == value ) {
-              if( self.data[question.id][value] ) setExclusiveAnswer( question.id, value );
-            } else {
-              // handle each question type
-              if( 'boolean' == question.type ) {
-                // unselect all other values
-                for( var property in self.data[question.id] ) {
-                  if( self.data[question.id].hasOwnProperty( property ) ) {
-                    if( ( value ? 'yes' : 'no' ) != property ) self.data[question.id][property] = false;
-                  }
-                }
-              } else if( 'list' == question.type ) {
-                // unselect certain values if we're checking this option
-                if( self.data[question.id][value.id] ) {
-                  if( value.exclusive ) {
-                    setExclusiveAnswer( question.id, value.id );
-                  } else {
-                    // unselect all no-answer and exclusive values
-                    self.data[question.id].dkna = false;
-                    self.data[question.id].refuse = false;
-                    question.optionList.filter( option => option.exclusive ).forEach( function( option ) {
-                      self.data[question.id][option.id] = false;
-                    } );
-                  }
-                }
+            var promiseList = [];
+            if( 'response' == this.parentModel.getSubjectFromState() ) {
+              var patchData = {};
+              if( ['dkna', 'refuse'].includes( value ) ) {
+                patchData[value] = self.data[question.id][value];
+              } else if( 'boolean' == question.type ) {
+                patchData.value_boolean = self.data[question.id][value ? 'yes' : 'no'] ? value : null;
+              }
 
-                // handle the special circumstance when clicking an option with an extra added input
-                if( null != value.extra ) {
-                  if( self.data[question.id][value.id] ) document.getElementById( 'other' + value.id ).focus();
-                  else self.data[question.id]['other' + value.id] = null;
+              promiseList.push(
+                CnHttpFactory.instance( {
+                  path: 'answer/response_id=' + $state.params.identifier + ';question_id=' + question.id,
+                  data: patchData,
+                  onError: function( response ) {
+                    self.data[question.id] = angular.copy( self.backupData[question.id] );
+                    CnModalMessageFactory.httpError( response );
+                  }
+                } ).patch()
+              );
+            }
+
+            $q.all( promiseList ).then( function() {
+              if( 'dkna' == value || 'refuse' == value ) {
+                if( self.data[question.id][value] ) setExclusiveAnswer( question.id, value );
+              } else {
+                // handle each question type
+                if( 'boolean' == question.type ) {
+                  // unselect all other values
+                  for( var property in self.data[question.id] ) {
+                    if( self.data[question.id].hasOwnProperty( property ) ) {
+                      if( ( value ? 'yes' : 'no' ) != property ) self.data[question.id][property] = false;
+                    }
+                  }
+                } else if( 'list' == question.type ) {
+                  // unselect certain values if we're checking this option
+                  if( self.data[question.id][value.id] ) {
+                    if( value.exclusive ) {
+                      setExclusiveAnswer( question.id, value.id );
+                    } else {
+                      // unselect all no-answer and exclusive values
+                      self.data[question.id].dkna = false;
+                      self.data[question.id].refuse = false;
+                      question.optionList.filter( option => option.exclusive ).forEach( function( option ) {
+                        self.data[question.id][option.id] = false;
+                      } );
+                    }
+                  }
+
+                  // handle the special circumstance when clicking an option with an extra added input
+                  if( null != value.extra ) {
+                    if( self.data[question.id][value.id] ) document.getElementById( 'other' + value.id ).focus();
+                    else self.data[question.id]['other' + value.id] = null;
+                  }
                 }
               }
-            }
+
+              // change is successful so overwrite the backup
+              self.backupData[question.id] = angular.copy( self.data[question.id] );
+
+              // re-determine whether the page is complete
+              self.pageComplete = isPageComplete();
+            } );
           },
 
           viewPage: function() {
@@ -341,6 +397,15 @@ define( function() {
           },
 
           renderNextPage: function() {
+            $state.go(
+              'page.render',
+              { identifier: this.parentModel.viewModel.record.next_page_id },
+              { reload: true }
+            );
+          },
+
+          proceed: function() {
+            // proceed to the response's next valid page
             $state.go(
               'page.render',
               { identifier: this.parentModel.viewModel.record.next_page_id },
@@ -385,7 +450,9 @@ define( function() {
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnPageModelFactory', [
     'CnBaseModelFactory', 'CnPageAddFactory', 'CnPageListFactory', 'CnPageRenderFactory', 'CnPageViewFactory',
-    function( CnBaseModelFactory, CnPageAddFactory, CnPageListFactory, CnPageRenderFactory, CnPageViewFactory ) {
+    'CnHttpFactory', '$state',
+    function( CnBaseModelFactory, CnPageAddFactory, CnPageListFactory, CnPageRenderFactory, CnPageViewFactory,
+              CnHttpFactory, $state ) {
       var object = function( root ) {
         var self = this;
         CnBaseModelFactory.construct( this, module );
@@ -393,6 +460,22 @@ define( function() {
         this.listModel = CnPageListFactory.instance( this );
         this.renderModel = CnPageRenderFactory.instance( this );
         this.viewModel = CnPageViewFactory.instance( this, root );
+
+        this.getServiceResourcePath = function( resource ) {
+          // when we're looking at a response use its identifier to figure out which page to load
+          if( 'response' == this.getSubjectFromState() ) {
+            var identifier = angular.isUndefined( resource ) ? $state.params.identifier : resource;
+            return 'page/response=' + identifier;
+          }
+
+          return this.$$getServiceResourcePath( resource );
+        };
+
+        this.getServiceCollectionPath = function( ignoreParent ) {
+          var path = this.$$getServiceCollectionPath( ignoreParent );
+          if( 'response' == this.getSubjectFromState() ) path = path.replace( 'response/', 'module/response=' );
+          return path;
+        };
       };
 
       return {

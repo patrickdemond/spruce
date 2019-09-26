@@ -24,6 +24,7 @@ class ui extends \cenozo\ui\ui
     $module = $this->get_module( 'qnaire' );
     if( !is_null( $module ) )
     {
+      $module->add_child( 'response' );
       $module->add_child( 'attribute' );
       $module->add_child( 'module' );
     }
@@ -56,6 +57,12 @@ class ui extends \cenozo\ui\ui
       $module->add_child( 'requisite' );
       $module->add_child( 'requisite_group' );
     }
+
+    $module = $this->get_module( 'response' );
+    if( !is_null( $module ) )
+    {
+      $module->add_action( 'run', '/{identifier}' );
+    }
   }
 
   /**
@@ -66,5 +73,6 @@ class ui extends \cenozo\ui\ui
     parent::build_listitem_list();
 
     $this->add_listitem( 'Questionnaires', 'qnaire' );
+    $this->remove_listitem( 'Participants' );
   }
 }
