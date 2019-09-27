@@ -48,12 +48,28 @@
                        uib-btn-checkbox>
                 </label>
               </div>
-              <div ng-if="null != option.extra" class="col-xs-9 col-slim">
-                <input type="string"
-                       id="other{{ option.id }}"
+              <div ng-if="null != option.extra" ng-switch="option.extra" class="col-xs-9 col-slim">
+                <input type="number"
+                       id="value_number"
                        class="form-control rounded-bottom-left rounded-bottom-right"
-                       ng-model="model.renderModel.data[question.id]['other'+option.id]"
+                       ng-switch-when="number"
+                       ng-model="model.renderModel.data[question.id].value_number"
+                       cn-change="model.renderModel.setAnswer( question, 'value_number' )"
                        ng-disabled="!model.renderModel.data[question.id][option.id]"></input>
+                <input type="string"
+                       id="value_string"
+                       class="form-control rounded-bottom-left rounded-bottom-right"
+                       ng-switch-when="string"
+                       ng-model="model.renderModel.data[question.id].value_string"
+                       cn-change="model.renderModel.setAnswer( question, 'value_string' )"
+                       ng-disabled="!model.renderModel.data[question.id][option.id]"></input>
+                <textarea id="value_text"
+                          cn-elastic
+                          class="form-control"
+                          ng-switch-when="text"
+                          ng-model="model.renderModel.data[question.id].value_text"
+                          cn-change="model.renderModel.setAnswer( question, 'value_text' )"
+                          ng-disabled="!model.renderModel.data[question.id][option.id]"></textarea>
               </div>
             </div>
             <input ng-switch-when="number"

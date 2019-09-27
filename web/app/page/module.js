@@ -253,7 +253,9 @@ define( function() {
                     question.optionList = response.data;
                     question.optionList.forEach( function( option ) {
                       self.data[question.id][option.id] = question.question_option_list.includes( option.id );
-                      if( null != option.extra ) self.data[question.id]['other' + option.id] = null;
+                      if( null != option.extra ) {
+                        self.data[question.id]['value_' + option.extra] = question['value_' + option.extra];
+                      }
                     } );
                   } ) );
                 } else if( 'comment' != question.type ) {
@@ -346,30 +348,44 @@ define( function() {
                   } ).patch()
                 );
               } else if( 'list' == question.type ) {
-                promiseList.push(
-                  self.data[question.id][value.id] ?
-                  CnHttpFactory.instance( {
-                    path: ['answer', identifier, 'question_option'].join( '/' ),
-                    data: value.id,
-                    onError: function( response ) {
-                      self.data[question.id] = angular.copy( self.backupData[question.id] );
-                      CnModalMessageFactory.httpError( response );
-                    }
-                  } ).post() :
-                  CnHttpFactory.instance( {
-                    path: ['answer', identifier, 'question_option', value.id].join( '/' ),
-                    onError: function( response ) {
-                      self.data[question.id] = angular.copy( self.backupData[question.id] );
-                      CnModalMessageFactory.httpError( response );
-                    }
-                  } ).delete()
-                );
+                if( angular.isString( value ) ) {
+                  // we're setting an extra option
+                  var patchData = {};
+                  patchData[value] = self.data[question.id][value];
+                  promiseList.push(
+                    CnHttpFactory.instance( {
+                      path: ['answer', identifier].join( '/' ),
+                      data: patchData
+                    } ).patch()
+                  );
+                } else {
+                  // we're adding or removing an option
+                  promiseList.push(
+                    self.data[question.id][value.id] ?
+                    CnHttpFactory.instance( {
+                      path: ['answer', identifier, 'question_option'].join( '/' ),
+                      data: value.id,
+                      onError: function( response ) {
+                        self.data[question.id] = angular.copy( self.backupData[question.id] );
+                        CnModalMessageFactory.httpError( response );
+                      }
+                    } ).post() :
+                    CnHttpFactory.instance( {
+                      path: ['answer', identifier, 'question_option', value.id].join( '/' ),
+                      onError: function( response ) {
+                        self.data[question.id] = angular.copy( self.backupData[question.id] );
+                        CnModalMessageFactory.httpError( response );
+                      }
+                    } ).delete()
+                  );
+                }
               }
             }
 
             $q.all( promiseList ).then( function() {
               if( 'dkna' == value || 'refuse' == value ) {
                 if( self.data[question.id][value] ) setExclusiveAnswer( question.id, value );
+                angular.element( 'textarea[cn-elastic]' ).trigger( 'elastic' );
               } else {
                 // handle each question type
                 if( 'boolean' == question.type ) {
@@ -396,8 +412,8 @@ define( function() {
 
                   // handle the special circumstance when clicking an option with an extra added input
                   if( null != value.extra ) {
-                    if( self.data[question.id][value.id] ) document.getElementById( 'other' + value.id ).focus();
-                    else self.data[question.id]['other' + value.id] = null;
+                    if( self.data[question.id][value.id] ) document.getElementById( 'value_' + value.extra ).focus();
+                    else self.data[question.id]['value_' + value.extra] = null;
                   }
                 }
               }

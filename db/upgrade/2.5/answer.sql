@@ -36,11 +36,18 @@ CREATE DEFINER = CURRENT_USER TRIGGER answer_BEFORE_UPDATE BEFORE UPDATE ON answ
 BEGIN
   IF ( NEW.dkna || NEW.refuse ) THEN
     IF( OLD.dkna != NEW.dkna || OLD.refuse != NEW.refuse ) THEN
+      -- unset any value in the answer
       SET NEW.value_boolean = NULL, NEW.value_number = NULL, NEW.value_string = NULL, NEW.value_text = NULL;
+      -- dkna and refuse are mutually exclusive
+      IF( OLD.dkna != NEW.dkna ) THEN SET NEW.refuse = false; ELSE SET NEW.dkna = false; END IF;
+      -- unset any question options
+      DELETE FROM answer_has_question_option WHERE answer_id = NEW.id;
     ELSE
+      -- the value has changed
       SET NEW.dkna = 0, NEW.refuse = 0;
     END IF;
   END IF;
 END$$
+
 
 DELIMITER ;

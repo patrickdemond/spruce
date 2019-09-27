@@ -19,3 +19,15 @@ CREATE TABLE IF NOT EXISTS answer_has_question_option (
     ON DELETE NO ACTION
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
+
+
+DELIMITER $$
+
+DROP TRIGGER IF EXISTS answer_has_question_option_AFTER_INSERT $$
+CREATE DEFINER = CURRENT_USER TRIGGER answer_has_question_option_AFTER_INSERT AFTER INSERT ON answer_has_question_option FOR EACH ROW
+BEGIN
+  -- make sure to remove the dkna and refuse bits when adding any option
+  UPDATE answer SET dkna = false, refuse = false WHERE id = NEW.answer_id;
+END$$
+
+DELIMITER ;

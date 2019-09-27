@@ -31,6 +31,10 @@ class query extends \cenozo\service\query
 
       $this->select->add_table_column( 'answer', 'dkna', NULL, true, 'boolean' );
       $this->select->add_table_column( 'answer', 'refuse', NULL, true, 'boolean' );
+      $this->select->add_table_column( 'answer', 'value_boolean' );
+      $this->select->add_table_column( 'answer', 'value_number' );
+      $this->select->add_table_column( 'answer', 'value_string' );
+      $this->select->add_table_column( 'answer', 'value_text' );
       $this->select->add_column(
         'CASE type '.
           'WHEN "boolean" THEN value_boolean '.

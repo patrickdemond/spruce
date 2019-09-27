@@ -28,6 +28,10 @@ define( function() {
       exclusive: {
         title: 'Exclusive',
         type: 'boolean'
+      },
+      extra: {
+        title: 'Extra',
+        type: 'string'
       }
     },
     defaultOrder: {
@@ -52,6 +56,10 @@ define( function() {
     exclusive: {
       title: 'Exclusive',
       type: 'boolean'
+    },
+    extra: {
+      title: 'Extra',
+      type: 'enum'
     }
   } );
 

@@ -65,7 +65,8 @@ AND code NOT IN( "DK_NA", "REFUSED" )
 ORDER BY qid, sortorder;
 
 INSERT IGNORE INTO question_option( question_id, rank, name, value, extra )
-SELECT question.id, question_order, question, title, IF( question = "Other" OR title LIKE "%\_OT\_%", "string", NULL )
+SELECT question.id, question_order, question, title,
+       IF( question = "Other" OR ( title LIKE "%\_OT\_%" AND title NOT LIKE 'CCT_%' ), "string", NULL )
 FROM patrick_linden.question
 JOIN patrick_limesurvey.questions subquestions ON question.qid = subquestions.parent_qid
 WHERE subquestions.language = "en"
