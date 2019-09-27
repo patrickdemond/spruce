@@ -200,13 +200,13 @@ define( function() {
             var questionComplete = false;
             for( var property in self.data[questionId] ) {
               if( self.data[questionId][property] ) {
-                questionComplete = true;
+                var extra = self.questionList.findByProperty( 'id', questionId ).optionList.findByProperty( 'id', property ).extra;
+                questionComplete = null == extra || self.data[questionId]['value_'+extra];
                 break;
               }
             }
-            if( !questionComplete ) {
-              return false;
-            }
+
+            if( !questionComplete ) return false;
           }
 
           return true;
@@ -224,8 +224,14 @@ define( function() {
               path: this.parentModel.getServiceResourcePath() + '/question'
             } ).query().then( function( response ) {
               var promiseList = [];
+              angular.extend( self, {
+                questionList: response.data,
+                data: {},
+                backupData: {},
+                keyQuestionIndex: null,
+                pageComplete: false
+              } );
 
-              self.questionList = response.data;
               self.questionList.forEach( function( question, index ) {
                 // all questions may have no answer
                 self.data[question.id] = { dkna: question.dkna, refuse: question.refuse };
