@@ -16,6 +16,29 @@ class answer extends \cenozo\database\record
   /**
    * Override parent method
    */
+  public static function get_unique_record( $column, $value )
+  {
+    $record = NULL;
+
+    // convert token column to a response_id
+    if( is_array( $column ) && in_array( 'token', $column ) )
+    {
+      $index = array_search( 'token', $column );
+      if( false !== $index )
+      {
+        $response_class_name = lib::get_class_name( 'database\response' );
+        $db_response = $response_class_name::get_unique_record( 'token', $value[$index] );
+        $column[$index] = 'response_id';
+        $value[$index] = is_null( $db_response ) ? 0 : $db_response->id;
+      }
+    }
+
+    return parent::get_unique_record( $column, $value );
+  }
+
+  /**
+   * Override parent method
+   */
   public function add_question_option( $ids )
   {
     // deal with exclusive answers

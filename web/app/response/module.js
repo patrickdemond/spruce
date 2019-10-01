@@ -97,7 +97,7 @@ define( [ 'page' ].reduce( function( list, name ) {
   module.addExtraOperation( 'view', {
     title: 'Launch',
     operation: function( $state, model ) {
-      $state.go( 'response.run', { identifier: model.viewModel.record.getIdentifier() } );
+      $state.go( 'response.run', { token: model.viewModel.record.token } );
     }
   } );
 

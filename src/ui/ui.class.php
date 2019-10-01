@@ -61,7 +61,7 @@ class ui extends \cenozo\ui\ui
     $module = $this->get_module( 'response' );
     if( !is_null( $module ) )
     {
-      $module->add_action( 'run', '/{identifier}' );
+      $module->add_action( 'run', '/{token}' );
     }
   }
 

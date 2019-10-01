@@ -16,13 +16,14 @@ class get extends \cenozo\service\get
   public function finish()
   {
     $answer_class_name = lib::get_class_name( 'database\answer' );
+    $response_class_name = lib::get_class_name( 'database\response' );
 
     parent::finish();
 
     // if we're asking for the page based on a response then make sure that all answers have been created
-    if( 1 == preg_match( '/^response=([0-9]+)/', $this->get_resource_value( 0 ), $parts ) )
+    if( 1 == preg_match( '/^token=([0-9a-f-]+)/', $this->get_resource_value( 0 ), $parts ) )
     {
-      $db_response = lib::create( 'database\response', $parts[1] );
+      $db_response = $response_class_name::get_unique_record( 'token', $parts[1] );
       $db_page = $db_response->get_page();
 
       $question_sel = lib::create( 'database\select' );

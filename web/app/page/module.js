@@ -341,7 +341,7 @@ define( function() {
 
             // first communicate with the server (if we're working with a response)
             if( 'response' == this.parentModel.getSubjectFromState() ) {
-              var identifier = 'response_id=' + $state.params.identifier + ';question_id=' + question.id;
+              var identifier = 'token=' + $state.params.token + ';question_id=' + question.id;
 
               if( 'option' == type ) {
                 // we're adding or removing an option
@@ -462,7 +462,7 @@ define( function() {
           proceed: function() {
             // proceed to the response's next valid page
             CnHttpFactory.instance( {
-              path: 'response/' + $state.params.identifier + '?action=proceed'
+              path: 'response/token=' + $state.params.token + '?action=proceed'
             } ).patch().then( function() {
               $state.reload();
             } );
@@ -517,18 +517,14 @@ define( function() {
         this.viewModel = CnPageViewFactory.instance( this, root );
 
         this.getServiceResourcePath = function( resource ) {
-          // when we're looking at a response use its identifier to figure out which page to load
-          if( 'response' == this.getSubjectFromState() ) {
-            var identifier = angular.isUndefined( resource ) ? $state.params.identifier : resource;
-            return 'page/response=' + identifier;
-          }
-
-          return this.$$getServiceResourcePath( resource );
+          // when we're looking at a response use its token to figure out which page to load
+          return 'response' == this.getSubjectFromState() ?
+            'page/token=' + $state.params.token : this.$$getServiceResourcePath( resource );
         };
 
         this.getServiceCollectionPath = function( ignoreParent ) {
           var path = this.$$getServiceCollectionPath( ignoreParent );
-          if( 'response' == this.getSubjectFromState() ) path = path.replace( 'response/', 'module/response=' );
+          if( 'response' == this.getSubjectFromState() ) path = path.replace( 'response/undefined', 'module/token=' + $state.params.token );
           return path;
         };
       };
