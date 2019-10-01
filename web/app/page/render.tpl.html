@@ -19,7 +19,7 @@
               <label class="btn btn-default full-width"
                      style="font-style: 'italic'; font-weight: 'normal'"
                      ng-model="model.renderModel.data[question.id].yes"
-                     ng-click="model.renderModel.setAnswer( question, true )"
+                     ng-click="model.renderModel.setAnswer( 'boolean', question, 'yes' )"
                      uib-btn-checkbox>
                 <i class="glyphicon"
                    ng-class="model.renderModel.data[question.id].yes ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
@@ -28,7 +28,7 @@
               <label class="btn btn-default full-width"
                      style="font-style: 'italic'; font-weight: 'normal'"
                      ng-model="model.renderModel.data[question.id].no"
-                     ng-click="model.renderModel.setAnswer( question, false )"
+                     ng-click="model.renderModel.setAnswer( 'boolean', question, 'no' )"
                      uib-btn-checkbox>
                 <i class="glyphicon"
                    ng-class="model.renderModel.data[question.id].no ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
@@ -41,7 +41,7 @@
                        ng-class="{ 'rounded-bottom-left rounded-top-left': null != option.extra }"
                        ng-model="model.renderModel.data[question.id][option.id]"
                        ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal', 'font-weight': 'normal' }"
-                       ng-click="model.renderModel.setAnswer( question, option )"
+                       ng-click="model.renderModel.setAnswer( 'option', question, option )"
                        ng-bind-html="'<i class=\'glyphicon ' + (
                          model.renderModel.data[question.id][option.id] ? 'glyphicon-check' : 'glyphicon-unchecked'
                        ) + '\'></i> ' + option.name"
@@ -54,46 +54,46 @@
                        class="form-control rounded-bottom-left rounded-bottom-right"
                        ng-switch-when="number"
                        ng-model="model.renderModel.data[question.id].value_number"
-                       cn-change="model.renderModel.setAnswer( question, 'value_number' )"
+                       cn-change="model.renderModel.setAnswer( 'extra', question, option )"
                        ng-disabled="!model.renderModel.data[question.id][option.id]"></input>
                 <input type="string"
                        id="value_string"
                        class="form-control rounded-bottom-left rounded-bottom-right"
                        ng-switch-when="string"
                        ng-model="model.renderModel.data[question.id].value_string"
-                       cn-change="model.renderModel.setAnswer( question, 'value_string' )"
+                       cn-change="model.renderModel.setAnswer( 'extra', question, option )"
                        ng-disabled="!model.renderModel.data[question.id][option.id]"></input>
-                <textarea id="value_text"
-                          cn-elastic
+                <textarea cn-elastic
+                          id="value_text"
                           class="form-control"
                           ng-switch-when="text"
                           ng-model="model.renderModel.data[question.id].value_text"
-                          cn-change="model.renderModel.setAnswer( question, 'value_text' )"
+                          cn-change="model.renderModel.setAnswer( 'extra', question, option )"
                           ng-disabled="!model.renderModel.data[question.id][option.id]"></textarea>
               </div>
             </div>
             <input ng-switch-when="number"
-                   ng-attr-id="question{{ question.id }}"
                    class="form-control"
                    type="number"
                    ng-model="model.renderModel.data[question.id].value"
+                   cn-change="model.renderModel.setAnswer( 'value', question )"
                    ng-disabled="model.renderModel.data[question.id].dkna || model.renderModel.data[question.id].refuse"
                    cn-autofocus
                    autocomplete="off">
             </input>
             <input ng-switch-when="string"
-                   ng-attr-id="question{{ question.id }}"
                    class="form-control"
                    type="text"
                    ng-model="model.renderModel.data[question.id].value"
+                   cn-change="model.renderModel.setAnswer( 'value', question )"
                    ng-disabled="model.renderModel.data[question.id].dkna || model.renderModel.data[question.id].refuse"
                    cn-autofocus
                    autocomplete="off">
             </input>
             <textarea ng-switch-when="text"
                       cn-elastic
-                      ng-attr-id="question{{ question.id }}"
                       ng-model="model.renderModel.data[question.id].value"
+                      cn-change="model.renderModel.setAnswer( 'value', question )"
                       ng-disabled="model.renderModel.data[question.id].dkna || model.renderModel.data[question.id].refuse"
                       cn-autofocus
                       class="form-control">
@@ -102,7 +102,7 @@
               <label class="btn btn-default col-xs-6"
                      style="font-style: italic; font-weight: normal"
                      ng-model="model.renderModel.data[question.id].dkna"
-                     ng-click="model.renderModel.setAnswer( question, 'dkna' )"
+                     ng-click="model.renderModel.setAnswer( 'dkna', question )"
                      uib-btn-checkbox>
                 <i class="glyphicon"
                    ng-class="model.renderModel.data[question.id].dkna ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
@@ -111,7 +111,7 @@
               <label class="btn btn-default col-xs-6"
                      style="font-style: italic; font-weight: normal"
                      ng-model="model.renderModel.data[question.id].refuse"
-                     ng-click="model.renderModel.setAnswer( question, 'refuse' )"
+                     ng-click="model.renderModel.setAnswer( 'refuse', question )"
                      uib-btn-checkbox>
                 <i class="glyphicon"
                    ng-class="model.renderModel.data[question.id].refuse ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>

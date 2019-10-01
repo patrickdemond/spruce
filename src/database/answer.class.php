@@ -82,6 +82,6 @@ class answer extends \cenozo\database\record
       }
     }
 
-    parent::add_question_option( $ids );
+    parent::remove_question_option( $ids );
   }
 }

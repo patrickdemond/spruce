@@ -200,9 +200,16 @@ define( function() {
             var questionComplete = false;
             for( var property in self.data[questionId] ) {
               if( self.data[questionId][property] ) {
-                var extra = self.questionList.findByProperty( 'id', questionId ).optionList.findByProperty( 'id', property ).extra;
-                questionComplete = null == extra || self.data[questionId]['value_'+extra];
-                break;
+                var question = self.questionList.findByProperty( 'id', questionId );
+                if( angular.isUndefined( question.optionList ) || ['dkna','refuse'].includes( property ) ) {
+                  questionComplete = true;
+                } else {
+                  var extra = question.optionList.findByProperty( 'id', property ).extra;
+                  questionComplete = null == extra || self.data[questionId]['value_'+extra];
+                }
+
+                // no need to keep checking if we know the question is complete
+                if( questionComplete ) break;
               }
             }
 
@@ -287,39 +294,38 @@ define( function() {
 
             if( 'boolean' == question.type ) {
               // 1 is yes, 2 is no, 3 is dkna and 4 is refuse
-              var answer = 1 == key ? true
-                         : 2 == key ? false
+              var answer = 1 == key ? 'yes'
+                         : 2 == key ? 'no'
                          : 3 == key ? 'dkna'
                          : 4 == key ? 'refuse'
                          : null;
 
               if( null != answer ) {
-                var property = angular.isString( answer ) ? answer : answer ? 'yes' : 'no';
-                self.data[question.id][property] = !self.data[question.id][property];
-                self.setAnswer( question, answer );
+                self.data[question.id][answer] = !self.data[question.id][answer];
+                self.setAnswer( 'boolean', question, answer );
               }
             } else if( 'list' == question.type ) {
               // check if the key is within the option list or the 2 dkna/refuse options
               if( key <= question.optionList.length ) {
                 var answer = question.optionList[key-1];
                 self.data[question.id][answer.id] = !self.data[question.id][answer.id];
-                self.setAnswer( question, answer );
+                self.setAnswer( 'list', question, answer );
               } else if( key == question.optionList.length + 1 ) {
                 self.data[question.id].dkna = !self.data[question.id].dkna;
-                self.setAnswer( question, 'dkna' );
+                self.setAnswer( 'dkna', question );
               } else if( key == question.optionList.length + 2 ) {
                 self.data[question.id].refuse = !self.data[question.id].refuse;
-                self.setAnswer( question, 'refuse' );
+                self.setAnswer( 'refuse', question );
               }
             } else {
               // 1 is dkna and 2 is refuse
-              var answer = 1 == key ? 'dkna'
+              var noAnswerType = 1 == key ? 'dkna'
                          : 2 == key ? 'refuse'
                          : null;
 
-              if( null != answer ) {
-                self.data[question.id][answer] = !self.data[question.id][answer];
-                self.setAnswer( question, answer );
+              if( null != noAnswerType ) {
+                self.data[question.id][noAnswerType] = !self.data[question.id][noAnswerType];
+                self.setAnswer( noAnswerType, question );
               }
             }
 
@@ -330,17 +336,44 @@ define( function() {
             } while( 'comment' == self.questionList[self.keyQuestionIndex].type );
           },
 
-          setAnswer: function( question, value ) {
+          setAnswer: function( type, question, option ) {
             var promiseList = [];
+
+            // first communicate with the server (if we're working with a response)
             if( 'response' == this.parentModel.getSubjectFromState() ) {
               var identifier = 'response_id=' + $state.params.identifier + ';question_id=' + question.id;
 
-              if( ['dkna', 'refuse'].includes( value ) || 'boolean' == question.type ) {
+              if( 'option' == type ) {
+                // we're adding or removing an option
+                promiseList.push(
+                  self.data[question.id][option.id] ?
+                  CnHttpFactory.instance( {
+                    path: ['answer', identifier, 'question_option'].join( '/' ),
+                    data: option.id,
+                    onError: function( response ) {
+                      self.data[question.id] = angular.copy( self.backupData[question.id] );
+                      CnModalMessageFactory.httpError( response );
+                    }
+                  } ).post() :
+                  CnHttpFactory.instance( {
+                    path: ['answer', identifier, 'question_option', option.id].join( '/' ),
+                    onError: function( response ) {
+                      self.data[question.id] = angular.copy( self.backupData[question.id] );
+                      CnModalMessageFactory.httpError( response );
+                    }
+                  } ).delete()
+                );
+              } else {
+                // determine the patch data
                 var patchData = {};
-                if( ['dkna', 'refuse'].includes( value ) ) {
-                  patchData[value] = self.data[question.id][value];
-                } else if( 'boolean' == question.type ) {
-                  patchData.value_boolean = self.data[question.id][value ? 'yes' : 'no'] ? value : null;
+                if( 'boolean' == type ) {
+                  patchData.value_boolean = self.data[question.id][option];
+                } else if( 'value' == type ) {
+                  patchData['value_' + question.type] = self.data[question.id].value;
+                } else if( 'extra' == type ) {
+                  patchData['value_' + option.extra] = self.data[question.id]['value_' + option.extra];
+                } else { // must be dkna or refuse
+                  patchData[type] = self.data[question.id][type];
                 }
 
                 promiseList.push(
@@ -353,59 +386,26 @@ define( function() {
                     }
                   } ).patch()
                 );
-              } else if( 'list' == question.type ) {
-                if( angular.isString( value ) ) {
-                  // we're setting an extra option
-                  var patchData = {};
-                  patchData[value] = self.data[question.id][value];
-                  promiseList.push(
-                    CnHttpFactory.instance( {
-                      path: ['answer', identifier].join( '/' ),
-                      data: patchData
-                    } ).patch()
-                  );
-                } else {
-                  // we're adding or removing an option
-                  promiseList.push(
-                    self.data[question.id][value.id] ?
-                    CnHttpFactory.instance( {
-                      path: ['answer', identifier, 'question_option'].join( '/' ),
-                      data: value.id,
-                      onError: function( response ) {
-                        self.data[question.id] = angular.copy( self.backupData[question.id] );
-                        CnModalMessageFactory.httpError( response );
-                      }
-                    } ).post() :
-                    CnHttpFactory.instance( {
-                      path: ['answer', identifier, 'question_option', value.id].join( '/' ),
-                      onError: function( response ) {
-                        self.data[question.id] = angular.copy( self.backupData[question.id] );
-                        CnModalMessageFactory.httpError( response );
-                      }
-                    } ).delete()
-                  );
-                }
               }
             }
 
             $q.all( promiseList ).then( function() {
-              if( 'dkna' == value || 'refuse' == value ) {
-                if( self.data[question.id][value] ) setExclusiveAnswer( question.id, value );
-                angular.element( 'textarea[cn-elastic]' ).trigger( 'elastic' );
+              if( 'dkna' == type || 'refuse' == type ) {
+                if( self.data[question.id][type] ) setExclusiveAnswer( question.id, type );
               } else {
-                // handle each question type
-                if( 'boolean' == question.type ) {
+                // handle each type
+                if( 'boolean' == type ) {
                   // unselect all other values
                   for( var property in self.data[question.id] ) {
                     if( self.data[question.id].hasOwnProperty( property ) ) {
-                      if( ( value ? 'yes' : 'no' ) != property ) self.data[question.id][property] = false;
+                      if( option != property ) self.data[question.id][property] = false;
                     }
                   }
-                } else if( 'list' == question.type ) {
-                  // unselect certain values if we're checking this option
-                  if( self.data[question.id][value.id] ) {
-                    if( value.exclusive ) {
-                      setExclusiveAnswer( question.id, value.id );
+                } else if( 'option' == type ) {
+                  // unselect certain values depending on the chosen option
+                  if( self.data[question.id][option.id] ) {
+                    if( option.exclusive ) {
+                      setExclusiveAnswer( question.id, option.id );
                     } else {
                       // unselect all no-answer and exclusive values
                       self.data[question.id].dkna = false;
@@ -417,12 +417,15 @@ define( function() {
                   }
 
                   // handle the special circumstance when clicking an option with an extra added input
-                  if( null != value.extra ) {
-                    if( self.data[question.id][value.id] ) document.getElementById( 'value_' + value.extra ).focus();
-                    else self.data[question.id]['value_' + value.extra] = null;
+                  if( null != option.extra ) {
+                    if( self.data[question.id][option.id] ) document.getElementById( 'value_' + option.extra ).focus();
+                    else self.data[question.id]['value_' + option.extra] = null;
                   }
                 }
               }
+
+              // resize any elastic text areas in case their data was changed
+              angular.element( 'textarea[cn-elastic]' ).trigger( 'elastic' );
 
               // change is successful so overwrite the backup
               self.backupData[question.id] = angular.copy( self.data[question.id] );
