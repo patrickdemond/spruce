@@ -5,8 +5,8 @@
  * @author Patrick Emond <emondpd@mcmaster.ca>
  */
 
-namespace linden\service\page\question;
-use cenozo\lib, cenozo\log, linden\util;
+namespace spruce\service\page\question;
+use cenozo\lib, cenozo\log, spruce\util;
 
 class query extends \cenozo\service\query
 {

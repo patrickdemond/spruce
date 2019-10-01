@@ -5,8 +5,8 @@
  * @author Patrick Emond <emondpd@mcmaster.ca>
  */
 
-namespace linden\service\response;
-use cenozo\lib, cenozo\log, linden\util;
+namespace spruce\service\response;
+use cenozo\lib, cenozo\log, spruce\util;
 
 class patch extends \cenozo\service\patch
 {

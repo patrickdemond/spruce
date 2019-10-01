@@ -4,7 +4,7 @@ CREATE PROCEDURE upgrade_application_number()
   BEGIN
 
     -- determine the @cenozo database name
-    SET @cenozo = ( SELECT REPLACE( DATABASE(), "linden", "cenozo" ) );
+    SET @cenozo = ( SELECT REPLACE( DATABASE(), "spruce", "cenozo" ) );
     
     SELECT "Upgrading application version number" AS "";
 

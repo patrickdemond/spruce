@@ -5,8 +5,8 @@
  * @author Patrick Emond <emondpd@mcmaster.ca>
  */
 
-namespace linden\service\qnaire;
-use cenozo\lib, cenozo\log, linden\util;
+namespace spruce\service\qnaire;
+use cenozo\lib, cenozo\log, spruce\util;
 
 /**
  * Performs operations which effect how this module is used in a service

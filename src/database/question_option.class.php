@@ -5,8 +5,8 @@
  * @author Patrick Emond <emondpd@mcmaster.ca>
  */
 
-namespace linden\database;
-use cenozo\lib, cenozo\log, linden\util;
+namespace spruce\database;
+use cenozo\lib, cenozo\log, spruce\util;
 
 /**
  * question_option: record

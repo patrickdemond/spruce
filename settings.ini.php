@@ -10,7 +10,7 @@
 global $SETTINGS;
 
 // tagged version
-$SETTINGS['general']['application_name'] = 'linden';
+$SETTINGS['general']['application_name'] = 'spruce';
 $SETTINGS['general']['instance_name'] = $SETTINGS['general']['application_name'];
 $SETTINGS['general']['version'] = '2.5';
 $SETTINGS['general']['build'] = '100e370';

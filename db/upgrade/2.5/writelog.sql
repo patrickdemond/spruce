@@ -4,7 +4,7 @@ DROP PROCEDURE IF EXISTS patch_writelog;
   BEGIN
 
     -- determine the @cenozo database name
-    SET @cenozo = ( SELECT REPLACE( DATABASE(), "linden", "cenozo" ) );
+    SET @cenozo = ( SELECT REPLACE( DATABASE(), "spruce", "cenozo" ) );
 
     SELECT "Creating new writelog table" AS "";
 

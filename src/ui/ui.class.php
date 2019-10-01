@@ -6,8 +6,8 @@
  * @filesource
  */
 
-namespace linden\ui;
-use cenozo\lib, cenozo\log, linden\util;
+namespace spruce\ui;
+use cenozo\lib, cenozo\log, spruce\util;
 
 /**
  * Application extension to ui class

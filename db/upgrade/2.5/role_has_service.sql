@@ -4,7 +4,7 @@ CREATE PROCEDURE patch_role_has_service()
   BEGIN
 
     -- determine the @cenozo database name
-    SET @cenozo = ( SELECT REPLACE( DATABASE(), "linden", "cenozo" ) );
+    SET @cenozo = ( SELECT REPLACE( DATABASE(), "spruce", "cenozo" ) );
     
     SELECT "Creating new role_has_service table" AS "";
 

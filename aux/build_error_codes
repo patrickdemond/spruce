@@ -43,7 +43,7 @@ function exception_block( $lists, $type )
       {
         $output .= sprintf(
           "define( '%s__%s__%s__ERRNO',\n".
-          "        %s_LINDEN_BASE_ERRNO + %d );\n",
+          "        %s_SPRUCE_BASE_ERRNO + %d );\n",
           strtoupper( $type ),
           strtoupper( $class_name ),
           strtoupper( $method_name ),
@@ -101,7 +101,7 @@ foreach( $grep_line_list as $grep_line )
     // make sure a match was found
     if( false === $start || false === $end ) continue;
     $class_name =
-      'linden_'.str_replace( '/', '_', substr( $grep_line, $start, $end - $start ) );
+      'spruce_'.str_replace( '/', '_', substr( $grep_line, $start, $end - $start ) );
 
     // get the method name
     $start_match = 'function ';
@@ -131,13 +131,13 @@ $output = <<<OUTPUT
 /**
  * Error number category defines.
  */
-define( 'ARGUMENT_LINDEN_BASE_ERRNO',   130000 );
-define( 'DATABASE_LINDEN_BASE_ERRNO',   230000 );
-define( 'LDAP_LINDEN_BASE_ERRNO',       330000 );
-define( 'NOTICE_LINDEN_BASE_ERRNO',     430000 );
-define( 'PERMISSION_LINDEN_BASE_ERRNO', 530000 );
-define( 'RUNTIME_LINDEN_BASE_ERRNO',    630000 );
-define( 'SYSTEM_LINDEN_BASE_ERRNO',     730000 );
+define( 'ARGUMENT_SPRUCE_BASE_ERRNO',   130000 );
+define( 'DATABASE_SPRUCE_BASE_ERRNO',   230000 );
+define( 'LDAP_SPRUCE_BASE_ERRNO',       330000 );
+define( 'NOTICE_SPRUCE_BASE_ERRNO',     430000 );
+define( 'PERMISSION_SPRUCE_BASE_ERRNO', 530000 );
+define( 'RUNTIME_SPRUCE_BASE_ERRNO',    630000 );
+define( 'SYSTEM_SPRUCE_BASE_ERRNO',     730000 );
 
 /**
  * "argument" error codes
