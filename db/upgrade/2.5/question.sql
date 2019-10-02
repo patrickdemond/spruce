@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS question (
   create_timestamp TIMESTAMP NOT NULL,
   page_id INT UNSIGNED NOT NULL,
   rank INT UNSIGNED NOT NULL,
+  precondition VARCHAR(511) NULL,
   name VARCHAR(127) NOT NULL,
   type ENUM('boolean', 'list', 'number', 'string', 'text', 'comment') NOT NULL,
   multiple TINYINT(1) NULL DEFAULT NULL,
@@ -23,3 +24,74 @@ CREATE TABLE IF NOT EXISTS question (
     ON DELETE CASCADE
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
+
+
+DELIMITER $$
+
+DROP TRIGGER IF EXISTS question_BEFORE_INSERT $$
+CREATE DEFINER = CURRENT_USER TRIGGER question_BEFORE_INSERT BEFORE INSERT ON question FOR EACH ROW
+BEGIN
+  -- make sure name is valid
+  SELECT NEW.name RLIKE "[a-z_][a-z0-9_]*" INTO @test;
+  IF( @test = 0 ) THEN
+    SIGNAL SQLSTATE 'HY000'
+    SET MESSAGE_TEXT = "Invalid name character string: must RLIKE [a-z_][a-z0-9_]",
+    MYSQL_ERRNO = 1300;
+  ELSE
+    -- make sure that question names are unique in qnaire
+    SELECT qnaire_id INTO @qnaire_id
+    FROM page
+    JOIN module ON page.module_id = module.id
+    WHERE page.id = NEW.page_id;
+
+    SELECT COUNT(*) INTO @test
+    FROM question
+    JOIN page ON question.page_id = page.id
+    JOIN module ON page.module_id = module.id
+    WHERE question.name = NEW.name
+    AND module.qnaire_id = @qnaire_id;
+    IF( @test > 0 ) THEN
+      SET @sql = CONCAT(
+        "Duplicate entry '",
+        @qnaire_id, "-", NEW.name,
+        "' for key 'uq_qnaire_id_name'"
+      );
+      SIGNAL SQLSTATE '23000' SET MESSAGE_TEXT = @sql, MYSQL_ERRNO = 1062;
+    END IF;
+  END IF;
+END$$
+
+DROP TRIGGER IF EXISTS question_BEFORE_UPDATE $$
+CREATE DEFINER = CURRENT_USER TRIGGER question_BEFORE_UPDATE BEFORE UPDATE ON question FOR EACH ROW
+BEGIN
+  -- make sure name is valid
+  SELECT NEW.name RLIKE "[a-z_][a-z0-9_]*" INTO @test;
+  IF( @test = 0 ) THEN
+    SIGNAL SQLSTATE 'HY000'
+    SET MESSAGE_TEXT = "Invalid name character string: must RLIKE [a-z_][a-z0-9_]",
+    MYSQL_ERRNO = 1300;
+  ELSE
+    -- make sure that question names are unique in qnaire
+    SELECT qnaire_id INTO @qnaire_id
+    FROM page
+    JOIN module ON page.module_id = module.id
+    WHERE page.id = NEW.page_id;
+
+    SELECT COUNT(*) INTO @test
+    FROM question
+    JOIN page ON question.page_id = page.id
+    JOIN module ON page.module_id = module.id
+    WHERE question.name = NEW.name
+    AND module.qnaire_id = @qnaire_id;
+    IF( @test > 0 ) THEN
+      SET @sql = CONCAT(
+        "Duplicate entry '",
+        @qnaire_id, "-", NEW.name,
+        "' for key 'uq_qnaire_id_name'"
+      );
+      SIGNAL SQLSTATE '23000' SET MESSAGE_TEXT = @sql, MYSQL_ERRNO = 1062;
+    END IF;
+  END IF;
+END$$
+
+DELIMITER ;
