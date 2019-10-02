@@ -33,14 +33,12 @@ class ui extends \cenozo\ui\ui
     if( !is_null( $module ) )
     {
       $module->add_child( 'page' );
-      $module->add_child( 'requisite_group' );
     }
 
     $module = $this->get_module( 'page' );
     if( !is_null( $module ) )
     {
       $module->add_child( 'question' );
-      $module->add_child( 'requisite_group' );
       $module->add_action( 'render', '/{identifier}' );
     }
 
@@ -48,14 +46,6 @@ class ui extends \cenozo\ui\ui
     if( !is_null( $module ) )
     {
       $module->add_child( 'question_option' );
-      $module->add_child( 'requisite_group' );
-    }
-
-    $module = $this->get_module( 'requisite_group' );
-    if( !is_null( $module ) )
-    {
-      $module->add_child( 'requisite' );
-      $module->add_child( 'requisite_group' );
     }
 
     $module = $this->get_module( 'response' );

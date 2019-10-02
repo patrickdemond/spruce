@@ -21,6 +21,8 @@ class module extends \cenozo\service\module
     $modifier->join( 'module', 'page.module_id', 'module.id' );
     $modifier->join( 'qnaire', 'module.qnaire_id', 'qnaire.id' );
 
+    if( $select->has_column( 'has_precondition' ) ) $select->add_column( 'precondition IS NOT NULL', 'has_precondition' );
+
     $db_page = $this->get_resource();
     if( !is_null( $db_page ) )
     {

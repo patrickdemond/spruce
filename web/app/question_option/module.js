@@ -19,6 +19,10 @@ define( function() {
         title: 'Rank',
         type: 'rank'
       },
+      has_precondition: {
+        title: 'Precondition',
+        type: 'boolean'
+      },
       name: {
         title: 'Name'
       },
@@ -44,6 +48,11 @@ define( function() {
     rank: {
       title: 'Rank',
       type: 'rank'
+    },
+    precondition: {
+      title: 'Precondition',
+      type: 'string',
+      help: 'A special expression which restricts whether or not to show this question option.'
     },
     name: {
       title: 'Name',
