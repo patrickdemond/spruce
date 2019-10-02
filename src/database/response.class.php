@@ -44,6 +44,19 @@ class response extends \cenozo\database\record
    }
 
   /**
+   * Moves the response to the previous valid page
+   * 
+   * TODO: page restriction logic still needs to be applied here
+   * @access public
+   */
+   public function move_to_previous_page()
+   {
+     $db_previous_page = $this->get_page()->get_previous_page();
+     $this->page_id = is_null( $db_previous_page ) ? NULL : $db_previous_page->id;
+     $this->save();
+   }
+
+  /**
    * Creates a unique token to be used for identifying a response
    * 
    * @access private

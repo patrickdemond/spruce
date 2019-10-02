@@ -466,6 +466,15 @@ define( function() {
             } ).patch().then( function() {
               $state.reload();
             } );
+          },
+
+          backup: function() {
+            // back up to the response's previous page
+            CnHttpFactory.instance( {
+              path: 'response/token=' + $state.params.token + '?action=backup'
+            } ).patch().then( function() {
+              $state.reload();
+            } );
           }
         } );
       }

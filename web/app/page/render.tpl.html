@@ -123,18 +123,27 @@
       </div>
     </div>
     <div class="form-footer text-right rounded-bottom bg-info">
-      <div ng-if="'page' == model.getSubjectFromState()" class="btn-group pull-left">
+      <div class="btn-group pull-left">
         <button type="button"
+                ng-if="'page' == model.getSubjectFromState()"
                 ng-disabled="null == model.viewModel.record.previous_page_id"
                 ng-click="model.renderModel.renderPreviousPage()"
                 class="btn btn-info">
           <i class="glyphicon glyphicon-chevron-left"></i>
         </button>
         <button type="button"
+                ng-if="'page' == model.getSubjectFromState()"
                 ng-disabled="null == model.viewModel.record.next_page_id"
                 ng-click="model.renderModel.renderNextPage()"
                 class="btn btn-info">
           <i class="glyphicon glyphicon-chevron-right"></i>
+        </button>
+        <button type="button"
+                ng-if="'response' == model.getSubjectFromState()"
+                ng-click="model.renderModel.backup()"
+                class="btn btn-default"
+                style="width: 12em;">
+          <i class="glyphicon glyphicon-chevron-left"></i> Back
         </button>
       </div>
       <div class="btn-group">
@@ -148,8 +157,9 @@
                 ng-if="'response' == model.getSubjectFromState()"
                 ng-disabled="!model.renderModel.pageComplete"
                 ng-click="model.renderModel.proceed()"
-                class="btn btn-default">
-          Proceed
+                class="btn btn-default"
+                style="width: 12em;">
+          Proceed <i class="glyphicon glyphicon-chevron-right"></i>
         </button>
       </div>
     </div>

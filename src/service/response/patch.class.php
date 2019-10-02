@@ -13,22 +13,6 @@ class patch extends \cenozo\service\patch
   /**
    * Extend parent method
    */
-  public function validate()
-  {
-    parent::validate();
-
-    $action = $this->get_argument( 'action', false );
-    if( $action )
-    {
-      if( 'proceed' == $action )
-      {
-      }
-    }
-  }
-
-  /**
-   * Extend parent method
-   */
   public function execute()
   {
     parent::execute();
@@ -40,6 +24,11 @@ class patch extends \cenozo\service\patch
       {
         $db_response = $this->get_leaf_record();
         $db_response->move_to_next_page();
+      }
+      else if( 'backup' == $action )
+      {
+        $db_response = $this->get_leaf_record();
+        $db_response->move_to_previous_page();
       }
     }
   }
