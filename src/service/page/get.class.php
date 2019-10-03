@@ -5,8 +5,8 @@
  * @author Patrick Emond <emondpd@mcmaster.ca>
  */
 
-namespace spruce\service\page;
-use cenozo\lib, cenozo\log, spruce\util;
+namespace pine\service\page;
+use cenozo\lib, cenozo\log, pine\util;
 
 class get extends \cenozo\service\get
 {

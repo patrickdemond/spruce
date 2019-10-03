@@ -9,13 +9,13 @@
 /**
  * Error number category defines.
  */
-define( 'ARGUMENT_SPRUCE_BASE_ERRNO',   130000 );
-define( 'DATABASE_SPRUCE_BASE_ERRNO',   230000 );
-define( 'LDAP_SPRUCE_BASE_ERRNO',       330000 );
-define( 'NOTICE_SPRUCE_BASE_ERRNO',     430000 );
-define( 'PERMISSION_SPRUCE_BASE_ERRNO', 530000 );
-define( 'RUNTIME_SPRUCE_BASE_ERRNO',    630000 );
-define( 'SYSTEM_SPRUCE_BASE_ERRNO',     730000 );
+define( 'ARGUMENT_PINE_BASE_ERRNO',   130000 );
+define( 'DATABASE_PINE_BASE_ERRNO',   230000 );
+define( 'LDAP_PINE_BASE_ERRNO',       330000 );
+define( 'NOTICE_PINE_BASE_ERRNO',     430000 );
+define( 'PERMISSION_PINE_BASE_ERRNO', 530000 );
+define( 'RUNTIME_PINE_BASE_ERRNO',    630000 );
+define( 'SYSTEM_PINE_BASE_ERRNO',     730000 );
 
 /**
  * "argument" error codes
@@ -44,8 +44,8 @@ define( 'SYSTEM_SPRUCE_BASE_ERRNO',     730000 );
 /**
  * "runtime" error codes
  */
-define( 'RUNTIME__SPRUCE_DATABASE_RESPONSE__GENERATE_TOKEN__ERRNO',
-        RUNTIME_SPRUCE_BASE_ERRNO + 1 );
+define( 'RUNTIME__PINE_DATABASE_RESPONSE__GENERATE_TOKEN__ERRNO',
+        RUNTIME_PINE_BASE_ERRNO + 1 );
 
 /**
  * "system" error codes

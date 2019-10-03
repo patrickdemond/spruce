@@ -6,8 +6,8 @@
  * @filesource
  */
 
-namespace spruce\ui;
-use cenozo\lib, cenozo\log, spruce\util;
+namespace pine\ui;
+use cenozo\lib, cenozo\log, pine\util;
 
 /**
  * Application extension to ui class

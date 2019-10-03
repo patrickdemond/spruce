@@ -10,10 +10,10 @@
 global $SETTINGS;
 
 // tagged version
-$SETTINGS['general']['application_name'] = 'spruce';
+$SETTINGS['general']['application_name'] = 'pine';
 $SETTINGS['general']['instance_name'] = $SETTINGS['general']['application_name'];
 $SETTINGS['general']['version'] = '2.5';
-$SETTINGS['general']['build'] = '15760ab';
+$SETTINGS['general']['build'] = 'bae745c';
 
 // the location of the application's internal path
 $SETTINGS['path']['APPLICATION'] = str_replace( '/settings.ini.php', '', __FILE__ );

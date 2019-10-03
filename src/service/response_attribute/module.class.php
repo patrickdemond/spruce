@@ -5,8 +5,8 @@
  * @author Patrick Emond <emondpd@mcmaster.ca>
  */
 
-namespace spruce\service\response_attribute;
-use cenozo\lib, cenozo\log, spruce\util;
+namespace pine\service\response_attribute;
+use cenozo\lib, cenozo\log, pine\util;
 
 /**
  * Performs operations which effect how this module is used in a service

@@ -5,8 +5,8 @@
  * @author Patrick Emond <emondpd@mcmaster.ca>
  */
 
-namespace spruce\database;
-use cenozo\lib, cenozo\log, spruce\util;
+namespace pine\database;
+use cenozo\lib, cenozo\log, pine\util;
 
 /**
  * attribute: record

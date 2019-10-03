@@ -4,7 +4,7 @@ CREATE PROCEDURE patch_access()
   BEGIN
 
     -- determine the @cenozo database name
-    SET @cenozo = ( SELECT REPLACE( DATABASE(), "spruce", "cenozo" ) );
+    SET @cenozo = ( SELECT REPLACE( DATABASE(), "pine", "cenozo" ) );
     
     SELECT "Creating new access table" AS "";
 

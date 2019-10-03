@@ -1,22 +1,22 @@
 -- create the tracking F2 qnaire
-INSERT IGNORE INTO patrick_spruce.qnaire( name ) VALUES ( "Tracking F2 Main" );
+INSERT IGNORE INTO patrick_pine.qnaire( name ) VALUES ( "Tracking F2 Main" );
 
 -- add all modules to the qnaire
-INSERT IGNORE INTO patrick_spruce.module( qnaire_id, rank, name, description )
+INSERT IGNORE INTO patrick_pine.module( qnaire_id, rank, name, description )
 SELECT qnaire.id, group_order+1, group_name, groups.description
-FROM patrick_spruce.qnaire, patrick_limesurvey.groups
+FROM patrick_pine.qnaire, patrick_limesurvey.groups
 WHERE qnaire.name = "Tracking F2 Main"
 AND sid = 357653
 AND language = "en"
 ORDER BY group_order;
 
 -- add all pages to the modules
-INSERT IGNORE INTO patrick_spruce.page( module_id, rank, name )
+INSERT IGNORE INTO patrick_pine.page( module_id, rank, name )
 SELECT module.id, question_order+1, title
 FROM patrick_limesurvey.questions
 JOIN patrick_limesurvey.groups USING ( gid, language )
-JOIN patrick_spruce.module ON group_order+1 = module.rank
-JOIN patrick_spruce.qnaire ON module.qnaire_id = qnaire.id
+JOIN patrick_pine.module ON group_order+1 = module.rank
+JOIN patrick_pine.qnaire ON module.qnaire_id = qnaire.id
 WHERE qnaire.name = "Tracking F2 Main"
 AND questions.sid = 357653
 AND parent_qid = 0
@@ -24,12 +24,12 @@ AND questions.language = "en"
 ORDER BY group_order, question_order;
 
 -- temporarily add a qid column to the question table
-ALTER TABLE patrick_spruce.question
+ALTER TABLE patrick_pine.question
 ADD COLUMN qid INT NULL DEFAULT NULL,
 ADD INDEX dk_qid ( qid );
 
 -- add all questions to the pages
-INSERT IGNORE INTO patrick_spruce.question( qid, page_id, rank, name, description, type, multiple )
+INSERT IGNORE INTO patrick_pine.question( qid, page_id, rank, name, description, type, multiple )
 SELECT qid, page.id, 1, title, question,
   CASE type WHEN "L" THEN ( IF( "DK_NA,NO,REFUSED,YES" = GROUP_CONCAT( answers.code ORDER BY answers.code ), "boolean", "list"  ) )
             WHEN "M" THEN "list"
@@ -44,9 +44,9 @@ SELECT qid, page.id, 1, title, question,
   "M" = type AS multiple
 FROM patrick_limesurvey.questions
 JOIN patrick_limesurvey.groups USING ( gid, language )
-JOIN patrick_spruce.module ON group_order+1 = module.rank
-JOIN patrick_spruce.qnaire ON module.qnaire_id = qnaire.id
-JOIN patrick_spruce.page ON module.id = page.module_id AND page.name = title COLLATE utf8mb4_unicode_ci
+JOIN patrick_pine.module ON group_order+1 = module.rank
+JOIN patrick_pine.qnaire ON module.qnaire_id = qnaire.id
+JOIN patrick_pine.page ON module.id = page.module_id AND page.name = title COLLATE utf8mb4_unicode_ci
 LEFT JOIN patrick_limesurvey.answers USING( qid, language )
 WHERE qnaire.name = "Tracking F2 Main"
 AND questions.sid = 357653
@@ -58,16 +58,16 @@ ORDER BY group_order, question_order;
 -- add all question_options to the questions
 INSERT IGNORE INTO question_option( question_id, rank, name, value, exclusive, extra )
 SELECT question.id, sortorder, answer, code, 1, IF( answer = "Other" OR code = "OTHER", "string", NULL ) 
-FROM patrick_spruce.question
+FROM patrick_pine.question
 JOIN patrick_limesurvey.answers USING( qid )
 WHERE answers.language = "en"
 AND code NOT IN( "DK_NA", "REFUSED" )
 ORDER BY qid, sortorder;
 
 INSERT IGNORE INTO question_option( question_id, rank, name, value, extra )
-SELECT question.id, question_order, question, title,
+SELECT question.id, question_order, title, question,
        IF( question = "Other" OR ( title LIKE "%\_OT\_%" AND title NOT LIKE 'CCT_%' ), "string", NULL )
-FROM patrick_spruce.question
+FROM patrick_pine.question
 JOIN patrick_limesurvey.questions subquestions ON question.qid = subquestions.parent_qid
 WHERE subquestions.language = "en"
 AND title NOT LIKE "%DK_NA%"
@@ -75,8 +75,8 @@ AND title NOT LIKE "%REFUSED%"
 ORDER BY parent_qid, question_order;
 
 -- make certain question_options exclusive
-UPDATE patrick_spruce.question_option
-JOIN patrick_spruce.question ON question_option.question_id = question.id
+UPDATE patrick_pine.question_option
+JOIN patrick_pine.question ON question_option.question_id = question.id
 JOIN patrick_limesurvey.question_attributes USING( qid )
 SET exclusive = 1
 WHERE attribute = "exclude_all_others"

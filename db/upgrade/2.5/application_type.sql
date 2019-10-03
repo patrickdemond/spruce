@@ -4,11 +4,11 @@ CREATE PROCEDURE patch_application_type()
   BEGIN
 
     -- determine the @cenozo database name
-    SET @cenozo = ( SELECT REPLACE( DATABASE(), "spruce", "cenozo" ) );
+    SET @cenozo = ( SELECT REPLACE( DATABASE(), "pine", "cenozo" ) );
 
-    SELECT "Adding spruce as new application_type" AS "";
+    SELECT "Adding pine as new application_type" AS "";
 
-    SET @sql = CONCAT( "INSERT IGNORE INTO ", @cenozo, ".application_type SET name = 'spruce'" );
+    SET @sql = CONCAT( "INSERT IGNORE INTO ", @cenozo, ".application_type SET name = 'pine'" );
     PREPARE statement FROM @sql;
     EXECUTE statement;
     DEALLOCATE PREPARE statement;

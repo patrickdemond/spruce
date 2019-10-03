@@ -15,7 +15,7 @@ cenozo.directive( 'cnQnaireNavigator', [
   'CnHttpFactory', '$state', '$q',
   function( CnHttpFactory, $state, $q ) {
     return {
-      templateUrl: cenozoApp.getFileUrl( 'spruce', 'qnaire_navigator.tpl.html' ),
+      templateUrl: cenozoApp.getFileUrl( 'pine', 'qnaire_navigator.tpl.html' ),
       restrict: 'E',
       controller: function( $scope ) {
         angular.extend( $scope, {

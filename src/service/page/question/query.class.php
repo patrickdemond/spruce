@@ -5,8 +5,8 @@
  * @author Patrick Emond <emondpd@mcmaster.ca>
  */
 
-namespace spruce\service\page\question;
-use cenozo\lib, cenozo\log, spruce\util;
+namespace pine\service\page\question;
+use cenozo\lib, cenozo\log, pine\util;
 
 class query extends \cenozo\service\query
 {

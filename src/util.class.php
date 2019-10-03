@@ -3,7 +3,7 @@
  * util.class.php
  */
 
-namespace spruce;
+namespace pine;
 
 /**
  * util: utility class of static methods
