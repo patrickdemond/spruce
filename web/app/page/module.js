@@ -376,7 +376,7 @@ define( function() {
                 // determine the patch data
                 var patchData = {};
                 if( 'boolean' == type ) {
-                  patchData.value_boolean = self.data[question.id][option];
+                  patchData.value_boolean = self.data[question.id][option] ? 'yes' == option : null;
                 } else if( 'value' == type ) {
                   patchData['value_' + question.type] = self.data[question.id].value;
                 } else if( 'extra' == type ) {

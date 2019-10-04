@@ -31,4 +31,23 @@ class qnaire extends \cenozo\database\record
       array( $this->id, 1 )
     );
   }
+
+  /**
+   * TODO: document
+   */
+  public function get_question( $name )
+  {
+    $select = lib::create( 'database\select' );
+    $select->from( 'qnaire' );
+    $select->add_table_column( 'question', 'id' );
+
+    $modifier = lib::create( 'database\modifier' );
+    $modifier->join( 'module', 'qnaire.id', 'module.qnaire_id' );
+    $modifier->join( 'page', 'module.id', 'page.module_id' );
+    $modifier->join( 'question', 'page.id', 'question.page_id' );
+    $modifier->where( 'question.name', '=', $name );
+
+    $question_id = static::db()->get_one( sprintf( '%s %s', $select->get_sql(), $modifier->get_sql() ) );
+    return is_null( $question_id ) ? NULL : lib::create( 'database\question', $question_id );
+  }
 }

@@ -50,23 +50,43 @@ class module extends \cenozo\database\has_rank
   /**
    * TODO: document
    */
-  public function get_previous_module()
+  public function get_previous_module( $db_response = NULL )
   {
-    return static::get_unique_record(
+    $expression_manager = lib::create( 'business\expression_manager' );
+
+    // start by getting the module one rank lower than the current
+    $db_previous_module = static::get_unique_record(
       array( 'qnaire_id', 'rank' ),
       array( $this->qnaire_id, $this->rank - 1 )
     );
+
+    // if there is a previous module then make sure to test its precondition if a response is included in the request
+    return !is_null( $db_previous_module ) &&
+           !is_null( $db_response ) &&
+           !is_null( $db_previous_module->precondition ) &&
+           !$expression_manager->evaluate( $db_response, $db_previous_module->precondition ) ?
+      $db_previous_module->get_previous_module( $db_response ) : $db_previous_module;
   }
 
   /**
    * TODO: document
    */
-  public function get_next_module()
+  public function get_next_module( $db_response = NULL )
   {
-    return static::get_unique_record(
+    $expression_manager = lib::create( 'business\expression_manager' );
+
+    // start by getting the module one rank higher than the current
+    $db_next_module = static::get_unique_record(
       array( 'qnaire_id', 'rank' ),
       array( $this->qnaire_id, $this->rank + 1 )
     );
+
+    // if there is a next module then make sure to test its precondition if a response is included in the request
+    return !is_null( $db_next_module ) &&
+           !is_null( $db_response ) &&
+           !is_null( $db_next_module->precondition ) &&
+           !$expression_manager->evaluate( $db_response, $db_next_module->precondition ) ?
+      $db_next_module->get_next_module( $db_response ) : $db_next_module;
   }
 
   /**

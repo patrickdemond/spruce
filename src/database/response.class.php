@@ -38,7 +38,7 @@ class response extends \cenozo\database\record
    */
    public function move_to_next_page()
    {
-     $db_next_page = $this->get_page()->get_next_page();
+     $db_next_page = $this->get_page()->get_next_page( $this );
      $this->page_id = is_null( $db_next_page ) ? NULL : $db_next_page->id;
      $this->save();
    }
@@ -51,7 +51,7 @@ class response extends \cenozo\database\record
    */
    public function move_to_previous_page()
    {
-     $db_previous_page = $this->get_page()->get_previous_page();
+     $db_previous_page = $this->get_page()->get_previous_page( $this );
      $this->page_id = is_null( $db_previous_page ) ? NULL : $db_previous_page->id;
      $this->save();
    }
