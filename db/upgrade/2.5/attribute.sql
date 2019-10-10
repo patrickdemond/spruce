@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS attribute (
   create_timestamp TIMESTAMP NOT NULL,
   qnaire_id INT UNSIGNED NOT NULL,
   name VARCHAR(127) NOT NULL,
+  code VARCHAR(255) NOT NULL,
   note TEXT NULL,
   PRIMARY KEY (id),
   INDEX fk_qnaire_id (qnaire_id ASC),

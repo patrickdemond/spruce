@@ -38,7 +38,7 @@ class expression_manager extends \cenozo\singleton
    * TODO: document
    * 
    * values:
-   *   %NAME% (response attribute)
+   *   @NAME@ (response attribute)
    *   $NAME$ (question)
    *   $NAME:empty()$ (true if question hasn't been answered, false if it has)
    *   dkna (when a question's answer is don't know or no answer)

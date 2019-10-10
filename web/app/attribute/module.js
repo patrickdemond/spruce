@@ -12,6 +12,9 @@ define( function() {
     columnList: {
       name: {
         title: 'Name'
+      },
+      code: {
+        title: 'Code'
       }
     },
     defaultOrder: {
@@ -23,6 +26,10 @@ define( function() {
   module.addInputGroup( '', {
     name: {
       title: 'Name',
+      type: 'string'
+    },
+    code: {
+      title: 'Code',
       type: 'string'
     },
     note: {

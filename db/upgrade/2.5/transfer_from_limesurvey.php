@@ -12,8 +12,15 @@ ini_set( 'date.timezone', 'US/Eastern' );
 
 // utility functions
 function out( $msg ) { printf( '%s: %s'."\n", date( 'Y-m-d H:i:s' ), $msg ); }
-function error( $msg ) { out( sprintf( 'ERROR! %s', $msg ) ); }
-
+function error( $msg )
+{
+  foreach( func_get_args() as $index => $arg )
+  {
+    if( 0 == $index ) $arg = sprintf( 'Error! %s', $arg );
+    out( $arg );
+  }
+  die();
+}
 
 class import
 {
@@ -42,6 +49,7 @@ class import
     $this->settings['survey_db']['server'] = next( $parts );
     $parts = explode( '=', $db[2], 2 );
     $this->settings['survey_db']['database'] = next( $parts );
+    $this->lsdb = $this->settings['survey_db']['database'];
   }
 
   public function connect_database()
@@ -51,12 +59,8 @@ class import
     $password = $this->settings['db']['password'];
     $name = $this->settings['db']['database_prefix'] . $this->settings['general']['instance_name'];
     $this->db = new \mysqli( $server, $username, $password, $name );
-    if( $this->db->connect_error )
-    {
-      error( $this->db->connect_error );
-      die();
-    }
-    $this->db->set_charset( 'utf8' );
+    if( $this->db->connect_error ) error( $this->db->connect_error );
+    $this->db->set_charset( 'utf8mb4' );
   }
 
   /**
@@ -73,40 +77,50 @@ class import
     out( 'Connecting to database' );
     $this->connect_database();
 
-    $pine_database = $this->settings['db']['database_prefix'] . $this->settings['general']['instance_name'];
-    $limesurvey_database = $this->settings['survey_db']['database'];
-
     out( 'Creating the tracking F2 qnaire' );
-    $sql = sprintf(
-      'INSERT IGNORE INTO %s.qnaire( name ) VALUES ( "Tracking F2 Main" )',
-      $pine_database
-    );
-    if( false === $this->db->query( $sql ) )
-    {
-      error( $this->db->error );
-      die();
-    }
+    $sql = 'INSERT INTO qnaire( name ) VALUES ( "Tracking F2 Main" )';
+    if( false === $this->db->query( $sql ) ) error( $this->db->error );
 
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    out( 'Adding temp columns to the module, page, and question tables' );
+    $sql = sprintf(
+      'ALTER TABLE module '.
+      'ADD COLUMN gid INT NULL DEFAULT NULL, '.
+      'ADD UNIQUE INDEX uq_gid ( gid )'
+    );
+    if( false === $this->db->query( $sql ) ) error( $this->db->error );
+
+    $sql = sprintf(
+      'ALTER TABLE page '.
+      'ADD COLUMN sid INT NULL DEFAULT NULL, '.
+      'ADD COLUMN qid INT NULL DEFAULT NULL, '.
+      'ADD INDEX uq_sid ( sid ), '.
+      'ADD UNIQUE INDEX uq_qid ( qid )'
+    );
+    if( false === $this->db->query( $sql ) ) error( $this->db->error );
+
+    $sql = sprintf(
+      'ALTER TABLE question '.
+      'ADD COLUMN qid INT NULL DEFAULT NULL, '.
+      'ADD UNIQUE INDEX uq_qid ( qid )'
+    );
+    if( false === $this->db->query( $sql ) ) error( $this->db->error );
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
     out( 'Adding all modules to the qnaire' );
     $sql = sprintf(
-      'INSERT IGNORE INTO %s.module( qnaire_id, rank, name, description ) '.
-      'SELECT qnaire.id, group_order+1, '.
+      'INSERT IGNORE INTO module( gid, qnaire_id, rank, name, description ) '.
+      'SELECT gid, qnaire.id, group_order+1, '.
              'TRIM( REPLACE( group_name, "INTERMISSION", "INTERMISSION 1" ) ), '.
              'TRIM( groups.description ) '.
-      'FROM %s.qnaire, %s.groups '.
+      'FROM qnaire, %s.groups '.
       'WHERE qnaire.name = "Tracking F2 Main" '.
       'AND sid = 357653 '.
       'AND language = "en" '.
       'ORDER BY group_order',
-      $pine_database,
-      $pine_database,
-      $limesurvey_database
+      $this->lsdb
     );
-    if( false === $this->db->query( $sql ) )
-    {
-      error( $this->db->error );
-      die();
-    }
+    if( false === $this->db->query( $sql ) ) error( $this->db->error );
 
     $sql = sprintf(
       'SELECT MAX( rank ) INTO @part2_offset '.
@@ -114,31 +128,21 @@ class import
       'JOIN qnaire ON module.qnaire_id = qnaire.id '.
       'WHERE qnaire.name = "Tracking F2 Main"'
     );
-    if( false === $this->db->query( $sql ) )
-    {
-      error( $this->db->error );
-      die();
-    }
+    if( false === $this->db->query( $sql ) ) error( $this->db->error );
 
     $sql = sprintf(
-      'INSERT IGNORE INTO %s.module( qnaire_id, rank, name, description ) '.
-      'SELECT qnaire.id, @part2_offset+group_order+1, '.
+      'INSERT IGNORE INTO module( gid, qnaire_id, rank, name, description ) '.
+      'SELECT gid, qnaire.id, @part2_offset+group_order+1, '.
              'TRIM( REPLACE( group_name, "INTERMISSION", "INTERMISSION 2" ) ), '.
              'TRIM( groups.description ) '.
-      'FROM %s.qnaire, %s.groups '.
+      'FROM qnaire, %s.groups '.
       'WHERE qnaire.name = "Tracking F2 Main" '.
       'AND sid = 126673 '.
       'AND language = "en" '.
       'ORDER BY group_order',
-      $pine_database,
-      $pine_database,
-      $limesurvey_database
+      $this->lsdb
     );
-    if( false === $this->db->query( $sql ) )
-    {
-      error( $this->db->error );
-      die();
-    }
+    if( false === $this->db->query( $sql ) ) error( $this->db->error );
 
     $sql = sprintf(
       'SELECT MAX( rank ) INTO @part3_offset '.
@@ -146,349 +150,685 @@ class import
       'JOIN qnaire ON module.qnaire_id = qnaire.id '.
       'WHERE qnaire.name = "Tracking F2 Main"'
     );
-    if( false === $this->db->query( $sql ) )
-    {
-      error( $this->db->error );
-      die();
-    }
+    if( false === $this->db->query( $sql ) ) error( $this->db->error );
 
     $sql = sprintf(
-      'INSERT IGNORE INTO %s.module( qnaire_id, rank, name, description ) '.
-      'SELECT qnaire.id, @part3_offset+group_order+1, '.
+      'INSERT IGNORE INTO module( gid, qnaire_id, rank, name, description ) '.
+      'SELECT gid, qnaire.id, @part3_offset+group_order+1, '.
              'TRIM( REPLACE( group_name, "INTERMISSION", "INTERMISSION 3" ) ), '.
              'TRIM( groups.description ) '.
-      'FROM %s.qnaire, %s.groups '.
+      'FROM qnaire, %s.groups '.
       'WHERE qnaire.name = "Tracking F2 Main" '.
       'AND sid = 155575 '.
       'AND language = "en" '.
       'ORDER BY group_order',
-      $pine_database,
-      $pine_database,
-      $limesurvey_database
+      $this->lsdb
     );
-    if( false === $this->db->query( $sql ) )
-    {
-      error( $this->db->error );
-      die();
-    }
+    if( false === $this->db->query( $sql ) ) error( $this->db->error );
 
-    out( 'Adding all pages to the modules' );
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    out( 'Reading all questions in parts 1, 2 and 3' );
     $sql = sprintf(
-      'INSERT IGNORE INTO %s.page( module_id, rank, name, precondition ) '.
-      'SELECT module.id, question_order+1, TRIM( title ), relevance '.
+      'SELECT module.id AS module_id, questions.sid, questions.qid, title, question, type, relevance '.
       'FROM %s.questions '.
-      'JOIN %s.groups USING ( gid, language ) '.
-      'JOIN %s.module ON group_order+1 = module.rank '.
-      'JOIN %s.qnaire ON module.qnaire_id = qnaire.id '.
-      'WHERE qnaire.name = "Tracking F2 Main" '.
-      'AND questions.sid = 357653 '.
+      'JOIN %s.groups USING( gid, language ) '.
+      'JOIN module ON groups.gid = module.gid '.
+      'WHERE questions.sid IN( 357653, 126673, 155575 ) '.
       'AND parent_qid = 0 '.
-      'AND questions.language = "en" '.
+      'AND language = "en" '.
+      'AND title NOT LIKE "%%\\_OTSP\\_%%" '. // ignore specify-other questions
       'ORDER BY group_order, question_order',
-      $pine_database,
-      $limesurvey_database,
-      $limesurvey_database,
-      $pine_database,
-      $pine_database
+      $this->lsdb,
+      $this->lsdb
     );
-    if( false === $this->db->query( $sql ) )
+    $result = $this->db->query( $sql );
+    if( false === $result ) error( $this->db->error );
+
+    $page_rank = 1;
+    $page_list = [];
+    foreach( $result as $row )
     {
-      error( $this->db->error );
-      die();
+      $page = [
+        'sid' => $row['sid'],
+        'qid' => $row['qid'],
+        'module_id' => $row['module_id'],
+        'rank' => $page_rank++,
+        'precondition' => 1 == $row['relevance'] ? NULL : $row['relevance'],
+        'name' => $row['title'],
+        'description' => NULL,
+        'question_list' => []
+      ];
+
+      if( ';' == $row['type'] ) // 2D array
+      {
+        // we only want the question title to show once
+        $page['description'] = preg_replace( '(<script.*<\/script>)s', '', $row['question'] );
+
+        // get the question rows
+        $sql = sprintf(
+          'SELECT qid, title, question '.
+          'FROM %s.questions '.
+          'WHERE parent_qid = %d '.
+          'AND language = "en" '.
+          'AND scale_id = 0 '.
+          'ORDER BY question_order',
+          $this->lsdb,
+          $row['qid']
+        );
+        $subresult = $this->db->query( $sql );
+        if( false === $subresult ) error( $this->db->error );
+        $question_rows = [];
+        foreach( $subresult as $subrow ) $question_rows[] = $subrow;
+
+        // get the question cols
+        $sql = sprintf(
+          'SELECT qid, title, question '.
+          'FROM %s.questions '.
+          'WHERE parent_qid = %d '.
+          'AND language = "en" '.
+          'AND scale_id = 1 '.
+          'ORDER BY question_order',
+          $this->lsdb,
+          $row['qid']
+        );
+        $subresult = $this->db->query( $sql );
+        if( false === $subresult ) error( $this->db->error );
+        $question_cols = [];
+        foreach( $subresult as $subrow ) $question_cols[] = $subrow;
+
+        // now create a new question for every row/col combination
+        $question_rank = 1;
+        foreach( $question_rows as $question_row )
+        {
+          foreach( $question_cols as $question_col )
+          {
+            $page['question_list'][] = [
+              'qid' => NULL,
+              'rank' => $question_rank++,
+              'name' => sprintf( '%s_%s', str_replace( '_TRF2', '', $question_row['title'] ), $question_col['title'] ),
+              'type' => 'string',
+              'mandatory' => 0,
+              'description' => sprintf( '%s %s', $question_row['question'], $question_col['question'] )
+            ];
+          }
+        }
+      }
+      else if( 'L' == $row['type'] ) // exclusive list
+      {
+        $option_list = $this->get_exclusive_option_list( $row['qid'] );
+
+        // the intermission questions have duplicate names, so prefix them with the module name
+        $name = $row['title'];
+        if( 1 == preg_match( '/^INT_[0-9]+/', $name ) )
+        {
+          $sql = sprintf(
+            'SELECT name FROM module WHERE id = %d',
+            $page['module_id']
+          );
+          $subresult = $this->db->query( $sql );
+          if( false === $subresult ) error( $this->db->error );
+          $name = sprintf(
+            '%s_%s',
+            str_replace( ' ', '_', current( $subresult->fetch_row() ) ),
+            $name
+          );
+        }
+
+        $question = [
+          'qid' => $row['qid'],
+          'rank' => 1,
+          'name' => $name,
+          'description' => preg_replace( '(<script.*<\/script>)s', '', $row['question'] )
+        ];
+        $question['type'] = 0 == count( $option_list ) ? 'boolean' : 'list';
+        if( 0 < count( $option_list ) ) $question['option_list'] = $option_list;
+
+        $page['question_list'][] = $question;
+      }
+      else if( 'F' == $row['type'] ) // multiple exclusive list questions
+      {
+        // we only want the question title to show once
+        $page['description'] = preg_replace( '(<script.*<\/script>)s', '', $row['question'] );
+        $page['qid'] = $row['qid']; // set the page's qid since it represents all questions
+
+        $option_list = $this->get_exclusive_option_list( $row['qid'] );
+
+        $sql = sprintf(
+          'SELECT qid, title, question '.
+          'FROM %s.questions '.
+          'WHERE parent_qid = %d '.
+          'AND language = "en" '.
+          'ORDER BY question_order',
+          $this->lsdb,
+          $row['qid']
+        );
+        $subresult = $this->db->query( $sql );
+        if( false === $subresult ) error( $this->db->error );
+
+        // create a new question for each subquestion
+        $question_rank = 1;
+        foreach( $subresult as $subrow )
+        {
+          $question = [
+            'qid' => $subrow['qid'],
+            'rank' => $question_rank++,
+            'name' => sprintf( '%s_%s', str_replace( '_TRF2', '', $row['title'] ), $subrow['title'] ),
+            'type' => 'list',
+            'description' => $subrow['question']
+          ];
+          $question['type'] = 0 == count( $option_list ) ? 'boolean' : 'list';
+          if( 0 < count( $option_list ) ) $question['option_list'] = $option_list;
+
+          $page['question_list'][] = $question;
+        }
+      }
+      else if( 'N' == $row['type'] ) // number
+      {
+        $question = [
+          'qid' => $row['qid'],
+          'rank' => 1,
+          'name' => $row['title'],
+          'description' => preg_replace( '(<script.*<\/script>)s', '', $row['question'] ),
+          'type' => 'number'
+        ];
+
+        // look at the question to see if there is a min/max value contained in old javascript
+        if( preg_match( '/\bmin: ([0-9]+)/', $row['question'], $matches ) )
+          $question['minimum'] = $matches[1];
+        if( preg_match( '/\bmax: ([0-9]+)/', $row['question'], $matches ) )
+          $question['maximum'] = $matches[1];
+        
+        $page['question_list'][] = $question;
+      }
+      else if( 'K' == $row['type'] ) // multiple number questions
+      {
+        // all multiple number questions are used to provide multiple different units for a single value
+        $sql = sprintf(
+          'SELECT qid, title, question '.
+          'FROM %s.questions '.
+          'WHERE parent_qid = %d '.
+          'AND language = "en" '.
+          'ORDER BY question_order',
+          $this->lsdb,
+          $row['qid']
+        );
+        $subresult = $this->db->query( $sql );
+        if( false === $subresult ) error( $this->db->error );
+
+        $option_list = [];
+        foreach( $subresult as $subrow )
+        {
+          $type = NULL;
+          if( preg_match( '/minutes/', strtolower( $subrow['question'] ) ) ) $type = 'minutes';
+          else if( preg_match( '/hours/', strtolower( $subrow['question'] ) ) ) $type = 'hours';
+          else if( preg_match( '/weeks/', strtolower( $subrow['question'] ) ) ) $type = 'weeks';
+          else if( preg_match( '/months/', strtolower( $subrow['question'] ) ) ) $type = 'months';
+          else if( preg_match( '/years/', strtolower( $subrow['question'] ) ) ) $type = 'years';
+          else if( preg_match( '/age/', strtolower( $subrow['question'] ) ) ) $type = 'age';
+          else if( preg_match( '/year/', strtolower( $subrow['question'] ) ) ) $type = 'year';
+
+          $option_list[] = [
+            'rank' => $option_rank++,
+            'name' => $type,
+            'value' => strtoupper( $type ),
+            'exclusive' => 1
+          ];
+        }
+
+        $question = [
+          'qid' => $row['qid'],
+          'rank' => 1,
+          'name' => $row['title'],
+          'description' => preg_replace( '(<script.*<\/script>)s', '', $row['question'] ),
+          'type' => 'number'
+        ];
+
+        // look at the question to see if there is a min/max value contained in old javascript
+        if( preg_match( '/\bmin: ([0-9]+)/', $row['question'], $matches ) )
+          $question['minimum'] = $matches[1];
+        if( preg_match( '/\bmax: ([0-9]+)/', $row['question'], $matches ) )
+          $question['maximum'] = $matches[1];
+        
+        $page['question_list'][] = $question;
+
+        // now add the unit question as an exclusive list
+        $question = [
+          'qid' => NULL,
+          'rank' => 2,
+          'type' => 'list',
+          'name' => str_replace( '_TRF2', '_UNIT_TRF2', $row['title'] ),
+          'description' => NULL,
+          'option_list' => $option_list
+        ];
+
+        $page['question_list'][] = $question;
+      }
+      else if( 'M' == $row['type'] ) // non-exclusive list
+      {
+        // get the list of options for all questions which make up this page
+        $sql = sprintf(
+          'SELECT title, question '.
+          'FROM %s.questions '.
+          'WHERE parent_qid = %d '.
+          'AND language = "en" '.
+          'AND title NOT IN ( "DK", "NA", "DK_NA", "REFUSED" ) '.
+          'ORDER BY question_order',
+          $this->lsdb,
+          $row['qid']
+        );
+        $subresult = $this->db->query( $sql );
+        if( false === $subresult ) error( $this->db->error );
+
+        $option_rank = 1;
+        $option_list = [];
+        foreach( $subresult as $subrow )
+        {
+          $option_list[] = [
+            'rank' => $option_rank++,
+            'name' => $subrow['question'],
+            'value' => $subrow['title'],
+            'exclusive' => 0
+          ];
+        }
+
+        // figure out which options are exclusive
+        $sql = sprintf(
+          'SELECT value '.
+          'FROM %s.question_attributes '.
+          'WHERE attribute = "exclude_all_others" '.
+          'AND qid = %d',
+          $this->lsdb,
+          $row['qid']
+        );
+        $subresult = $this->db->query( $sql );
+        if( false === $subresult ) error( $this->db->error );
+
+        foreach( $subresult as $subrow )
+        {
+          foreach( explode( ';', $subrow['value'] ) as $exclusive_value )
+          {
+            foreach( $option_list as $index => $option )
+            {
+              if( $option['value'] == $exclusive_value )
+              {
+                $option_list[$index]['exclusive'] = 1;
+                break;
+              }
+            }
+          }
+        }
+
+        $question = [
+          'qid' => $row['qid'],
+          'rank' => 1,
+          'name' => $row['title'],
+          'description' => preg_replace( '(<script.*<\/script>)s', '', $row['question'] ),
+          'type' => 'list',
+          'option_list' => $option_list
+        ];
+
+        $page['question_list'][] = $question;
+      }
+      else if( 'S' == $row['type'] ) // string
+      {
+        $page['question_list'][] = [
+          'qid' => $row['qid'],
+          'rank' => 1,
+          'name' => $row['title'],
+          'description' => preg_replace( '(<script.*<\/script>)s', '', $row['question'] ),
+          'type' => 'string'
+        ];
+      }
+      else if( 'Q' == $row['type'] ) // multiple string questions
+      {
+        // we only want the question title to show once
+        $page['description'] = preg_replace( '(<script.*<\/script>)s', '', $row['question'] );
+
+        $sql = sprintf(
+          'SELECT qid, title, question '.
+          'FROM %s.questions '.
+          'WHERE parent_qid = %d '.
+          'AND language = "en" '.
+          'ORDER BY question_order',
+          $this->lsdb,
+          $row['qid']
+        );
+        $subresult = $this->db->query( $sql );
+        if( false === $subresult ) error( $this->db->error );
+
+        // create a new question for each subquestion
+        $question_rank = 1;
+        foreach( $subresult as $subrow )
+        {
+          $page['question_list'][] = [
+            'qid' => $subrow['qid'],
+            'rank' => $question_rank++,
+            'name' => $subrow['title'],
+            'description' => $subrow['question'],
+            'type' => 'string'
+          ];
+        }
+      }
+      else if( 'T' == $row['type'] ) // text
+      {
+        $page['question_list'][] = [
+          'qid' => $row['qid'],
+          'rank' => 1,
+          'name' => $row['title'],
+          'description' => preg_replace( '(<script.*<\/script>)s', '', $row['question'] ),
+          'type' => 'text'
+        ];
+      }
+      else if( 'X' == $row['type'] ) // comment
+      {
+        // the intermission questions have duplicate names, so prefix them with the module name
+        $name = $row['title'];
+        if( 1 == preg_match( '/^INT_[0-9]+/', $name ) )
+        {
+          $sql = sprintf(
+            'SELECT name FROM module WHERE id = %d',
+            $page['module_id']
+          );
+          $subresult = $this->db->query( $sql );
+          if( false === $subresult ) error( $this->db->error );
+          $name = sprintf(
+            '%s_%s',
+            str_replace( ' ', '_', current( $subresult->fetch_row() ) ),
+            $name
+          );
+        }
+
+        $page['question_list'][] = [
+          'qid' => $row['qid'],
+          'rank' => 1,
+          'name' => $name,
+          'description' => preg_replace( '(<script.*<\/script>)s', '', $row['question'] ),
+          'type' => 'comment'
+        ];
+      }
+
+      $page_list[] = $page;
     }
 
-    $sql = sprintf(
-      'INSERT IGNORE INTO %s.page( module_id, rank, name, precondition ) '.
-      'SELECT module.id, question_order+1, TRIM( title ), relevance '.
-      'FROM %s.questions '.
-      'JOIN %s.groups USING ( gid, language ) '.
-      'JOIN %s.module ON @part2_offset+group_order+1 = module.rank '.
-      'JOIN %s.qnaire ON module.qnaire_id = qnaire.id '.
-      'WHERE qnaire.name = "Tracking F2 Main" '.
-      'AND questions.sid = 126673 '.
-      'AND parent_qid = 0 '.
-      'AND questions.language = "en" '.
-      'ORDER BY group_order, question_order',
-      $pine_database,
-      $limesurvey_database,
-      $limesurvey_database,
-      $pine_database,
-      $pine_database
-    );
-    if( false === $this->db->query( $sql ) )
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    out( 'Writing pages and questions to the database' );
+
+    foreach( $page_list as $page )
     {
-      error( $this->db->error );
-      die();
+      $sql = 'INSERT INTO page( sid, qid, module_id, rank, precondition, name, description ) VALUES '.sprintf(
+        '( %d, %s, %d, %d, %s, "%s", %s )',
+        $page['sid'],
+        is_null( $page['qid'] ) ? 'NULL' : $page['qid'],
+        $page['module_id'],
+        $page['rank'],
+        is_null( $page['precondition'] ) ? 'NULL' : sprintf( '"%s"', addslashes( $page['precondition'] ) ),
+        $page['name'],
+        is_null( $page['description'] ) ? 'NULL' : sprintf( '"%s"', addslashes( $page['description'] ) )
+      );
+      if( false === $this->db->query( $sql ) ) error( $this->db->error, $sql );
+      $page_id = $this->db->insert_id;
+
+      foreach( $page['question_list'] as $question )
+      {
+        $sql = 'INSERT INTO question( qid, page_id, rank, name, type, mandatory, minimum, maximum, description ) '.
+               'VALUES '.sprintf(
+          '( %s, %d, %d, "%s", "%s", %d, %s, %s, %s  )',
+          is_null( $question['qid'] ) ? 'NULL' : $question['qid'],
+          $page_id,
+          $question['rank'],
+          $question['name'],
+          $question['type'],
+          array_key_exists( 'mandatory', $question ) ? $question['mandatory'] : 1,
+          array_key_exists( 'minimum', $question ) ? $question['minimum'] : 'NULL',
+          array_key_exists( 'maximum', $question ) ? $question['maximum'] : 'NULL',
+          is_null( $question['description'] ) ? 'NULL' : sprintf( '"%s"', addslashes( $question['description'] ) )
+        );
+        if( false === $this->db->query( $sql ) ) error( $this->db->error, $sql );
+        $question_id = $this->db->insert_id;
+
+        if( array_key_exists( 'option_list', $question ) )
+        {
+          $sql = 'INSERT INTO question_option( question_id, rank, name, value, exclusive, extra ) VALUES ';
+          foreach( $question['option_list'] as $index => $option )
+          {
+            $sql .= ( 0 == $index ? '' : ",\n" );
+            $sql .= sprintf(
+              '( %d, %d, "%s", "%s", %d, %s )',
+              $question_id,
+              $option['rank'],
+              addslashes( $option['name'] ),
+              $option['value'],
+              array_key_exists( 'exclusive', $option ) ? $option['exclusive'] : 0,
+              'OTHER' == $option['value'] ? '"string"' : 'NULL'
+            );
+          }
+          if( false === $this->db->query( $sql ) ) error( $this->db->error, $sql );
+        }
+      }
     }
 
-    $sql = sprintf(
-      'INSERT IGNORE INTO %s.page( module_id, rank, name, precondition ) '.
-      'SELECT module.id, question_order+1, TRIM( title ), relevance '.
-      'FROM %s.questions '.
-      'JOIN %s.groups USING ( gid, language ) '.
-      'JOIN %s.module ON @part3_offset+group_order+1 = module.rank '.
-      'JOIN %s.qnaire ON module.qnaire_id = qnaire.id '.
-      'WHERE qnaire.name = "Tracking F2 Main" '.
-      'AND questions.sid = 155575 '.
-      'AND parent_qid = 0 '.
-      'AND questions.language = "en" '.
-      'ORDER BY group_order, question_order',
-      $pine_database,
-      $limesurvey_database,
-      $limesurvey_database,
-      $pine_database,
-      $pine_database
-    );
-    if( false === $this->db->query( $sql ) )
-    {
-      error( $this->db->error );
-      die();
-    }
-
-    out( 'Temporarily add a qid column to the question table' );
-    $sql = sprintf(
-      'ALTER TABLE %s.question '.
-      'ADD COLUMN qid INT NULL DEFAULT NULL, '.
-      'ADD INDEX dk_qid ( qid )',
-      $pine_database
-    );
-    if( false === $this->db->query( $sql ) )
-    {
-      error( $this->db->error );
-      die();
-    }
-
-    out( 'Adding all questions to the pages' );
-    $sql = sprintf(
-      'INSERT IGNORE INTO %s.question( qid, page_id, rank, name, description, type, multiple ) '.
-      'SELECT qid, page.id, 1, TRIM( IF( title LIKE "INT\_0_", REPLACE( title, "INT", "INT1" ), title ) ), TRIM( question ), '.
-      '  CASE type WHEN "L" THEN ( '.
-          'IF( "DK_NA,NO,REFUSED,YES" = GROUP_CONCAT( answers.code ORDER BY answers.code ), "boolean", "list"  ) '.
-        ') '.
-      '            WHEN "M" THEN "list" '.
-      '            WHEN "S" THEN "string" '.
-      '            WHEN "Q" THEN "string" '. // TODO: multiple strings -- need to make them separate questions '.
-      '            WHEN "N" THEN "number" '.
-      '            WHEN "T" THEN "text" '.
-      '            WHEN "F" THEN "list" '. // TODO: multiple lists -- need to make them separate questions '.
-      '            WHEN "K" THEN "number" '. // TODO: multiple numbers -- used to enter value in more than one unit '.
-      '            WHEN "X" THEN "comment" '.
-      '  END AS type, '.
-      '  "M" = type AS multiple '.
-      'FROM %s.questions '.
-      'JOIN %s.groups USING ( gid, language ) '.
-      'JOIN %s.module ON group_order+1 = module.rank '.
-      'JOIN %s.qnaire ON module.qnaire_id = qnaire.id '.
-      'JOIN %s.page ON module.id = page.module_id AND page.name = title COLLATE utf8mb4_unicode_ci '.
-      'LEFT JOIN %s.answers USING( qid, language ) '.
-      'WHERE qnaire.name = "Tracking F2 Main" '.
-      'AND questions.sid = 357653 '.
-      'AND parent_qid = 0  '.
-      'AND questions.language = "en" '.
-      'GROUP BY questions.qid '.
-      'ORDER BY group_order, question_order',
-      $pine_database,
-      $limesurvey_database,
-      $limesurvey_database,
-      $pine_database,
-      $pine_database,
-      $pine_database,
-      $limesurvey_database
-    );
-    if( false === $this->db->query( $sql ) )
-    {
-      error( $this->db->error );
-      die();
-    }
-
-    $sql = sprintf(
-      'INSERT IGNORE INTO %s.question( qid, page_id, rank, name, description, type, multiple ) '.
-      'SELECT qid, page.id, 1, TRIM( IF( title LIKE "INT\_0_", REPLACE( title, "INT", "INT2" ), title ) ), TRIM( question ), '.
-      '  CASE type WHEN "L" THEN ( '.
-          'IF( "DK_NA,NO,REFUSED,YES" = GROUP_CONCAT( answers.code ORDER BY answers.code ), "boolean", "list"  ) '.
-        ') '.
-      '            WHEN "M" THEN "list" '.
-      '            WHEN "S" THEN "string" '.
-      '            WHEN "Q" THEN "string" '. // TODO: multiple strings -- need to make them separate questions '.
-      '            WHEN "N" THEN "number" '.
-      '            WHEN "T" THEN "text" '.
-      '            WHEN "F" THEN "list" '. // TODO: multiple lists -- need to make them separate questions '.
-      '            WHEN "K" THEN "number" '. // TODO: multiple numbers -- used to enter value in more than one unit '.
-      '            WHEN "X" THEN "comment" '.
-      '  END AS type, '.
-      '  "M" = type AS multiple '.
-      'FROM %s.questions '.
-      'JOIN %s.groups USING ( gid, language ) '.
-      'JOIN %s.module ON @part2_offset+group_order+1 = module.rank '.
-      'JOIN %s.qnaire ON module.qnaire_id = qnaire.id '.
-      'JOIN %s.page ON module.id = page.module_id AND page.name = title COLLATE utf8mb4_unicode_ci '.
-      'LEFT JOIN %s.answers USING( qid, language ) '.
-      'WHERE qnaire.name = "Tracking F2 Main" '.
-      'AND questions.sid = 126673 '.
-      'AND parent_qid = 0  '.
-      'AND questions.language = "en" '.
-      'GROUP BY questions.qid '.
-      'ORDER BY group_order, question_order',
-      $pine_database,
-      $limesurvey_database,
-      $limesurvey_database,
-      $pine_database,
-      $pine_database,
-      $pine_database,
-      $limesurvey_database
-    );
-    if( false === $this->db->query( $sql ) )
-    {
-      error( $this->db->error );
-      die();
-    }
-
-    $sql = sprintf(
-      'INSERT IGNORE INTO %s.question( qid, page_id, rank, name, description, type, multiple ) '.
-      'SELECT qid, page.id, 1, TRIM( IF( title LIKE "INT\_0_", REPLACE( title, "INT", "INT3" ), title ) ), TRIM( question ), '.
-      '  CASE type WHEN "L" THEN ( '.
-          'IF( "DK_NA,NO,REFUSED,YES" = GROUP_CONCAT( answers.code ORDER BY answers.code ), "boolean", "list"  ) '.
-        ') '.
-      '            WHEN "M" THEN "list" '.
-      '            WHEN "S" THEN "string" '.
-      '            WHEN "Q" THEN "string" '. // TODO: multiple strings -- need to make them separate questions '.
-      '            WHEN "N" THEN "number" '.
-      '            WHEN "T" THEN "text" '.
-      '            WHEN "F" THEN "list" '. // TODO: multiple lists -- need to make them separate questions '.
-      '            WHEN "K" THEN "number" '. // TODO: multiple numbers -- used to enter value in more than one unit '.
-      '            WHEN "X" THEN "comment" '.
-      '  END AS type, '.
-      '  "M" = type AS multiple '.
-      'FROM %s.questions '.
-      'JOIN %s.groups USING ( gid, language ) '.
-      'JOIN %s.module ON @part3_offset+group_order+1 = module.rank '.
-      'JOIN %s.qnaire ON module.qnaire_id = qnaire.id '.
-      'JOIN %s.page ON module.id = page.module_id AND page.name = title COLLATE utf8mb4_unicode_ci '.
-      'LEFT JOIN %s.answers USING( qid, language ) '.
-      'WHERE qnaire.name = "Tracking F2 Main" '.
-      'AND questions.sid = 155575 '.
-      'AND parent_qid = 0  '.
-      'AND questions.language = "en" '.
-      'GROUP BY questions.qid '.
-      'ORDER BY group_order, question_order',
-      $pine_database,
-      $limesurvey_database,
-      $limesurvey_database,
-      $pine_database,
-      $pine_database,
-      $pine_database,
-      $limesurvey_database
-    );
-    if( false === $this->db->query( $sql ) )
-    {
-      error( $this->db->error );
-      die();
-    }
-
-    out( 'Adding all question_options to the questions' );
-    $sql = sprintf(
-      'INSERT IGNORE INTO question_option( question_id, rank, name, value, exclusive, extra ) '.
-      'SELECT question.id, sortorder, TRIM( answer ), TRIM( code ), 1, IF( answer = "Other" OR code = "OTHER", "string", NULL )  '.
-      'FROM %s.question '.
-      'JOIN %s.answers USING( qid ) '.
-      'WHERE answers.language = "en" '.
-      'AND code NOT IN( "DK_NA", "REFUSED" ) '.
-      'ORDER BY qid, sortorder',
-      $pine_database,
-      $limesurvey_database
-    );
-    if( false === $this->db->query( $sql ) )
-    {
-      error( $this->db->error );
-      die();
-    }
-
-    $sql = sprintf(
-      'INSERT IGNORE INTO question_option( question_id, rank, name, value, extra ) '.
-      'SELECT question.id, question_order, TRIM( title ), TRIM( question ), '.
-      '       IF( question = "Other" OR ( title LIKE "%%\_OT\_%%" AND title NOT LIKE "CCT_%%" ), "string", NULL ) '.
-      'FROM %s.question '.
-      'JOIN %s.questions subquestions ON question.qid = subquestions.parent_qid '.
-      'WHERE subquestions.language = "en" '.
-      'AND title NOT LIKE "%%DK_NA%%" '.
-      'AND title NOT LIKE "%%REFUSED%%" '.
-      'ORDER BY parent_qid, question_order',
-      $pine_database,
-      $limesurvey_database
-    );
-    if( false === $this->db->query( $sql ) )
-    {
-      error( $this->db->error );
-      die();
-    }
-
-    out( 'Making some question_options exclusive' );
-    $sql = sprintf(
-      'UPDATE %s.question_option '.
-      'JOIN %s.question ON question_option.question_id = question.id '.
-      'JOIN %s.question_attributes USING( qid ) '.
-      'SET exclusive = 1 '.
-      'WHERE attribute = "exclude_all_others" '.
-      'AND question_attributes.value LIKE CONCAT( "%%", question_option.value COLLATE utf8mb4_unicode_ci, "%%" )',
-      $pine_database,
-      $pine_database,
-      $limesurvey_database
-    );
-    if( false === $this->db->query( $sql ) )
-    {
-      error( $this->db->error );
-      die();
-    }
-
+    ///////////////////////////////////////////////////////////////////////////////////////////////
     out( 'Reading token attributes' );
-    $attribute_list = array( '358653' => [], '126673' => [], '155575' => [] );
+    $attribute_list = [ '358653' => [], '126673' => [], '155575' => [] ];
     $sql = sprintf(
       'SELECT sid, attributedescriptions FROM %s.surveys WHERE sid IN( 357653, 126673, 155575 )',
-      $limesurvey_database
+      $this->lsdb
     );
     $result = $this->db->query( $sql );
-    if( false === $result )
-    {
-      error( $this->db->error );
-      die();
-    }
+    if( false === $result ) error( $this->db->error );
     foreach( $result as $row )
     {
-      $sid = $row['sid'];
-      foreach( get_object_vars( json_decode( $row['attributedescriptions' ] ) ) as $attribute => $obj )
-        $attribute_list[$row['sid']][$attribute] = $obj->description;
+      foreach( get_object_vars( json_decode( $row['attributedescriptions' ] ) ) as $ls_attribute => $obj )
+      {
+        $code = $obj->description;
+        $attribute = [ 'code' => $code ];
+
+        if( false !== strpos( $code, 'participant.limesurvey.' ) )
+        { // we don't need to put other parts of the qnaire into attributes anymore
+          $attribute['name'] = sprintf(
+            false === strpos( $code, 'PKD_MED' ) ? '$%s$' : '$PKD_MED_%s$',
+            str_replace( 'participant.limesurvey.357653.', '', $code )
+          );
+        }
+        else
+        {
+          // see if the attribute record already exists
+          $name = NULL;
+          foreach( $attribute_list as $sid => $attributes )
+          {
+            foreach( $attributes as $a )
+            {
+              if( array_key_exists( 'code', $a ) && $code == $a['code'] )
+              {
+                $name = $a['name'];
+                break;
+              }
+            }
+
+            if( !is_null( $name ) ) break;
+          }
+
+          // if not then create it
+          if( is_null( $name ) )
+          {
+            $name = 1 == preg_match( '/participant\.opal\.TokenAttributes\.TrackingF2\.([A-Z0-9_]+)\.(cache|label)/', $code, $matches )
+                  ? ( $matches[1].( 'label' == $matches[2] ? '.label' : '' ) )
+                  : str_replace( [ '.age()', '.sex' ], [ '_age', '_sex' ], $code );
+
+            $sql = sprintf(
+              'INSERT INTO attribute( qnaire_id, name, code ) '.
+              'SELECT qnaire.id, "%s", "%s" '.
+              'FROM qnaire '.
+              'WHERE qnaire.name = "Tracking F2 Main"',
+              $name,
+              $code
+            );
+            if( false === $this->db->query( $sql ) ) error( $this->db->error );
+          }
+
+          $attribute['name'] = sprintf( '@%s@', $name );
+        }
+
+        $attribute_list[$row['sid']][strtoupper( $ls_attribute )] = $attribute;
+      }
     }
 
-    $question_list = array();
-    $sql = sprintf(
-      'SELECT sid, name, precondition FROM %s.question',
-      $pine_database
-    );
+    $page_list = [];
+
+    // get a list of all pages, questions and options
+    $sql = 'SELECT page.sid, page.qid page_qid, question.qid question_qid, page.precondition, '.
+                  'page.id page_id, question.id question_id, question_option.id option_id, '.
+                  'page.name page_name, question.name question_name, question_option.value option_value '.
+           'FROM page '.
+           'JOIN question ON page.id = question.page_id '.
+           'LEFT JOIN question_option ON question.id = question_option.question_id '.
+           'ORDER BY page.rank, question.rank, question_option.rank';
     $result = $this->db->query( $sql );
-    if( false === $result )
-    {
-      error( $this->db->error );
-      die();
-    }
+    if( false === $result ) error( $this->db->error );
     foreach( $result as $row )
     {
-      // TODO: get all question list data here
+      extract( $row );
+      $qid = is_null( $page_qid ) ? $question_qid : $page_qid;
+
+      if( !array_key_exists( $qid, $page_list ) )
+      {
+        $page_list[$qid] = [
+          'sid' => $sid,
+          'multi' => !is_null( $page_qid ),
+          'id' => $page_id,
+          'name' => $page_name,
+          'precondition' => $precondition,
+          'question_list' => []
+        ];
+      }
+
+      if( !array_key_exists( $question_name, $page_list[$qid]['question_list'] ) )
+      {
+        $page_list[$qid]['question_list'][$question_name] = [
+          'id' => $question_id,
+          'name' => $question_name,
+          'option_list' => []
+        ];
+      }
+
+      if( !is_null( $option_id ) )
+      {
+        $page_list[$qid]['question_list'][$question_name]['option_list'][$option_value] = [
+          'id' => $option_id,
+          'name' => $option_value
+        ];
+      }
     }
 
-    // TODO: now go through and update all preconditions to replace 0X0X0 codes with $QUESTION$ and write to db
-
-    out( 'Removing the temporary qid column now that we no longer need it' );
-    $sql = sprintf(
-      'ALTER TABLE %s.question DROP INDEX dk_qid, DROP COLUMN qid',
-      $pine_database
-    );
-    if( false === $this->db->query( $sql ) )
+    // now go through and update all preconditions to replace 0X0X0 codes with $QUESTION$ and write to db
+    foreach( $page_list as $qid => $page )
     {
-      error( $this->db->error );
-      die();
+      $precondition = $page['precondition'];
+
+      // replace questions
+      if( preg_match_all( '/([0-9]+X[0-9]+X[0-9]+)([A-Z][0-9A-Z_]+)?\.NAOK/', $precondition, $matches ) )
+      {
+        foreach( $matches[1] as $index => $match ) // index 1 will contain the sXgXq code
+        {
+          $parts = explode( 'X', $match );
+          $qid = $parts[2];
+
+          $ref_page = $page_list[$qid];
+          if( $ref_page['multi'] ) // page has multiple questions which used to be sub-questions
+          {
+            // replace the xSgXq code with the page's name (without the TRF2 suffix)
+            $precondition = str_replace(
+              $match,
+              sprintf( '$%s', str_replace( 'TRF2', '', $ref_page['name'] ) ),
+              $precondition
+            );
+            
+            // replace the NAOK with a closing $
+            $precondition = str_replace( '.NAOK', '$', $precondition );
+          }
+          else // page has a single question, possibly with multiple options
+          {
+            // replace the xSgXq code with the page's name
+            $precondition = str_replace(
+              $match,
+              sprintf( '$%s$', $page_list[$qid]['name'] ),
+              $precondition
+            );
+          }
+
+          // subquestions need to be delimited by a :
+          if( 0 < strlen( $matches[2][$index] ) )
+          {
+            $precondition = str_replace( '$'.$matches[2][$index], sprintf( ':%s$', $matches[2][$index] ), $precondition );
+          }
+        }
+
+        // remove all of the NAOK's
+        $precondition = str_replace( '.NAOK', '', $precondition );
+      }
+
+      // replace attributes
+      if( preg_match_all( '/TOKEN:(ATTRIBUTE_[0-9]+)/', $precondition, $matches ) )
+        foreach( $matches[1] as $index => $match ) // index 1 will contain the sXgXq code
+          $precondition = str_replace( $matches[0][$index], $attribute_list[$page['sid']][$match]['name'], $precondition );
+
+      if( $precondition != $page['precondition'] )
+      {
+        $sql = sprintf(
+          'UPDATE page SET precondition = "%s" WHERE id = %d',
+          addslashes( $precondition ),
+          $page['id']
+        );
+        if( false === $this->db->query( $sql ) ) error( $this->db->error );
+      }
     }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    out( 'Removing the temporary gid and qid columns now that we no longer need them' );
+    $sql = 'ALTER TABLE module DROP INDEX uq_gid, DROP COLUMN gid';
+    if( false === $this->db->query( $sql ) ) error( $this->db->error );
+    $sql = 'ALTER TABLE page DROP INDEX uq_sid, DROP INDEX uq_qid, DROP COLUMN sid, DROP COLUMN qid';
+    if( false === $this->db->query( $sql ) ) error( $this->db->error );
+    $sql = 'ALTER TABLE question DROP INDEX uq_qid, DROP COLUMN qid';
+    if( false === $this->db->query( $sql ) ) error( $this->db->error );
 
     out( 'Done' );
+  }
+
+  private function get_exclusive_option_list( $qid )
+  {
+    // get the list of options for all questions which make up this page
+    $sql = sprintf(
+      'SELECT code, answer '.
+      'FROM %s.answers '.
+      'WHERE qid = %d '.
+      'AND language = "en" '.
+      'AND code NOT IN ( "DK", "NA", "DK_NA", "REFUSED" ) '.
+      'ORDER BY sortorder',
+      $this->lsdb,
+      $qid
+    );
+    $subresult = $this->db->query( $sql );
+    if( false === $subresult ) error( $this->db->error );
+
+    $option_rank = 1;
+    $option_list = [];
+    $possible_answer_list = [];
+    foreach( $subresult as $subrow )
+    {
+      $option_list[] = [
+        'rank' => $option_rank++,
+        'name' => $subrow['answer'],
+        'value' => $subrow['code'],
+        'exclusive' => 1
+      ];
+      $possible_answer_list[] = $subrow['code'];
+    }
+
+    sort( $possible_answer_list );
+
+    return 2 == count( $possible_answer_list ) && 'NOYES' == implode( $possible_answer_list ) ?
+      [] : $option_list;
   }
 
   /**
@@ -496,14 +836,8 @@ class import
    * @var array
    * @access private
    */
-  private $settings = array();
+  private $settings = [];
 }
 
 $import = new import();
 $import->execute();
-
-
-
-
-
-
