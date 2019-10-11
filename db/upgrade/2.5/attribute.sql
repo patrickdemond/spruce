@@ -25,10 +25,10 @@ DROP TRIGGER IF EXISTS attribute_BEFORE_INSERT $$
 CREATE DEFINER = CURRENT_USER TRIGGER attribute_BEFORE_INSERT BEFORE INSERT ON attribute FOR EACH ROW
 BEGIN
   -- make sure name is valid
-  SELECT NEW.name RLIKE "[a-z_][a-z0-9_]*" INTO @test;
+  SELECT NEW.name RLIKE "^[a-z0-9_]+$" INTO @test;
   IF( @test = 0 ) THEN
     SIGNAL SQLSTATE 'HY000'
-    SET MESSAGE_TEXT = "Invalid name character string: must RLIKE [a-z_][a-z0-9_]",
+    SET MESSAGE_TEXT = "Invalid name character string: must RLIKE ^[a-z0-9_]+$",
     MYSQL_ERRNO = 1300;
   END IF;
 END$$
@@ -37,10 +37,10 @@ DROP TRIGGER IF EXISTS attribute_BEFORE_UPDATE $$
 CREATE DEFINER = CURRENT_USER TRIGGER attribute_BEFORE_UPDATE BEFORE UPDATE ON attribute FOR EACH ROW
 BEGIN
   -- make sure name is valid
-  SELECT NEW.name RLIKE "[a-z_][a-z0-9_]*" INTO @test;
+  SELECT NEW.name RLIKE "^[a-z0-9_]+$" INTO @test;
   IF( @test = 0 ) THEN
     SIGNAL SQLSTATE 'HY000'
-    SET MESSAGE_TEXT = "Invalid name character string: must RLIKE [a-z_][a-z0-9_]",
+    SET MESSAGE_TEXT = "Invalid name character string: must RLIKE ^[a-z0-9_]+$",
     MYSQL_ERRNO = 1300;
   END IF;
 END$$

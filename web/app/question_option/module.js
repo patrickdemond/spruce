@@ -26,8 +26,8 @@ define( function() {
       name: {
         title: 'Name'
       },
-      value: {
-        title: 'Value'
+      description: {
+        title: 'Description'
       },
       exclusive: {
         title: 'Exclusive',
@@ -58,8 +58,8 @@ define( function() {
       title: 'Name',
       type: 'string'
     },
-    value: {
-      title: 'Value',
+    description: {
+      title: 'Description',
       type: 'string'
     },
     exclusive: {

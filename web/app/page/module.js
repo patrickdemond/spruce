@@ -268,7 +268,7 @@ define( function() {
                   promiseList.push( CnHttpFactory.instance( {
                     path: ['question', question.id, 'question_option' ].join( '/' ),
                     data: {
-                      select: { column: [ 'name', 'value', 'exclusive', 'extra' ] },
+                      select: { column: [ 'name', 'description', 'exclusive', 'extra' ] },
                       modifier: { order: 'question_option.rank' }
                     }
                   } ).query().then( function( response ) {

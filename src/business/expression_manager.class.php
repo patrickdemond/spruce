@@ -361,10 +361,10 @@ class expression_manager extends \cenozo\singleton
       else if( 'list' == $db_question->type )
       {
         $select = lib::create( 'database\select' );
-        $select->add_column( 'value' );
+        $select->add_column( 'name' );
         $question_option_list = [];
         foreach( $db_answer->get_question_option_list( $select ) as $question_option )
-          $question_option_list[] = $question_option['value'];
+          $question_option_list[] = $question_option['name'];
         $compiled = sprintf( '"%s"', implode( ',', $question_option_list ) );
       }
     }

@@ -379,8 +379,8 @@ class import
 
             $option_list[] = [
               'rank' => $option_rank++,
-              'name' => $type,
-              'value' => strtoupper( $type ),
+              'name' => strtoupper( $type ),
+              'description' => $type,
               'exclusive' => 1
             ];
           }
@@ -435,8 +435,8 @@ class import
           {
             $option_list[] = [
               'rank' => $option_rank++,
-              'name' => $subrow['question'],
-              'value' => $subrow['title'],
+              'name' => $subrow['title'],
+              'description' => $subrow['question'],
               'exclusive' => 0
             ];
           }
@@ -459,7 +459,7 @@ class import
             {
               foreach( $option_list as $index => $option )
               {
-                if( $option['value'] == $exclusive_value )
+                if( $option['name'] == $exclusive_value )
                 {
                   $option_list[$index]['exclusive'] = 1;
                   break;
@@ -599,7 +599,7 @@ class import
 
         if( array_key_exists( 'option_list', $question ) )
         {
-          $sql = 'INSERT INTO question_option( question_id, rank, name, value, exclusive, extra ) VALUES ';
+          $sql = 'INSERT INTO question_option( question_id, rank, name, description, exclusive, extra ) VALUES ';
           foreach( $question['option_list'] as $index => $option )
           {
             $sql .= ( 0 == $index ? '' : ",\n" );
@@ -607,10 +607,10 @@ class import
               '( %d, %d, "%s", "%s", %d, %s )',
               $question_id,
               $option['rank'],
-              addslashes( $option['name'] ),
-              $option['value'],
+              $option['name'],
+              addslashes( $option['description'] ),
               array_key_exists( 'exclusive', $option ) ? $option['exclusive'] : 0,
-              'OTHER' == $option['value'] ? '"string"' : 'NULL'
+              'OTHER' == $option['name'] ? '"string"' : 'NULL'
             );
           }
           if( false === $this->db->query( $sql ) ) error( $this->db->error, $sql );
@@ -663,7 +663,7 @@ class import
           if( is_null( $name ) )
           {
             $name = 1 == preg_match( '/participant\.opal\.TokenAttributes\.TrackingF2\.([A-Z0-9_]+)\.(cache|label)/', $code, $matches )
-                  ? ( $matches[1].( 'label' == $matches[2] ? '.label' : '' ) )
+                  ? ( $matches[1].( 'label' == $matches[2] ? '_LABEL' : '' ) )
                   : str_replace( [ '.age()', '.sex' ], [ '_age', '_sex' ], $code );
 
             $sql = sprintf(
@@ -674,7 +674,7 @@ class import
               $name,
               $code
             );
-            if( false === $this->db->query( $sql ) ) error( $this->db->error );
+            if( false === $this->db->query( $sql ) ) { var_dump( $sql ); error( $this->db->error ); }
           }
 
           $attribute['name'] = sprintf( '@%s@', $name );
@@ -689,7 +689,7 @@ class import
     // get a list of all pages, questions and options
     $sql = 'SELECT page.sid, page.qid page_qid, question.qid question_qid, page.precondition, '.
                   'page.id page_id, question.id question_id, question_option.id option_id, '.
-                  'page.name page_name, question.name question_name, question_option.value option_value '.
+                  'page.name page_name, question.name question_name, question_option.name option_name '.
            'FROM page '.
            'JOIN question ON page.id = question.page_id '.
            'LEFT JOIN question_option ON question.id = question_option.question_id '.
@@ -709,24 +709,6 @@ class import
           'id' => $page_id,
           'name' => $page_name,
           'precondition' => $precondition,
-          'question_list' => []
-        ];
-      }
-
-      if( !array_key_exists( $question_name, $page_list[$qid]['question_list'] ) )
-      {
-        $page_list[$qid]['question_list'][$question_name] = [
-          'id' => $question_id,
-          'name' => $question_name,
-          'option_list' => []
-        ];
-      }
-
-      if( !is_null( $option_id ) )
-      {
-        $page_list[$qid]['question_list'][$question_name]['option_list'][$option_value] = [
-          'id' => $option_id,
-          'name' => $option_value
         ];
       }
     }
@@ -829,8 +811,8 @@ class import
     {
       $option_list[] = [
         'rank' => $option_rank++,
-        'name' => $subrow['answer'],
-        'value' => $subrow['code'],
+        'name' => $subrow['code'],
+        'description' => $subrow['answer'],
         'exclusive' => 1
       ];
       $possible_answer_list[] = $subrow['code'];
