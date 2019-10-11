@@ -168,386 +168,397 @@ class import
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     out( 'Reading all questions in parts 1, 2 and 3' );
-    $sql = sprintf(
-      'SELECT module.id AS module_id, questions.sid, questions.qid, title, question, type, relevance '.
-      'FROM %s.questions '.
-      'JOIN %s.groups USING( gid, language ) '.
-      'JOIN module ON groups.gid = module.gid '.
-      'WHERE questions.sid IN( 357653, 126673, 155575 ) '.
-      'AND parent_qid = 0 '.
-      'AND language = "en" '.
-      'AND title NOT LIKE "%%\\_OTSP\\_%%" '. // ignore specify-other questions
-      'ORDER BY group_order, question_order',
-      $this->lsdb,
-      $this->lsdb
-    );
-    $result = $this->db->query( $sql );
-    if( false === $result ) error( $this->db->error );
 
-    $page_rank = 1;
     $page_list = [];
-    foreach( $result as $row )
+    foreach( [ 357653, 126673, 155575 ] as $sid )
     {
-      $page = [
-        'sid' => $row['sid'],
-        'qid' => $row['qid'],
-        'module_id' => $row['module_id'],
-        'rank' => $page_rank++,
-        'precondition' => 1 == $row['relevance'] ? NULL : $row['relevance'],
-        'name' => $row['title'],
-        'description' => NULL,
-        'question_list' => []
-      ];
+      $sql = sprintf(
+        'SELECT module.id AS module_id, questions.qid, title, question, type, relevance '.
+        'FROM %s.questions '.
+        'JOIN %s.groups USING( gid, language ) '.
+        'JOIN module ON groups.gid = module.gid '.
+        'WHERE questions.sid = %d '.
+        'AND parent_qid = 0 '.
+        'AND language = "en" '.
+        'AND title NOT LIKE "%%\\_OTSP\\_%%" '. // ignore specify-other questions
+        'ORDER BY group_order, question_order',
+        $this->lsdb,
+        $this->lsdb,
+        $sid
+      );
+      $result = $this->db->query( $sql );
+      if( false === $result ) error( $this->db->error );
 
-      if( ';' == $row['type'] ) // 2D array
+      $last_module_id = NULL;
+      foreach( $result as $row )
       {
-        // we only want the question title to show once
-        $page['description'] = preg_replace( '(<script.*<\/script>)s', '', $row['question'] );
-
-        // get the question rows
-        $sql = sprintf(
-          'SELECT qid, title, question '.
-          'FROM %s.questions '.
-          'WHERE parent_qid = %d '.
-          'AND language = "en" '.
-          'AND scale_id = 0 '.
-          'ORDER BY question_order',
-          $this->lsdb,
-          $row['qid']
-        );
-        $subresult = $this->db->query( $sql );
-        if( false === $subresult ) error( $this->db->error );
-        $question_rows = [];
-        foreach( $subresult as $subrow ) $question_rows[] = $subrow;
-
-        // get the question cols
-        $sql = sprintf(
-          'SELECT qid, title, question '.
-          'FROM %s.questions '.
-          'WHERE parent_qid = %d '.
-          'AND language = "en" '.
-          'AND scale_id = 1 '.
-          'ORDER BY question_order',
-          $this->lsdb,
-          $row['qid']
-        );
-        $subresult = $this->db->query( $sql );
-        if( false === $subresult ) error( $this->db->error );
-        $question_cols = [];
-        foreach( $subresult as $subrow ) $question_cols[] = $subrow;
-
-        // now create a new question for every row/col combination
-        $question_rank = 1;
-        foreach( $question_rows as $question_row )
+        if( $last_module_id != $row['module_id'] )
         {
-          foreach( $question_cols as $question_col )
-          {
-            $page['question_list'][] = [
-              'qid' => NULL,
-              'rank' => $question_rank++,
-              'name' => sprintf( '%s_%s', str_replace( '_TRF2', '', $question_row['title'] ), $question_col['title'] ),
-              'type' => 'string',
-              'mandatory' => 0,
-              'description' => sprintf( '%s %s', $question_row['question'], $question_col['question'] )
-            ];
-          }
+          $page_rank = 1;
+          $last_module_id = $row['module_id'];
         }
-      }
-      else if( 'L' == $row['type'] ) // exclusive list
-      {
-        $option_list = $this->get_exclusive_option_list( $row['qid'] );
 
-        // the intermission questions have duplicate names, so prefix them with the module name
-        $name = $row['title'];
-        if( 1 == preg_match( '/^INT_[0-9]+/', $name ) )
+        $page = [
+          'sid' => $sid,
+          'qid' => $row['qid'],
+          'module_id' => $row['module_id'],
+          'rank' => $page_rank++,
+          'precondition' => 1 == $row['relevance'] ? NULL : $row['relevance'],
+          'name' => $row['title'],
+          'description' => NULL,
+          'question_list' => []
+        ];
+
+        if( ';' == $row['type'] ) // 2D array
         {
+          // we only want the question title to show once
+          $page['description'] = preg_replace( '(<script.*<\/script>)s', '', $row['question'] );
+
+          // get the question rows
           $sql = sprintf(
-            'SELECT name FROM module WHERE id = %d',
-            $page['module_id']
+            'SELECT qid, title, question '.
+            'FROM %s.questions '.
+            'WHERE parent_qid = %d '.
+            'AND language = "en" '.
+            'AND scale_id = 0 '.
+            'ORDER BY question_order',
+            $this->lsdb,
+            $row['qid']
           );
           $subresult = $this->db->query( $sql );
           if( false === $subresult ) error( $this->db->error );
-          $name = sprintf(
-            '%s_%s',
-            str_replace( ' ', '_', current( $subresult->fetch_row() ) ),
-            $name
+          $question_rows = [];
+          foreach( $subresult as $subrow ) $question_rows[] = $subrow;
+
+          // get the question cols
+          $sql = sprintf(
+            'SELECT qid, title, question '.
+            'FROM %s.questions '.
+            'WHERE parent_qid = %d '.
+            'AND language = "en" '.
+            'AND scale_id = 1 '.
+            'ORDER BY question_order',
+            $this->lsdb,
+            $row['qid']
           );
+          $subresult = $this->db->query( $sql );
+          if( false === $subresult ) error( $this->db->error );
+          $question_cols = [];
+          foreach( $subresult as $subrow ) $question_cols[] = $subrow;
+
+          // now create a new question for every row/col combination
+          $question_rank = 1;
+          foreach( $question_rows as $question_row )
+          {
+            foreach( $question_cols as $question_col )
+            {
+              $page['question_list'][] = [
+                'qid' => NULL,
+                'rank' => $question_rank++,
+                'name' => sprintf( '%s_%s', str_replace( '_TRF2', '', $question_row['title'] ), $question_col['title'] ),
+                'type' => 'string',
+                'mandatory' => 0,
+                'description' => sprintf( '%s %s', $question_row['question'], $question_col['question'] )
+              ];
+            }
+          }
         }
-
-        $question = [
-          'qid' => $row['qid'],
-          'rank' => 1,
-          'name' => $name,
-          'description' => preg_replace( '(<script.*<\/script>)s', '', $row['question'] )
-        ];
-        $question['type'] = 0 == count( $option_list ) ? 'boolean' : 'list';
-        if( 0 < count( $option_list ) ) $question['option_list'] = $option_list;
-
-        $page['question_list'][] = $question;
-      }
-      else if( 'F' == $row['type'] ) // multiple exclusive list questions
-      {
-        // we only want the question title to show once
-        $page['description'] = preg_replace( '(<script.*<\/script>)s', '', $row['question'] );
-        $page['qid'] = $row['qid']; // set the page's qid since it represents all questions
-
-        $option_list = $this->get_exclusive_option_list( $row['qid'] );
-
-        $sql = sprintf(
-          'SELECT qid, title, question '.
-          'FROM %s.questions '.
-          'WHERE parent_qid = %d '.
-          'AND language = "en" '.
-          'ORDER BY question_order',
-          $this->lsdb,
-          $row['qid']
-        );
-        $subresult = $this->db->query( $sql );
-        if( false === $subresult ) error( $this->db->error );
-
-        // create a new question for each subquestion
-        $question_rank = 1;
-        foreach( $subresult as $subrow )
+        else if( 'L' == $row['type'] ) // exclusive list
         {
+          $option_list = $this->get_exclusive_option_list( $row['qid'] );
+
+          // the intermission questions have duplicate names, so prefix them with the module name
+          $name = $row['title'];
+          if( 1 == preg_match( '/^INT_[0-9]+/', $name ) )
+          {
+            $sql = sprintf(
+              'SELECT name FROM module WHERE id = %d',
+              $page['module_id']
+            );
+            $subresult = $this->db->query( $sql );
+            if( false === $subresult ) error( $this->db->error );
+            $name = sprintf(
+              '%s_%s',
+              str_replace( ' ', '_', current( $subresult->fetch_row() ) ),
+              $name
+            );
+          }
+
           $question = [
-            'qid' => $subrow['qid'],
-            'rank' => $question_rank++,
-            'name' => sprintf( '%s_%s', str_replace( '_TRF2', '', $row['title'] ), $subrow['title'] ),
-            'type' => 'list',
-            'description' => $subrow['question']
+            'qid' => $row['qid'],
+            'rank' => 1,
+            'name' => $name,
+            'description' => preg_replace( '(<script.*<\/script>)s', '', $row['question'] )
           ];
           $question['type'] = 0 == count( $option_list ) ? 'boolean' : 'list';
           if( 0 < count( $option_list ) ) $question['option_list'] = $option_list;
 
           $page['question_list'][] = $question;
         }
-      }
-      else if( 'N' == $row['type'] ) // number
-      {
-        $question = [
-          'qid' => $row['qid'],
-          'rank' => 1,
-          'name' => $row['title'],
-          'description' => preg_replace( '(<script.*<\/script>)s', '', $row['question'] ),
-          'type' => 'number'
-        ];
-
-        // look at the question to see if there is a min/max value contained in old javascript
-        if( preg_match( '/\bmin: ([0-9]+)/', $row['question'], $matches ) )
-          $question['minimum'] = $matches[1];
-        if( preg_match( '/\bmax: ([0-9]+)/', $row['question'], $matches ) )
-          $question['maximum'] = $matches[1];
-        
-        $page['question_list'][] = $question;
-      }
-      else if( 'K' == $row['type'] ) // multiple number questions
-      {
-        // all multiple number questions are used to provide multiple different units for a single value
-        $sql = sprintf(
-          'SELECT qid, title, question '.
-          'FROM %s.questions '.
-          'WHERE parent_qid = %d '.
-          'AND language = "en" '.
-          'ORDER BY question_order',
-          $this->lsdb,
-          $row['qid']
-        );
-        $subresult = $this->db->query( $sql );
-        if( false === $subresult ) error( $this->db->error );
-
-        $option_list = [];
-        foreach( $subresult as $subrow )
+        else if( 'F' == $row['type'] ) // multiple exclusive list questions
         {
-          $type = NULL;
-          if( preg_match( '/minutes/', strtolower( $subrow['question'] ) ) ) $type = 'minutes';
-          else if( preg_match( '/hours/', strtolower( $subrow['question'] ) ) ) $type = 'hours';
-          else if( preg_match( '/weeks/', strtolower( $subrow['question'] ) ) ) $type = 'weeks';
-          else if( preg_match( '/months/', strtolower( $subrow['question'] ) ) ) $type = 'months';
-          else if( preg_match( '/years/', strtolower( $subrow['question'] ) ) ) $type = 'years';
-          else if( preg_match( '/age/', strtolower( $subrow['question'] ) ) ) $type = 'age';
-          else if( preg_match( '/year/', strtolower( $subrow['question'] ) ) ) $type = 'year';
+          // we only want the question title to show once
+          $page['description'] = preg_replace( '(<script.*<\/script>)s', '', $row['question'] );
+          $page['qid'] = $row['qid']; // set the page's qid since it represents all questions
 
-          $option_list[] = [
-            'rank' => $option_rank++,
-            'name' => $type,
-            'value' => strtoupper( $type ),
-            'exclusive' => 1
-          ];
-        }
+          $option_list = $this->get_exclusive_option_list( $row['qid'] );
 
-        $question = [
-          'qid' => $row['qid'],
-          'rank' => 1,
-          'name' => $row['title'],
-          'description' => preg_replace( '(<script.*<\/script>)s', '', $row['question'] ),
-          'type' => 'number'
-        ];
-
-        // look at the question to see if there is a min/max value contained in old javascript
-        if( preg_match( '/\bmin: ([0-9]+)/', $row['question'], $matches ) )
-          $question['minimum'] = $matches[1];
-        if( preg_match( '/\bmax: ([0-9]+)/', $row['question'], $matches ) )
-          $question['maximum'] = $matches[1];
-        
-        $page['question_list'][] = $question;
-
-        // now add the unit question as an exclusive list
-        $question = [
-          'qid' => NULL,
-          'rank' => 2,
-          'type' => 'list',
-          'name' => str_replace( '_TRF2', '_UNIT_TRF2', $row['title'] ),
-          'description' => NULL,
-          'option_list' => $option_list
-        ];
-
-        $page['question_list'][] = $question;
-      }
-      else if( 'M' == $row['type'] ) // non-exclusive list
-      {
-        // get the list of options for all questions which make up this page
-        $sql = sprintf(
-          'SELECT title, question '.
-          'FROM %s.questions '.
-          'WHERE parent_qid = %d '.
-          'AND language = "en" '.
-          'AND title NOT IN ( "DK", "NA", "DK_NA", "REFUSED" ) '.
-          'ORDER BY question_order',
-          $this->lsdb,
-          $row['qid']
-        );
-        $subresult = $this->db->query( $sql );
-        if( false === $subresult ) error( $this->db->error );
-
-        $option_rank = 1;
-        $option_list = [];
-        foreach( $subresult as $subrow )
-        {
-          $option_list[] = [
-            'rank' => $option_rank++,
-            'name' => $subrow['question'],
-            'value' => $subrow['title'],
-            'exclusive' => 0
-          ];
-        }
-
-        // figure out which options are exclusive
-        $sql = sprintf(
-          'SELECT value '.
-          'FROM %s.question_attributes '.
-          'WHERE attribute = "exclude_all_others" '.
-          'AND qid = %d',
-          $this->lsdb,
-          $row['qid']
-        );
-        $subresult = $this->db->query( $sql );
-        if( false === $subresult ) error( $this->db->error );
-
-        foreach( $subresult as $subrow )
-        {
-          foreach( explode( ';', $subrow['value'] ) as $exclusive_value )
-          {
-            foreach( $option_list as $index => $option )
-            {
-              if( $option['value'] == $exclusive_value )
-              {
-                $option_list[$index]['exclusive'] = 1;
-                break;
-              }
-            }
-          }
-        }
-
-        $question = [
-          'qid' => $row['qid'],
-          'rank' => 1,
-          'name' => $row['title'],
-          'description' => preg_replace( '(<script.*<\/script>)s', '', $row['question'] ),
-          'type' => 'list',
-          'option_list' => $option_list
-        ];
-
-        $page['question_list'][] = $question;
-      }
-      else if( 'S' == $row['type'] ) // string
-      {
-        $page['question_list'][] = [
-          'qid' => $row['qid'],
-          'rank' => 1,
-          'name' => $row['title'],
-          'description' => preg_replace( '(<script.*<\/script>)s', '', $row['question'] ),
-          'type' => 'string'
-        ];
-      }
-      else if( 'Q' == $row['type'] ) // multiple string questions
-      {
-        // we only want the question title to show once
-        $page['description'] = preg_replace( '(<script.*<\/script>)s', '', $row['question'] );
-
-        $sql = sprintf(
-          'SELECT qid, title, question '.
-          'FROM %s.questions '.
-          'WHERE parent_qid = %d '.
-          'AND language = "en" '.
-          'ORDER BY question_order',
-          $this->lsdb,
-          $row['qid']
-        );
-        $subresult = $this->db->query( $sql );
-        if( false === $subresult ) error( $this->db->error );
-
-        // create a new question for each subquestion
-        $question_rank = 1;
-        foreach( $subresult as $subrow )
-        {
-          $page['question_list'][] = [
-            'qid' => $subrow['qid'],
-            'rank' => $question_rank++,
-            'name' => $subrow['title'],
-            'description' => $subrow['question'],
-            'type' => 'string'
-          ];
-        }
-      }
-      else if( 'T' == $row['type'] ) // text
-      {
-        $page['question_list'][] = [
-          'qid' => $row['qid'],
-          'rank' => 1,
-          'name' => $row['title'],
-          'description' => preg_replace( '(<script.*<\/script>)s', '', $row['question'] ),
-          'type' => 'text'
-        ];
-      }
-      else if( 'X' == $row['type'] ) // comment
-      {
-        // the intermission questions have duplicate names, so prefix them with the module name
-        $name = $row['title'];
-        if( 1 == preg_match( '/^INT_[0-9]+/', $name ) )
-        {
           $sql = sprintf(
-            'SELECT name FROM module WHERE id = %d',
-            $page['module_id']
+            'SELECT qid, title, question '.
+            'FROM %s.questions '.
+            'WHERE parent_qid = %d '.
+            'AND language = "en" '.
+            'ORDER BY question_order',
+            $this->lsdb,
+            $row['qid']
           );
           $subresult = $this->db->query( $sql );
           if( false === $subresult ) error( $this->db->error );
-          $name = sprintf(
-            '%s_%s',
-            str_replace( ' ', '_', current( $subresult->fetch_row() ) ),
-            $name
+
+          // create a new question for each subquestion
+          $question_rank = 1;
+          foreach( $subresult as $subrow )
+          {
+            $question = [
+              'qid' => $subrow['qid'],
+              'rank' => $question_rank++,
+              'name' => sprintf( '%s_%s', str_replace( '_TRF2', '', $row['title'] ), $subrow['title'] ),
+              'type' => 'list',
+              'description' => $subrow['question']
+            ];
+            $question['type'] = 0 == count( $option_list ) ? 'boolean' : 'list';
+            if( 0 < count( $option_list ) ) $question['option_list'] = $option_list;
+
+            $page['question_list'][] = $question;
+          }
+        }
+        else if( 'N' == $row['type'] ) // number
+        {
+          $question = [
+            'qid' => $row['qid'],
+            'rank' => 1,
+            'name' => $row['title'],
+            'description' => preg_replace( '(<script.*<\/script>)s', '', $row['question'] ),
+            'type' => 'number'
+          ];
+
+          // look at the question to see if there is a min/max value contained in old javascript
+          if( preg_match( '/\bmin: ([0-9]+)/', $row['question'], $matches ) )
+            $question['minimum'] = $matches[1];
+          if( preg_match( '/\bmax: ([0-9]+)/', $row['question'], $matches ) )
+            $question['maximum'] = $matches[1];
+          
+          $page['question_list'][] = $question;
+        }
+        else if( 'K' == $row['type'] ) // multiple number questions
+        {
+          // all multiple number questions are used to provide multiple different units for a single value
+          $sql = sprintf(
+            'SELECT qid, title, question '.
+            'FROM %s.questions '.
+            'WHERE parent_qid = %d '.
+            'AND language = "en" '.
+            'ORDER BY question_order',
+            $this->lsdb,
+            $row['qid']
           );
+          $subresult = $this->db->query( $sql );
+          if( false === $subresult ) error( $this->db->error );
+
+          $option_list = [];
+          foreach( $subresult as $subrow )
+          {
+            $type = NULL;
+            if( preg_match( '/minutes/', strtolower( $subrow['question'] ) ) ) $type = 'minutes';
+            else if( preg_match( '/hours/', strtolower( $subrow['question'] ) ) ) $type = 'hours';
+            else if( preg_match( '/weeks/', strtolower( $subrow['question'] ) ) ) $type = 'weeks';
+            else if( preg_match( '/months/', strtolower( $subrow['question'] ) ) ) $type = 'months';
+            else if( preg_match( '/years/', strtolower( $subrow['question'] ) ) ) $type = 'years';
+            else if( preg_match( '/age/', strtolower( $subrow['question'] ) ) ) $type = 'age';
+            else if( preg_match( '/year/', strtolower( $subrow['question'] ) ) ) $type = 'year';
+
+            $option_list[] = [
+              'rank' => $option_rank++,
+              'name' => $type,
+              'value' => strtoupper( $type ),
+              'exclusive' => 1
+            ];
+          }
+
+          $question = [
+            'qid' => $row['qid'],
+            'rank' => 1,
+            'name' => $row['title'],
+            'description' => preg_replace( '(<script.*<\/script>)s', '', $row['question'] ),
+            'type' => 'number'
+          ];
+
+          // look at the question to see if there is a min/max value contained in old javascript
+          if( preg_match( '/\bmin: ([0-9]+)/', $row['question'], $matches ) )
+            $question['minimum'] = $matches[1];
+          if( preg_match( '/\bmax: ([0-9]+)/', $row['question'], $matches ) )
+            $question['maximum'] = $matches[1];
+          
+          $page['question_list'][] = $question;
+
+          // now add the unit question as an exclusive list
+          $question = [
+            'qid' => NULL,
+            'rank' => 2,
+            'type' => 'list',
+            'name' => str_replace( '_TRF2', '_UNIT_TRF2', $row['title'] ),
+            'description' => NULL,
+            'option_list' => $option_list
+          ];
+
+          $page['question_list'][] = $question;
+        }
+        else if( 'M' == $row['type'] ) // non-exclusive list
+        {
+          // get the list of options for all questions which make up this page
+          $sql = sprintf(
+            'SELECT title, question '.
+            'FROM %s.questions '.
+            'WHERE parent_qid = %d '.
+            'AND language = "en" '.
+            'AND title NOT IN ( "DK", "NA", "DK_NA", "REFUSED" ) '.
+            'ORDER BY question_order',
+            $this->lsdb,
+            $row['qid']
+          );
+          $subresult = $this->db->query( $sql );
+          if( false === $subresult ) error( $this->db->error );
+
+          $option_rank = 1;
+          $option_list = [];
+          foreach( $subresult as $subrow )
+          {
+            $option_list[] = [
+              'rank' => $option_rank++,
+              'name' => $subrow['question'],
+              'value' => $subrow['title'],
+              'exclusive' => 0
+            ];
+          }
+
+          // figure out which options are exclusive
+          $sql = sprintf(
+            'SELECT value '.
+            'FROM %s.question_attributes '.
+            'WHERE attribute = "exclude_all_others" '.
+            'AND qid = %d',
+            $this->lsdb,
+            $row['qid']
+          );
+          $subresult = $this->db->query( $sql );
+          if( false === $subresult ) error( $this->db->error );
+
+          foreach( $subresult as $subrow )
+          {
+            foreach( explode( ';', $subrow['value'] ) as $exclusive_value )
+            {
+              foreach( $option_list as $index => $option )
+              {
+                if( $option['value'] == $exclusive_value )
+                {
+                  $option_list[$index]['exclusive'] = 1;
+                  break;
+                }
+              }
+            }
+          }
+
+          $question = [
+            'qid' => $row['qid'],
+            'rank' => 1,
+            'name' => $row['title'],
+            'description' => preg_replace( '(<script.*<\/script>)s', '', $row['question'] ),
+            'type' => 'list',
+            'option_list' => $option_list
+          ];
+
+          $page['question_list'][] = $question;
+        }
+        else if( 'S' == $row['type'] ) // string
+        {
+          $page['question_list'][] = [
+            'qid' => $row['qid'],
+            'rank' => 1,
+            'name' => $row['title'],
+            'description' => preg_replace( '(<script.*<\/script>)s', '', $row['question'] ),
+            'type' => 'string'
+          ];
+        }
+        else if( 'Q' == $row['type'] ) // multiple string questions
+        {
+          // we only want the question title to show once
+          $page['description'] = preg_replace( '(<script.*<\/script>)s', '', $row['question'] );
+
+          $sql = sprintf(
+            'SELECT qid, title, question '.
+            'FROM %s.questions '.
+            'WHERE parent_qid = %d '.
+            'AND language = "en" '.
+            'ORDER BY question_order',
+            $this->lsdb,
+            $row['qid']
+          );
+          $subresult = $this->db->query( $sql );
+          if( false === $subresult ) error( $this->db->error );
+
+          // create a new question for each subquestion
+          $question_rank = 1;
+          foreach( $subresult as $subrow )
+          {
+            $page['question_list'][] = [
+              'qid' => $subrow['qid'],
+              'rank' => $question_rank++,
+              'name' => $subrow['title'],
+              'description' => $subrow['question'],
+              'type' => 'string'
+            ];
+          }
+        }
+        else if( 'T' == $row['type'] ) // text
+        {
+          $page['question_list'][] = [
+            'qid' => $row['qid'],
+            'rank' => 1,
+            'name' => $row['title'],
+            'description' => preg_replace( '(<script.*<\/script>)s', '', $row['question'] ),
+            'type' => 'text'
+          ];
+        }
+        else if( 'X' == $row['type'] ) // comment
+        {
+          // the intermission questions have duplicate names, so prefix them with the module name
+          $name = $row['title'];
+          if( 1 == preg_match( '/^INT_[0-9]+/', $name ) )
+          {
+            $sql = sprintf(
+              'SELECT name FROM module WHERE id = %d',
+              $page['module_id']
+            );
+            $subresult = $this->db->query( $sql );
+            if( false === $subresult ) error( $this->db->error );
+            $name = sprintf(
+              '%s_%s',
+              str_replace( ' ', '_', current( $subresult->fetch_row() ) ),
+              $name
+            );
+          }
+
+          $page['question_list'][] = [
+            'qid' => $row['qid'],
+            'rank' => 1,
+            'name' => $name,
+            'description' => preg_replace( '(<script.*<\/script>)s', '', $row['question'] ),
+            'type' => 'comment'
+          ];
         }
 
-        $page['question_list'][] = [
-          'qid' => $row['qid'],
-          'rank' => 1,
-          'name' => $name,
-          'description' => preg_replace( '(<script.*<\/script>)s', '', $row['question'] ),
-          'type' => 'comment'
-        ];
+        $page_list[] = $page;
       }
-
-      $page_list[] = $page;
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
@@ -694,7 +705,7 @@ class import
       {
         $page_list[$qid] = [
           'sid' => $sid,
-          'multi' => !is_null( $page_qid ),
+          'multi' => !is_null( $page_qid ) && is_null( $question_qid ),
           'id' => $page_id,
           'name' => $page_name,
           'precondition' => $precondition,

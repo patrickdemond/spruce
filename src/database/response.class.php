@@ -39,6 +39,11 @@ class response extends \cenozo\database\record
    public function move_to_next_page()
    {
      $db_next_page = $this->get_page()->get_next_page( $this );
+     if( is_null( $db_next_page ) )
+     {
+       $db_next_page = lib::create( 'database\page', 1 );
+       log::debug( 'null' );
+     }
      $this->page_id = is_null( $db_next_page ) ? NULL : $db_next_page->id;
      $this->save();
    }
@@ -81,5 +86,19 @@ class response extends \cenozo\database\record
 
     // if we get here then something is wrong
     if( !$created ) throw lib::create( 'exception\runtime', 'Unable to create unique response token.', __METHOD__ );
+  }
+
+  public function create_attributes()
+  {
+    $db_participant = $this->get_participant();
+
+    foreach( $this->get_qnaire()->get_attribute_object_list() as $db_attribute )
+    {
+      $db_response_attribute = lib::create( 'database\response_attribute' );
+      $db_response_attribute->response_id = $this->id;
+      $db_response_attribute->attribute_id = $db_attribute->id;
+      $db_response_attribute->value = $db_attribute->get_participant_value( $db_participant );
+      $db_response_attribute->save();
+    }
   }
 }

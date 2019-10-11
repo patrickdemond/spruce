@@ -139,7 +139,7 @@ class expression_manager extends \cenozo\singleton
       }
       else if( 'attribute' == $this->active_term )
       {
-        if( '%' != $char ) $this->term .= $char;
+        if( '@' != $char ) $this->term .= $char;
         else $compiled .= $this->process_attribute( $db_qnaire, $db_response );
         $process_char = false;
       }
@@ -177,6 +177,7 @@ class expression_manager extends \cenozo\singleton
     else if( 'constant' == $this->active_term ) $compiled .= $this->process_constant();
     else if( 'operator' == $this->active_term ) $compiled .= $this->process_operator();
 
+    $compiled = strtolower( $compiled );
     return is_null( $db_response ) ? true : eval( sprintf( 'return (%s);', $compiled ) );
   }
 
@@ -357,6 +358,15 @@ class expression_manager extends \cenozo\singleton
       if( 'boolean' == $db_question->type ) $compiled = $db_answer->value_boolean ? 'true' : 'false';
       else if( 'number' == $db_question->type ) $compiled = $db_answer->value_number;
       else if( 'string' == $db_question->type ) $compiled = sprintf( '"%s"', addslashes( $db_answer->value_string ) );
+      else if( 'list' == $db_question->type )
+      {
+        $select = lib::create( 'database\select' );
+        $select->add_column( 'value' );
+        $question_option_list = [];
+        foreach( $db_answer->get_question_option_list( $select ) as $question_option )
+          $question_option_list[] = $question_option['value'];
+        $compiled = sprintf( '"%s"', implode( ',', $question_option_list ) );
+      }
     }
 
     // the text type is just a long string
@@ -385,13 +395,13 @@ class expression_manager extends \cenozo\singleton
       $this->quote = $char;
     }
     else if( ' ' == $char ) ; // ignore spaces
-    else if( '%' == $char ) $this->active_term = 'attribute';
+    else if( '@' == $char ) $this->active_term = 'attribute';
     else if( '$' == $char ) $this->active_term = 'question';
     else if( preg_match( '/[0-9.]/', $char ) ) $this->active_term = 'number';
     else if( preg_match( '/[a-z_]/', $char ) ) $this->active_term = 'constant';
     else if( preg_match( '/[-+*\/<>!=~&|]/', $char ) ) $this->active_term = 'operator';
 
-    $this->term = in_array( $char, ['(', ')', "'", '"', '`', ' ', '%', '$'] ) ? '' : $char;
+    $this->term = in_array( $char, ['(', ')', "'", '"', '`', ' ', '@', '$'] ) ? '' : $char;
 
     return $compiled;
   }
