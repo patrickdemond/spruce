@@ -572,7 +572,7 @@ class import
         is_null( $page['qid'] ) ? 'NULL' : $page['qid'],
         $page['module_id'],
         $page['rank'],
-        is_null( $page['precondition'] ) ? 'NULL' : sprintf( '"%s"', addslashes( $page['precondition'] ) ),
+        $page['precondition'] ? sprintf( '"%s"', addslashes( $page['precondition'] ) ) : 'NULL',
         $page['name'],
         is_null( $page['description'] ) ? 'NULL' : sprintf( '"%s"', addslashes( $page['description'] ) )
       );
@@ -674,10 +674,12 @@ class import
               $name,
               $code
             );
-            if( false === $this->db->query( $sql ) ) { var_dump( $sql ); error( $this->db->error ); }
+            if( false === $this->db->query( $sql ) ) error( $this->db->error );
+
+            $name = sprintf( '@%s@', $name );
           }
 
-          $attribute['name'] = sprintf( '@%s@', $name );
+          $attribute['name'] = $name;
         }
 
         $attribute_list[$row['sid']][strtoupper( $ls_attribute )] = $attribute;
@@ -717,6 +719,9 @@ class import
     foreach( $page_list as $qid => $page )
     {
       $precondition = $page['precondition'];
+
+      // replace text-based logical operators
+      $precondition = preg_replace( array( '/\band\b/', '/\bor\b/' ), array( '&&', '||' ), $precondition );
 
       // replace questions
       if( preg_match_all( '/([0-9]+X[0-9]+X[0-9]+)([A-Z][0-9A-Z_]+)?\.NAOK/', $precondition, $matches ) )

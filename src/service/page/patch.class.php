@@ -27,10 +27,7 @@ class patch extends \cenozo\service\patch
       $error = $expression_manager->validate( $db_qnaire, $data['precondition'] );
       if( !is_null( $error ) )
       {
-        $this->set_data( sprintf(
-          'The precondition failed to validate: %s',
-          $error
-        ) );
+        $this->set_data( $error );
         $this->status->set_code( 306 );
       }
     }

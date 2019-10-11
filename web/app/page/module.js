@@ -136,8 +136,11 @@ define( function() {
           $document.unbind( 'keydown.render' );
           $document.bind( 'keydown.render', function( event ) {
             // only send keydown events when on the render page and the key is a numpad number
-            if( ['render','run'].includes( $scope.model.getActionFromState() ) && 96 <= event.which && event.which <= 105 ) {
-              $scope.model.renderModel.onKeydown( event.which - 96 );
+            if( ['render','run'].includes( $scope.model.getActionFromState() ) && (
+              // keypad enter or number keys
+              13 == event.which || ( 97 <= event.which && event.which <= 105 )
+            ) ) {
+              $scope.model.renderModel.onKeydown( 13 == event.which ? 'enter' : event.which - 96 );
               $scope.$apply();
             }
           } );
@@ -206,7 +209,9 @@ define( function() {
 
         function isPageComplete() {
           for( var questionId in self.data ) {
-            var questionComplete = false;
+            // empty questions are comments so they're always considered complete
+            var questionComplete = angular.equals( {}, self.data[questionId] );
+
             for( var property in self.data[questionId] ) {
               if( self.data[questionId][property] ) {
                 var question = self.questionList.findByProperty( 'id', questionId );
@@ -250,7 +255,7 @@ define( function() {
 
               self.questionList.forEach( function( question, index ) {
                 // all questions may have no answer
-                self.data[question.id] = { dkna: question.dkna, refuse: question.refuse };
+                self.data[question.id] = 'comment' == question.type ? {} : { dkna: question.dkna, refuse: question.refuse };
 
                 if( 'boolean' == question.type ) {
                   angular.extend( self.data[question.id], {
@@ -296,6 +301,12 @@ define( function() {
           },
 
           onKeydown: function( key ) {
+            // proceed to the next page when the enter key is clicked
+            if( 'enter' == key ) {
+              if( self.pageComplete ) self.proceed();
+              return;
+            }
+
             // do nothing if we have no key question index (which means the page only has comments)
             if( null == self.keyQuestionIndex ) return;
 
@@ -318,7 +329,7 @@ define( function() {
               if( key <= question.optionList.length ) {
                 var answer = question.optionList[key-1];
                 self.data[question.id][answer.id] = !self.data[question.id][answer.id];
-                self.setAnswer( 'list', question, answer );
+                self.setAnswer( 'option', question, answer );
               } else if( key == question.optionList.length + 1 ) {
                 self.data[question.id].dkna = !self.data[question.id].dkna;
                 self.setAnswer( 'dkna', question );
@@ -381,8 +392,10 @@ define( function() {
                   patchData['value_' + question.type] = self.data[question.id].value;
                 } else if( 'extra' == type ) {
                   patchData['value_' + option.extra] = self.data[question.id]['value_' + option.extra];
-                } else { // must be dkna or refuse
+                } else if( 'dkna' == type || 'refuse' == type ) { // must be dkna or refuse
                   patchData[type] = self.data[question.id][type];
+                } else {
+                  throw new Error( 'Tried to set answer with invalid type "' + type + '"' );
                 }
 
                 promiseList.push(

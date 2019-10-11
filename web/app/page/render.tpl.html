@@ -9,6 +9,7 @@
       <div class="container-fluid vertical-spacer">
         <span class="text-info" ng-bind-html="model.viewModel.record.description | cnNewlines"></span>
         <div ng-repeat="question in model.renderModel.questionList">
+          <hr ng-if="!$first" />
           <div ng-if="'comment' == question.type"
                class="vertical-spacer text-info"
                ng-bind-html="question.description | cnNewlines">
@@ -44,7 +45,7 @@
                        ng-click="model.renderModel.setAnswer( 'option', question, option )"
                        ng-bind-html="'<i class=\'glyphicon ' + (
                          model.renderModel.data[question.id][option.id] ? 'glyphicon-check' : 'glyphicon-unchecked'
-                       ) + '\'></i> ' + option.name"
+                       ) + '\'></i> ' + option.description"
                        uib-btn-checkbox>
                 </label>
               </div>

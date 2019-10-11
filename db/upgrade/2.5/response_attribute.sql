@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS response_attribute (
   PRIMARY KEY (id),
   INDEX fk_response_id (response_id ASC),
   INDEX fk_attribute_id (attribute_id ASC),
+  UNIQUE INDEX uq_response_id_attribute_id (response_id ASC, attribute_id ASC),
   CONSTRAINT fk_response_attribute_response_id
     FOREIGN KEY (response_id)
     REFERENCES response (id)

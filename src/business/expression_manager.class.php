@@ -30,7 +30,10 @@ class expression_manager extends \cenozo\singleton
   public function validate( $db_qnaire, $precondition )
   {
     try { $this->evaluate( $db_qnaire, $precondition ); }
-    catch( \cenozo\exception\runtime $e ) { return $e->get_raw_message(); }
+    catch( \cenozo\exception\runtime $e )
+    {
+      return sprintf( "%s\n\n%s", $e->get_raw_message(), $e->get_previous()->get_raw_message() );
+    }
     return NULL;
   }
 
@@ -87,95 +90,105 @@ class expression_manager extends \cenozo\singleton
     $this->reset();
     $compiled = '';
 
-    // loop through the precondition one character at a time
-    foreach( str_split( strtolower( $precondition ) ) as $index => $char )
-    {
-      $process_char = true;
+    try{
+      // loop through the precondition one character at a time
+      foreach( str_split( strtolower( $precondition ) ) as $index => $char )
+      {
+        $process_char = true;
 
-      if( 'string' == $this->active_term )
-      { // ignore characters until the string has closed
-        if( $this->quote != $char ) $this->term .= $char;
-        else $compiled .= $this->process_string();
-        $process_char = false;
-      }
-      else if( 'number' == $this->active_term )
-      {
-        if( preg_match( '/[0-9.]/', $char ) )
-        {
-          $this->term .= $char;
+        if( 'string' == $this->active_term )
+        { // ignore characters until the string has closed
+          if( $this->quote != $char ) $this->term .= $char;
+          else $compiled .= $this->process_string();
           $process_char = false;
         }
-        else
+        else if( 'number' == $this->active_term )
         {
-          $compiled .= $this->process_number();
-          $process_char = true;
+          if( preg_match( '/[0-9.]/', $char ) )
+          {
+            $this->term .= $char;
+            $process_char = false;
+          }
+          else
+          {
+            $compiled .= $this->process_number();
+            $process_char = true;
+          }
         }
-      }
-      else if( 'constant' == $this->active_term )
-      {
-        if( preg_match( '/[a-z]/', $char ) )
+        else if( 'constant' == $this->active_term )
         {
-          $this->term .= $char;
+          if( preg_match( '/[a-z]/', $char ) )
+          {
+            $this->term .= $char;
+            $process_char = false;
+          }
+          else
+          {
+            $compiled .= $this->process_constant();
+            $process_char = true;
+          }
+        }
+        else if( 'operator' == $this->active_term )
+        {
+          if( preg_match( '/[-+*\/<>!=~&|]/', $char ) )
+          {
+            $this->term .= $char;
+            $process_char = false;
+          }
+          else
+          {
+            $compiled .= $this->process_operator();
+            $process_char = true;
+          }
+        }
+        else if( 'attribute' == $this->active_term )
+        {
+          if( '@' != $char ) $this->term .= $char;
+          else $compiled .= $this->process_attribute( $db_qnaire, $db_response );
           $process_char = false;
         }
-        else
+        else if( 'question' == $this->active_term )
         {
-          $compiled .= $this->process_constant();
-          $process_char = true;
+          if( '$' != $char ) $this->term .= $char;
+          else $compiled .= $this->process_question( $db_qnaire, $db_response );
+          $process_char = false;
         }
+
+        if( $process_char ) $compiled .= $this->process_character( $char );
+      }
+
+
+      if( 0 != $this->open_bracket ) 
+      {
+        throw lib::create( 'exception\runtime',
+          sprintf(
+            'There are %d too many %s brackets in the expression',
+            abs( $this->open_bracket ),
+            0 < $this->open_bracket ? 'opening' : 'closing'
+          ),
+          __METHOD__
+        );
       }
       else if( 'operator' == $this->active_term )
-      {
-        if( preg_match( '/[-+*\/<>!=~&|]/', $char ) )
-        {
-          $this->term .= $char;
-          $process_char = false;
-        }
-        else
-        {
-          $compiled .= $this->process_operator();
-          $process_char = true;
-        }
-      }
+        throw lib::create( 'exception\runtime', 'Expecting expression after operator', __METHOD__ );
+      else if( 'string' == $this->active_term )
+        throw lib::create( 'exception\runtime', 'Expression has an unclosed string', __METHOD__ );
       else if( 'attribute' == $this->active_term )
-      {
-        if( '@' != $char ) $this->term .= $char;
-        else $compiled .= $this->process_attribute( $db_qnaire, $db_response );
-        $process_char = false;
-      }
+        throw lib::create( 'exception\runtime', 'Expression has an unclosed attribute', __METHOD__ );
       else if( 'question' == $this->active_term )
-      {
-        if( '$' != $char ) $this->term .= $char;
-        else $compiled .= $this->process_question( $db_qnaire, $db_response );
-        $process_char = false;
-      }
-
-      if( $process_char ) $compiled .= $this->process_character( $char );
+        throw lib::create( 'exception\runtime', 'Expression has an unclosed question', __METHOD__ );
+      else if( 'number' == $this->active_term ) $compiled .= $this->process_number();
+      else if( 'constant' == $this->active_term ) $compiled .= $this->process_constant();
+      else if( 'operator' == $this->active_term ) $compiled .= $this->process_operator();
     }
-
-
-    if( 0 != $this->open_bracket ) 
+    catch( \cenozo\exception\runtime $e )
     {
       throw lib::create( 'exception\runtime',
-        sprintf(
-          'There are %d too many %s brackets in the expression',
-          abs( $this->open_bracket ),
-          0 < $this->open_bracket ? 'opening' : 'closing'
-        ),
-        __METHOD__
+        sprintf( 'Error while evaluating precondition:%s', "\n".$precondition ),
+        __METHOD__,
+        $e
       );
     }
-    else if( 'operator' == $this->active_term )
-      throw lib::create( 'exception\runtime', 'Expecting expression after operator', __METHOD__ );
-    else if( 'string' == $this->active_term )
-      throw lib::create( 'exception\runtime', 'Expression has an unclosed string', __METHOD__ );
-    else if( 'attribute' == $this->active_term )
-      throw lib::create( 'exception\runtime', 'Expression has an unclosed attribute', __METHOD__ );
-    else if( 'question' == $this->active_term )
-      throw lib::create( 'exception\runtime', 'Expression has an unclosed question', __METHOD__ );
-    else if( 'number' == $this->active_term ) $compiled .= $this->process_number();
-    else if( 'constant' == $this->active_term ) $compiled .= $this->process_constant();
-    else if( 'operator' == $this->active_term ) $compiled .= $this->process_operator();
 
     $compiled = strtolower( $compiled );
     return is_null( $db_response ) ? true : eval( sprintf( 'return (%s);', $compiled ) );
@@ -202,7 +215,8 @@ class expression_manager extends \cenozo\singleton
     if( !is_null( $this->last_term ) && 'operator' != $this->last_term )
       throw lib::create( 'exception\runtime', 'String found bug expecting an operator', __METHOD__ );
 
-    $this->last_term = $this->active_term;
+    // if the last term was an operator then assume we now represent a boolean expression
+    $this->last_term = 'operator' == $this->last_term ? 'boolean' : $this->active_term;
     $this->active_term = NULL;
     $this->quote = NULL;
 
@@ -222,7 +236,8 @@ class expression_manager extends \cenozo\singleton
     if( !is_null( $this->last_term ) && 'operator' != $this->last_term )
       throw lib::create( 'exception\runtime', 'Number found but expecting an operator', __METHOD__ );
 
-    $this->last_term = $this->active_term;
+    // if the last term was an operator then assume we now represent a boolean expression
+    $this->last_term = 'operator' == $this->last_term ? 'boolean' : $this->active_term;
     $this->active_term = NULL;
 
     return (string)(float)$this->term;
@@ -245,7 +260,8 @@ class expression_manager extends \cenozo\singleton
     if( !is_null( $this->last_term ) && 'operator' != $this->last_term )
       throw lib::create( 'exception\runtime', 'Constant found but expecting an operator', __METHOD__ );
 
-    $this->last_term = $type;
+    // if the last term was an operator then assume we now represent a boolean expression
+    $this->last_term = 'operator' == $this->last_term ? 'boolean' : $type;
     $this->active_term = NULL;
 
     return 'no answer' == $type ? sprintf( '"@%s@"', $this->term ) : $this->term;
@@ -303,7 +319,11 @@ class expression_manager extends \cenozo\singleton
     $response_attribute_class_name = lib::get_class_name( 'database\response_attribute' );
 
     // make sure the attribute exists in the qnaire
-    $db_attribute = $attribute_class_name::get_unique_record( 'name', $this->term );
+    $db_attribute = $attribute_class_name::get_unique_record(
+      array( 'qnaire_id', 'name' ),
+      array( $db_qnaire->id, $this->term )
+    );
+
     if( is_null( $db_attribute ) )
       throw lib::create( 'exception\runtime', sprintf( 'Invalid attribute "%s"', $this->term ), __METHOD__ );
 
@@ -322,7 +342,8 @@ class expression_manager extends \cenozo\singleton
       $compiled = sprintf( '"%s"', addslashes( $db_response_attribute->value ) );
     }
 
-    $this->last_term = $this->active_term;
+    // if the last term was an operator then assume we now represent a boolean expression
+    $this->last_term = 'operator' == $this->last_term ? 'boolean' : $this->active_term;
     $this->active_term = NULL;
 
     return $compiled;
@@ -355,7 +376,8 @@ class expression_manager extends \cenozo\singleton
         array( $db_response->id, $db_question->id )
       );
       
-      if( 'boolean' == $db_question->type ) $compiled = $db_answer->value_boolean ? 'true' : 'false';
+      if( is_null( $db_answer ) ) $compiled = 'NULL';
+      else if( 'boolean' == $db_question->type ) $compiled = $db_answer->value_boolean ? 'true' : 'false';
       else if( 'number' == $db_question->type ) $compiled = $db_answer->value_number;
       else if( 'string' == $db_question->type ) $compiled = sprintf( '"%s"', addslashes( $db_answer->value_string ) );
       else if( 'list' == $db_question->type )
@@ -367,10 +389,12 @@ class expression_manager extends \cenozo\singleton
           $question_option_list[] = $question_option['name'];
         $compiled = sprintf( '"%s"', implode( ',', $question_option_list ) );
       }
+      else log::warning( 'Tried to fill question %s which has an invalid type %s.', $this->term, $db_question->type );
     }
 
     // the text type is just a long string
-    $this->last_term = $db_question->type;
+    // if the last term was an operator then assume we now represent a boolean expression
+    $this->last_term = 'operator' == $this->last_term ? 'boolean' : $db_question->type;
     $this->active_term = NULL;
     $this->active_term = NULL;
 
@@ -388,6 +412,8 @@ class expression_manager extends \cenozo\singleton
     {
       $compiled .= $char;
       $this->open_bracket += '(' == $char ? 1 : -1;
+      if( 0 > $this->open_bracket )
+        throw lib::create( 'exception\runtime', 'Found closing bracket without a matching opening bracket.', __METHOD__ );
     }
     else if( in_array( $char, ["'", '"', '`'] ) )
     {
