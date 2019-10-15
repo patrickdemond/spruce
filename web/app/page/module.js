@@ -136,6 +136,7 @@ define( function() {
           $document.unbind( 'keydown.render' );
           $document.bind( 'keydown.render', function( event ) {
             // only send keydown events when on the render page and the key is a numpad number
+            console.log( $scope.model.getActionFromState() );
             if( ['render','run'].includes( $scope.model.getActionFromState() ) && (
               // keypad enter or number keys
               13 == event.which || ( 97 <= event.which && event.which <= 105 )
@@ -213,7 +214,8 @@ define( function() {
             var questionComplete = angular.equals( {}, self.data[questionId] );
 
             for( var property in self.data[questionId] ) {
-              if( self.data[questionId][property] ) {
+              // check if the value is set (careful, a value of "0" is a valid answer
+              if( self.data[questionId][property] || 0 === self.data[questionId][property] ) {
                 var question = self.questionList.findByProperty( 'id', questionId );
                 if( angular.isUndefined( question.optionList ) || ['dkna','refuse'].includes( property ) ) {
                   questionComplete = true;
@@ -262,7 +264,9 @@ define( function() {
                     yes: 1 === parseInt( question.value ),
                     no: 0 === parseInt( question.value )
                   } );
-                } else if( ['number', 'string', 'text'].includes( question.type ) ) {
+                } else if( 'number' == question.type ) {
+                  self.data[question.id].value = parseFloat( question.value );
+                } else if( ['string', 'text'].includes( question.type ) ) {
                   self.data[question.id].value = question.value;
                 } else if( 'list' == question.type ) {
                   // parse the answer option list

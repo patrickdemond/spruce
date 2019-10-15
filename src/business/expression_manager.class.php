@@ -354,14 +354,45 @@ class expression_manager extends \cenozo\singleton
    */
   private function process_question( $db_qnaire, $db_response = NULL )
   {
+    $question_option_class_name = lib::get_class_name( 'database\question_option' );
     $answer_class_name = lib::get_class_name( 'database\answer' );
 
-    $db_question = $db_qnaire->get_question( $this->term );
-    if( is_null( $db_question ) )
-      throw lib::create( 'exception\runtime', sprintf( 'Invalid question "%s"', $this->term ), __METHOD__ );
+    // figure out the question, and possibly the question option referred to by this term
+    $db_question = NULL;
+    $db_question_option = NULL;
 
-    if( 'text' == $db_question->type || 'comment' == $db_question->type )
-      throw lib::create( 'exception\runtime', sprintf( 'Cannot use question type "%s"', $db_question->type ), __METHOD__ );
+    // question-options are defined by question:question_option
+    if( false !== strpos( $this->term, ':' ) )
+    {
+      $parts = explode( ':', $this->term );
+      if( 2 != count( $parts ) )
+        throw lib::create( 'exception\runtime', sprintf( 'Invalid question "%s"', $this->term ), __METHOD__ );
+
+      $db_question = $db_qnaire->get_question( $parts[0] );
+      if( is_null( $db_question ) )
+        throw lib::create( 'exception\runtime', sprintf( 'Invalid question "%s"', $parts[0] ), __METHOD__ );
+
+      $db_question_option = $question_option_class_name::get_unique_record(
+        array( 'question_id', 'name' ),
+        array( $db_question->id, $parts[1] )
+      );
+      if( is_null( $db_question_option ) )
+      {
+        throw lib::create( 'exception\runtime',
+          sprintf( 'Invalid question option "%s" for question "%s"', $parts[1], $parts[0] ),
+          __METHOD__
+        );
+      }
+    }
+    else // questions are defined by name
+    {
+      $db_question = $db_qnaire->get_question( $this->term );
+      if( is_null( $db_question ) )
+        throw lib::create( 'exception\runtime', sprintf( 'Invalid question "%s"', $this->term ), __METHOD__ );
+
+      if( 'text' == $db_question->type || 'comment' == $db_question->type )
+        throw lib::create( 'exception\runtime', sprintf( 'Cannot use question type "%s"', $db_question->type ), __METHOD__ );
+    }
 
     // test that the working item is an operator
     if( !is_null( $this->last_term ) && 'operator' != $this->last_term )
@@ -375,21 +406,43 @@ class expression_manager extends \cenozo\singleton
         array( 'response_id', 'question_id' ),
         array( $db_response->id, $db_question->id )
       );
-      
+
       if( is_null( $db_answer ) ) $compiled = 'NULL';
-      else if( 'boolean' == $db_question->type ) $compiled = $db_answer->value_boolean ? 'true' : 'false';
-      else if( 'number' == $db_question->type ) $compiled = $db_answer->value_number;
-      else if( 'string' == $db_question->type ) $compiled = sprintf( '"%s"', addslashes( $db_answer->value_string ) );
-      else if( 'list' == $db_question->type )
+      else if( !is_null( $db_question_option ) )
       {
-        $select = lib::create( 'database\select' );
-        $select->add_column( 'name' );
-        $question_option_list = [];
-        foreach( $db_answer->get_question_option_list( $select ) as $question_option )
-          $question_option_list[] = $question_option['name'];
-        $compiled = sprintf( '"%s"', implode( ',', $question_option_list ) );
+        if( is_null( $db_question_option->extra ) )
+        {
+          // set whether or not the response checked off the option
+          $modifier = lib::create( 'database\modifier' );
+          $modifier->where( 'question_option_id', '=', $db_question_option->id );
+          $compiled = 0 < $db_answer->get_question_option_count( $modifier ) ? 'true' : 'false';
+        }
+        else
+        {
+          // set the option's value
+          if( 'number' == $db_question_option->type ) $compiled = $db_answer->value_number;
+          else if( 'string' == $db_question_option->type || 'text' == $db_question_option->type )
+            $compiled = sprintf( '"%s"', addslashes( $db_answer->value_string ) );
+          else log::warning( 'Tried to fill question option %s which has an invalid type %s.', $this->term, $db_question_option->type );
+        }
       }
-      else log::warning( 'Tried to fill question %s which has an invalid type %s.', $this->term, $db_question->type );
+      else
+      {
+        if( 'boolean' == $db_question->type ) $compiled = $db_answer->value_boolean ? 'true' : 'false';
+        else if( 'number' == $db_question->type ) $compiled = $db_answer->value_number;
+        else if( 'string' == $db_question->type || 'text' == $db_question->type )
+          $compiled = sprintf( '"%s"', addslashes( $db_answer->value_string ) );
+        else if( 'list' == $db_question->type )
+        {
+          $select = lib::create( 'database\select' );
+          $select->add_column( 'name' );
+          $question_option_list = [];
+          foreach( $db_answer->get_question_option_list( $select ) as $question_option )
+            $question_option_list[] = $question_option['name'];
+          $compiled = sprintf( '"%s"', implode( ',', $question_option_list ) );
+        }
+        else log::warning( 'Tried to fill question %s which has an invalid type %s.', $this->term, $db_question->type );
+      }
     }
 
     // the text type is just a long string

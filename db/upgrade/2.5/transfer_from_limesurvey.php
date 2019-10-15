@@ -688,31 +688,27 @@ class import
 
     $page_list = [];
 
-    // get a list of all pages, questions and options
-    $sql = 'SELECT page.sid, page.qid page_qid, question.qid question_qid, page.precondition, '.
-                  'page.id page_id, question.id question_id, question_option.id option_id, '.
-                  'page.name page_name, question.name question_name, question_option.name option_name '.
+    // get a list of all pages
+    $sql = 'SELECT page.id, page.name, page.sid, page.precondition, '.
+                  'page.qid AS page_qid, question.qid AS question_qid, '.
+                  'COUNT(*) as questions '.
            'FROM page '.
            'JOIN question ON page.id = question.page_id '.
-           'LEFT JOIN question_option ON question.id = question_option.question_id '.
-           'ORDER BY page.rank, question.rank, question_option.rank';
+           'GROUP BY page.id '.
+           'ORDER BY page.rank';
     $result = $this->db->query( $sql );
     if( false === $result ) error( $this->db->error );
     foreach( $result as $row )
     {
-      extract( $row );
-      $qid = is_null( $page_qid ) ? $question_qid : $page_qid;
+      $qid = is_null( $row['page_qid'] ) ? $row['question_qid'] : $row['page_qid'];
 
-      if( !array_key_exists( $qid, $page_list ) )
-      {
-        $page_list[$qid] = [
-          'sid' => $sid,
-          'multi' => !is_null( $page_qid ) && is_null( $question_qid ),
-          'id' => $page_id,
-          'name' => $page_name,
-          'precondition' => $precondition,
-        ];
-      }
+      $page_list[$qid] = [
+        'sid' => $row['sid'],
+        'questions' => $row['questions'],
+        'id' => $row['id'],
+        'name' => $row['name'],
+        'precondition' => $row['precondition'],
+      ];
     }
 
     // now go through and update all preconditions to replace 0X0X0 codes with $QUESTION$ and write to db
@@ -732,7 +728,7 @@ class import
           $qid = $parts[2];
 
           $ref_page = $page_list[$qid];
-          if( $ref_page['multi'] ) // page has multiple questions which used to be sub-questions
+          if( 1 < $ref_page['questions'] ) // page has multiple questions which used to be sub-questions
           {
             // replace the xSgXq code with the page's name (without the TRF2 suffix)
             $precondition = str_replace(
