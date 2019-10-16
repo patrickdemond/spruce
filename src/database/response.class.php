@@ -36,17 +36,40 @@ class response extends \cenozo\database\record
    * TODO: page restriction logic still needs to be applied here
    * @access public
    */
-   public function move_to_next_page()
-   {
-     $db_next_page = $this->get_page()->get_next_page( $this );
-     if( is_null( $db_next_page ) )
-     {
-       $db_next_page = lib::create( 'database\page', 1 );
-       log::debug( 'null' );
-     }
-     $this->page_id = is_null( $db_next_page ) ? NULL : $db_next_page->id;
-     $this->save();
-   }
+  public function move_to_next_page()
+  {
+    $answer_class_name = lib::get_class_name( 'database\answer' );
+
+    // start by making sure that the current page is complete
+    $complete = true;
+    $db_page = $this->get_page();
+    foreach( $db_page->get_question_object_list() as $db_question )
+    {
+      $db_answer = $answer_class_name::get_unique_record(
+        array( 'response_id', 'question_id' ),
+        array( $this->id, $db_question->id )
+      );
+
+      if( !$db_answer->is_complete() )
+      {
+        log::warning( sprintf(
+          'Tried to advance response for %s to the next page but the current page "%s" is incomplete.',
+          $this->get_participant()->uid,
+          $db_page->name
+        ) );
+
+        $complete = false;
+        break;
+      }
+    }
+
+    if( $complete )
+    {
+      $db_next_page = $db_page->get_next_page( $this );
+      $this->page_id = is_null( $db_next_page ) ? NULL : $db_next_page->id;
+      $this->save();
+    }
+  }
 
   /**
    * Moves the response to the previous valid page
@@ -57,8 +80,11 @@ class response extends \cenozo\database\record
    public function move_to_previous_page()
    {
      $db_previous_page = $this->get_page()->get_previous_page( $this );
-     $this->page_id = is_null( $db_previous_page ) ? NULL : $db_previous_page->id;
-     $this->save();
+     if( !is_null( $db_previous_page ) )
+     {
+       $this->page_id = $db_previous_page->id;
+       $this->save();
+     }
    }
 
   /**
