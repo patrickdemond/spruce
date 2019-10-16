@@ -19,7 +19,6 @@ CREATE PROCEDURE patch_access()
         "token CHAR(19) NOT NULL, ",
         "start_datetime DATETIME NOT NULL, ",
         "last_datetime DATETIME NULL DEFAULT NULL, ",
-        "end_datetime DATETIME NULL DEFAULT NULL, ",
         "PRIMARY KEY (id), ",
         "INDEX fk_qnaire_id (qnaire_id ASC), ",
         "INDEX fk_participant_id (participant_id ASC), ",

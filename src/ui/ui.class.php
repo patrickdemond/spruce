@@ -25,8 +25,8 @@ class ui extends \cenozo\ui\ui
     if( !is_null( $module ) )
     {
       $module->add_child( 'response' );
-      $module->add_child( 'attribute' );
       $module->add_child( 'module' );
+      $module->add_child( 'attribute' );
     }
 
     $module = $this->get_module( 'module' );

@@ -21,6 +21,8 @@ class module extends \cenozo\service\module
     parent::prepare_read( $select, $modifier );
 
     $modifier->join( 'participant', 'response.participant_id', 'participant.id' );
+    $modifier->left_join( 'page', 'response.page_id', 'page.id' );
+    $modifier->left_join( 'module', 'page.module_id', 'module.id' );
 
     if( !is_null( $this->get_resource() ) )
     {

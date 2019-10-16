@@ -24,9 +24,12 @@ define( [ 'page' ].reduce( function( list, name ) {
       token: {
         title: 'Token'
       },
+      module: {
+        column: 'module.name',
+        title: 'Module'
+      },
       page: {
-        column: 'page.rank',
-        type: 'rank',
+        column: 'page.name',
         title: 'Page'
       },
       start_datetime: {
@@ -35,10 +38,6 @@ define( [ 'page' ].reduce( function( list, name ) {
       },
       last_datetime: {
         title: 'Last',
-        type: 'datetime'
-      },
-      end_datetime: {
-        title: 'End',
         type: 'datetime'
       }
     },
@@ -81,12 +80,6 @@ define( [ 'page' ].reduce( function( list, name ) {
     },
     last_datetime: {
       title: 'Last Date & Time',
-      type: 'datetime',
-      constant: true,
-      exclude: 'add'
-    },
-    end_datetime: {
-      title: 'End Date & Time',
       type: 'datetime',
       constant: true,
       exclude: 'add'
