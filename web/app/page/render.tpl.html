@@ -7,6 +7,7 @@
     <div ng-if="!isComplete" class="loading spacer" uib-tooltip="Loading&hellip;"></div>
     <div ng-if="isComplete" class="spacer" id="Page{{ model.viewModel.record.rank }}">
       <div class="container-fluid vertical-spacer">
+        <span class="text-info" ng-bind-html="model.viewModel.record.module_description | cnNewlines"></span>
         <span class="text-info" ng-bind-html="model.viewModel.record.description | cnNewlines"></span>
         <div ng-repeat="question in model.renderModel.questionList">
           <hr ng-if="!$first" />

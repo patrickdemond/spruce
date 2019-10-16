@@ -61,6 +61,7 @@ define( function() {
     },
 
     module_id: { exclude: true },
+    module_description: { column: 'module.description', exclude: true },
     previous_page_id: { exclude: true },
     next_page_id: { exclude: true }
   } );
