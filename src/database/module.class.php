@@ -73,6 +73,7 @@ class module extends \cenozo\database\has_rank
    */
   public function get_next_module( $db_response = NULL )
   {
+    $answer_class_name = lib::get_class_name( 'database\answer' );
     $expression_manager = lib::create( 'business\expression_manager' );
 
     // start by getting the module one rank higher than the current
@@ -82,11 +83,33 @@ class module extends \cenozo\database\has_rank
     );
 
     // if there is a next module then make sure to test its precondition if a response is included in the request
-    return !is_null( $db_next_module ) &&
-           !is_null( $db_response ) &&
-           !is_null( $db_next_module->precondition ) &&
-           !$expression_manager->evaluate( $db_response, $db_next_module->precondition ) ?
-      $db_next_module->get_next_module( $db_response ) : $db_next_module;
+    if( !is_null( $db_next_module ) &&
+        !is_null( $db_response ) &&
+        !is_null( $db_next_module->precondition ) )
+    {
+      if( !$expression_manager->evaluate( $db_response, $db_next_module->precondition ) )
+      {
+        // before proceeding to delete any answer associated with the skipped module
+        foreach( $db_next_module->get_page_object_list() as $db_page )
+        {
+          $select = lib::create( 'database\select' );
+          $select->add_column( 'id' );
+          foreach( $db_page->get_question_list( $select ) as $question )
+          {
+            $db_answer = $answer_class_name::get_unique_record(
+              array( 'response_id', 'question_id' ),
+              array( $db_response->id, $question['id'] )
+            );
+            if( !is_null( $db_answer ) ) $db_answer->delete();
+          }
+        }
+
+        // now advance to the next module
+        $db_next_module = $db_next_module->get_next_module( $db_response );
+      }
+    }
+
+    return $db_next_module;
   }
 
   /**
