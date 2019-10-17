@@ -32,12 +32,14 @@ class ui extends \cenozo\ui\ui
     $module = $this->get_module( 'module' );
     if( !is_null( $module ) )
     {
+      $module->add_child( 'module_description' );
       $module->add_child( 'page' );
     }
 
     $module = $this->get_module( 'page' );
     if( !is_null( $module ) )
     {
+      $module->add_child( 'page_description' );
       $module->add_child( 'question' );
       $module->add_action( 'render', '/{identifier}' );
     }
@@ -45,7 +47,14 @@ class ui extends \cenozo\ui\ui
     $module = $this->get_module( 'question' );
     if( !is_null( $module ) )
     {
+      $module->add_child( 'question_description' );
       $module->add_child( 'question_option' );
+    }
+
+    $module = $this->get_module( 'question_option' );
+    if( !is_null( $module ) )
+    {
+      $module->add_child( 'question_option_description' );
     }
 
     $module = $this->get_module( 'response' );

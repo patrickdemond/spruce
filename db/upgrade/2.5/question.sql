@@ -14,7 +14,6 @@ CREATE TABLE IF NOT EXISTS question (
   minimum FLOAT NULL DEFAULT NULL,
   maximum FLOAT NULL DEFAULT NULL,
   precondition TEXT NULL,
-  description TEXT NULL,
   note TEXT NULL,
   PRIMARY KEY (id),
   INDEX fk_page_id (page_id ASC),
@@ -61,6 +60,17 @@ BEGIN
       SIGNAL SQLSTATE '23000' SET MESSAGE_TEXT = @sql, MYSQL_ERRNO = 1062;
     END IF;
   END IF;
+END$$
+
+DROP TRIGGER IF EXISTS question_AFTER_INSERT $$
+CREATE DEFINER = CURRENT_USER TRIGGER question_AFTER_INSERT AFTER INSERT ON question FOR EACH ROW
+BEGIN
+  INSERT INTO question_description( question_id, language_id )
+  SELECT NEW.id, language_id
+  FROM qnaire_has_language
+  JOIN module ON qnaire_has_language.qnaire_id = module.qnaire_id
+  JOIN page ON module.id = page.module_id
+  WHERE page.id = NEW.page_id;
 END$$
 
 DROP TRIGGER IF EXISTS question_BEFORE_UPDATE $$

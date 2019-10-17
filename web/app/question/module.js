@@ -28,10 +28,6 @@ define( function() {
       },
       type: {
         title: 'Type'
-      },
-      description: {
-        title: 'Description',
-        align: 'left'
       }
     },
     defaultOrder: {
@@ -67,10 +63,6 @@ define( function() {
       title: 'Maximum',
       type: 'string',
       format: 'float'
-    },
-    description: {
-      title: 'Description',
-      type: 'text'
     },
     note: {
       title: 'Note',

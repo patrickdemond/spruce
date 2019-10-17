@@ -18,6 +18,8 @@ class module extends \cenozo\service\module
    */
   public function prepare_read( $select, $modifier )
   {
+    parent::prepare_read( $select, $modifier );
+
     $modifier->join( 'qnaire', 'module.qnaire_id', 'qnaire.id' );
 
     if( $select->has_column( 'has_precondition' ) ) $select->add_column( 'precondition IS NOT NULL', 'has_precondition' );

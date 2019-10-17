@@ -1,17 +1,17 @@
 <?php
 /**
- * module.class.php
+ * page_description.class.php
  * 
  * @author Patrick Emond <emondpd@mcmaster.ca>
  */
 
-namespace pine\service\question_option;
+namespace pine\service\page_description;
 use cenozo\lib, cenozo\log, pine\util;
 
 /**
  * Performs operations which effect how this module is used in a service
  */
-class module extends \cenozo\service\module
+class module extends \pine\service\base_description_module
 {
   /**
    * Extend parent method
@@ -20,6 +20,7 @@ class module extends \cenozo\service\module
   {
     parent::prepare_read( $select, $modifier );
 
-    if( $select->has_column( 'has_precondition' ) ) $select->add_column( 'precondition IS NOT NULL', 'has_precondition' );
+    $modifier->join( 'module', 'page.module_id', 'module.id' );
+    $modifier->join( 'qnaire', 'module.qnaire_id', 'qnaire.id' );
   }
 }

@@ -18,6 +18,8 @@ class module extends \cenozo\service\module
    */
   public function prepare_read( $select, $modifier )
   {
+    parent::prepare_read( $select, $modifier );
+
     $modifier->join( 'module', 'page.module_id', 'module.id' );
     $modifier->join( 'qnaire', 'module.qnaire_id', 'qnaire.id' );
 

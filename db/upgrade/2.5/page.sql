@@ -8,7 +8,6 @@ CREATE TABLE IF NOT EXISTS page (
   rank INT UNSIGNED NOT NULL,
   name VARCHAR(127) NOT NULL,
   precondition TEXT NULL,
-  description TEXT NULL,
   note TEXT NULL,
   PRIMARY KEY (id),
   INDEX fk_module_id (module_id ASC),
@@ -20,3 +19,18 @@ CREATE TABLE IF NOT EXISTS page (
     ON DELETE CASCADE
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
+
+
+DELIMITER $$
+
+DROP TRIGGER IF EXISTS page_AFTER_INSERT $$
+CREATE DEFINER = CURRENT_USER TRIGGER page_AFTER_INSERT AFTER INSERT ON page FOR EACH ROW
+BEGIN
+  INSERT INTO page_description( page_id, language_id )
+  SELECT NEW.id, language_id
+  FROM qnaire_has_language
+  JOIN module ON qnaire_has_language.qnaire_id = module.qnaire_id
+  WHERE module.id = NEW.module_id;
+END$$
+
+DELIMITER ;

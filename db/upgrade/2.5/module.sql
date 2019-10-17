@@ -8,7 +8,6 @@ CREATE TABLE IF NOT EXISTS module (
   rank INT UNSIGNED NOT NULL,
   name VARCHAR(127) NOT NULL,
   precondition TEXT NULL,
-  description TEXT NULL,
   note TEXT NULL,
   PRIMARY KEY (id),
   INDEX fk_qnaire_id (qnaire_id ASC),
@@ -20,3 +19,17 @@ CREATE TABLE IF NOT EXISTS module (
     ON DELETE CASCADE
     ON UPDATE NO ACTION)
 ENGINE = InnoDB;
+
+
+DELIMITER $$
+
+DROP TRIGGER IF EXISTS module_AFTER_INSERT $$
+CREATE DEFINER = CURRENT_USER TRIGGER module_AFTER_INSERT AFTER INSERT ON module FOR EACH ROW
+BEGIN
+  INSERT INTO module_description( module_id, language_id )
+  SELECT NEW.id, language_id
+  FROM qnaire_has_language
+  WHERE qnaire_id = NEW.qnaire_id;
+END$$
+
+DELIMITER ;

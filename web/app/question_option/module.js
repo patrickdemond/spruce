@@ -26,9 +26,6 @@ define( function() {
       name: {
         title: 'Name'
       },
-      description: {
-        title: 'Description'
-      },
       exclusive: {
         title: 'Exclusive',
         type: 'boolean'
@@ -56,10 +53,6 @@ define( function() {
     },
     name: {
       title: 'Name',
-      type: 'string'
-    },
-    description: {
-      title: 'Description',
       type: 'string'
     },
     exclusive: {

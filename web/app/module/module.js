@@ -25,10 +25,6 @@ define( function() {
       },
       name: {
         title: 'Name'
-      },
-      description: {
-        title: 'Description',
-        align: 'left'
       }
     },
     defaultOrder: {
@@ -50,10 +46,6 @@ define( function() {
     name: {
       title: 'Name',
       type: 'string'
-    },
-    description: {
-      title: 'Description',
-      type: 'text'
     },
     note: {
       title: 'Note',

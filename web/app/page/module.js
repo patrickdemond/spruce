@@ -25,10 +25,6 @@ define( function() {
       },
       name: {
         title: 'Name'
-      },
-      description: {
-        title: 'Description',
-        align: 'left'
       }
     },
     defaultOrder: {
@@ -51,17 +47,12 @@ define( function() {
       title: 'Name',
       type: 'string'
     },
-    description: {
-      title: 'Description',
-      type: 'text'
-    },
     note: {
       title: 'Note',
       type: 'text'
     },
 
     module_id: { exclude: true },
-    module_description: { column: 'module.description', exclude: true },
     previous_page_id: { exclude: true },
     next_page_id: { exclude: true }
   } );
@@ -278,7 +269,7 @@ define( function() {
                   promiseList.push( CnHttpFactory.instance( {
                     path: ['question', question.id, 'question_option' ].join( '/' ),
                     data: {
-                      select: { column: [ 'name', 'description', 'exclusive', 'extra' ] },
+                      select: { column: [ 'name', 'exclusive', 'extra' ] },
                       modifier: { order: 'question_option.rank' }
                     }
                   } ).query().then( function( response ) {

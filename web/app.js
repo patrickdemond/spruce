@@ -11,6 +11,93 @@ cenozo.controller( 'HeaderCtrl', [
 ] );
 
 /* ######################################################################################################## */
+cenozoApp.initDescriptionModule = function( module, type ) {
+  angular.extend( module, {
+    identifier: {
+      parent: {
+        subject: type,
+        column: type + '.id'
+      }
+    },
+    name: {
+      singular: 'description',
+      plural: 'descriptions',
+      possessive: 'description\'s'
+    },  
+    columnList: {
+      language: {
+        column: 'language.code',
+        title: 'Langauge'
+      },  
+      value: {
+        title: 'Value',
+        align: 'left'
+      }   
+    },  
+    defaultOrder: {
+      column: 'language.code',
+      reverse: false
+    }   
+  } );
+
+  module.addInputGroup( '', {
+    language: {
+      column: 'language.code',
+      type: 'string',
+      constant: true
+    },  
+    value: {
+      title: 'Value',
+      type: 'text'
+    },  
+
+    previous_description_id: { exclude: true },
+    next_description_id: { exclude: true }
+  } );
+
+  module.addExtraOperation( 'view', {
+    title: '<i class="glyphicon glyphicon-chevron-left"></i>',
+    classes: 'btn-info',
+    operation: function( $state, model ) { model.viewModel.viewPreviousDescription(); },
+    isDisabled: function( $state, model ) { return null == model.viewModel.record.previous_description_id; }
+  } );
+
+  module.addExtraOperation( 'view', {
+    title: '<i class="glyphicon glyphicon-chevron-right"></i>',
+    classes: 'btn-info',
+    operation: function( $state, model ) { model.viewModel.viewNextDescription(); },
+    isDisabled: function( $state, model ) { return null == model.viewModel.record.next_description_id; }
+  } );
+};
+
+/* ######################################################################################################## */
+cenozo.factory( 'CnBaseDescriptionViewFactory', [
+  '$state',
+  function( $state  ) {
+    return {
+      construct: function( object, type ) {
+        angular.extend( object, {
+          viewPreviousDescription: function() {
+            $state.go(
+              type + '_description.view',
+              { identifier: this.record.previous_description_id },
+              { reload: true }
+            );  
+          },
+          viewNextDescription: function() {
+            $state.go(
+              type + '_description.view',
+              { identifier: this.record.next_description_id },
+              { reload: true }
+            );
+          }
+        } );
+      }
+    };
+  }
+] );
+
+/* ######################################################################################################## */
 cenozo.directive( 'cnQnaireNavigator', [
   'CnHttpFactory', '$state', '$q',
   function( CnHttpFactory, $state, $q ) {

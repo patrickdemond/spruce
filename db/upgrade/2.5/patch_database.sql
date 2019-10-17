@@ -14,11 +14,16 @@ SOURCE setting.sql
 SOURCE writelog.sql
 
 SOURCE qnaire.sql
+SOURCE qnaire_has_language.sql
 SOURCE attribute.sql
 SOURCE module.sql
+SOURCE module_description.sql
 SOURCE page.sql
+SOURCE page_description.sql
 SOURCE question.sql
+SOURCE question_description.sql
 SOURCE question_option.sql
+SOURCE question_option_description.sql
 SOURCE response.sql
 SOURCE response_attribute.sql
 SOURCE answer.sql
