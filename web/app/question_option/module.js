@@ -19,9 +19,8 @@ define( function() {
         title: 'Rank',
         type: 'rank'
       },
-      has_precondition: {
-        title: 'Precondition',
-        type: 'boolean'
+      precondition: {
+        title: 'Precondition'
       },
       name: {
         title: 'Name'
@@ -46,14 +45,14 @@ define( function() {
       title: 'Rank',
       type: 'rank'
     },
-    precondition: {
-      title: 'Precondition',
-      type: 'string',
-      help: 'A special expression which restricts whether or not to show this question option.'
-    },
     name: {
       title: 'Name',
       type: 'string'
+    },
+    precondition: {
+      title: 'Precondition',
+      type: 'text',
+      help: 'A special expression which restricts whether or not to show this question option.'
     },
     exclusive: {
       title: 'Exclusive',

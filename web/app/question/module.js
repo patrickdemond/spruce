@@ -41,14 +41,14 @@ define( function() {
       title: 'Rank',
       type: 'rank'
     },
-    precondition: {
-      title: 'Precondition',
-      type: 'string',
-      help: 'A special expression which restricts whether or not to show this question.'
-    },
     name: {
       title: 'Name',
       type: 'string'
+    },
+    precondition: {
+      title: 'Precondition',
+      type: 'text',
+      help: 'A special expression which restricts whether or not to show this question.'
     },
     type: {
       title: 'Type',
