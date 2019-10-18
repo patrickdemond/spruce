@@ -70,6 +70,8 @@ class expression_manager extends \cenozo\singleton
    *   ~= function(x,y) where x,y must be number, string, A:NAME, Q:NAME(type=number|string|text)
    *   && function(x,y) where x,y must be boolean, Q:NAME(type=boolean), comparison
    *   || function(x,y) where x,y must be boolean, Q:NAME(type=boolean), comparison
+   *   ? function(x,y) where x must be boolean and y can be any non comparison
+   *   : function(x,y) where x,y can be any non comparison
    *   ( must have same number opening as closing
    *   ) must have same number opening as closing
    */
@@ -237,7 +239,7 @@ class expression_manager extends \cenozo\singleton
       throw lib::create( 'exception\runtime', 'Number found but expecting an operator', __METHOD__ );
 
     // if the last term was an operator then assume we now represent a boolean expression
-    $this->last_term = 'operator' == $this->last_term ? 'boolean' : $this->active_term;
+    $this->last_term = $this->active_term;
     $this->active_term = NULL;
 
     return (string)(float)$this->term;
@@ -274,33 +276,48 @@ class expression_manager extends \cenozo\singleton
   {
     if( in_array( $this->term, ['-', '+', '*', '/'] ) )
     { // mathematical operator
-      if( !in_array( $this->last_term, ['number', 'attribute'] ) )
-        throw lib::create( 'exception\runtime',
-          sprintf( 'Expecting a number or attribute before "%s"', $this->term ), __METHOD__ );
+      if( !in_array( $this->last_term, ['number', 'boolean', 'attribute'] ) )
+      {
+        throw lib::create( 'exception\runtime', sprintf(
+          'Expecting a number or attribute before "%s"', $this->term
+        ), __METHOD__ );
+      }
     }
     else if( in_array( $this->term, ['<', '<=', '>', '>='] ) )
     { // quantity operator
       if( !in_array( $this->last_term, ['number', 'string', 'attribute'] ) )
-        throw lib::create( 'exception\runtime',
-          sprintf( 'Expecting a number, string or attribute before "%s"', $this->term ), __METHOD__ );
+      {
+        throw lib::create( 'exception\runtime', sprintf(
+          'Expecting a number, string or attribute before "%s"', $this->term
+        ), __METHOD__ );
+      }
     }
-    else if( in_array( $this->term, ['==', '!='] ) )
+    else if( in_array( $this->term, ['==', '!=', '?', ':'] ) )
     { // equality operator
       if( is_null( $this->last_term ) || 'operator' == $this->last_term )
-        throw lib::create( 'exception\runtime',
-          sprintf( 'Expecting an expression before "%s"', $this->term ), __METHOD__ );
+      {
+        throw lib::create( 'exception\runtime', sprintf(
+          'Expecting an expression before "%s"', $this->term
+        ), __METHOD__ );
+      }
     }
     else if( '~=' == $this->term )
     { // sql LIKE operator
       if( !in_array( $this->last_term, ['number', 'string', 'attribute'] ) )
-        throw lib::create( 'exception\runtime',
-          sprintf( 'Expecting a number, string or attribute before "%s"', $this->term ), __METHOD__ );
+      {
+        throw lib::create( 'exception\runtime', sprintf(
+          'Expecting a number, string or attribute before "%s"', $this->term
+        ), __METHOD__ );
+      }
     }
     else if( in_array( $this->term, ['&&', '||'] ) )
     { // logical operator
       if( !in_array( $this->last_term, ['boolean'] ) )
-        throw lib::create( 'exception\runtime',
-          sprintf( 'Expecting a boolean before "%s"', $this->term ), __METHOD__ );
+      {
+        throw lib::create( 'exception\runtime', sprintf(
+          'Expecting a boolean before "%s"', $this->term
+        ), __METHOD__ );
+      }
     }
     else throw lib::create( 'exception\runtime', sprintf( 'Invalid operator "%s"', $this->term ), __METHOD__ );
 
@@ -478,10 +495,9 @@ class expression_manager extends \cenozo\singleton
     else if( '$' == $char ) $this->active_term = 'question';
     else if( preg_match( '/[0-9.]/', $char ) ) $this->active_term = 'number';
     else if( preg_match( '/[a-z_]/', $char ) ) $this->active_term = 'constant';
-    else if( preg_match( '/[-+*\/<>!=~&|]/', $char ) ) $this->active_term = 'operator';
+    else if( preg_match( '/[-+*\/<>!=~&|?:]/', $char ) ) $this->active_term = 'operator';
 
     $this->term = in_array( $char, ['(', ')', "'", '"', '`', ' ', '@', '$'] ) ? '' : $char;
-
     return $compiled;
   }
 
