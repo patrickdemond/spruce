@@ -10,7 +10,6 @@ CREATE TABLE IF NOT EXISTS question (
   type ENUM('boolean', 'list', 'number', 'string', 'text', 'comment') NOT NULL,
   mandatory TINYINT(1) NOT NULL DEFAULT 1,
   dkna_refuse TINYINT(1) NOT NULL DEFAULT 1,
-  multiple TINYINT(1) NULL DEFAULT NULL,
   minimum FLOAT NULL DEFAULT NULL,
   maximum FLOAT NULL DEFAULT NULL,
   precondition TEXT NULL,
