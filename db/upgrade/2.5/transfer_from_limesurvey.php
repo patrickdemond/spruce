@@ -221,13 +221,19 @@ class import
         'JOIN %s.language ON questions.language = language.code '.
         'JOIN %s.groups USING( gid, language ) '.
         'JOIN module ON groups.gid = module.gid '.
+        'LEFT JOIN %s.question_attributes '.
+          'ON questions.qid = question_attributes.qid AND '.
+          'question_attributes.attribute = "hidden" AND '.
+          'question_attributes.value = 1 '.
         'WHERE questions.sid = %d '.
         'AND parent_qid = 0 '.
         'AND title NOT LIKE "%%\\_OTSP\\_%%" '. // ignore specify-other questions
+        'AND qaid IS NULL '. // don't include hidden questions
         'GROUP BY questions.qid '.
         'ORDER BY group_order, question_order',
         $this->lsdb,
         $this->cenozodb,
+        $this->lsdb,
         $this->lsdb,
         $sid
       );
@@ -378,7 +384,7 @@ class import
             $question['minimum'] = $matches[1];
           if( preg_match( '/\bmax: ([0-9]+)/', $parts[0], $matches ) )
             $question['maximum'] = $matches[1];
-          
+
           $page['question_list'][] = $question;
         }
         else if( 'K' == $row['type'] ) // multiple number questions
@@ -422,7 +428,7 @@ class import
             $question['minimum'] = $matches[1];
           if( preg_match( '/\bmax: ([0-9]+)/', $parts[0], $matches ) )
             $question['maximum'] = $matches[1];
-          
+
           $page['question_list'][] = $question;
 
           // now add the unit question as an exclusive list
@@ -465,9 +471,9 @@ class import
           $subresult = $this->db->query( $sql );
           if( false === $subresult ) error( $this->db->error );
 
-          foreach( $subresult as $sub_question )
+          foreach( $subresult as $attribute )
           {
-            foreach( explode( ';', $sub_question['value'] ) as $exclusive_value )
+            foreach( explode( ';', $attribute['value'] ) as $exclusive_value )
             {
               foreach( $option_list as $index => $option )
               {
@@ -480,6 +486,28 @@ class import
             }
           }
 
+          // look for array filters and apply them as preconditions to question options
+          $sql = sprintf(
+            'SELECT value '.
+            'FROM %s.question_attributes '.
+            'WHERE attribute = "array_filter" '.
+            'AND qid = %d',
+            $this->lsdb,
+            $row['qid']
+          );
+          $subresult = $this->db->query( $sql );
+          if( false === $subresult ) error( $this->db->error );
+          $filter = $subresult->fetch_row();
+          if( !is_null( $filter ) )
+          {
+            foreach( $option_list as $index => $option )
+            {
+              if( !preg_match( '/_NONE_|_DK_NA_|_REFUSED_/', $option['name'] ) )
+                $option_list[$index]['precondition'] = sprintf( '$%s:%s$', current( $filter ), $option['name'] );
+            }
+          }
+
+          // now add the question
           $parts = explode( '`', $row['question'] );
           $question = [
             'qid' => $row['qid'],
@@ -642,13 +670,15 @@ class import
         {
           foreach( $question['option_list'] as $index => $option )
           {
-            $sql = 'INSERT INTO question_option( question_id, rank, name, exclusive, extra ) VALUES '.sprintf(
-              '( %d, %d, "%s", %d, %s )',
+            $sql = 'INSERT INTO question_option( question_id, rank, name, exclusive, extra, precondition ) VALUES '.sprintf(
+              '( %d, %d, "%s", %d, %s, %s )',
               $question_id,
               $option['rank'],
               $option['name'],
               array_key_exists( 'exclusive', $option ) ? $option['exclusive'] : 0,
-              'OTHER' == $option['name'] ? '"string"' : 'NULL'
+              'OTHER' == $option['name'] ? '"string"' : 'NULL',
+              array_key_exists( 'precondition', $option ) && !is_null( $option['precondition'] ) ?
+                sprintf( '"%s"', $option['precondition'] ) : 'NULL'
             );
             if( false === $this->db->query( $sql ) ) error( $this->db->error, $sql );
             $question_option_id = $this->db->insert_id;
@@ -786,7 +816,7 @@ class import
               sprintf( '$%s', str_replace( 'TRF2', '', $ref_page['name'] ) ),
               $precondition
             );
-            
+
             // replace the NAOK with a closing $
             $precondition = str_replace( '.NAOK', '$', $precondition );
           }
