@@ -254,7 +254,7 @@ class import
           'qid' => $row['qid'],
           'module_id' => $row['module_id'],
           'rank' => $page_rank++,
-          'precondition' => 1 == $row['relevance'] ? NULL : $row['relevance'],
+          'precondition' => 1 == $row['relevance'] ? NULL : preg_replace( '/(\.code)? == "Y"/', '', $row['relevance'] ),
           'name' => $row['title'],
           'description' => [ 'en' => NULL, 'fr' => NULL ],
           'question_list' => []
@@ -506,6 +506,21 @@ class import
                 $option_list[$index]['precondition'] = sprintf( '$%s:%s$', current( $filter ), $option['name'] );
             }
           }
+
+          // look for array filters and apply them as preconditions to question options
+          $sql = sprintf(
+            'SELECT value '.
+            'FROM %s.question_attributes '.
+            'WHERE attribute = "max_answers" '.
+            'AND qid = %d',
+            $this->lsdb,
+            $row['qid']
+          );
+          $subresult = $this->db->query( $sql );
+          if( false === $subresult ) error( $this->db->error );
+          $filter = $subresult->fetch_row();
+          if( !is_null( $filter ) )
+            foreach( $option_list as $index => $option ) $option_list[$index]['exclusive'] = true;
 
           // now add the question
           $parts = explode( '`', $row['question'] );
