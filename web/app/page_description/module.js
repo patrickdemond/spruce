@@ -3,7 +3,7 @@ define( function() {
 
   try { var module = cenozoApp.module( 'page_description', true ); } catch( err ) { console.warn( err ); return; }
 
-  cenozoApp.initDescriptionPage( module, 'page' );
+  cenozoApp.initDescriptionModule( module, 'page' );
 
   /* ######################################################################################################## */
   cenozo.providers.directive( 'cnPageDescriptionList', [

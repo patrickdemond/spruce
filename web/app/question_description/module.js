@@ -3,7 +3,7 @@ define( function() {
 
   try { var module = cenozoApp.module( 'question_description', true ); } catch( err ) { console.warn( err ); return; }
 
-  cenozoApp.initDescriptionQuestion( module, 'question' );
+  cenozoApp.initDescriptionModule( module, 'question' );
 
   /* ######################################################################################################## */
   cenozo.providers.directive( 'cnQuestionDescriptionList', [
