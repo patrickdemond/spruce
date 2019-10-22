@@ -38,6 +38,14 @@ class module extends \cenozo\service\module
         $db_next_module = $db_module->get_next_module();
         $select->add_constant( is_null( $db_next_module ) ? NULL : $db_next_module->id, 'next_module_id', 'integer' );
       }
+
+      if( $select->has_column( 'first_page_id' ) )
+      {
+        $first_page_id = NULL;
+        $db_first_page = $db_module->get_first_page();
+        if( !is_null( $db_first_page) ) $first_page_id = $db_first_page->id;
+        $select->add_constant( $first_page_id, 'first_page_id', 'integer' );
+      }
     }
   }
 }

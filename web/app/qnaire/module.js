@@ -36,6 +36,19 @@ define( function() {
     note: {
       title: 'Note',
       type: 'text'
+    },
+    first_page_id: { exclude: true }
+  } );
+
+  module.addExtraOperation( 'view', {
+    title: 'Preview',
+    isDisabled: function( $state, model ) { return !model.viewModel.record.first_page_id; },
+    operation: function( $state, model ) {
+      $state.go(
+        'page.render',
+        { identifier: model.viewModel.record.first_page_id },
+        { reload: true }
+      );
     }
   } );
 
