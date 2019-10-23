@@ -52,6 +52,10 @@ define( function() {
       type: 'text'
     },
 
+    qnaire_id: { column: 'qnaire.id', exclude: true },
+    base_language: { column: 'base_language.code', exclude: true },
+    descriptions: { exclude: true },
+    module_descriptions: { exclude: true },
     module_id: { exclude: true },
     previous_page_id: { exclude: true },
     next_page_id: { exclude: true }
@@ -81,6 +85,20 @@ define( function() {
       );
     }
   } );
+
+  // used by services below to convert a list of descriptions into an object
+  function parseDescriptions( descriptionList ) {
+    var code = null;
+    return descriptionList.split( '`' ).reduce( function( list, part ) {
+      if( null == code ) {
+        code = part;
+      } else {
+        list[code] = part;
+        code = null;
+      }
+      return list;
+    }, {} );
+  }
 
   /* ######################################################################################################## */
   cenozo.providers.directive( 'cnPageAdd', [
@@ -128,7 +146,6 @@ define( function() {
           $document.unbind( 'keydown.render' );
           $document.bind( 'keydown.render', function( event ) {
             // only send keydown events when on the render page and the key is a numpad number
-            console.log( $scope.model.getActionFromState() );
             if( ['render','run'].includes( $scope.model.getActionFromState() ) && (
               // keypad enter or number keys
               13 == event.which || ( 97 <= event.which && event.which <= 105 )
@@ -142,6 +159,7 @@ define( function() {
             $scope.model.viewModel.onView( true ),
             $scope.model.renderModel.onLoad()
           ] ).then( function() {
+            $scope.model.renderModel.currentLanguage = $scope.model.viewModel.record.base_language;
             $scope.isComplete = true;
           } );
         }
@@ -230,13 +248,15 @@ define( function() {
         angular.extend( this, {
           parentModel: parentModel,
           questionList: [],
+          currentLanguage: null,
           data: {},
           backupData: {},
           keyQuestionIndex: null,
           pageComplete: false,
           onLoad: function() {
             return CnHttpFactory.instance( {
-              path: this.parentModel.getServiceResourcePath() + '/question'
+              path: this.parentModel.getServiceResourcePath() + '/question',
+              data: { select: { column: [ 'rank', 'name', 'type', 'mandatory', 'dkna_refuse', 'minimum', 'maximum', 'descriptions' ] } }
             } ).query().then( function( response ) {
               var promiseList = [];
               angular.extend( self, {
@@ -248,6 +268,8 @@ define( function() {
               } );
 
               self.questionList.forEach( function( question, index ) {
+                question.descriptions = parseDescriptions( question.descriptions );
+
                 // all questions may have no answer
                 self.data[question.id] = 'comment' == question.type ? {} : { dkna: question.dkna, refuse: question.refuse };
 
@@ -269,12 +291,13 @@ define( function() {
                   promiseList.push( CnHttpFactory.instance( {
                     path: ['question', question.id, 'question_option' ].join( '/' ),
                     data: {
-                      select: { column: [ 'name', 'exclusive', 'extra' ] },
+                      select: { column: [ 'name', 'exclusive', 'extra', 'descriptions' ] },
                       modifier: { order: 'question_option.rank' }
                     }
                   } ).query().then( function( response ) {
                     question.optionList = response.data;
                     question.optionList.forEach( function( option ) {
+                      option.descriptions = parseDescriptions( option.descriptions );
                       self.data[question.id][option.id] = question.question_option_list.includes( option.id );
                       if( null != option.extra ) {
                         self.data[question.id]['value_' + option.extra] = question['value_' + option.extra];
@@ -325,7 +348,7 @@ define( function() {
               if( key <= question.optionList.length ) {
                 var answer = question.optionList[key-1];
                 self.data[question.id][answer.id] = !self.data[question.id][answer.id];
-                self.setAnswer( 'option', question, answer );
+                self.setanswer( 'option', question, answer );
               } else if( key == question.optionList.length + 1 ) {
                 self.data[question.id].dkna = !self.data[question.id].dkna;
                 self.setAnswer( 'dkna', question );
@@ -509,6 +532,19 @@ define( function() {
         CnBaseViewFactory.construct( this, parentModel, root );
 
         angular.extend( this, {
+          onView: function( force ) {
+            return this.$$onView( force ).then( function() {
+              self.record.descriptions = parseDescriptions( self.record.descriptions );
+              self.record.module_descriptions = parseDescriptions( self.record.module_descriptions );
+
+              return CnHttpFactory.instance( {
+                path: [ 'qnaire', self.record.qnaire_id, 'language' ].join( '/' ),
+                data: { select: { column: [ 'id', 'code', 'name' ] } }
+              } ).query().then( function( response ) {
+                self.record.languageList = response.data;
+              } );
+            } );
+          },
           viewPreviousPage: function() {
             $state.go(
               'page.view',

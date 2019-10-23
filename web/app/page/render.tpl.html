@@ -1,21 +1,32 @@
 <cn-qnaire-navigator ng-if="'page' == model.getSubjectFromState()"></cn-qnaire-navigator>
 <div class="utility-view rounded">
   <div class="container-fluid bg-primary rounded-top">
-    <h4>{{ model.viewModel.record.name ? model.viewModel.record.name : 'Loading...' }}</h4>
+    <h4>
+      {{ model.viewModel.record.name ? model.viewModel.record.name : 'Loading...' }}
+      <div class="pull-right" style="margin-top: -7px;">
+        <select class="form-control"
+                ng-model="model.renderModel.currentLanguage"
+                ng-options="lang.code as lang.name for lang in model.viewModel.record.languageList">
+        </select>
+      </div>
+    </h4>
   </div>
   <form name="form" novalidate>
     <div ng-if="!isComplete" class="loading spacer" uib-tooltip="Loading&hellip;"></div>
     <div ng-if="isComplete" class="spacer" id="Page{{ model.viewModel.record.rank }}">
       <div class="container-fluid vertical-spacer">
-        <span class="text-info" ng-bind-html="model.viewModel.record.module_description | cnNewlines"></span>
-        <span class="text-info" ng-bind-html="model.viewModel.record.description | cnNewlines"></span>
+        <span class="text-info"
+              ng-bind-html="model.viewModel.record.module_descriptions[model.renderModel.currentLanguage] | cnNewlines"></span>
+        <span class="text-info"
+              ng-bind-html="model.viewModel.record.descriptions[model.renderModel.currentLanguage] | cnNewlines"></span>
         <div ng-repeat="question in model.renderModel.questionList">
           <hr ng-if="!$first" />
           <div ng-if="'comment' == question.type"
                class="vertical-spacer text-info"
-               ng-bind-html="question.description | cnNewlines">
+               ng-bind-html="question.descriptions[model.renderModel.currentLanguage] | cnNewlines">
           </div>
-          <div ng-if="'comment' != question.type" ng-bind-html="question.description | cnNewlines"></div>
+          <div ng-if="'comment' != question.type"
+               ng-bind-html="question.descriptions[model.renderModel.currentLanguage] | cnNewlines"></div>
           <div class="horizontal-spacer" ng-if="'comment' != question" ng-switch="question.type">
             <div ng-switch-when="boolean">
               <label class="btn btn-default full-width"
@@ -46,7 +57,7 @@
                        ng-click="model.renderModel.setAnswer( 'option', question, option )"
                        ng-bind-html="'<i class=\'glyphicon ' + (
                          model.renderModel.data[question.id][option.id] ? 'glyphicon-check' : 'glyphicon-unchecked'
-                       ) + '\'></i> ' + option.description"
+                       ) + '\'></i> ' + option.descriptions[model.renderModel.currentLanguage]"
                        uib-btn-checkbox>
                 </label>
               </div>

@@ -23,6 +23,7 @@ abstract class base_description_module extends \cenozo\service\module
     $subject = $this->get_subject();
     $parent_subject = str_replace( '_description', '', $subject );
 
+    $modifier->join( 'language', sprintf( '%s.language_id', $subject ), 'language.id' );
     $modifier->join(
       $parent_subject,
       sprintf( '%s.%s_id', $subject, $parent_subject ),
