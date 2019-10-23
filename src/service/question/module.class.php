@@ -11,7 +11,7 @@ use cenozo\lib, cenozo\log, pine\util;
 /**
  * Performs operations which effect how this module is used in a service
  */
-class module extends \cenozo\service\module
+class module extends \pine\service\base_qnaire_part_module
 {
   /**
    * Extend parent method
@@ -23,22 +23,5 @@ class module extends \cenozo\service\module
     $modifier->join( 'page', 'question.page_id', 'page.id' );
     $modifier->join( 'module', 'page.module_id', 'module.id' );
     $modifier->join( 'qnaire', 'module.qnaire_id', 'qnaire.id' );
-
-    if( $select->has_column( 'has_precondition' ) ) $select->add_column( 'precondition IS NOT NULL', 'has_precondition' );
-
-    $db_question = $this->get_resource();
-    if( !is_null( $db_question ) )
-    {
-      if( $select->has_column( 'previous_question_id' ) )
-      {
-        $db_previous_question = $db_question->get_previous_question();
-        $select->add_constant( is_null( $db_previous_question ) ? NULL : $db_previous_question->id, 'previous_question_id', 'integer' );
-      }
-      if( $select->has_column( 'next_question_id' ) )
-      {
-        $db_next_question = $db_question->get_next_question();
-        $select->add_constant( is_null( $db_next_question ) ? NULL : $db_next_question->id, 'next_question_id', 'integer' );
-      }
-    }
   }
 }

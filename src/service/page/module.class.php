@@ -11,7 +11,7 @@ use cenozo\lib, cenozo\log, pine\util;
 /**
  * Performs operations which effect how this module is used in a service
  */
-class module extends \cenozo\service\module
+class module extends \pine\service\base_qnaire_part_module
 {
   /**
    * Extend parent method
@@ -22,23 +22,17 @@ class module extends \cenozo\service\module
 
     $modifier->join( 'module', 'page.module_id', 'module.id' );
     $modifier->join( 'qnaire', 'module.qnaire_id', 'qnaire.id' );
+    $modifier->join( 'language', 'qnaire.base_language_id', 'base_language.id', '', 'base_language' );
 
-    if( $select->has_column( 'has_precondition' ) ) $select->add_column( 'precondition IS NOT NULL', 'has_precondition' );
-
-    $db_page = $this->get_resource();
-    if( !is_null( $db_page ) )
+    if( $select->has_column( 'module_descriptions' ) )
     {
-      if( $select->has_column( 'previous_page_id' ) )
-      {
-        $db_previous_page = $db_page->get_previous_page();
-        $select->add_constant( is_null( $db_previous_page ) ? NULL : $db_previous_page->id, 'previous_page_id', 'integer' );
-      }
-
-      if( $select->has_column( 'next_page_id' ) )
-      {
-        $db_next_page = $db_page->get_next_page();
-        $select->add_constant( is_null( $db_next_page ) ? NULL : $db_next_page->id, 'next_page_id', 'integer' );
-      }
+      $modifier->left_join( 'module_description', 'module.id', 'module_description.module_id' );
+      $modifier->left_join( 'language', 'module_description.language_id', 'module_language.id', 'module_language' );
+      $select->add_column(
+        'GROUP_CONCAT( CONCAT_WS( "`", module_language.code, module_description.value ) SEPARATOR "`" )',
+        'module_descriptions',
+        false
+      );
     }
   }
 }
