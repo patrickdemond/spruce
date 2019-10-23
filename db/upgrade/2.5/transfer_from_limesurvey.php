@@ -702,10 +702,10 @@ class import
               '( %d, %d, %s ), ( %d, %d, %s )',
               $question_option_id,
               $english_id,
-              is_null( $question['description'] ) ? 'NULL' : sprintf( '"%s"', addslashes( $question['description']['en'] ) ),
+              is_null( $option['description'] ) ? 'NULL' : sprintf( '"%s"', addslashes( $option['description']['en'] ) ),
               $question_option_id,
               $french_id,
-              is_null( $question['description'] ) ? 'NULL' : sprintf( '"%s"', addslashes( $question['description']['fr'] ) )
+              is_null( $option['description'] ) ? 'NULL' : sprintf( '"%s"', addslashes( $option['description']['fr'] ) )
             );
             if( false === $this->db->query( $sql ) ) error( $this->db->error, $sql );
           }
