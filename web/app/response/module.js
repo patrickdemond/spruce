@@ -21,6 +21,10 @@ define( [ 'page' ].reduce( function( list, name ) {
         column: 'participant.uid',
         title: 'Participant'
       },
+      language: {
+        column: 'language.code',
+        title: 'Language'
+      },
       token: {
         title: 'Token'
       },
@@ -59,10 +63,15 @@ define( [ 'page' ].reduce( function( list, name ) {
       },
       constant: 'view'
     },
+    language_id: {
+      column: 'response.language_id',
+      title: 'Language',
+      type: 'enum',
+      exclude: 'add'
+    },
     token: {
       title: 'Token',
       type: 'string',
-      constant: true,
       exclude: 'add'
     },
     page: {
@@ -75,13 +84,11 @@ define( [ 'page' ].reduce( function( list, name ) {
     start_datetime: {
       title: 'Start Date & Time',
       type: 'datetime',
-      constant: true,
       exclude: 'add'
     },
     last_datetime: {
       title: 'Last Date & Time',
       type: 'datetime',
-      constant: true,
       exclude: 'add'
     },
     page_id: { exclude: true }
@@ -176,27 +183,44 @@ define( [ 'page' ].reduce( function( list, name ) {
   cenozo.providers.factory( 'CnResponseViewFactory', [
     'CnBaseViewFactory',
     function( CnBaseViewFactory ) {
-      var object = function( parentModel, root ) {
-        CnBaseViewFactory.construct( this, parentModel, root );
-        this.onView = function( force ) {
-          return this.$$onView( force );
-        };
-      }
+      var object = function( parentModel, root ) { CnBaseViewFactory.construct( this, parentModel, root ); }
       return { instance: function( parentModel, root ) { return new object( parentModel, root ); } };
     }
   ] );
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnResponseModelFactory', [
-    'CnBaseModelFactory', 'CnResponseAddFactory', 'CnResponseListFactory', 'CnResponseViewFactory', 'CnPageRenderFactory',
-    function( CnBaseModelFactory, CnResponseAddFactory, CnResponseListFactory, CnResponseViewFactory, CnPageRenderFactory ) {
+    'CnBaseModelFactory', 'CnResponseAddFactory', 'CnResponseListFactory', 'CnResponseViewFactory', 'CnHttpFactory',
+    function( CnBaseModelFactory, CnResponseAddFactory, CnResponseListFactory, CnResponseViewFactory, CnHttpFactory ) {
       var object = function( root ) {
         var self = this;
         CnBaseModelFactory.construct( this, module );
         this.addModel = CnResponseAddFactory.instance( this );
         this.listModel = CnResponseListFactory.instance( this );
-//        this.renderModel = CnPageRenderFactory.instance( this );
         this.viewModel = CnResponseViewFactory.instance( this, root );
+
+        this.getMetadata = function() {
+          return this.$$getMetadata().then( function() {
+            return CnHttpFactory.instance( {
+              path: 'language',
+              data: {
+                select: { column: [ 'id', 'name' ] }, 
+                modifier: {
+                  where: { column: 'active', operator: '=', value: true },
+                  order: 'name'
+                }
+              }
+            } ).query().then( function success( response ) {
+              self.metadata.columnList.language_id.enumList = [];
+              response.data.forEach( function( item ) {
+                self.metadata.columnList.language_id.enumList.push( {
+                  value: item.id,
+                  name: item.name
+                } );
+              } );
+            } );
+          } );
+        };
       };
 
       return {

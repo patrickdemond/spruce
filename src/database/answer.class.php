@@ -14,6 +14,18 @@ use cenozo\lib, cenozo\log, pine\util;
 class answer extends \cenozo\database\record
 {
   /**
+   * Override the parent method
+   */
+  public function save()
+  {
+    // always set the language to whatever the response's current language is
+    $db_response = lib::create( 'database\response', $this->response_id );
+    $this->language_id = $db_response->language_id;
+
+    parent::save();
+  }
+
+  /**
    * Override parent method
    */
   public static function get_unique_record( $column, $value )

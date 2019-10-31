@@ -132,8 +132,8 @@ define( function() {
 
   /* ######################################################################################################## */
   cenozo.providers.directive( 'cnPageRender', [
-    'CnPageModelFactory', '$q', '$document', '$transitions',
-    function( CnPageModelFactory, $q, $document, $transitions ) {
+    'CnPageModelFactory', 'CnTranslationHelper', '$q', '$document', '$transitions',
+    function( CnPageModelFactory, CnTranslationHelper, $q, $document, $transitions ) {
       return {
         templateUrl: module.getFileUrl( 'render.tpl.html' ),
         restrict: 'E',
@@ -155,11 +155,16 @@ define( function() {
             }
           } );
 
+          $scope.text = function( address, language ) {
+            return CnTranslationHelper.translate( address, $scope.model.renderModel.currentLanguage );
+          };
+
           $q.all( [
             $scope.model.viewModel.onView( true ),
             $scope.model.renderModel.onLoad()
           ] ).then( function() {
-            $scope.model.renderModel.currentLanguage = $scope.model.viewModel.record.base_language;
+            if( null == $scope.model.renderModel.currentLanguage )
+              $scope.model.renderModel.currentLanguage = $scope.model.viewModel.record.base_language;
             $scope.isComplete = true;
           } );
         }
@@ -267,6 +272,11 @@ define( function() {
                 pageComplete: false
               } );
 
+              // set the current language to the first question's language
+              if( 0 < self.questionList.length && angular.isDefined( self.questionList[0].language ) ) {
+                self.currentLanguage = self.questionList[0].language;
+              }
+
               self.questionList.forEach( function( question, index ) {
                 question.descriptions = parseDescriptions( question.descriptions );
 
@@ -317,6 +327,15 @@ define( function() {
                 self.pageComplete = isPageComplete();
               } );
             } );
+          },
+
+          setLanguage: function() {
+            if( 'response' == this.parentModel.getSubjectFromState() ) {
+              CnHttpFactory.instance( {
+                path: this.parentModel.getServiceResourcePath().replace( 'page/', 'response/' ) +
+                  '?action=set_language&code=' + this.currentLanguage
+              } ).patch();
+            }
           },
 
           onKeydown: function( key ) {
@@ -419,7 +438,7 @@ define( function() {
 
                 promiseList.push(
                   CnHttpFactory.instance( {
-                    path: ['answer', identifier].join( '/' ),
+                    path: 'answer/' + identifier,
                     data: patchData,
                     onError: function( response ) {
                       self.data[question.id] = angular.copy( self.backupData[question.id] );
@@ -587,7 +606,8 @@ define( function() {
 
         this.getServiceCollectionPath = function( ignoreParent ) {
           var path = this.$$getServiceCollectionPath( ignoreParent );
-          if( 'response' == this.getSubjectFromState() ) path = path.replace( 'response/undefined', 'module/token=' + $state.params.token );
+          if( 'response' == this.getSubjectFromState() )
+            path = path.replace( 'response/undefined', 'module/token=' + $state.params.token );
           return path;
         };
       };

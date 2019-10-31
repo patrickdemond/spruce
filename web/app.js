@@ -307,3 +307,37 @@ cenozo.directive( 'cnQnaireNavigator', [
     };
   }
 ] );
+
+cenozo.service( 'CnTranslationHelper', [
+  function() {
+    return {
+      translate: function( address, language ) {
+        var addressParts = address.split('.');
+
+        function get( array, index ) {
+          if( angular.isUndefined( index ) ) index = 0;
+          var part = addressParts[index];
+          return angular.isUndefined( array[part] )
+               ? 'ERROR'
+               : angular.isDefined( array[part][language] )
+               ? array[part][language]
+               : angular.isDefined( array[part].en )
+               ? array[part].en
+               : get( array[part], index+1 );
+        }
+
+        return get( this.lookupData );
+      },
+      lookupData: {
+        misc: {
+          yes: { en: 'Yes', fr: 'Oui' },
+          no: { en: 'No', fr: 'Non' },
+          dkna: { en: 'Don\'t Know / No Answer', fr: 'Ne sait pas / pas de réponse' },
+          refuse: { en: 'Refuse', fr: 'Refus' },
+          next: { en: 'Next', fr: 'Suivant' },
+          previous: { en: 'Previous', fr: 'Précédent' }
+        }
+      }
+    };
+  }
+] );

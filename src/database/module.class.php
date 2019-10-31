@@ -28,21 +28,13 @@ class module extends \cenozo\database\has_rank
   {
     $response_class_name = lib::get_class_name( 'database\response' );
 
-    if( preg_match( '/^token=/', $identifier ) )
+    if( 1 == preg_match( '/^token=([^;\/]+)/', $identifier, $parts ) )
     {
-      // tokens MUST be for groups of for hex numbers delimited by dashes: hhhh-hhhh-hhhh-hhhh
-      if( !preg_match( '/^token=([0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4})/', $identifier, $parts ) )
-      {
-        return NULL;
-      }
-      else
-      {
-        // return the current module for the provided response's page
-        $db_response = $response_class_name::get_unique_record( 'token', $parts[1] );
-        if( is_null( $db_response ) ) return NULL;
-        $db_page = $db_response->get_page();
-        return is_null( $db_page ) ? NULL : lib::create( 'database\module', $db_page->module_id );
-      }
+      // return the current module for the provided response's page
+      $db_response = $response_class_name::get_unique_record( 'token', $parts[1] );
+      if( is_null( $db_response ) ) return NULL;
+      $db_page = $db_response->get_page();
+      return is_null( $db_page ) ? NULL : lib::create( 'database\module', $db_page->module_id );
     }
     else return parent::get_record_from_identifier( $identifier );
   }

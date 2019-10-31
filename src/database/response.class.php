@@ -23,6 +23,9 @@ class response extends \cenozo\database\record
     {
       $db_qnaire = lib::create( 'database\qnaire', $this->qnaire_id );
       $this->page_id = $db_qnaire->get_first_module()->get_first_page()->id;
+
+      $db_participant = lib::create( 'database\participant', $this->participant_id );
+      $this->language_id = $db_participant->language_id;
       $this->token = static::generate_token();
       $this->start_datetime = util::get_datetime_object();
     }
@@ -77,15 +80,44 @@ class response extends \cenozo\database\record
    * TODO: page restriction logic still needs to be applied here
    * @access public
    */
-   public function move_to_previous_page()
-   {
-     $db_previous_page = $this->get_page()->get_previous_page( $this );
-     if( !is_null( $db_previous_page ) )
-     {
-       $this->page_id = $db_previous_page->id;
-       $this->save();
-     }
-   }
+  public function move_to_previous_page()
+  {
+    $db_previous_page = $this->get_page()->get_previous_page( $this );
+    if( !is_null( $db_previous_page ) )
+    {
+      $this->page_id = $db_previous_page->id;
+      $this->save();
+    }
+  }
+
+  /**
+   * Change's the response's current language, including all questions on the current page
+   * @param database\language $db_language
+   * @access public
+   */
+  public function set_language( $db_language )
+  {
+    $this->language_id = $db_language->id;
+    $this->save();
+
+    // also update the language for all answers from the current page
+    if( !is_null( $this->id ) && !is_null( $this->page_id ) )
+    {
+      $pre_mod = lib::create( 'database\modifier' );
+      $pre_mod->join( 'question', 'answer.question_id', 'question.id' );
+
+      $post_mod = lib::create( 'database\modifier' );
+      $post_mod->where( 'answer.response_id', '=', $this->id );
+      $post_mod->where( 'question.page_id', '=', $this->page_id );
+
+      static::db()->execute( sprintf(
+        'UPDATE answer %s SET language_id = %d %s',
+        $pre_mod->get_sql(),
+        $db_language->id,
+        $post_mod->get_sql()
+      ) );
+    }
+  }
 
   /**
    * Creates a unique token to be used for identifying a response

@@ -21,7 +21,7 @@ class get extends \cenozo\service\get
     parent::finish();
 
     // if we're asking for the page based on a response then make sure that all answers have been created
-    if( 1 == preg_match( '/^token=([0-9a-f-]+)/', $this->get_resource_value( 0 ), $parts ) )
+    if( 1 == preg_match( '/^token=([^;\/]+)/', $this->get_resource_value( 0 ), $parts ) )
     {
       $db_response = $response_class_name::get_unique_record( 'token', $parts[1] );
       $db_page = $db_response->get_page();

@@ -6,6 +6,7 @@
       <div class="pull-right" style="margin-top: -7px;">
         <select class="form-control"
                 ng-model="model.renderModel.currentLanguage"
+                ng-change="model.renderModel.setLanguage()"
                 ng-options="lang.code as lang.name for lang in model.viewModel.record.languageList">
         </select>
       </div>
@@ -36,7 +37,7 @@
                      uib-btn-checkbox>
                 <i class="glyphicon"
                    ng-class="model.renderModel.data[question.id].yes ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
-                Yes
+                {{ text( 'misc.yes' ) }}
               </label>
               <label class="btn btn-default full-width"
                      style="font-style: 'italic'; font-weight: 'normal'"
@@ -45,7 +46,7 @@
                      uib-btn-checkbox>
                 <i class="glyphicon"
                    ng-class="model.renderModel.data[question.id].no ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
-                No
+                {{ text( 'misc.no' ) }}
               </label>
             </div>
             <div ng-switch-when="list" ng-repeat="option in question.optionList">
@@ -119,7 +120,7 @@
                      uib-btn-checkbox>
                 <i class="glyphicon"
                    ng-class="model.renderModel.data[question.id].dkna ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
-                Don't Know / No Answer
+                {{ text( 'misc.dkna' ) }}
               </label>
               <label class="btn btn-default col-xs-6"
                      style="font-style: italic; font-weight: normal"
@@ -128,7 +129,7 @@
                      uib-btn-checkbox>
                 <i class="glyphicon"
                    ng-class="model.renderModel.data[question.id].refuse ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
-                Refuse
+                {{ text( 'misc.refuse' ) }}
               </label>
             </div>
           </div>
@@ -157,7 +158,8 @@
                 ng-click="model.renderModel.backup()"
                 class="btn btn-default"
                 style="width: 12em;">
-          <i class="glyphicon glyphicon-chevron-left"></i> Back
+          <i class="glyphicon glyphicon-chevron-left"></i>
+          {{ text( 'misc.previous' ) }}
         </button>
       </div>
       <div class="btn-group">
@@ -173,7 +175,8 @@
                 ng-click="model.renderModel.proceed()"
                 class="btn btn-default"
                 style="width: 12em;">
-          Proceed <i class="glyphicon glyphicon-chevron-right"></i>
+          {{ text( 'misc.next' ) }}
+          <i class="glyphicon glyphicon-chevron-right"></i>
         </button>
       </div>
     </div>

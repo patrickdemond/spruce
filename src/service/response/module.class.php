@@ -21,6 +21,7 @@ class module extends \cenozo\service\module
     parent::prepare_read( $select, $modifier );
 
     $modifier->join( 'participant', 'response.participant_id', 'participant.id' );
+    $modifier->join( 'language', 'response.language_id', 'language.id' );
     $modifier->left_join( 'page', 'response.page_id', 'page.id' );
     $modifier->left_join( 'module', 'page.module_id', 'module.id' );
 
@@ -30,6 +31,13 @@ class module extends \cenozo\service\module
       $select->add_column(
         'CONCAT( participant.first_name, " ", participant.last_name, " (", participant.uid, ")" )',
         'formatted_participant_id',
+        false
+      );
+
+      // include the language first/last/uid as supplemental data
+      $select->add_column(
+        'CONCAT( language.name, " [", language.code, "]" )',
+        'formatted_language_id',
         false
       );
     }
