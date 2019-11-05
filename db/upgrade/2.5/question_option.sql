@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS question_option (
   rank INT UNSIGNED NOT NULL,
   name VARCHAR(127) NOT NULL,
   exclusive TINYINT(1) NOT NULL DEFAULT 0,
-  extra ENUM('number', 'string', 'text') NULL DEFAULT NULL,
+  extra ENUM('number', 'string', 'text', 'list') NULL DEFAULT NULL,
   precondition TEXT NULL,
   PRIMARY KEY (id),
   INDEX fk_question_id (question_id ASC),

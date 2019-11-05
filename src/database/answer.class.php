@@ -48,6 +48,9 @@ class answer extends \cenozo\database\record
     return parent::get_unique_record( $column, $value );
   }
 
+  /**
+   * TODO: document
+   */
   public function is_complete()
   {
     $db_question = $this->get_question();
@@ -70,7 +73,7 @@ class answer extends \cenozo\database\record
       // make sure that any selected question options that have the "extra" feature also have that data filled in
       foreach( $this->get_question_option_object_list() as $db_question_option )
       {
-        if( !is_null( $db_question_option->extra ) )
+        if( !is_null( $db_question_option->extra ) && 'list' != $db_question_option->extra )
         {
           $property = sprintf( 'value_%s', $db_question_option->extra );
           if( is_null( $this->$property ) ) return false;
@@ -103,6 +106,11 @@ class answer extends \cenozo\database\record
         $modifier->where( 'answer_id', '=', $this->id );
         static::db()->execute( sprintf( 'DELETE FROM answer_has_question_option %s', $modifier->get_sql() ) );
 
+        // and delete any answer_extra data
+        $modifier = lib::create( 'database\modifier' );
+        $modifier->where( 'answer_id', '=', $this->id );
+        static::db()->execute( sprintf( 'DELETE FROM answer_extra %s', $modifier->get_sql() ) );
+
         // and clean out the extra text
         $this->value_number = NULL;
         $this->value_string = NULL;
@@ -122,7 +130,7 @@ class answer extends \cenozo\database\record
           $exclusive_question_option_list[] = $exclusive_question_option['id'];
 
           // clear the extra values while we're at it
-          if( !is_null( $exclusive_question_option['extra'] ) )
+          if( !is_null( $exclusive_question_option['extra'] ) && 'list' != $exclusive_question_option['extra'] )
           {
             $column = 'value_'.$exclusive_question_option['extra'];
             $this->$column = null;
@@ -149,7 +157,7 @@ class answer extends \cenozo\database\record
     if( !is_array( $ids ) )
     {
       $db_question_option = lib::create( 'database\question_option', $ids );
-      if( $db_question_option->extra )
+      if( $db_question_option->extra && 'list' != $db_question_option->extra )
       { // if the question option is exclusive then we need to remove all other options
         $column = 'value_'.$db_question_option->extra;
         $this->$column = NULL;

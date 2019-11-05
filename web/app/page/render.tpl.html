@@ -50,40 +50,64 @@
               </label>
             </div>
             <div ng-switch-when="list" ng-repeat="option in question.optionList">
-              <div ng-class="{ 'col-xs-3 col-slim': null != option.extra }">
+              <div ng-if="'list' != option.extra" ng-class="{ 'col-xs-3 col-slim': null != option.extra }">
                 <label class="btn btn-default full-width"
                        ng-class="{ 'rounded-bottom-left rounded-top-left': null != option.extra }"
-                       ng-model="model.renderModel.data[question.id][option.id]"
+                       ng-model="model.renderModel.data[question.id].selectedOptionList[option.id]"
                        ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal', 'font-weight': 'normal' }"
                        ng-click="model.renderModel.setAnswer( 'option', question, option )"
                        ng-bind-html="'<i class=\'glyphicon ' + (
-                         model.renderModel.data[question.id][option.id] ? 'glyphicon-check' : 'glyphicon-unchecked'
+                         model.renderModel.data[question.id].selectedOptionList[option.id] ? 'glyphicon-check' : 'glyphicon-unchecked'
                        ) + '\'></i> ' + option.descriptions[model.renderModel.currentLanguage]"
                        uib-btn-checkbox>
                 </label>
               </div>
-              <div ng-if="null != option.extra" ng-switch="option.extra" class="col-xs-9 col-slim">
+              <div ng-if="'list' == option.extra">
+                <label class="btn btn-default full-width"
+                       class="rounded-bottom-left rounded-top-left"
+                       ng-model="model.renderModel.data[question.id].selectedOptionList[option.id]"
+                       ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal', 'font-weight': 'normal' }"
+                       ng-click="model.renderModel.addAnswerExtra( question )"
+                       ng-bind-html="option.descriptions[model.renderModel.currentLanguage] +
+                                     ' <i class=\'glyphicon glyphicon-plus\'></i>'">
+                </label>
+              </div>
+              <div ng-if="null != option.extra" ng-switch="option.extra" ng-class="{ 'col-xs-9 col-slim': 'list' != option.extra }">
                 <input type="number"
                        id="value_number"
                        class="form-control rounded-bottom-left rounded-bottom-right"
                        ng-switch-when="number"
                        ng-model="model.renderModel.data[question.id].value_number"
                        cn-change="model.renderModel.setAnswer( 'extra', question, option )"
-                       ng-disabled="!model.renderModel.data[question.id][option.id]"></input>
+                       ng-disabled="!model.renderModel.data[question.id].selectedOptionList[option.id]"></input>
                 <input type="string"
                        id="value_string"
                        class="form-control rounded-bottom-left rounded-bottom-right"
                        ng-switch-when="string"
                        ng-model="model.renderModel.data[question.id].value_string"
                        cn-change="model.renderModel.setAnswer( 'extra', question, option )"
-                       ng-disabled="!model.renderModel.data[question.id][option.id]"></input>
+                       ng-disabled="!model.renderModel.data[question.id].selectedOptionList[option.id]"></input>
                 <textarea cn-elastic
                           id="value_text"
                           class="form-control"
                           ng-switch-when="text"
                           ng-model="model.renderModel.data[question.id].value_text"
                           cn-change="model.renderModel.setAnswer( 'extra', question, option )"
-                          ng-disabled="!model.renderModel.data[question.id][option.id]"></textarea>
+                          ng-disabled="!model.renderModel.data[question.id].selectedOptionList[option.id]"></textarea>
+                <div ng-switch-when="list" ng-repeat="answerExtra in model.renderModel.data[question.id].answerExtraList">
+                  <div class="col-xs-11 col-slim">
+                    <input type="string"
+                           id="answerExtra{{ answerExtra.id }}"
+                           ng-model="answerExtra.value"
+                           cn-change="model.renderModel.setAnswerExtra( question, answerExtra )"
+                           class="form-control rounded-bottom-left rounded-bottom-right"></input>
+                  </div>
+                  <button type="button"
+                          class="btn btn-danger col-slim col-xs-1"
+                          ng-click="model.renderModel.removeAnswerExtra( question, answerExtra )">
+                    <i class="glyphicon glyphicon-remove"></i>
+                  </button>
+                </div>
               </div>
             </div>
             <input ng-switch-when="number"

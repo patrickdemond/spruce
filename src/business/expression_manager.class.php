@@ -53,7 +53,6 @@ class expression_manager extends \cenozo\singleton
 
    * lists:
    *   $NAME:OPTION$ (always true if it is selected, false if not)
-   *   $NAME:OPTION:extra$ (always the 
    *   $NAME:count()$ (always a number representing how many options are selected)
 
    * operators:
@@ -427,21 +426,10 @@ class expression_manager extends \cenozo\singleton
       if( is_null( $db_answer ) ) $compiled = 'NULL';
       else if( !is_null( $db_question_option ) )
       {
-        if( is_null( $db_question_option->extra ) )
-        {
-          // set whether or not the response checked off the option
-          $modifier = lib::create( 'database\modifier' );
-          $modifier->where( 'question_option_id', '=', $db_question_option->id );
-          $compiled = 0 < $db_answer->get_question_option_count( $modifier ) ? 'true' : 'false';
-        }
-        else
-        {
-          // set the option's value
-          if( 'number' == $db_question_option->type ) $compiled = $db_answer->value_number;
-          else if( 'string' == $db_question_option->type || 'text' == $db_question_option->type )
-            $compiled = sprintf( '"%s"', addslashes( $db_answer->value_string ) );
-          else log::warning( 'Tried to fill question option %s which has an invalid type %s.', $this->term, $db_question_option->type );
-        }
+        // set whether or not the response checked off the option
+        $modifier = lib::create( 'database\modifier' );
+        $modifier->where( 'question_option_id', '=', $db_question_option->id );
+        $compiled = 0 < $db_answer->get_question_option_count( $modifier ) ? 'true' : 'false';
       }
       else
       {
