@@ -81,7 +81,7 @@ class module extends \cenozo\database\has_rank
     {
       if( !$expression_manager->evaluate( $db_response, $db_next_module->precondition ) )
       {
-        // before proceeding to delete any answer associated with the skipped module
+        // before proceeding, delete any answer associated with the skipped module
         foreach( $db_next_module->get_page_object_list() as $db_page )
         {
           $select = lib::create( 'database\select' );
