@@ -102,14 +102,10 @@ class answer extends \cenozo\database\record
       $db_question_option = lib::create( 'database\question_option', $ids );
       if( $db_question_option->exclusive )
       { // if the question option is exclusive then we need to remove all other options
+        // note that answer_extra data is automatically deleted by triggers
         $modifier = lib::create( 'database\modifier' );
         $modifier->where( 'answer_id', '=', $this->id );
         static::db()->execute( sprintf( 'DELETE FROM answer_has_question_option %s', $modifier->get_sql() ) );
-
-        // and delete any answer_extra data
-        $modifier = lib::create( 'database\modifier' );
-        $modifier->where( 'answer_id', '=', $this->id );
-        static::db()->execute( sprintf( 'DELETE FROM answer_extra %s', $modifier->get_sql() ) );
 
         // and clean out the extra text
         $this->value_number = NULL;

@@ -68,6 +68,8 @@ BEGIN
       IF( OLD.dkna != NEW.dkna ) THEN SET NEW.refuse = false; ELSE SET NEW.dkna = false; END IF;
       -- unset any question options
       DELETE FROM answer_has_question_option WHERE answer_id = NEW.id;
+      -- unset any answer_extra data
+      DELETE FROM answer_extra WHERE answer_id = NEW.id;
     ELSE
       -- the value has changed
       SET NEW.dkna = 0, NEW.refuse = 0;

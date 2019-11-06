@@ -28,6 +28,11 @@ CREATE DEFINER = CURRENT_USER TRIGGER answer_has_question_option_AFTER_INSERT AF
 BEGIN
   -- make sure to remove the dkna and refuse bits when adding any option
   UPDATE answer SET dkna = false, refuse = false WHERE id = NEW.answer_id;
+  -- unset any answer_extra data if the selected option is exclusive
+  SELECT exclusive INTO @exclusive FROM question_option WHERE id = NEW.question_option_id;
+  IF @exclusive THEN
+    DELETE FROM answer_extra WHERE answer_id = NEW.answer_id;
+  END IF;
 END$$
 
 DELIMITER ;
