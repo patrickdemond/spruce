@@ -67,8 +67,8 @@ class answer extends \cenozo\database\record
 
     if( 'list' == $db_question->type )
     {
-      // there has to be at least one question option selected
-      if( 0 == $this->get_question_option_count() ) return false;
+      // there has to be at least one question option selected or answer_extra filled in
+      if( 0 == $this->get_question_option_count() && 0 == $this->get_answer_extra_count() ) return false;
 
       // make sure that any selected question options that have the "extra" feature also have that data filled in
       foreach( $this->get_question_option_object_list() as $db_question_option )

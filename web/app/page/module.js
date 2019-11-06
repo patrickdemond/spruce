@@ -159,13 +159,12 @@ define( function() {
             return CnTranslationHelper.translate( address, $scope.model.renderModel.currentLanguage );
           };
 
-          $q.all( [
-            $scope.model.viewModel.onView( true ),
-            $scope.model.renderModel.onLoad()
-          ] ).then( function() {
-            if( null == $scope.model.renderModel.currentLanguage )
-              $scope.model.renderModel.currentLanguage = $scope.model.viewModel.record.base_language;
-            $scope.isComplete = true;
+          $scope.model.viewModel.onView( true ).then( function() {
+            $scope.model.renderModel.onLoad().then( function() {
+              if( null == $scope.model.renderModel.currentLanguage )
+                $scope.model.renderModel.currentLanguage = $scope.model.viewModel.record.base_language;
+              $scope.isComplete = true;
+            } );
           } );
         }
       };
@@ -691,10 +690,8 @@ define( function() {
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnPageModelFactory', [
-    'CnBaseModelFactory', 'CnPageAddFactory', 'CnPageListFactory', 'CnPageRenderFactory', 'CnPageViewFactory',
-    'CnHttpFactory', '$state',
-    function( CnBaseModelFactory, CnPageAddFactory, CnPageListFactory, CnPageRenderFactory, CnPageViewFactory,
-              CnHttpFactory, $state ) {
+    'CnBaseModelFactory', 'CnPageAddFactory', 'CnPageListFactory', 'CnPageRenderFactory', 'CnPageViewFactory', '$state',
+    function( CnBaseModelFactory, CnPageAddFactory, CnPageListFactory, CnPageRenderFactory, CnPageViewFactory, $state ) {
       var object = function( root ) {
         var self = this;
         CnBaseModelFactory.construct( this, module );

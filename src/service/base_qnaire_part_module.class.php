@@ -31,10 +31,19 @@ abstract class base_qnaire_part_module extends \cenozo\service\module
         sprintf( '%s.id', $subject ),
         sprintf( '%s_description.%s_id', $subject, $subject )
       );
-      $modifier->left_join( 'language', sprintf( '%s_description.language_id', $subject ), 'language.id' );
+      $modifier->left_join(
+        'language',
+        sprintf( '%s_description.language_id', $subject ),
+        sprintf( '%s_language.id', $subject ),
+        sprintf( '%s_language', $subject )
+      );
       $modifier->group( sprintf( '%s.id', $subject ) );
       $select->add_column(
-        sprintf( 'GROUP_CONCAT( CONCAT_WS( "`", language.code, %s_description.value ) SEPARATOR "`" )', $subject ),
+        sprintf(
+          'GROUP_CONCAT( DISTINCT CONCAT_WS( "`", %s_language.code, %s_description.value ) SEPARATOR "`" )',
+          $subject,
+          $subject
+        ),
         'descriptions',
         false
       );

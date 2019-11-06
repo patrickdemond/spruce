@@ -29,7 +29,7 @@ class module extends \pine\service\base_qnaire_part_module
       $modifier->left_join( 'module_description', 'module.id', 'module_description.module_id' );
       $modifier->left_join( 'language', 'module_description.language_id', 'module_language.id', 'module_language' );
       $select->add_column(
-        'GROUP_CONCAT( CONCAT_WS( "`", module_language.code, module_description.value ) SEPARATOR "`" )',
+        'GROUP_CONCAT( DISTINCT CONCAT_WS( "`", module_language.code, module_description.value ) SEPARATOR "`" )',
         'module_descriptions',
         false
       );
