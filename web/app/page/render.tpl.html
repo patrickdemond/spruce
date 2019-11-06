@@ -31,7 +31,7 @@
           <div class="horizontal-spacer" ng-if="'comment' != question" ng-switch="question.type">
             <div ng-switch-when="boolean">
               <label class="btn btn-default full-width"
-                     style="font-style: 'italic'; font-weight: 'normal'"
+                     style="text-align: left; font-style: italic; font-weight: normal"
                      ng-model="model.renderModel.data[question.id].yes"
                      ng-click="model.renderModel.setAnswer( 'boolean', question, 'yes' )"
                      uib-btn-checkbox>
@@ -40,7 +40,7 @@
                 {{ text( 'misc.yes' ) }}
               </label>
               <label class="btn btn-default full-width"
-                     style="font-style: 'italic'; font-weight: 'normal'"
+                     style="text-align: left; font-style: italic; font-weight: normal"
                      ng-model="model.renderModel.data[question.id].no"
                      ng-click="model.renderModel.setAnswer( 'boolean', question, 'no' )"
                      uib-btn-checkbox>
@@ -52,6 +52,7 @@
             <div ng-switch-when="list" ng-repeat="option in question.optionList">
               <div ng-if="'list' != option.extra" ng-class="{ 'col-xs-3 col-slim': null != option.extra }">
                 <label class="btn btn-default full-width"
+                       style="text-align: left"
                        ng-class="{ 'rounded-bottom-left rounded-top-left': null != option.extra }"
                        ng-model="model.renderModel.data[question.id].selectedOptionList[option.id]"
                        ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal', 'font-weight': 'normal' }"
@@ -64,6 +65,7 @@
               </div>
               <div ng-if="'list' == option.extra">
                 <label class="btn btn-default full-width"
+                       style="text-align: left"
                        class="rounded-bottom-left rounded-top-left"
                        ng-model="model.renderModel.data[question.id].selectedOptionList[option.id]"
                        ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal', 'font-weight': 'normal' }"
@@ -138,7 +140,7 @@
             </textarea>
             <div class="btn-group full-width" ng-if="'comment' != question.type">
               <label class="btn btn-default col-xs-6"
-                     style="font-style: italic; font-weight: normal"
+                     style="text-align: left; font-style: italic; font-weight: normal"
                      ng-model="model.renderModel.data[question.id].dkna"
                      ng-click="model.renderModel.setAnswer( 'dkna', question )"
                      uib-btn-checkbox>
@@ -147,7 +149,7 @@
                 {{ text( 'misc.dkna' ) }}
               </label>
               <label class="btn btn-default col-xs-6"
-                     style="font-style: italic; font-weight: normal"
+                     style="text-align: left; font-style: italic; font-weight: normal"
                      ng-model="model.renderModel.data[question.id].refuse"
                      ng-click="model.renderModel.setAnswer( 'refuse', question )"
                      uib-btn-checkbox>
