@@ -167,7 +167,7 @@ define( function() {
             CnSession.setBreadcrumbTrail( [ {
               title: $scope.model.viewModel.record.qnaire_name
             }, {
-              title: $scope.model.viewModel.record.uid
+              title: $scope.model.viewModel.record.uid ? $scope.model.viewModel.record.uid : 'Preview'
             }, {
               title: $scope.model.viewModel.record.module_name
             } ] );
