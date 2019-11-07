@@ -129,11 +129,12 @@ define( function() {
     'CnBaseModelFactory', 'CnQnaireAddFactory', 'CnQnaireListFactory', 'CnQnaireViewFactory',
     function( CnBaseModelFactory, CnQnaireAddFactory, CnQnaireListFactory, CnQnaireViewFactory ) {
       var object = function( root ) {
-        var self = this;
         CnBaseModelFactory.construct( this, module );
         this.addModel = CnQnaireAddFactory.instance( this );
         this.listModel = CnQnaireListFactory.instance( this );
         this.viewModel = CnQnaireViewFactory.instance( this, root );
+
+        this.getBreadcrumbTitle = function() { return this.viewModel.record.name; };
       };
 
       return {

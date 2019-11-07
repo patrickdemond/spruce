@@ -53,12 +53,14 @@ define( function() {
     },
 
     qnaire_id: { column: 'qnaire.id', exclude: true },
+    qnaire_name: { column: 'qnaire.name', exclude: true },
     base_language: { column: 'base_language.code', exclude: true },
     descriptions: { exclude: true },
     module_descriptions: { exclude: true },
     module_id: { exclude: true },
     previous_page_id: { exclude: true },
-    next_page_id: { exclude: true }
+    next_page_id: { exclude: true },
+    module_name: { column: 'module.name', exclude: true }
   } );
 
   module.addExtraOperation( 'view', {
@@ -132,8 +134,8 @@ define( function() {
 
   /* ######################################################################################################## */
   cenozo.providers.directive( 'cnPageRender', [
-    'CnPageModelFactory', 'CnTranslationHelper', '$q', '$document', '$transitions',
-    function( CnPageModelFactory, CnTranslationHelper, $q, $document, $transitions ) {
+    'CnPageModelFactory', 'CnTranslationHelper', 'CnSession', '$q', '$document', '$transitions',
+    function( CnPageModelFactory, CnTranslationHelper, CnSession, $q, $document, $transitions ) {
       return {
         templateUrl: module.getFileUrl( 'render.tpl.html' ),
         restrict: 'E',
@@ -155,11 +157,23 @@ define( function() {
             }
           } );
 
+          if( angular.isUndefined( $scope.progress ) ) $scope.progress = 0;
+
           $scope.text = function( address, language ) {
             return CnTranslationHelper.translate( address, $scope.model.renderModel.currentLanguage );
           };
 
           $scope.model.viewModel.onView( true ).then( function() {
+            CnSession.setBreadcrumbTrail( [ {
+              title: $scope.model.viewModel.record.qnaire_name
+            }, {
+              title: $scope.model.viewModel.record.uid
+            }, {
+              title: $scope.model.viewModel.record.module_name
+            } ] );
+            $scope.progress = Math.round(
+              100 * $scope.model.viewModel.record.qnaire_page / $scope.model.viewModel.record.qnaire_pages
+            );
             $scope.model.renderModel.onLoad().then( function() {
               if( null == $scope.model.renderModel.currentLanguage )
                 $scope.model.renderModel.currentLanguage = $scope.model.viewModel.record.base_language;
@@ -693,12 +707,15 @@ define( function() {
     'CnBaseModelFactory', 'CnPageAddFactory', 'CnPageListFactory', 'CnPageRenderFactory', 'CnPageViewFactory', '$state',
     function( CnBaseModelFactory, CnPageAddFactory, CnPageListFactory, CnPageRenderFactory, CnPageViewFactory, $state ) {
       var object = function( root ) {
-        var self = this;
         CnBaseModelFactory.construct( this, module );
         this.addModel = CnPageAddFactory.instance( this );
         this.listModel = CnPageListFactory.instance( this );
         this.renderModel = CnPageRenderFactory.instance( this );
         this.viewModel = CnPageViewFactory.instance( this, root );
+
+        this.getBreadcrumbParentTitle = function() {
+          return this.viewModel.record.module_name;
+        };
 
         this.getServiceResourcePath = function( resource ) {
           // when we're looking at a response use its token to figure out which page to load

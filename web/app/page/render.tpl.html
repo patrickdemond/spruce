@@ -2,7 +2,7 @@
 <div class="utility-view rounded">
   <div class="container-fluid bg-primary rounded-top">
     <h4>
-      {{ model.viewModel.record.name ? model.viewModel.record.name : 'Loading...' }}
+      {{ model.viewModel.record.module_name ?  model.viewModel.record.module_name : 'Loading...' }}
       <div class="pull-right" style="margin-top: -7px;">
         <select class="form-control"
                 ng-model="model.renderModel.currentLanguage"
@@ -11,6 +11,14 @@
         </select>
       </div>
     </h4>
+  </div>
+  <div class="progress no-rounding">
+    <div class="progress-bar"
+         role="progressbar"
+         style="width: {{ progress }}%; -webkit-transition: none !important; transition: none !important;"
+         aria-valuenow="{{ progress }}"
+         aria-valuemin="0"
+         aria-valuemax="100">{{ progress }}%</div>
   </div>
   <form name="form" novalidate>
     <div ng-if="!isComplete" class="loading spacer" uib-tooltip="Loading&hellip;"></div>

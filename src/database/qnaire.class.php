@@ -50,4 +50,18 @@ class qnaire extends \cenozo\database\record
     $question_id = static::db()->get_one( sprintf( '%s %s', $select->get_sql(), $modifier->get_sql() ) );
     return is_null( $question_id ) ? NULL : lib::create( 'database\question', $question_id );
   }
+
+  /**
+   * TODO: document
+   */
+  public function get_number_of_pages()
+  {
+    $select = lib::create( 'database\select' );
+    $select->from( 'page' );
+    $select->add_constant( 'COUNT(*)', 'total', 'integer', false );
+    $modifier = lib::create( 'database\modifier' );
+    $modifier->join( 'module', 'page.module_id', 'module.id' );
+    $modifier->where( 'module.qnaire_id', '=', $this->id );
+    return static::db()->get_one( sprintf( '%s %s', $select->get_sql(), $modifier->get_sql() ) );
+  }
 }

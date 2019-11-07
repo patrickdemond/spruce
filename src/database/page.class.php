@@ -112,4 +112,21 @@ class page extends \cenozo\database\has_rank
 
     return $db_next_page;
   }
+
+  /**
+   * TODO: document
+   */
+  public function get_overall_rank()
+  {
+    $db_module = $this->get_module();
+
+    $select = lib::create( 'database\select' );
+    $select->from( 'page' );
+    $select->add_constant( 'COUNT(*)', 'total', 'integer', false );
+    $modifier = lib::create( 'database\modifier' );
+    $modifier->join( 'module', 'page.module_id', 'module.id' );
+    $modifier->where( 'module.qnaire_id', '=', $db_module->qnaire_id );
+    $modifier->where( 'module.rank', '<', $db_module->rank );
+    return static::db()->get_one( sprintf( '%s %s', $select->get_sql(), $modifier->get_sql() ) ) + $this->rank;
+  }
 }

@@ -6,7 +6,7 @@ define( function() {
     identifier: {
       parent: {
         subject: 'qnaire',
-        column: 'qnaire.id'
+        column: 'qnaire.name'
       }
     },
     name: {

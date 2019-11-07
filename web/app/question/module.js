@@ -70,7 +70,8 @@ define( function() {
     },
 
     previous_question_id: { exclude: true },
-    next_question_id: { exclude: true }
+    next_question_id: { exclude: true },
+    page_name: { column: 'page.name', exclude: true }
   } );
 
   module.addExtraOperation( 'view', {
@@ -184,11 +185,14 @@ define( function() {
     'CnBaseModelFactory', 'CnQuestionAddFactory', 'CnQuestionListFactory', 'CnQuestionViewFactory',
     function( CnBaseModelFactory, CnQuestionAddFactory, CnQuestionListFactory, CnQuestionViewFactory ) {
       var object = function( root ) {
-        var self = this;
         CnBaseModelFactory.construct( this, module );
         this.addModel = CnQuestionAddFactory.instance( this );
         this.listModel = CnQuestionListFactory.instance( this );
         this.viewModel = CnQuestionViewFactory.instance( this, root );
+
+        this.getBreadcrumbParentTitle = function() {
+          return this.viewModel.record.page_name;
+        };
       };
 
       return {

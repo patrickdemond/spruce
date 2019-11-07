@@ -34,5 +34,12 @@ class module extends \pine\service\base_qnaire_part_module
         false
       );
     }
+
+    $db_page = $this->get_resource();
+    if( !is_null( $db_page ) )
+    {
+      $select->add_constant( $db_page->get_module()->get_qnaire()->get_number_of_pages(), 'qnaire_pages', 'integer' );
+      $select->add_constant( $db_page->get_overall_rank(), 'qnaire_page', 'integer' );
+    }
   }
 }
