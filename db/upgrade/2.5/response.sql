@@ -25,6 +25,7 @@ CREATE PROCEDURE patch_access()
         "INDEX fk_participant_id (participant_id ASC), ",
         "INDEX fk_language_id (language_id ASC), ",
         "INDEX fk_page_id (page_id ASC), ",
+        "UNIQUE INDEX `uq_qnaire_id_participant_id` (`qnaire_id` ASC, `participant_id` ASC), ",
         "UNIQUE INDEX uq_token (token ASC), ",
         "CONSTRAINT fk_response_qnaire_id ",
           "FOREIGN KEY (qnaire_id) ",
