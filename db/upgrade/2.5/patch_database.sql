@@ -7,6 +7,8 @@ SOURCE application_type_has_role.sql
 SOURCE application.sql
 SOURCE application_has_site.sql
 
+SOURCE role.sql
+SOURCE user.sql
 SOURCE access.sql
 SOURCE service.sql
 SOURCE role_has_service.sql

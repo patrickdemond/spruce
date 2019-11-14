@@ -15,6 +15,46 @@ use cenozo\lib, cenozo\log, pine\util;
 class ui extends \cenozo\ui\ui
 {
   /**
+   * TODO: document
+   */
+  public function get_interface( $maintenance = false, $error = NULL )
+  {
+    $session = lib::create( 'business\session' );
+
+    // If we're loading the qnaire run then show a special interface if we're logged in as the qnaire user
+    $db_response = $session->get_response();
+    if( !is_null( $db_response ) )
+    {
+      $setting_manager = lib::create( 'business\setting_manager' );
+      $qnaire_username = $setting_manager->get_setting( 'utility', 'qnaire_username' );
+
+      if( $qnaire_username == $session->get_user()->name )
+      {
+        // prepare the framework module list (used to identify which modules are provided by the framework)
+        $framework_module_list = $this->get_framework_module_list();
+        sort( $framework_module_list );
+
+        // prepare the module list (used to create all necessary states needed by the active role)
+        $this->build_module_list();
+        ksort( $this->module_list );
+
+        // create the json strings for the interface
+        $module_array = array();
+        foreach( $this->module_list as $module ) $module_array[$module->get_subject()] = $module->as_array();
+        $framework_module_string = util::json_encode( $framework_module_list );
+        $module_string = util::json_encode( $module_array );
+
+        // build the interface
+        ob_start();
+        include( dirname( __FILE__ ).'/qnaire_interface.php' );
+        return ob_get_clean();
+      }
+    }
+
+    return parent::get_interface( $maintenance, $error );
+  }
+
+  /**
    * Extends the sparent method
    */
   protected function build_module_list()
@@ -60,7 +100,7 @@ class ui extends \cenozo\ui\ui
     $module = $this->get_module( 'response' );
     if( !is_null( $module ) )
     {
-      $module->add_action( 'run', '/{token}' );
+      $module->add_action( 'run', '/{token}', true );
     }
   }
 

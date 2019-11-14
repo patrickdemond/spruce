@@ -48,6 +48,26 @@ CREATE PROCEDURE patch_role_has_service()
     EXECUTE statement;
     DEALLOCATE PREPARE statement;
 
+    -- respondent
+    SET @sql = CONCAT(
+      "INSERT INTO role_has_service( role_id, service_id ) ",
+      "SELECT role.id, service.id ",
+      "FROM ", @cenozo, ".role, service ",
+      "WHERE role.name = 'respondent' ",
+      "AND service.restricted = 1 "
+      "AND ( "
+        "( subject = 'qnaire' AND method = 'GET' AND resource = 1 ) OR "
+        "( subject = 'response' AND method IN( 'GET', 'PATCH' ) AND resource = 1 ) OR "
+        "( subject = 'page' AND method = 'GET' AND resource = 1 ) OR "
+        "( subject = 'question' AND method = 'GET' ) OR "
+        "( subject IN( 'answer', 'question_option' ) ) "
+      ")"
+    );
+    SELECT @sql;
+    PREPARE statement FROM @sql;
+    EXECUTE statement;
+    DEALLOCATE PREPARE statement;
+
   END //
 DELIMITER ;
 

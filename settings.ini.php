@@ -13,7 +13,10 @@ global $SETTINGS;
 $SETTINGS['general']['application_name'] = 'pine';
 $SETTINGS['general']['instance_name'] = $SETTINGS['general']['application_name'];
 $SETTINGS['general']['version'] = '2.5';
-$SETTINGS['general']['build'] = '448dce4';
+$SETTINGS['general']['build'] = '1603d80';
 
 // the location of the application's internal path
 $SETTINGS['path']['APPLICATION'] = str_replace( '/settings.ini.php', '', __FILE__ );
+
+// the user to use when filling in a qnaire without logging in
+$SETTINGS['utility']['qnaire_username'] = 'pine';

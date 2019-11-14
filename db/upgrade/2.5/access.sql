@@ -47,6 +47,21 @@ CREATE PROCEDURE patch_access()
 
     SET @test = ( SELECT COUNT(*) FROM access );
     IF @test = 0 THEN
+      SELECT "Adding generic qnaire account for running qnaires without a username" AS "";
+
+      SET @sql = CONCAT(
+        "INSERT IGNORE INTO access ",
+        "( user_id, role_id, site_id ) ",
+        "SELECT user.id, role.id, site.id ",
+        "FROM ", @cenozo, ".user, ", @cenozo, ".site, ", @cenozo, ".role ",
+        "WHERE user.name = 'pine' ",
+        "AND role.name = 'respondent' ",
+        "AND site.name = 'NCC'"
+      );
+      PREPARE statement FROM @sql;
+      EXECUTE statement;
+      DEALLOCATE PREPARE statement;
+
       SELECT "Adding default administrator access based on Mastodon" AS "";
 
       SET @sql = CONCAT(
@@ -54,7 +69,7 @@ CREATE PROCEDURE patch_access()
         "( user_id, role_id, site_id ) ",
         "SELECT user.id, role.id, site.id ",
         "FROM ", @cenozo, ".user, ", @cenozo, ".site, ", @cenozo, ".role ",
-        "WHERE user.name IN ( 'cenozo', 'cheesem', 'imolnar', 'langss', 'llawsom', 'patrick' ) ",
+        "WHERE user.name IN ( 'cenozo', 'patrick' ) ",
         "AND role.name IN( 'administrator' ) ",
         "AND site.name = 'NCC'"
       );
