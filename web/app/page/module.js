@@ -232,6 +232,10 @@ define( function() {
           // unselect all values other than the selected one
           for( var p in list ) if( option != p && list[p] ) list[p] = angular.isString( list[p] ) ? null : false;
 
+          // unselect boolean yes/no answers if they are not selected
+          if( angular.isDefined( data.yes ) && 'yes' != option ) data.yes = false;
+          if( angular.isDefined( data.no ) && 'no' != option ) data.no = false;
+
           // unselect the dkna/refuse options if they are not selected
           if( angular.isDefined( data.dkna ) && 'dkna' != option ) data.dkna = false;
           if( angular.isDefined( data.refuse ) && 'refuse' != option ) data.refuse = false;
