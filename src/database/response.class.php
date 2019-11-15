@@ -21,13 +21,9 @@ class response extends \cenozo\database\record
     // setup new responses
     if( is_null( $this->id ) )
     {
-      $db_qnaire = lib::create( 'database\qnaire', $this->qnaire_id );
-      $this->page_id = $db_qnaire->get_first_module()->get_first_page()->id;
-
       $db_participant = lib::create( 'database\participant', $this->participant_id );
       $this->language_id = $db_participant->language_id;
       $this->token = static::generate_token();
-      $this->start_datetime = util::get_datetime_object();
     }
 
     parent::save();
@@ -43,34 +39,59 @@ class response extends \cenozo\database\record
   {
     $answer_class_name = lib::get_class_name( 'database\answer' );
 
+    if( $this->submitted )
+    {
+      log::warning( 'Tried to move submitted response to the next page.' );
+      return;
+    }
+
     // start by making sure that the current page is complete
     $complete = true;
     $db_page = $this->get_page();
-    foreach( $db_page->get_question_object_list() as $db_question )
-    {
-      $db_answer = $answer_class_name::get_unique_record(
-        array( 'response_id', 'question_id' ),
-        array( $this->id, $db_question->id )
-      );
-
-      if( !$db_answer->is_complete() )
-      {
-        log::warning( sprintf(
-          'Tried to advance response for %s to the next page but the current page "%s" is incomplete.',
-          $this->get_participant()->uid,
-          $db_page->name
-        ) );
-
-        $complete = false;
-        break;
-      }
-    }
-
-    if( $complete )
-    {
-      $db_next_page = $db_page->get_next_page( $this );
-      $this->page_id = is_null( $db_next_page ) ? NULL : $db_next_page->id;
+    
+    if( is_null( $db_page ) )
+    { // the qnaire has never been started
+      $this->page_id = $this->get_qnaire()->get_first_module()->get_first_page()->id;
+      $this->start_datetime = util::get_datetime_object();
       $this->save();
+    }
+    else // we've already started the qnaire
+    {
+      // make sure that all questions on the current page are finished
+      foreach( $db_page->get_question_object_list() as $db_question )
+      {
+        $db_answer = $answer_class_name::get_unique_record(
+          array( 'response_id', 'question_id' ),
+          array( $this->id, $db_question->id )
+        );
+
+        if( !$db_answer->is_complete() )
+        {
+          log::warning( sprintf(
+            'Tried to advance response for %s to the next page but the current page "%s" is incomplete.',
+            $this->get_participant()->uid,
+            $db_page->name
+          ) );
+
+          $complete = false;
+          break;
+        }
+      }
+
+      if( $complete )
+      {
+        $db_next_page = $db_page->get_next_page( $this );
+        if( is_null( $db_next_page ) )
+        {
+          $this->page_id = NULL;
+          $this->submitted = true;
+        }
+        else
+        {
+          $this->page_id = $db_next_page->id;
+        }
+        $this->save();
+      }
     }
   }
 
@@ -82,6 +103,12 @@ class response extends \cenozo\database\record
    */
   public function move_to_previous_page()
   {
+    if( $this->submitted )
+    {
+      log::warning( 'Tried to move submitted response to the previous page.' );
+      return;
+    }
+
     $db_previous_page = $this->get_page()->get_previous_page( $this );
     if( !is_null( $db_previous_page ) )
     {

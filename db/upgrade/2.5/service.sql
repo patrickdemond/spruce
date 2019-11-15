@@ -137,4 +137,7 @@ INSERT INTO service ( subject, method, resource, restricted ) VALUES
 ( 'qnaire', 'GET', 0, 0 ),
 ( 'qnaire', 'GET', 1, 0 ),
 ( 'qnaire', 'PATCH', 1, 1 ),
-( 'qnaire', 'POST', 0, 1 );
+( 'qnaire', 'POST', 0, 1 ),
+( 'qnaire_description', 'GET', 0, 0 ),
+( 'qnaire_description', 'GET', 1, 0 ),
+( 'qnaire_description', 'PATCH', 1, 1 );

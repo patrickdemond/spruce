@@ -19,7 +19,6 @@ class get extends \cenozo\service\get
 
     parent::execute();
 
-    // if we're asking for the page based on a response then make sure that all answers have been created
     if( 1 == preg_match( '/^token=([^;\/]+)/', $this->get_resource_value( 0 ), $parts ) )
     {
       $this->db_response = $response_class_name::get_unique_record( 'token', $parts[1] );

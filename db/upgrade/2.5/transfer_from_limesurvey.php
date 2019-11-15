@@ -114,6 +114,24 @@ class import
     );
     if( false === $this->db->query( $sql ) ) error( $this->db->error );
 
+    $sql = sprintf(
+      'REPLACE INTO qnaire_description( qnaire_id, language_id, type, value ) '.
+      'SELECT qnaire.id, language.id, "conclusion", "The questionnaire is complete." '.
+      'FROM qnaire, %s.language '.
+      'WHERE language.code = "en"',
+      $this->cenozodb
+    );
+    if( false === $this->db->query( $sql ) ) error( $this->db->error );
+
+    $sql = sprintf(
+      'REPLACE INTO qnaire_description( qnaire_id, language_id, type, value ) '.
+      'SELECT qnaire.id, language.id, "conclusion", "Le questionnaire est complet." '.
+      'FROM qnaire, %s.language '.
+      'WHERE language.code = "fr"',
+      $this->cenozodb
+    );
+    if( false === $this->db->query( $sql ) ) error( $this->db->error );
+
     ///////////////////////////////////////////////////////////////////////////////////////////////
     out( 'Adding temp columns to the module, page, and question tables' );
     $sql = sprintf(
@@ -227,7 +245,6 @@ class import
           'question_attributes.value = 1 '.
         'WHERE questions.sid = %d '.
         'AND parent_qid = 0 '.
-//        'AND title NOT LIKE "%%\\_OTSP\\_%%" '. // ignore specify-other questions
         'AND qaid IS NULL '. // don't include hidden questions
         'GROUP BY questions.qid '.
         'ORDER BY group_order, question_order',

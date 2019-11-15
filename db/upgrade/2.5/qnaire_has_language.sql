@@ -45,6 +45,10 @@ DELIMITER $$
 DROP TRIGGER IF EXISTS qnaire_has_language_AFTER_INSERT $$
 CREATE DEFINER = CURRENT_USER TRIGGER qnaire_has_language_AFTER_INSERT AFTER INSERT ON qnaire_has_language FOR EACH ROW
 BEGIN
+  INSERT IGNORE INTO qnaire_description( qnaire_id, language_id, type ) VALUES
+  ( NEW.qnaire_id, NEW.language_id, 'introduction' ),
+  ( NEW.qnaire_id, NEW.language_id, 'conclusion' );
+
   INSERT IGNORE INTO module_description( module_id, language_id )
   SELECT module.id, NEW.language_id
   FROM module
@@ -75,6 +79,10 @@ END$$
 DROP TRIGGER IF EXISTS qnaire_has_language_AFTER_DELETE $$
 CREATE DEFINER = CURRENT_USER TRIGGER qnaire_has_language_AFTER_DELETE AFTER DELETE ON qnaire_has_language FOR EACH ROW
 BEGIN
+  DELETE FROM qnaire_description
+  WHERE language_id = OLD.language_id
+  AND qnaire_id = OLD.qnaire_id;
+
   DELETE FROM module_description
   WHERE language_id = OLD.language_id
   AND module_id IN ( SELECT id FROM (

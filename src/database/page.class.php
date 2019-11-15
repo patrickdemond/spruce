@@ -32,7 +32,7 @@ class page extends \cenozo\database\has_rank
     {
       // return the current page for the provided response
       $db_response = $response_class_name::get_unique_record( 'token', $parts[1] );
-      return is_null( $db_response ) ? NULL : lib::create( 'database\page', $db_response->page_id );
+      return is_null( $db_response ) || is_null( $db_response->page_id ) ? NULL : lib::create( 'database\page', $db_response->page_id );
     }
     else return parent::get_record_from_identifier( $identifier );
   }

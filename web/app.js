@@ -334,8 +334,10 @@ cenozo.service( 'CnTranslationHelper', [
           no: { en: 'No', fr: 'Non' },
           dkna: { en: 'Don\'t Know / No Answer', fr: 'Ne sait pas / pas de réponse' },
           refuse: { en: 'Refuse', fr: 'Refus' },
+          begin: { en: 'Begin', fr: 'Commencer' },
           next: { en: 'Next', fr: 'Suivant' },
-          previous: { en: 'Previous', fr: 'Précédent' }
+          previous: { en: 'Previous', fr: 'Précédent' },
+          submit: { en: 'Submit', fr: 'Envoyer' }
         }
       }
     };

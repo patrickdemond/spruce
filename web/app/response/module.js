@@ -28,6 +28,10 @@ define( [ 'page' ].reduce( function( list, name ) {
       token: {
         title: 'Token'
       },
+      submitted: {
+        title: 'Submitted',
+        type: 'boolean'
+      },
       module: {
         column: 'module.name',
         title: 'Module'
@@ -74,10 +78,23 @@ define( [ 'page' ].reduce( function( list, name ) {
       type: 'string',
       exclude: 'add'
     },
-    page: {
-      column: 'page.rank',
+    submitted: {
+      title: 'Submitted',
+      type: 'boolean',
+      constant: true,
+      exclude: 'add'
+    },
+    module: {
+      column: 'module.name',
+      title: 'Module',
       type: 'string',
-      title: 'Page Rank',
+      constant: true,
+      exclude: 'add'
+    },
+    page: {
+      column: 'page.name',
+      title: 'Page',
+      type: 'string',
       constant: true,
       exclude: 'add'
     },

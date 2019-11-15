@@ -63,7 +63,6 @@ CREATE PROCEDURE patch_role_has_service()
         "( subject IN( 'answer', 'question_option' ) ) "
       ")"
     );
-    SELECT @sql;
     PREPARE statement FROM @sql;
     EXECUTE statement;
     DEALLOCATE PREPARE statement;

@@ -20,10 +20,43 @@ class module extends \cenozo\service\module
   {
     parent::prepare_read( $select, $modifier );
 
+    $modifier->join( 'qnaire', 'response.qnaire_id', 'qnaire.id' );
     $modifier->join( 'participant', 'response.participant_id', 'participant.id' );
     $modifier->join( 'language', 'response.language_id', 'language.id' );
     $modifier->left_join( 'page', 'response.page_id', 'page.id' );
     $modifier->left_join( 'module', 'page.module_id', 'module.id' );
+
+    if( $select->has_column( 'introductions' ) )
+    {
+      // join to the introductions
+      $join_mod = lib::create( 'database\modifier' );
+      $join_mod->where( 'qnaire.id', '=', 'introduction.qnaire_id', false );
+      $join_mod->where( 'introduction.type', '=', 'introduction' );
+      $modifier->join_modifier( 'qnaire_description', $join_mod, '', 'introduction' );
+      $modifier->join( 'language', 'introduction.language_id', 'introduction_language.id', '', 'introduction_language' );
+      $select->add_column(
+        'GROUP_CONCAT( DISTINCT CONCAT_WS( "`", introduction_language.code, IFNULL( introduction.value, "" ) ) SEPARATOR "`" )',
+        'introductions',
+        false
+      );
+
+      $modifier->group( 'qnaire.id' );
+    }
+
+    if( $select->has_column( 'conclusions' ) )
+    {
+      // join to the conclusions
+      $join_mod = lib::create( 'database\modifier' );
+      $join_mod->where( 'qnaire.id', '=', 'conclusion.qnaire_id', false );
+      $join_mod->where( 'conclusion.type', '=', 'conclusion' );
+      $modifier->join_modifier( 'qnaire_description', $join_mod, '', 'conclusion' );
+      $modifier->join( 'language', 'conclusion.language_id', 'conclusion_language.id', '', 'conclusion_language' );
+      $select->add_column(
+        'GROUP_CONCAT( DISTINCT CONCAT_WS( "`", conclusion_language.code, IFNULL( conclusion.value, "" ) ) SEPARATOR "`" )',
+        'conclusions',
+        false
+      );
+    }
 
     if( !is_null( $this->get_resource() ) )
     {

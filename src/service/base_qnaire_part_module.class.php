@@ -26,21 +26,22 @@ abstract class base_qnaire_part_module extends \cenozo\service\module
 
     if( $select->has_column( 'descriptions' ) )
     {
-      $modifier->left_join(
+      $modifier->join(
         sprintf( '%s_description', $subject ),
         sprintf( '%s.id', $subject ),
         sprintf( '%s_description.%s_id', $subject, $subject )
       );
-      $modifier->left_join(
+      $modifier->join(
         'language',
         sprintf( '%s_description.language_id', $subject ),
         sprintf( '%s_language.id', $subject ),
+        '',
         sprintf( '%s_language', $subject )
       );
       $modifier->group( sprintf( '%s.id', $subject ) );
       $select->add_column(
         sprintf(
-          'GROUP_CONCAT( DISTINCT CONCAT_WS( "`", %s_language.code, %s_description.value ) SEPARATOR "`" )',
+          'GROUP_CONCAT( DISTINCT CONCAT_WS( "`", %s_language.code, IFNULL( %s_description.value, "" ) ) SEPARATOR "`" )',
           $subject,
           $subject
         ),

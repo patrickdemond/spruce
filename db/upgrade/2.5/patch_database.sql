@@ -16,6 +16,7 @@ SOURCE setting.sql
 SOURCE writelog.sql
 
 SOURCE qnaire.sql
+SOURCE qnaire_description.sql
 SOURCE qnaire_has_language.sql
 SOURCE attribute.sql
 SOURCE module.sql

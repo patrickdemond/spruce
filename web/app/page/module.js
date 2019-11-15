@@ -134,13 +134,21 @@ define( function() {
 
   /* ######################################################################################################## */
   cenozo.providers.directive( 'cnPageRender', [
-    'CnPageModelFactory', 'CnTranslationHelper', 'CnSession', '$q', '$document', '$transitions',
-    function( CnPageModelFactory, CnTranslationHelper, CnSession, $q, $document, $transitions ) {
+    'CnPageModelFactory', 'CnTranslationHelper', 'CnSession', 'CnHttpFactory', '$q', '$state', '$document',
+    function( CnPageModelFactory, CnTranslationHelper, CnSession, CnHttpFactory, $q, $state, $document ) {
       return {
         templateUrl: module.getFileUrl( 'render.tpl.html' ),
         restrict: 'E',
         scope: { model: '=?' },
         controller: function( $scope ) {
+          $scope.data = {
+            page_id: null,
+            qnaire_id: null,
+            qnaire_name: null,
+            base_language: null,
+            title: null,
+            uid: null
+          };
           $scope.isComplete = false;
           if( angular.isUndefined( $scope.model ) ) $scope.model = CnPageModelFactory.root;
 
@@ -163,23 +171,77 @@ define( function() {
             return CnTranslationHelper.translate( address, $scope.model.renderModel.currentLanguage );
           };
 
-          $scope.model.viewModel.onView( true ).then( function() {
-            CnSession.setBreadcrumbTrail( [ {
-              title: $scope.model.viewModel.record.qnaire_name
-            }, {
-              title: $scope.model.viewModel.record.uid ? $scope.model.viewModel.record.uid : 'Preview'
-            }, {
-              title: $scope.model.viewModel.record.module_name
-            } ] );
-            $scope.progress = Math.round(
-              100 * $scope.model.viewModel.record.qnaire_page / $scope.model.viewModel.record.qnaire_pages
+          function render() {
+            var promiseList = [];
+            if( 'response' != $scope.model.getSubjectFromState() || null != $scope.data.page_id ) promiseList.push(
+              $scope.model.viewModel.onView( true ).then( function() {
+                $scope.data = {
+                  page_id: $scope.model.viewModel.record.id,
+                  qnaire_id: $scope.model.viewModel.record.qnaire_id,
+                  qnaire_name: $scope.model.viewModel.record.qnaire_name,
+                  base_language: $scope.model.viewModel.record.base_language,
+                  title: $scope.model.viewModel.record.module_name,
+                  uid: null
+                };
+
+                $scope.progress = Math.round(
+                  100 * $scope.model.viewModel.record.qnaire_page / $scope.model.viewModel.record.qnaire_pages
+                );
+                return $scope.model.renderModel.onLoad();
+              } )
             );
-            $scope.model.renderModel.onLoad().then( function() {
+
+            $q.all( promiseList ).then( function() {
+              CnHttpFactory.instance( {
+                path: [ 'qnaire', $scope.data.qnaire_id, 'language' ].join( '/' ),
+                data: { select: { column: [ 'id', 'code', 'name' ] } }
+              } ).query().then( function( response ) {
+                $scope.languageList = response.data;
+              } );
+
+              CnSession.setBreadcrumbTrail( [ {
+                title: $scope.data.qnaire_name,
+                go: function() { return $state.go( 'qnaire.view', { identifier: $scope.data.qnaire_id } ); }
+              }, {
+                title: $scope.data.uid ? $scope.data.uid : 'Preview'
+              }, {
+                title: $scope.data.title
+              } ] );
+
               if( null == $scope.model.renderModel.currentLanguage )
-                $scope.model.renderModel.currentLanguage = $scope.model.viewModel.record.base_language;
+                $scope.model.renderModel.currentLanguage = $scope.data.base_language;
+
               $scope.isComplete = true;
             } );
-          } );
+          }
+
+          if( 'response' != $scope.model.getSubjectFromState() ) render();
+          else {
+            // test to see if the response has a current page
+            CnHttpFactory.instance( {
+              path: 'response/token=' + $state.params.token,
+              data: { select: { column: [
+                'qnaire_id', 'page_id', 'submitted', 'introductions', 'conclusions',
+                { table: 'participant', column: 'uid' },
+                { table: 'language', column: 'code', alias: 'base_language' },
+                { table: 'qnaire', column: 'name', alias: 'qnaire_name' },
+                { table: 'module', column: 'name', alias: 'module_name' }
+              ] } },
+              onError: function( response ) {
+                $state.go( 'error.' + response.status, response );
+              }
+            } ).get().then( function( response ) {
+              $scope.data = response.data;
+              $scope.data.introductions = parseDescriptions( $scope.data.introductions );
+              $scope.data.conclusions = parseDescriptions( $scope.data.conclusions );
+              $scope.data.title = null != $scope.data.module_name
+                                ? $scope.data.module_name
+                                : $scope.data.submitted
+                                ? 'Conclusion'
+                                : 'Introduction';
+              render();
+            } );
+          }
         }
       };
     }
@@ -375,7 +437,7 @@ define( function() {
           },
 
           setLanguage: function() {
-            if( 'response' == this.parentModel.getSubjectFromState() ) {
+            if( 'response' == this.parentModel.getSubjectFromState() && null != this.currentLanguage ) {
               CnHttpFactory.instance( {
                 path: this.parentModel.getServiceResourcePath().replace( 'page/', 'response/' ) +
                   '?action=set_language&code=' + this.currentLanguage
@@ -646,7 +708,7 @@ define( function() {
             CnHttpFactory.instance( {
               path: 'response/token=' + $state.params.token + '?action=proceed'
             } ).patch().then( function() {
-              $state.reload();
+              self.parentModel.reloadState( true );
             } );
           },
 
@@ -655,7 +717,7 @@ define( function() {
             CnHttpFactory.instance( {
               path: 'response/token=' + $state.params.token + '?action=backup'
             } ).patch().then( function() {
-              $state.reload();
+              self.parentModel.reloadState( true );
             } );
           }
         } );
@@ -666,8 +728,8 @@ define( function() {
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnPageViewFactory', [
-    'CnBaseViewFactory', 'CnHttpFactory', '$state',
-    function( CnBaseViewFactory, CnHttpFactory, $state ) {
+    'CnBaseViewFactory', 'CnHttpFactory', 'CnModalMessageFactory', '$state',
+    function( CnBaseViewFactory, CnHttpFactory, CnModalMessageFactory, $state ) {
       var object = function( parentModel, root ) {
         var self = this;
         CnBaseViewFactory.construct( this, parentModel, root );
@@ -677,13 +739,6 @@ define( function() {
             return this.$$onView( force ).then( function() {
               self.record.descriptions = parseDescriptions( self.record.descriptions );
               self.record.module_descriptions = parseDescriptions( self.record.module_descriptions );
-
-              return CnHttpFactory.instance( {
-                path: [ 'qnaire', self.record.qnaire_id, 'language' ].join( '/' ),
-                data: { select: { column: [ 'id', 'code', 'name' ] } }
-              } ).query().then( function( response ) {
-                self.record.languageList = response.data;
-              } );
             } );
           },
           viewPreviousPage: function() {
