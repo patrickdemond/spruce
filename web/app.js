@@ -44,15 +44,15 @@ cenozoApp.initDescriptionModule = function( module, type ) {
     language: {
       column: 'language.code',
       type: 'string',
-      constant: true
+      isConstant: true
     },  
     value: {
       title: 'Value',
       type: 'text'
     },  
 
-    previous_description_id: { exclude: true },
-    next_description_id: { exclude: true }
+    previous_description_id: { isExcluded: true },
+    next_description_id: { isExcluded: true }
   } );
 
   module.addExtraOperation( 'view', {

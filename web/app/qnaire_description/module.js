@@ -11,10 +11,7 @@ define( function() {
     value: module.columnList.value
   }
 
-  module.addInputAfter( '', 'language', 'type', {
-    title: 'Type',
-    type: 'enum'
-  } );
+  module.addInput( '', 'type', { title: 'Type', type: 'enum' }, 'language' );
 
   /* ######################################################################################################## */
   cenozo.providers.directive( 'cnQnaireDescriptionList', [

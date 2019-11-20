@@ -69,9 +69,9 @@ define( function() {
       type: 'text'
     },
 
-    previous_question_id: { exclude: true },
-    next_question_id: { exclude: true },
-    page_name: { column: 'page.name', exclude: true }
+    previous_question_id: { isExcluded: true },
+    next_question_id: { isExcluded: true },
+    page_name: { column: 'page.name', isExcluded: true }
   } );
 
   module.addExtraOperation( 'view', {

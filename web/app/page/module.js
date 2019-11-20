@@ -52,15 +52,15 @@ define( function() {
       type: 'text'
     },
 
-    qnaire_id: { column: 'qnaire.id', exclude: true },
-    qnaire_name: { column: 'qnaire.name', exclude: true },
-    base_language: { column: 'base_language.code', exclude: true },
-    descriptions: { exclude: true },
-    module_descriptions: { exclude: true },
-    module_id: { exclude: true },
-    previous_page_id: { exclude: true },
-    next_page_id: { exclude: true },
-    module_name: { column: 'module.name', exclude: true }
+    qnaire_id: { column: 'qnaire.id', isExcluded: true },
+    qnaire_name: { column: 'qnaire.name', isExcluded: true },
+    base_language: { column: 'base_language.code', isExcluded: true },
+    descriptions: { isExcluded: true },
+    module_descriptions: { isExcluded: true },
+    module_id: { isExcluded: true },
+    previous_page_id: { isExcluded: true },
+    next_page_id: { isExcluded: true },
+    module_name: { column: 'module.name', isExcluded: true }
   } );
 
   module.addExtraOperation( 'view', {

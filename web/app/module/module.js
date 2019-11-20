@@ -52,9 +52,9 @@ define( function() {
       type: 'text'
     },
 
-    previous_module_id: { exclude: true },
-    next_module_id: { exclude: true },
-    first_page_id: { exclude: true }
+    previous_module_id: { isExcluded: true },
+    next_module_id: { isExcluded: true },
+    first_page_id: { isExcluded: true }
   } );
 
   module.addExtraOperation( 'view', {

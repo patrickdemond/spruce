@@ -37,7 +37,7 @@ define( function() {
       title: 'Note',
       type: 'text'
     },
-    first_page_id: { exclude: true }
+    first_page_id: { isExcluded: true }
   } );
 
   module.addExtraOperation( 'view', {

@@ -65,50 +65,50 @@ define( [ 'page' ].reduce( function( list, name ) {
         select: 'CONCAT( participant.first_name, " ", participant.last_name, " (", uid, ")" )',
         where: [ 'participant.first_name', 'participant.last_name', 'uid' ]
       },
-      constant: 'view'
+      isConstant: 'view'
     },
     language_id: {
       column: 'response.language_id',
       title: 'Language',
       type: 'enum',
-      exclude: 'add'
+      isExcluded: 'add'
     },
     token: {
       title: 'Token',
       type: 'string',
-      exclude: 'add'
+      isExcluded: 'add'
     },
     submitted: {
       title: 'Submitted',
       type: 'boolean',
-      constant: true,
-      exclude: 'add'
+      isConstant: true,
+      isExcluded: 'add'
     },
     module: {
       column: 'module.name',
       title: 'Module',
       type: 'string',
-      constant: true,
-      exclude: 'add'
+      isConstant: true,
+      isExcluded: 'add'
     },
     page: {
       column: 'page.name',
       title: 'Page',
       type: 'string',
-      constant: true,
-      exclude: 'add'
+      isConstant: true,
+      isExcluded: 'add'
     },
     start_datetime: {
       title: 'Start Date & Time',
       type: 'datetime',
-      exclude: 'add'
+      isExcluded: 'add'
     },
     last_datetime: {
       title: 'Last Date & Time',
       type: 'datetime',
-      exclude: 'add'
+      isExcluded: 'add'
     },
-    page_id: { exclude: true }
+    page_id: { isExcluded: true }
   } );
 
   module.addExtraOperation( 'view', {
