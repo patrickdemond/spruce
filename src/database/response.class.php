@@ -18,8 +18,13 @@ class response extends \cenozo\database\record
    */
   public function save()
   {
+    $script_class_name = lib::get_class_name( 'database\script' );
+
+    $new = is_null( $this->id );
+    $submitted = $this->has_column_changed( 'submitted' ) && $this->submitted;
+
     // setup new responses
-    if( is_null( $this->id ) )
+    if( $new )
     {
       $db_participant = lib::create( 'database\participant', $this->participant_id );
       $this->language_id = $db_participant->language_id;
@@ -27,6 +32,17 @@ class response extends \cenozo\database\record
     }
 
     parent::save();
+
+    // see if the qnaire exists as a script and apply the started/finished events if it does
+    if( $new || $submitted )
+    {
+      $db_script = $script_class_name::get_unique_record( 'pine_qnaire_id', $this->qnaire_id );
+      if( !is_null( $db_script ) )
+      {
+        if( $new ) $db_script->add_started_event( $this->get_participant(), $this->last_datetime );
+        else if( $submitted ) $db_script->add_finished_event( $this->get_participant(), $this->last_datetime );
+      }
+    }
   }
 
   /**
