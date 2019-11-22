@@ -93,7 +93,8 @@ BEGIN
     JOIN page ON question.page_id = page.id
     JOIN module ON page.module_id = module.id
     WHERE question.name = NEW.name
-    AND module.qnaire_id = @qnaire_id;
+    AND module.qnaire_id = @qnaire_id
+    AND question.id != NEW.id;
     IF( @test > 0 ) THEN
       SET @sql = CONCAT(
         "Duplicate entry '",
