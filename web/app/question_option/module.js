@@ -2,6 +2,9 @@ define( function() {
   'use strict';
 
   try { var module = cenozoApp.module( 'question_option', true ); } catch( err ) { console.warn( err ); return; }
+
+  cenozoApp.initQnairePartModule( module );
+
   angular.extend( module, {
     identifier: {
       parent: {
@@ -129,9 +132,12 @@ define( function() {
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnQuestionOptionViewFactory', [
-    'CnBaseViewFactory',
-    function( CnBaseViewFactory ) {
-      var object = function( parentModel, root ) { CnBaseViewFactory.construct( this, parentModel, root ); }
+    'CnBaseViewFactory', 'CnBaseQnairePartViewFactory',
+    function( CnBaseViewFactory, CnBaseQnairePartViewFactory ) {
+      var object = function( parentModel, root ) {
+        CnBaseViewFactory.construct( this, parentModel, root );
+        CnBaseQnairePartViewFactory.construct( this, 'question_option' );
+      }
       return { instance: function( parentModel, root ) { return new object( parentModel, root ); } };
     }
   ] );

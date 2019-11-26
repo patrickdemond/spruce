@@ -2,6 +2,9 @@ define( function() {
   'use strict';
 
   try { var module = cenozoApp.module( 'question', true ); } catch( err ) { console.warn( err ); return; }
+
+  cenozoApp.initQnairePartModule( module );
+
   angular.extend( module, {
     identifier: {
       parent: {
@@ -69,23 +72,7 @@ define( function() {
       type: 'text'
     },
 
-    previous_question_id: { isExcluded: true },
-    next_question_id: { isExcluded: true },
     page_name: { column: 'page.name', isExcluded: true }
-  } );
-
-  module.addExtraOperation( 'view', {
-    title: '<i class="glyphicon glyphicon-chevron-left"></i>',
-    classes: 'btn-info',
-    operation: function( $state, model ) { model.viewModel.viewPreviousQuestion(); },
-    isDisabled: function( $state, model ) { return null == model.viewModel.record.previous_question_id; }
-  } );
-
-  module.addExtraOperation( 'view', {
-    title: '<i class="glyphicon glyphicon-chevron-right"></i>',
-    classes: 'btn-info',
-    operation: function( $state, model ) { model.viewModel.viewNextQuestion(); },
-    isDisabled: function( $state, model ) { return null == model.viewModel.record.next_question_id; }
   } );
 
   /* ######################################################################################################## */
@@ -153,28 +140,11 @@ define( function() {
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnQuestionViewFactory', [
-    'CnBaseViewFactory', 'CnHttpFactory', '$state',
-    function( CnBaseViewFactory, CnHttpFactory, $state ) {
+    'CnBaseViewFactory', 'CnBaseQnairePartViewFactory',
+    function( CnBaseViewFactory, CnBaseQnairePartViewFactory ) {
       var object = function( parentModel, root ) {
-        var self = this;
         CnBaseViewFactory.construct( this, parentModel, root );
-
-        angular.extend( this, {
-          viewPreviousQuestion: function() {
-            $state.go(
-              'question.view',
-              { identifier: this.record.previous_question_id },
-              { reload: true }
-            );
-          },
-          viewNextQuestion: function() {
-            $state.go(
-              'question.view',
-              { identifier: this.record.next_question_id },
-              { reload: true }
-            );
-          }
-        } );
+        CnBaseQnairePartViewFactory.construct( this, 'question' );
       }
       return { instance: function( parentModel, root ) { return new object( parentModel, root ); } };
     }

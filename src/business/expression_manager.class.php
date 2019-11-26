@@ -89,6 +89,10 @@ class expression_manager extends \cenozo\singleton
     else throw lib::create( 'exception\argument', 'record', $record, __METHOD__ );
 
     $this->reset();
+
+    // empty preconditions always pass
+    if( is_null( $precondition ) ) return true; 
+
     $compiled = '';
 
     try{

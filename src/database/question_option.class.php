@@ -11,7 +11,7 @@ use cenozo\lib, cenozo\log, pine\util;
 /**
  * question_option: record
  */
-class question_option extends \cenozo\database\has_rank
+class question_option extends base_qnaire_part
 {
   /**
    * The type of record which the record has a rank for.

@@ -11,7 +11,7 @@ use cenozo\lib, cenozo\log, pine\util;
 /**
  * page: record
  */
-class page extends \cenozo\database\has_rank
+class page extends base_qnaire_part
 {
   /**
    * The type of record which the record has a rank for.
@@ -40,73 +40,95 @@ class page extends \cenozo\database\has_rank
   /**
    * TODO: document
    */
-  public function get_previous_page( $db_response = NULL )
+  public function get_previous()
   {
-    $expression_manager = lib::create( 'business\expression_manager' );
-
-    // start by getting the page one rank lower than the current
-    $db_previous_page = static::get_unique_record(
-      array( 'module_id', 'rank' ),
-      array( $this->module_id, $this->rank - 1 )
-    );
+    $db_previous_page = parent::get_previous();
 
     if( is_null( $db_previous_page ) )
     {
-      // check if there is a previous module
-      $db_previous_module = $this->get_module()->get_previous_module( $db_response );
+      $db_previous_module = $this->get_module()->get_previous();
       if( !is_null( $db_previous_module ) ) $db_previous_page = $db_previous_module->get_last_page();
     }
 
-    // if there is a previous page then make sure to test its precondition if a response is included in the request
-    return !is_null( $db_previous_page ) &&
-           !is_null( $db_response ) &&
-           !is_null( $db_previous_page->precondition ) &&
-           !$expression_manager->evaluate( $db_response, $db_previous_page->precondition ) ?
-      $db_previous_page->get_previous_page( $db_response ) : $db_previous_page;
+    return $db_previous_page;
   }
 
   /**
    * TODO: document
    */
-  public function get_next_page( $db_response = NULL )
+  public function get_next()
   {
-    $answer_class_name = lib::get_class_name( 'database\answer' );
-    $expression_manager = lib::create( 'business\expression_manager' );
-
-    // start by getting the page one rank higher than the current
-    $db_next_page = static::get_unique_record(
-      array( 'module_id', 'rank' ),
-      array( $this->module_id, $this->rank + 1 )
-    );
+    $db_next_page = parent::get_next();
 
     if( is_null( $db_next_page ) )
     {
-      // check if there is a next module
-      $db_next_module = $this->get_module()->get_next_module( $db_response );
+      $db_next_module = $this->get_module()->get_next();
       if( !is_null( $db_next_module ) ) $db_next_page = $db_next_module->get_first_page();
     }
 
-    // if there is a next page then make sure to test its precondition if a response is included in the request
-    if( !is_null( $db_next_page ) &&
-        !is_null( $db_response ) &&
-        !is_null( $db_next_page->precondition ) )
-    {
-      if( !$expression_manager->evaluate( $db_response, $db_next_page->precondition ) )
-      {
-        // before proceeding to delete any answer associated with the skipped page
-        $select = lib::create( 'database\select' );
-        $select->add_column( 'id' );
-        foreach( $db_next_page->get_question_list( $select ) as $question )
-        {
-          $db_answer = $answer_class_name::get_unique_record(
-            array( 'response_id', 'question_id' ),
-            array( $db_response->id, $question['id'] )
-          );
-          if( !is_null( $db_answer ) ) $db_answer->delete();
-        }
+    return $db_next_page;
+  }
 
-        // now advance to the next page
-        $db_next_page = $db_next_page->get_next_page( $db_response );
+  /**
+   * TODO: document
+   */
+  public function get_previous_for_response( $db_response )
+  {
+    $expression_manager = lib::create( 'business\expression_manager' );
+
+    // start by getting the page one rank lower than the current
+    $db_previous_page = $this->get_previous();
+
+    if( !is_null( $db_previous_page ) )
+    {
+      // make sure the page's module is valid
+      $db_module = $db_previous_page->get_module();
+      if( !$expression_manager->evaluate( $db_response, $db_module()->precondition ) )
+      {
+        do { $db_module = $db_module->get_previous(); }
+        while( !is_null( $db_module ) && !$expression_manager->evaluate( $db_response, $db_module()->precondition ) );
+        $db_previous_page = is_null( $db_module ) ? NULL : $db_module->get_last_page();
+      }
+
+      // if there is a previous page then make sure to test its precondition if a response is included in the request
+      if( !is_null( $db_next_page ) && !$expression_manager->evaluate( $db_response, $db_previous_page->precondition ) )
+        $db_previous_page = $db_previous_page->get_previous_for_response( $db_response );
+    }
+
+    return $db_previous_page;
+  }
+
+  /**
+   * TODO: document
+   */
+  public function get_next_for_response( $db_response )
+  {
+    $expression_manager = lib::create( 'business\expression_manager' );
+
+    // start by getting the page one rank lower than the current
+    $db_next_page = $this->get_next();
+
+    if( !is_null( $db_next_page ) )
+    {
+      // make sure the page's module is valid
+      $db_module = $db_next_page->get_module();
+      if( !$expression_manager->evaluate( $db_response, $db_module()->precondition ) )
+      {
+        do
+        {
+          // delete any answer associated with the skipped module
+          $db_response->delete_answers_in_module( $db_module );
+          $db_module = $db_module->get_next();
+        }
+        while( !is_null( $db_module ) && !$expression_manager->evaluate( $db_response, $db_module()->precondition ) );
+        $db_next_page = is_null( $db_module ) ? NULL : $db_module->get_first_page();
+      }
+
+      // if there is a next page then make sure to test its precondition if a response is included in the request
+      if( !is_null( $db_next_page ) && !$expression_manager->evaluate( $db_response, $db_next_page->precondition ) )
+      {
+        $db_response->delete_answers_in_page( $db_page );
+        $db_next_page = $db_next_page->get_next_for_response( $db_response );
       }
     }
 
@@ -128,5 +150,29 @@ class page extends \cenozo\database\has_rank
     $modifier->where( 'module.qnaire_id', '=', $db_module->qnaire_id );
     $modifier->where( 'module.rank', '<', $db_module->rank );
     return static::db()->get_one( sprintf( '%s %s', $select->get_sql(), $modifier->get_sql() ) ) + $this->rank;
+  }
+
+  /**
+   * TODO: document
+   */
+  public function get_first_question()
+  {
+    $question_class_name = lib::get_class_name( 'database\question' );
+    return $question_class_name::get_unique_record(
+      array( 'page_id', 'rank' ),
+      array( $this->id, 1 )
+    );
+  }
+
+  /**
+   * TODO: document
+   */
+  public function get_last_question()
+  {
+    $question_class_name = lib::get_class_name( 'database\question' );
+    return $question_class_name::get_unique_record(
+      array( 'page_id', 'rank' ),
+      array( $this->id, $this->get_question_count() )
+    );
   }
 }

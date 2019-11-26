@@ -11,7 +11,7 @@ use cenozo\lib, cenozo\log, pine\util;
 /**
  * question: record
  */
-class question extends \cenozo\database\has_rank
+class question extends base_qnaire_part
 {
   /**
    * The type of record which the record has a rank for.
@@ -24,22 +24,33 @@ class question extends \cenozo\database\has_rank
   /**
    * TODO: document
    */
-  public function get_previous_question()
+  public function get_previous()
   {
-    return static::get_unique_record(
-      array( 'page_id', 'rank' ),
-      array( $this->page_id, $this->rank - 1 )
-    );
+    $db_previous_question = parent::get_previous();
+
+    if( is_null( $db_previous_question ) )
+    {
+      $db_previous_page = $this->get_page()->get_previous();
+      if( !is_null( $db_previous_page ) ) $db_previous_question = $db_previous_page->get_last_question();
+    }
+
+    return $db_previous_question;
   }
 
   /**
    * TODO: document
    */
-  public function get_next_question()
+  public function get_next()
   {
-    return static::get_unique_record(
-      array( 'page_id', 'rank' ),
-      array( $this->page_id, $this->rank + 1 )
-    );
+    $db_next_question = parent::get_next();
+
+    if( is_null( $db_next_question ) )
+    {
+      $db_next_page = $this->get_page()->get_next();
+      if( !is_null( $db_next_page ) ) $db_next_question = $db_next_page->get_first_question();
+    }
+
+    return $db_next_question;
   }
+
 }

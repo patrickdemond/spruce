@@ -11,6 +11,26 @@ cenozo.controller( 'HeaderCtrl', [
 ] );
 
 /* ######################################################################################################## */
+cenozoApp.initQnairePartModule = function( module, type ) {
+  module.addInput( '', 'previous_id', { isExcluded: true } );
+  module.addInput( '', 'next_id', { isExcluded: true } );
+
+  module.addExtraOperation( 'view', {
+    title: '<i class="glyphicon glyphicon-chevron-left"></i>',
+    classes: 'btn-info',
+    operation: function( $state, model ) { model.viewModel.viewPrevious(); },
+    isDisabled: function( $state, model ) { return null == model.viewModel.record.previous_id; }
+  } );
+
+  module.addExtraOperation( 'view', {
+    title: '<i class="glyphicon glyphicon-chevron-right"></i>',
+    classes: 'btn-info',
+    operation: function( $state, model ) { model.viewModel.viewNext(); },
+    isDisabled: function( $state, model ) { return null == model.viewModel.record.next_id; }
+  } );
+};
+
+/* ######################################################################################################## */
 cenozoApp.initDescriptionModule = function( module, type ) {
   angular.extend( module, {
     identifier: {
@@ -23,21 +43,21 @@ cenozoApp.initDescriptionModule = function( module, type ) {
       singular: 'description',
       plural: 'descriptions',
       possessive: 'description\'s'
-    },  
+    },
     columnList: {
       language: {
         column: 'language.code',
         title: 'Langauge'
-      },  
+      },
       value: {
         title: 'Value',
         align: 'left'
-      }   
-    },  
+      }
+    },
     defaultOrder: {
       column: 'language.code',
       reverse: false
-    }   
+    }
   } );
 
   module.addInputGroup( '', {
@@ -45,11 +65,11 @@ cenozoApp.initDescriptionModule = function( module, type ) {
       column: 'language.code',
       type: 'string',
       isConstant: true
-    },  
+    },
     value: {
       title: 'Value',
       type: 'text'
-    },  
+    },
 
     previous_description_id: { isExcluded: true },
     next_description_id: { isExcluded: true }
@@ -71,6 +91,25 @@ cenozoApp.initDescriptionModule = function( module, type ) {
 };
 
 /* ######################################################################################################## */
+cenozo.factory( 'CnBaseQnairePartViewFactory', [
+  '$state',
+  function( $state  ) {
+    return {
+      construct: function( object, type ) {
+        angular.extend( object, {
+          viewPrevious: function() {
+            $state.go( type + '.view', { identifier: this.record.previous_id }, { reload: true } );
+          },
+          viewNext: function() {
+            $state.go( type + '.view', { identifier: this.record.next_id }, { reload: true } );
+          }
+        } );
+      }
+    };
+  }
+] );
+
+/* ######################################################################################################## */
 cenozo.factory( 'CnBaseDescriptionViewFactory', [
   '$state',
   function( $state  ) {
@@ -82,7 +121,7 @@ cenozo.factory( 'CnBaseDescriptionViewFactory', [
               type + '_description.view',
               { identifier: this.record.previous_description_id },
               { reload: true }
-            );  
+            );
           },
           viewNextDescription: function() {
             $state.go(
@@ -221,7 +260,7 @@ cenozo.directive( 'cnQnaireNavigator', [
             { table: 'page', column: 'name', alias: 'page_name' }
           );
         }
-        
+
         // if we're looking at a question then get the question's details
         if( questionDetails ) {
           columnList.push(

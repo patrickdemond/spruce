@@ -96,7 +96,7 @@ class response extends \cenozo\database\record
 
       if( $complete )
       {
-        $db_next_page = $db_page->get_next_page( $this );
+        $db_next_page = $db_page->get_next_for_response( $this );
         if( is_null( $db_next_page ) )
         {
           $this->page_id = NULL;
@@ -125,7 +125,7 @@ class response extends \cenozo\database\record
       return;
     }
 
-    $db_previous_page = $this->get_page()->get_previous_page( $this );
+    $db_previous_page = $this->get_page()->get_previous_for_response( $this );
     if( !is_null( $db_previous_page ) )
     {
       $this->page_id = $db_previous_page->id;
@@ -161,6 +161,45 @@ class response extends \cenozo\database\record
       ) );
     }
   }
+
+  /**
+   * TODO: document
+   */
+   public function delete_answers_in_module( $db_module )
+   {
+     $question_sel = lib::create( 'database\select' );
+     $question_sel->from( 'question' );
+     $question_sel->add_column( 'id' );
+     $question_mod = lib::create( 'database\modifier' );
+     $question_mod->join( 'page', 'question.page_id', 'page.id' );
+     $question_mod->where( 'page.module_id', '=', $db_module->id );
+     $question_sql = sprintf( '%s %s', $question_sel->get_sql(), $question_mod->get_sql() );
+
+     $modifier = lib::create( 'database\modifier' );
+     $modifier->where( 'response_id', '=', $this->id );
+     $modifier->where( 'question_id', 'IN', $question_sql, false );
+     $sql = sprintf( 'DELETE FROM answer %s', $modifier->get_sql() );
+     static::db()->execute( $sql );
+   }
+
+  /**
+   * TODO: document
+   */
+   public function delete_answers_in_page( $db_page )
+   {
+     $question_sel = lib::create( 'database\select' );
+     $question_sel->from( 'question' );
+     $question_sel->add_column( 'id' );
+     $question_mod = lib::create( 'database\modifier' );
+     $question_mod->where( 'question.page_id', '=', $db_page->id );
+     $question_sql = sprintf( '%s %s', $question_sel->get_sql(), $question_mod->get_sql() );
+
+     $modifier = lib::create( 'database\modifier' );
+     $modifier->where( 'response_id', '=', $this->id );
+     $modifier->where( 'question_id', 'IN', $question_sql, false );
+     $sql = sprintf( 'DELETE FROM answer %s', $modifier->get_sql() );
+     static::db()->execute( $sql );
+   }
 
   /**
    * Creates a unique token to be used for identifying a response

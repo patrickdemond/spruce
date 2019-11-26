@@ -2,6 +2,9 @@ define( function() {
   'use strict';
 
   try { var module = cenozoApp.module( 'page', true ); } catch( err ) { console.warn( err ); return; }
+
+  cenozoApp.initQnairePartModule( module );
+
   angular.extend( module, {
     identifier: {
       parent: {
@@ -58,23 +61,7 @@ define( function() {
     descriptions: { isExcluded: true },
     module_descriptions: { isExcluded: true },
     module_id: { isExcluded: true },
-    previous_page_id: { isExcluded: true },
-    next_page_id: { isExcluded: true },
     module_name: { column: 'module.name', isExcluded: true }
-  } );
-
-  module.addExtraOperation( 'view', {
-    title: '<i class="glyphicon glyphicon-chevron-left"></i>',
-    classes: 'btn-info',
-    operation: function( $state, model ) { model.viewModel.viewPreviousPage(); },
-    isDisabled: function( $state, model ) { return null == model.viewModel.record.previous_page_id; }
-  } );
-
-  module.addExtraOperation( 'view', {
-    title: '<i class="glyphicon glyphicon-chevron-right"></i>',
-    classes: 'btn-info',
-    operation: function( $state, model ) { model.viewModel.viewNextPage(); },
-    isDisabled: function( $state, model ) { return null == model.viewModel.record.next_page_id; }
   } );
 
   module.addExtraOperation( 'view', {
@@ -690,7 +677,7 @@ define( function() {
           renderPreviousPage: function() {
             $state.go(
               'page.render',
-              { identifier: this.parentModel.viewModel.record.previous_page_id },
+              { identifier: this.parentModel.viewModel.record.previous_id },
               { reload: true }
             );
           },
@@ -698,7 +685,7 @@ define( function() {
           renderNextPage: function() {
             $state.go(
               'page.render',
-              { identifier: this.parentModel.viewModel.record.next_page_id },
+              { identifier: this.parentModel.viewModel.record.next_id },
               { reload: true }
             );
           },
@@ -728,11 +715,12 @@ define( function() {
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnPageViewFactory', [
-    'CnBaseViewFactory', 'CnHttpFactory', 'CnModalMessageFactory', '$state',
-    function( CnBaseViewFactory, CnHttpFactory, CnModalMessageFactory, $state ) {
+    'CnBaseViewFactory', 'CnBaseQnairePartViewFactory',
+    function( CnBaseViewFactory, CnBaseQnairePartViewFactory ) {
       var object = function( parentModel, root ) {
         var self = this;
         CnBaseViewFactory.construct( this, parentModel, root );
+        CnBaseQnairePartViewFactory.construct( this, 'page' );
 
         angular.extend( this, {
           onView: function( force ) {
@@ -740,20 +728,6 @@ define( function() {
               self.record.descriptions = parseDescriptions( self.record.descriptions );
               self.record.module_descriptions = parseDescriptions( self.record.module_descriptions );
             } );
-          },
-          viewPreviousPage: function() {
-            $state.go(
-              'page.view',
-              { identifier: this.record.previous_page_id },
-              { reload: true }
-            );
-          },
-          viewNextPage: function() {
-            $state.go(
-              'page.view',
-              { identifier: this.record.next_page_id },
-              { reload: true }
-            );
           }
         } );
       }

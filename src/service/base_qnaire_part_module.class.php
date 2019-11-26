@@ -53,20 +53,16 @@ abstract class base_qnaire_part_module extends \cenozo\service\module
     $record = $this->get_resource();
     if( !is_null( $record ) )
     {
-      $column = sprintf( 'previous_%s_id', $subject );
-      if( $select->has_column( $column ) )
+      if( $select->has_column( 'previous_id' ) )
       {
-        $function = sprintf( 'get_previous_%s', $subject );
-        $db_previous_record = $record->$function();
-        $select->add_constant( is_null( $db_previous_record ) ? NULL : $db_previous_record->id, $column, 'integer' );
+        $db_previous_record = $record->get_previous();
+        $select->add_constant( is_null( $db_previous_record ) ? NULL : $db_previous_record->id, 'previous_id', 'integer' );
       }
 
-      $column = sprintf( 'next_%s_id', $subject );
-      if( $select->has_column( $column ) )
+      if( $select->has_column( 'next_id' ) )
       {
-        $function = sprintf( 'get_next_%s', $subject );
-        $db_next_record = $record->$function();
-        $select->add_constant( is_null( $db_next_record ) ? NULL : $db_next_record->id, $column, 'integer' );
+        $db_next_record = $record->get_next();
+        $select->add_constant( is_null( $db_next_record ) ? NULL : $db_next_record->id, 'next_id', 'integer' );
       }
     }
   }
