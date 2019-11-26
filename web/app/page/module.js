@@ -612,25 +612,35 @@ define( function() {
             if( angular.isDefined( answerExtra.id ) ) {
               // the ID already exists
               if( 0 < answerExtra.value.length ) {
-                // patch the existing record
-                CnHttpFactory.instance( {
-                  path: ['answer', question.answer_id, 'answer_extra', answerExtra.id].join( '/' ),
-                  data: { value: answerExtra.value }
-                } ).patch().then( function() {
-                  self.pageComplete = isPageComplete();
-                } );
+                if( 'response' == self.parentModel.getSubjectFromState() ) {
+                  // patch the existing record
+                  CnHttpFactory.instance( {
+                    path: ['answer', question.answer_id, 'answer_extra', answerExtra.id].join( '/' ),
+                    data: { value: answerExtra.value }
+                  } ).patch().then( function() {
+                    self.pageComplete = isPageComplete();
+                  } );
+                }
               } else {
                 // delete the existing record (since the value was set to an empty string)
                 self.removeAnswerExtra( question, answerExtra );
               }
             } else {
               // the ID doesn't exist, so create a new record
-              CnHttpFactory.instance( {
-                path: ['answer', question.answer_id, 'answer_extra'].join( '/' ),
-                data: { value: answerExtra.value }
-              } ).post().then( function( response ) {
-                answerExtra.id = response.data;
+              var promiseList = [];
 
+              if( 'response' == self.parentModel.getSubjectFromState() ) {
+                promiseList.push(
+                  CnHttpFactory.instance( {
+                    path: ['answer', question.answer_id, 'answer_extra'].join( '/' ),
+                    data: { value: answerExtra.value }
+                  } ).post().then( function( response ) {
+                    answerExtra.id = response.data;
+                  } )
+                );
+              }
+
+              $q.all( promiseList ).then( function() {
                 // unselect all no-answer and exclusive values
                 var data = self.data[question.id];
                 data.dkna = false;
@@ -648,13 +658,15 @@ define( function() {
             var data = self.data[question.id];
 
             if( angular.isDefined( answerExtra.id ) ) {
-              CnHttpFactory.instance( {
-                path: 'answer_extra/' + answerExtra.id
-              } ).delete().then( function() {
-                var index = data.answerExtraList.findIndexByProperty( 'id', answerExtra.id );
-                if( null != index ) data.answerExtraList.splice( index, 1 );
-                self.pageComplete = isPageComplete();
-              } );
+              if( 'response' == self.parentModel.getSubjectFromState() ) {
+                CnHttpFactory.instance( {
+                  path: 'answer_extra/' + answerExtra.id
+                } ).delete().then( function() {
+                  var index = data.answerExtraList.findIndexByProperty( 'id', answerExtra.id );
+                  if( null != index ) data.answerExtraList.splice( index, 1 );
+                  self.pageComplete = isPageComplete();
+                } );
+              }
             } else {
               // remove the last object in the answer extra list that has an undefined id
               data.answerExtraList.reverse().some( function( answerExtra, index ) {

@@ -198,21 +198,21 @@
         <div class="btn-group pull-left">
           <button type="button"
                   ng-if="'page' == model.getSubjectFromState()"
-                  ng-disabled="null == model.viewModel.record.previous_page_id"
+                  ng-disabled="null == model.viewModel.record.previous_id"
                   ng-click="model.renderModel.renderPreviousPage()"
                   class="btn btn-info">
             <i class="glyphicon glyphicon-chevron-left"></i>
           </button>
           <button type="button"
                   ng-if="'page' == model.getSubjectFromState()"
-                  ng-disabled="null == model.viewModel.record.next_page_id"
+                  ng-disabled="null == model.viewModel.record.next_id"
                   ng-click="model.renderModel.renderNextPage()"
                   class="btn btn-info">
             <i class="glyphicon glyphicon-chevron-right"></i>
           </button>
           <button type="button"
                   ng-if="'response' == model.getSubjectFromState()"
-                  ng-show="null != model.viewModel.record.previous_page_id"
+                  ng-show="null != model.viewModel.record.previous_id"
                   ng-disabled="!isComplete"
                   ng-click="model.renderModel.backup()"
                   class="btn btn-default"
@@ -233,10 +233,10 @@
                   ng-disabled="!isComplete || !model.renderModel.pageComplete"
                   ng-click="model.renderModel.proceed()"
                   class="btn"
-                  ng-class="null != model.viewModel.record.next_page_id ? 'btn-default' : 'btn-success'"
+                  ng-class="null != model.viewModel.record.next_id ? 'btn-default' : 'btn-success'"
                   style="width: 12em;">
-            {{ text( null != model.viewModel.record.next_page_id ? 'misc.next' : 'misc.submit' ) }}
-            <i ng-if="null != model.viewModel.record.next_page_id" class="glyphicon glyphicon-chevron-right"></i>
+            {{ text( null != model.viewModel.record.next_id ? 'misc.next' : 'misc.submit' ) }}
+            <i ng-if="null != model.viewModel.record.next_id" class="glyphicon glyphicon-chevron-right"></i>
           </button>
         </div>
       </div>
