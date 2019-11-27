@@ -268,14 +268,23 @@ class import
 
         if( 1 == preg_match( '/_OTSP_/', $row['title'] ) )
         {
-          // ignore OTSP questions, but make note of those which are type Q since they denote a list-type extra option
+          // ignore OTSP questions, but make note of those which are type Q since they denote a multiple answers
           $pindex = count( $page_list ) - 1;
           $last_page = $page_list[$pindex];
           foreach( $last_page['question_list'] as $qindex => $question )
+          {
             if( array_key_exists( 'option_list', $question ) )
+            {
               foreach( $question['option_list'] as $oindex => $option )
+              {
                 if( 1 == preg_match( '/_OT_/', $option['name'] ) )
-                  $page_list[$pindex]['question_list'][$qindex]['option_list'][$oindex]['extra'] = 'list';
+                {
+                  $page_list[$pindex]['question_list'][$qindex]['option_list'][$oindex]['extra'] = 'text';
+                  $page_list[$pindex]['question_list'][$qindex]['option_list'][$oindex]['multiple_answers'] = true;
+                }
+              }
+            }
+          }
         }
         else
         {
@@ -438,6 +447,7 @@ class import
                 'name' => strtoupper( $desc['en'] ),
                 'description' => $desc,
                 'extra' => NULL,
+                'multiple_answers' => false,
                 'exclusive' => 1
               ];
             }
@@ -487,6 +497,7 @@ class import
                 'name' => $sub_question['title'],
                 'description' => [ 'en' => $parts[0], 'fr' => $parts[1] ],
                 'extra' => 'OTHER' == $sub_question['title'] ? 'string' : NULL,
+                'multiple_answers' => false,
                 'exclusive' => 0
               ];
             }
@@ -586,26 +597,33 @@ class import
           }
           else if( 'Q' == $row['type'] ) // multiple string questions
           {
-            // we only want the question title to show once
-            $parts = explode( '`', $row['question'] );
-            $page['description'] = [
-              'en' => preg_replace( '(<script.*<\/script>)s', '', $parts[0] ),
-              'fr' => preg_replace( '(<script.*<\/script>)s', '', $parts[1] )
-            ];
-
-            // create a new question for each subquestion
-            $question_rank = 1;
+            // get the list of ll options for this question
+            $option_rank = 1;
+            $option_list = [];
             foreach( $this->get_sub_question_list( $row['qid'] ) as $sub_question )
             {
               $parts = explode( '`', $sub_question['question'] );
-              $page['question_list'][] = [
-                'qid' => $sub_question['qid'],
-                'rank' => $question_rank++,
+              $option_list[] = [
+                'rank' => $option_rank++,
                 'name' => $sub_question['title'],
                 'description' => [ 'en' => $parts[0], 'fr' => $parts[1] ],
-                'type' => 'string'
+                'extra' => 'string',
+                'multiple_answers' => false,
+                'exclusive' => 0
               ];
             }
+
+            $page['question_list'][] = [
+              'qid' => $row['qid'],
+              'rank' => 1,
+              'name' => $row['title'],
+              'description' => [
+                'en' => preg_replace( '(<script.*<\/script>)s', '', $parts[0] ),
+                'fr' => preg_replace( '(<script.*<\/script>)s', '', $parts[1] )
+              ],
+              'type' => 'list',
+              'option_list' => $option_list
+            ];
           }
           else if( 'T' == $row['type'] ) // text
           {
@@ -718,16 +736,18 @@ class import
         {
           foreach( $question['option_list'] as $index => $option )
           {
-            $sql = 'INSERT INTO question_option( question_id, rank, name, exclusive, extra, precondition ) VALUES '.sprintf(
-              '( %d, %d, "%s", %d, %s, %s )',
-              $question_id,
-              $option['rank'],
-              $option['name'],
-              array_key_exists( 'exclusive', $option ) ? $option['exclusive'] : 0,
-              is_null( $option['extra'] ) ? 'NULL' : sprintf( '"%s"', $option['extra'] ),
-              array_key_exists( 'precondition', $option ) && !is_null( $option['precondition'] ) ?
-                sprintf( '"%s"', $option['precondition'] ) : 'NULL'
-            );
+            $sql = 'INSERT INTO question_option( question_id, rank, name, exclusive, extra, multiple_answers, precondition ) VALUES '.
+                   sprintf(
+                     '( %d, %d, "%s", %d, %s, %d, %s )',
+                     $question_id,
+                     $option['rank'],
+                     $option['name'],
+                     array_key_exists( 'exclusive', $option ) ? $option['exclusive'] : 0,
+                     is_null( $option['extra'] ) ? 'NULL' : sprintf( '"%s"', $option['extra'] ),
+                     true === $option['multiple_answers'] ? 1 : 0,
+                     array_key_exists( 'precondition', $option ) && !is_null( $option['precondition'] ) ?
+                       sprintf( '"%s"', $option['precondition'] ) : 'NULL'
+                   );
             if( false === $this->db->query( $sql ) ) error( $this->db->error, $sql );
             $question_option_id = $this->db->insert_id;
 
@@ -977,6 +997,7 @@ class import
           'fr' => $parts[1]
         ],
         'extra' => 'OTHER' == $row['code'] ? 'string' : NULL,
+        'multiple_answers' => false,
         'exclusive' => 1
       ];
       $possible_answer_list[] = $row['code'];

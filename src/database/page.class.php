@@ -83,10 +83,10 @@ class page extends base_qnaire_part
     {
       // make sure the page's module is valid
       $db_module = $db_previous_page->get_module();
-      if( !$expression_manager->evaluate( $db_response, $db_module()->precondition ) )
+      if( !$expression_manager->evaluate( $db_response, $db_module->precondition ) )
       {
         do { $db_module = $db_module->get_previous(); }
-        while( !is_null( $db_module ) && !$expression_manager->evaluate( $db_response, $db_module()->precondition ) );
+        while( !is_null( $db_module ) && !$expression_manager->evaluate( $db_response, $db_module->precondition ) );
         $db_previous_page = is_null( $db_module ) ? NULL : $db_module->get_last_page();
       }
 
@@ -112,7 +112,7 @@ class page extends base_qnaire_part
     {
       // make sure the page's module is valid
       $db_module = $db_next_page->get_module();
-      if( !$expression_manager->evaluate( $db_response, $db_module()->precondition ) )
+      if( !$expression_manager->evaluate( $db_response, $db_module->precondition ) )
       {
         do
         {
@@ -120,7 +120,7 @@ class page extends base_qnaire_part
           $db_response->delete_answers_in_module( $db_module );
           $db_module = $db_module->get_next();
         }
-        while( !is_null( $db_module ) && !$expression_manager->evaluate( $db_response, $db_module()->precondition ) );
+        while( !is_null( $db_module ) && !$expression_manager->evaluate( $db_response, $db_module->precondition ) );
         $db_next_page = is_null( $db_module ) ? NULL : $db_module->get_first_page();
       }
 

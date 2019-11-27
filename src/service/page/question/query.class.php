@@ -30,7 +30,6 @@ class query extends \cenozo\service\query
       $this->modifier->join_modifier( 'answer', $join_mod, 'left' );
       $this->modifier->join( 'language', 'answer.language_id', 'language.id' );
       $this->modifier->left_join( 'answer_has_question_option', 'answer.id', 'answer_has_question_option.answer_id' );
-      $this->modifier->left_join( 'answer_extra', 'answer.id', 'answer_extra.answer_id' );
       $this->modifier->group( 'question.id' );
 
       $this->select->add_table_column( 'language', 'code', 'language' );
@@ -55,12 +54,6 @@ class query extends \cenozo\service\query
       $this->select->add_column(
         'GROUP_CONCAT( DISTINCT answer_has_question_option.question_option_id )',
         'question_option_list',
-        false
-      );
-
-      $this->select->add_column(
-        'GROUP_CONCAT( DISTINCT answer_extra.id, ",", answer_extra.value )',
-        'answer_extra_list',
         false
       );
     }

@@ -35,6 +35,10 @@ define( function() {
       extra: {
         title: 'Extra',
         type: 'string'
+      },
+      multiple_answers: {
+        title: 'Multiple Answers',
+        type: 'boolean'
       }
     },
     defaultOrder: {
@@ -64,6 +68,10 @@ define( function() {
     extra: {
       title: 'Extra',
       type: 'enum'
+    },
+    multiple_answers: {
+      title: 'Multiple Answers',
+      type: 'boolean'
     }
   } );
 

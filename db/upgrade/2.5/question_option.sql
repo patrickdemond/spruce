@@ -8,13 +8,13 @@ CREATE TABLE IF NOT EXISTS question_option (
   rank INT UNSIGNED NOT NULL,
   name VARCHAR(127) NOT NULL,
   exclusive TINYINT(1) NOT NULL DEFAULT 0,
-  extra ENUM('number', 'string', 'text', 'list') NULL DEFAULT NULL,
+  extra ENUM('number', 'string', 'text') NULL DEFAULT NULL,
+  multiple_answers TINYINT(1) NOT NULL DEFAULT 0,
   precondition TEXT NULL,
   PRIMARY KEY (id),
   INDEX fk_question_id (question_id ASC),
   UNIQUE INDEX uq_question_id_rank (question_id ASC, rank ASC),
   UNIQUE INDEX uq_question_id_name (question_id ASC, name ASC),
-  UNIQUE INDEX uq_question_id_extra (question_id ASC, extra ASC),
   CONSTRAINT fk_question_option_question_id
     FOREIGN KEY (question_id)
     REFERENCES question (id)
