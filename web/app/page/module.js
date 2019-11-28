@@ -333,44 +333,44 @@ define( function() {
               return promise;
             } );
           },
-          pageNotDone: function() {
-            // TODONEXT: this needs to be overhauled, then do the same on server side
-            return false;
-            /*
-            return this.questionList.some( function( question ) {
-              // empty questions are comments so they're always considered complete
-              if( angular.equals( {}, self.data ) ) return false;
+          pageIsDone: function() {
+            // TODONEXT: this works but seems slow, measure speed and make more efficient?
 
-              for( var property in self.data ) {
-                if( self.data.hasOwnProperty( property ) ) {
-                  if( 'answerExtraList' == property ) {
-                    for( var optionId in self.data.answerExtraList ) {
-                      if( self.data.answerExtraList.hasOwnProperty( optionId ) ) {
-                        if( self.data.answerExtraList[optionId] ) {
-                          return !self.data.answerExtraList[optionId].some( function( ae ) {
-                            return angular.isDefined( ae.value ) && '' != ae.value;
-                          } );
-                        }
+            // loop through the question list until we find a question which is not finished
+            return !this.questionList.some( function( question ) {
+              var answer = self.data[question.id];
+
+              // if the question is not mandatory then it is considered complete
+              // also, if dkna/refuse is allowed then it is also complete if one of those options is selected
+              if( question.mandatory && ( !question.dkna_refuse || ( !answer.dkna && !answer.refuse ) ) ) {
+                if( 'boolean' == question.type ) {
+                  if( !answer.yes && !answer.no ) return true;
+                } else if ( ['number','string','text'].includes( question.type ) ) {
+                  // careful, answers may be the number 0
+                  if( !answer.value && 0 !== snswer.value ) return true;
+                } else if ( 'list' == question.type ) {
+                  // at least one option must be selected for the question to be answered
+                  if( 0 == answer.selectedOptionList.length ) return true;
+
+                  var atLeastOne = false;
+                  for( var optionId in answer.selectedOptionList ) {
+                    if( answer.selectedOptionList[optionId] ) {
+                      atLeastOne = true;
+                      var aeList = answer.answerExtraList[optionId];
+                      // if the option type includes extra data then make sure it's filled out
+                      if( null != question.optionList.findByProperty( 'id', optionId ).extra ) {
+                        // make sure that at there is at least one answer-extra with a set value
+                        if( 0 == aeList.length ) return true;
+                        if( !aeList.some( function( ae ) { return ae.value || 0 === ae.value; } ) ) return true;
                       }
                     }
-                  } else if( 'selectedOptionList' == property ) {
-                    for( var optionId in self.data.selectedOptionList ) {
-                      if( self.data.selectedOptionList.hasOwnProperty( optionId ) ) {
-                        if( self.data.selectedOptionList[optionId] ) {
-                          return false;
-                        }
-                      }
-                    }
-                  } else {
-                    // check if the value is set (careful, a value of "0" is a valid answer
-                    if( self.data[property] || 0 === self.data[property] ) return false;
                   }
+                  if( !atLeastOne ) return true;
                 }
               }
 
-              return true;
+              return false; // meaning the question is complete
             } );
-          */
           },
 
           onLoad: function() {
@@ -396,25 +396,25 @@ define( function() {
                 question.descriptions = parseDescriptions( question.descriptions );
 
                 // all questions may have no answer
-                var data = 'comment' == question.type ? {} : { dkna: question.dkna, refuse: question.refuse };
+                var answer = 'comment' == question.type ? {} : { dkna: question.dkna, refuse: question.refuse };
 
                 if( 'boolean' == question.type ) {
-                  angular.extend( data, {
+                  angular.extend( answer, {
                     yes: 1 === parseInt( question.value ),
                     no: 0 === parseInt( question.value )
                   } );
                 } else if( 'number' == question.type ) {
-                  data.value = parseFloat( question.value );
+                  answer.value = parseFloat( question.value );
                 } else if( ['string', 'text'].includes( question.type ) ) {
-                  data.value = question.value;
+                  answer.value = question.value;
                 } else if( 'list' == question.type ) {
                   // parse the question option list
                   question.question_option_list = null != question.question_option_list
                                               ? question.question_option_list.split( ',' ).map( v => parseInt( v ) )
                                               : [];
 
-                  data.selectedOptionList = {};
-                  data.answerExtraList = {};
+                  answer.selectedOptionList = {};
+                  answer.answerExtraList = {};
 
                   promiseList.push(
                     CnHttpFactory.instance( {
@@ -428,12 +428,12 @@ define( function() {
                       question.optionList = response.data;
                       question.optionList.forEach( function( option ) {
                         option.descriptions = parseDescriptions( option.descriptions );
-                        data.selectedOptionList[option.id] = question.question_option_list.includes( option.id );
+                        answer.selectedOptionList[option.id] = question.question_option_list.includes( option.id );
                         if( null != option.extra ) {
-                          data.answerExtraList[option.id] = option.multiple_answers ? [] : [ { id: undefined, value: undefined } ];
+                          answer.answerExtraList[option.id] = option.multiple_answers ? [] : [ { id: undefined, value: undefined } ];
 
                           // get answer_extra data one option at a time
-                          if( data.selectedOptionList[option.id] ) {
+                          if( answer.selectedOptionList[option.id] ) {
                             subPromiseList.push(
                               CnHttpFactory.instance( {
                                 path: ['answer', question.answer_id, 'answer_extra'].join( '/' ),
@@ -442,7 +442,7 @@ define( function() {
                                   modifier: { where: { column: 'question_option_id', operator: '=', value: option.id } }
                                 }
                               } ).query().then( function( response ) {
-                                data.answerExtraList[option.id] = response.data;
+                                answer.answerExtraList[option.id] = response.data;
                               } )
                             );
                           }
@@ -453,18 +453,18 @@ define( function() {
                     } )
                   );
                 } else if( 'comment' != question.type ) {
-                  data.value = null;
+                  answer.value = null;
                 }
 
                 // make sure we have the first non-comment question set as the first key question
                 if( null == self.keyQuestionIndex && 'comment' != question.type ) self.keyQuestionIndex = index;
 
-                self.data[question.id] = data;
+                self.data[question.id] = answer;
               } );
 
               return $q.all( promiseList ).then( function() {
                 self.backupData = angular.copy( self.data );
-                self.pageComplete = !self.pageNotDone();
+                self.pageComplete = self.pageIsDone();
               } );
             } );
           },
@@ -640,7 +640,7 @@ define( function() {
               self.backupData[question.id] = angular.copy( data );
 
               // re-determine whether the page is complete
-              self.pageComplete = !self.pageNotDone();
+              self.pageComplete = self.pageIsDone();
 
               var deferred = $q.defer();
               $timeout( function() { deferred.resolve(); }, 100 );
@@ -668,7 +668,7 @@ define( function() {
                       path: ['answer', question.answer_id, 'answer_extra', answerExtra.id].join( '/' ),
                       data: patchData
                     } ).patch().then( function() {
-                      self.pageComplete = !self.pageNotDone();
+                      self.pageComplete = self.pageIsDone();
                     } );
                   } );
                 }
@@ -704,7 +704,7 @@ define( function() {
                   data.selectedOptionList[o.id] = false;
                 } );
 
-                self.pageComplete = !self.pageNotDone();
+                self.pageComplete = self.pageIsDone();
               } );
             }
           },
@@ -729,7 +729,7 @@ define( function() {
                 }
                 return list;
               }, [] );
-              self.pageComplete = !self.pageNotDone();
+              self.pageComplete = self.pageIsDone();
             } );
           },
 
