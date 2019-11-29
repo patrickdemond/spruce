@@ -111,7 +111,7 @@
                   <div class="col-slim" ng-class="option.multiple_answers ? 'col-xs-11' : 'col-xs-8'" ng-switch="option.extra">
                     <input type="number"
                            ng-switch-when="number"
-                           id="answerExtra{{ answerExtra.id }}"
+                           id="answerExtra{{ answerExtra.index }}"
                            class="form-control rounded-bottom-left rounded-bottom-right"
                            ng-switch-when="number"
                            ng-model="answerExtra.value"
@@ -120,7 +120,7 @@
                            class="form-control rounded-bottom-left rounded-bottom-right"></input>
                     <input type="string"
                            ng-switch-when="string"
-                           id="answerExtra{{ answerExtra.id }}"
+                           id="answerExtra{{ answerExtra.index }}"
                            class="form-control rounded-bottom-left rounded-bottom-right"
                            ng-switch-when="string"
                            ng-model="answerExtra.value"
@@ -129,7 +129,7 @@
                            class="form-control rounded-bottom-left rounded-bottom-right"></input>
                     <textarea cn-elastic
                       ng-switch-when="text"
-                      id="answerExtra{{ answerExtra.id }}"
+                      id="answerExtra{{ answerExtra.index }}"
                       class="form-control"
                       ng-switch-when="text"
                       ng-model="answerExtra.value"

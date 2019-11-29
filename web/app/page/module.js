@@ -299,7 +299,7 @@ define( function() {
           for( var optionId in data.answerExtraList ) {
             if( data.answerExtraList.hasOwnProperty( optionId ) ) {
               if( value != optionId && angular.isDefined( data.answerExtraList[optionId] ) ) {
-                var option = self.questionList.findByProperty( 'id', questionId ).optionList.findByProperty( 'id', optionId );
+                var option = self.optionListById[optionId];
                 if( option.multiple_answers ) data.answerExtraList[optionId] = [];
                 else data.answerExtraList[optionId] = [ { id: undefined, value: undefined } ];
               }
@@ -310,6 +310,7 @@ define( function() {
         angular.extend( this, {
           parentModel: parentModel,
           questionList: [],
+          optionListById: {},
           currentLanguage: null,
           data: {},
           backupData: {},
@@ -334,8 +335,6 @@ define( function() {
             } );
           },
           pageIsDone: function() {
-            // TODONEXT: this works but seems slow, measure speed and make more efficient?
-
             // loop through the question list until we find a question which is not finished
             return !this.questionList.some( function( question ) {
               var answer = self.data[question.id];
@@ -354,18 +353,31 @@ define( function() {
 
                   var atLeastOne = false;
                   for( var optionId in answer.selectedOptionList ) {
-                    if( answer.selectedOptionList[optionId] ) {
-                      atLeastOne = true;
-                      var aeList = answer.answerExtraList[optionId];
-                      // if the option type includes extra data then make sure it's filled out
-                      if( null != question.optionList.findByProperty( 'id', optionId ).extra ) {
-                        // make sure that at there is at least one answer-extra with a set value
-                        if( 0 == aeList.length ) return true;
-                        if( !aeList.some( function( ae ) { return ae.value || 0 === ae.value; } ) ) return true;
+                    if( answer.selectedOptionList.hasOwnProperty( optionId ) ) {
+                      if( answer.selectedOptionList[optionId] ) {
+                        atLeastOne = true;
+                        var aeList = answer.answerExtraList[optionId];
+                        // if the option type includes extra data then make sure it's filled out
+                        if( null != self.optionListById[optionId].extra ) {
+                          // make sure that at there is at least one answer-extra with a set value
+                          if( 0 == aeList.length ) return true;
+                          if( !aeList.some( function( ae ) { return ae.value || 0 === ae.value; } ) ) return true;
+                        }
                       }
                     }
                   }
                   if( !atLeastOne ) return true;
+
+                  // if there are answer-extra (without an option) then make sure at least one is filled out
+                  var multipleAnswerOption = false;
+                  var atLeastOne = question.optionList.filter( option => option.multiple_answers ).some( function( option ) {
+                    return answer.answerExtraList[option.id].some( function( ae ) {
+                      multipleAnswerOption = true;
+                      return ae.value || 0 === ae.value;
+                    } );
+                  } );
+
+                  if( multipleAnswerOption && !atLeastOne ) return true;
                 }
               }
 
@@ -427,6 +439,7 @@ define( function() {
                       var subPromiseList = [];
                       question.optionList = response.data;
                       question.optionList.forEach( function( option ) {
+                        self.optionListById[option.id] = option;
                         option.descriptions = parseDescriptions( option.descriptions );
                         answer.selectedOptionList[option.id] = question.question_option_list.includes( option.id );
                         if( null != option.extra ) {
@@ -539,13 +552,14 @@ define( function() {
             } );
           },
 
-          setAnswer: function( type, question, option ) {
+          setAnswer: function( type, question, value ) {
             var data = self.data[question.id];
             var promiseList = [];
 
             // first communicate with the server (if we're working with a response)
             if( 'response' == self.parentModel.getSubjectFromState() ) {
               if( 'option' == type ) {
+                var option = value;
                 if( !option.multiple_answers ) {
                   // we're adding or removing an option
                   promiseList.push( this.runQuery( function() {
@@ -557,7 +571,21 @@ define( function() {
                           data = angular.copy( self.backupData[question.id] );
                           CnModalMessageFactory.httpError( response );
                         }
-                      } ).post() :
+                      } ).post().then( function() {
+                        // if the option has extra data then we need to get the new answer-extra id which was created automatically
+                        if( null != option.extra ) {
+                          return CnHttpFactory.instance( {
+                            path: ['answer', question.answer_id, 'answer_extra'].join( '/' ),
+                            data: {
+                              select: { column: [ 'id', 'value' ] },
+                              modifier: { where: { column: 'question_option_id', operator: '=', value: option.id } }
+                            }
+                          } ).query().then( function( response ) {
+                            // TODONEXT: either keep going or change based on redesign
+                            self.data[question.id].answerExtraList[option.id] = response.data;
+                          } );
+                        }
+                      } ) :
                       CnHttpFactory.instance( {
                         path: ['answer', question.answer_id, 'question_option', option.id].join( '/' ),
                         onError: function( response ) {
@@ -571,30 +599,28 @@ define( function() {
                   } ) );
                 }
               } else {
-                if( 'extra' != type ) {
-                  // determine the patch data
-                  var patchData = {};
-                  if( 'boolean' == type ) {
-                    patchData.value_boolean = data[option] ? 'yes' == option : null;
-                  } else if( 'value' == type ) {
-                    patchData['value_' + question.type] = data.value;
-                  } else if( 'dkna' == type || 'refuse' == type ) { // must be dkna or refuse
-                    patchData[type] = data[type];
-                  } else {
-                    throw new Error( 'Tried to set answer with invalid type "' + type + '"' );
-                  }
-
-                  promiseList.push( this.runQuery( function() {
-                    return CnHttpFactory.instance( {
-                      path: 'answer/' + question.answer_id,
-                      data: patchData,
-                      onError: function( response ) {
-                        data = angular.copy( self.backupData[question.id] );
-                        CnModalMessageFactory.httpError( response );
-                      }
-                    } ).patch()
-                  } ) );
+                // determine the patch data
+                var patchData = {};
+                if( 'boolean' == type ) {
+                  patchData.value_boolean = data[value] ? 'yes' == value : null;
+                } else if( 'value' == type ) {
+                  patchData['value_' + question.type] = data.value;
+                } else if( 'dkna' == type || 'refuse' == type ) { // must be dkna or refuse
+                  patchData[type] = data[type];
+                } else {
+                  throw new Error( 'Tried to set answer with invalid type "' + type + '"' );
                 }
+
+                promiseList.push( this.runQuery( function() {
+                  return CnHttpFactory.instance( {
+                    path: 'answer/' + question.answer_id,
+                    data: patchData,
+                    onError: function( response ) {
+                      data = angular.copy( self.backupData[question.id] );
+                      CnModalMessageFactory.httpError( response );
+                    }
+                  } ).patch()
+                } ) );
               }
             }
 
@@ -605,10 +631,12 @@ define( function() {
                 // unselect all other values
                 for( var property in data ) {
                   if( data.hasOwnProperty( property ) ) {
-                    if( option != property ) data[property] = false;
+                    if( value != property ) data[property] = false;
                   }
                 }
               } else if( 'option' == type ) {
+                var option = value;
+
                 // unselect certain values depending on the chosen option
                 if( data.selectedOptionList[option.id] ) {
                   if( option.exclusive ) {
@@ -617,19 +645,19 @@ define( function() {
                     // unselect all no-answer and exclusive values
                     data.dkna = false;
                     data.refuse = false;
-                    question.optionList.filter( option => option.exclusive ).forEach( function( option ) {
-                      data.selectedOptionList[option.id] = false;
+                    question.optionList.filter( o => o.exclusive ).forEach( function( o ) {
+                      data.selectedOptionList[o.id] = false;
                     } );
                   }
                 }
 
-                // handle the special circumstance when clicking an option with an extra added input
                 if( null != option.extra ) {
-                  if( option.multiple_answers ) self.addAnswerExtra( question );
-                  $timeout( function() {
-                    
-                    // document.getElementById( 'answerExtra' ).focus();
-                  }, 50 );
+                  // if the option has extra data and it has been selected then focus the answer-extra associated with it
+                  if( data.selectedOptionList[option.id] ) {
+                    $timeout( function() { document.getElementById( 'answerExtra' ).focus(); }, 50 );
+                  } else { // if it isn't selected then make sure to blank out the answer extra
+                    self.data[question.id].answerExtraList[option.id][0].value = undefined;
+                  }
                 }
               }
 
@@ -643,7 +671,7 @@ define( function() {
               self.pageComplete = self.pageIsDone();
 
               var deferred = $q.defer();
-              $timeout( function() { deferred.resolve(); }, 100 );
+              $timeout( function() { deferred.resolve(); }, 50 );
               return deferred;
             } );
           },
@@ -651,6 +679,18 @@ define( function() {
           addAnswerExtra: function( question, option ) {
             var index = self.data[question.id].answerExtraList[option.id].length;
             self.data[question.id].answerExtraList[option.id].push( { id: undefined, value: undefined, index: index } );
+
+            // wait for the new answer-extra's element to be created then automatically focus it
+            $timeout( function() {
+              var maxIndex = self.data[question.id].answerExtraList[option.id].reduce( function( max, ae ) {
+                if( max < ae.index ) max = ae.index;
+                return max;
+              }, 0 );
+              document.getElementById( 'answerExtra' + maxIndex ).focus();
+            }, 50 );
+
+            // re-determine whether the page is complete
+            self.pageComplete = self.pageIsDone();
           },
 
           setAnswerExtra: function( question, option, answerExtra ) {
@@ -674,7 +714,7 @@ define( function() {
                 }
               } else {
                 // delete the existing record (since the value was set to an empty string)
-                return self.removeAnswerExtra( question, answerExtra );
+                return self.removeAnswerExtra( question, option, answerExtra );
               }
             } else {
               // the ID doesn't exist, so create a new record
@@ -710,8 +750,9 @@ define( function() {
           },
 
           removeAnswerExtra: function( question, option, answerExtra ) {
+            if( !option.multiple_answers ) return;
             var promiseList = [];
-            if( 'response' == self.parentModel.getSubjectFromState() )
+            if( 'response' == self.parentModel.getSubjectFromState() && answerExtra.id )
               promiseList.push( this.runQuery( function() {
                 return CnHttpFactory.instance( {
                   path: 'answer_extra/' + answerExtra.id
