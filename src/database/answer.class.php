@@ -10,6 +10,14 @@ use cenozo\lib, cenozo\log, pine\util;
 
 /**
  * answer: record
+ * 
+ * Note that the value column of this record is a JSON value with the following example values:
+ * dkna: { "dkna": true }
+ * refuse: { "refuse": true }
+ * boolean: true
+ * number: 1
+ * string: "value"
+ * list: [ 1, 2, { "id":3, "value":"rawr"}, { "id":12, "value": ["one", "two", "three"] } ]
  */
 class answer extends \cenozo\database\record
 {
@@ -53,41 +61,8 @@ class answer extends \cenozo\database\record
    */
   public function is_complete()
   {
-    $db_question = $this->get_question();
-
-    if(
-      // if the question isn't mandatory or
-      !$db_question->mandatory ||
-      // it's a comment then it is always considered complete or
-      'comment' == $db_question->type || (
-        // dkna-refuse is allowed and one of them is selected then the answer is complete
-        $db_question->dkna_refuse && ( $this->dkna || $this->refuse )
-      )
-    ) return true;
-
-    if( 'list' == $db_question->type )
-    {
-      // there has to be at least one question option selected or answer_extra filled in
-      if( 0 == $this->get_question_option_count() && 0 == $this->get_answer_extra_count() ) return false;
-
-      // make sure that any selected question options that have the "extra" feature also have that data filled in
-      foreach( $this->get_question_option_object_list() as $db_question_option )
-      {
-        if( !is_null( $db_question_option->extra ) && 'list' != $db_question_option->extra )
-        {
-          $property = sprintf( 'value_%s', $db_question_option->extra );
-          if( is_null( $this->$property ) ) return false;
-        }
-      }
-    }
-    else
-    {
-      // simple question, so just make sure the type value is filled out
-      $property = sprintf( 'value_%s', $db_question->type );
-      if( is_null( $this->$property ) ) return false;
-    }
-
     // everything checks out, so the answer is complete
+    // TODONEXT: rewrite this using the new JSON value column
     return true;
   }
 

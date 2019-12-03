@@ -16,17 +16,13 @@ CREATE PROCEDURE patch_answer()
         "response_id INT UNSIGNED NOT NULL, ",
         "question_id INT UNSIGNED NOT NULL, ",
         "language_id INT UNSIGNED NOT NULL, ",
-        "dkna TINYINT(1) NOT NULL DEFAULT 0, ",
-        "refuse TINYINT(1) NOT NULL DEFAULT 0, ",
-        "value_boolean TINYINT(1) NULL DEFAULT NULL, ",
-        "value_number FLOAT NULL DEFAULT NULL, ",
-        "value_string VARCHAR(255) NULL DEFAULT NULL, ",
-        "value_text TEXT NULL DEFAULT NULL, ",
+        "value JSON NULL NOT NULL DEFAULT 'null', ",
         "PRIMARY KEY (id), ",
         "INDEX fk_response_id (response_id ASC), ",
         "INDEX fk_question_id (question_id ASC), ",
         "INDEX fk_language_id (language_id ASC), ",
         "UNIQUE INDEX uq_response_id_question_id (response_id ASC, question_id ASC), ",
+        "CHECK( JSON_VALID( value ) ), ",
         "CONSTRAINT fk_answer_response_id ",
           "FOREIGN KEY (response_id) ",
           "REFERENCES response (id) ",
@@ -53,39 +49,3 @@ DELIMITER ;
 
 CALL patch_answer();
 DROP PROCEDURE IF EXISTS patch_answer;
-
-
-DELIMITER $$
-
-DROP TRIGGER IF EXISTS answer_BEFORE_UPDATE $$
-CREATE DEFINER = CURRENT_USER TRIGGER answer_BEFORE_UPDATE BEFORE UPDATE ON answer FOR EACH ROW
-BEGIN
-  IF ( NEW.dkna || NEW.refuse ) THEN
-    IF( OLD.dkna != NEW.dkna || OLD.refuse != NEW.refuse ) THEN
-      -- unset any value in the answer
-      SET NEW.value_boolean = NULL, NEW.value_number = NULL, NEW.value_string = NULL, NEW.value_text = NULL;
-      -- dkna and refuse are mutually exclusive
-      IF( OLD.dkna != NEW.dkna ) THEN SET NEW.refuse = false; ELSE SET NEW.dkna = false; END IF;
-      -- unset any question options
-      DELETE FROM answer_has_question_option WHERE answer_id = NEW.id;
-      -- unset any answer_extra data
-      DELETE FROM answer_extra WHERE answer_id = NEW.id;
-    ELSE
-      -- the value has changed
-      SET NEW.dkna = 0, NEW.refuse = 0;
-    END IF;
-  ELSE
-	-- make sure that only one value can be non-null
-    IF( OLD.value_boolean IS NULL AND NEW.value_boolean IS NOT NULL ) THEN
-      SET NEW.value_number = NULL, NEW.value_string = NULL, NEW.value_text = NULL;
-    ELSEIF( OLD.value_number IS NULL AND NEW.value_number IS NOT NULL ) THEN
-      SET NEW.value_boolean = NULL, NEW.value_string = NULL, NEW.value_text = NULL;
-    ELSEIF( OLD.value_string IS NULL AND NEW.value_string IS NOT NULL ) THEN
-      SET NEW.value_boolean = NULL, NEW.value_number = NULL, NEW.value_text = NULL;
-    ELSEIF( OLD.value_text IS NULL AND NEW.value_text IS NOT NULL ) THEN
-      SET NEW.value_boolean = NULL, NEW.value_number = NULL, NEW.value_string = NULL;
-    END IF;
-  END IF;
-END$$
-
-DELIMITER ;

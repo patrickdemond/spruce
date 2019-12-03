@@ -274,37 +274,16 @@ define( function() {
       var object = function( parentModel ) {
         var self = this;
 
-        function setExclusiveAnswer( questionId, value ) {
-          var data = self.data[questionId];
-          var list = data.selectedOptionList;
-
-          // unselect all values other than the selected one
-          for( var p in list ) {
-            if( list.hasOwnProperty( p ) ) {
-              if( value != p && list[p] ) {
-                list[p] = angular.isString( list[p] ) ? null : false;
-              }
+        // returns the index of the option matching the second argument
+        function searchOptionList( optionList, id ) {
+          var optionIndex = null;
+          optionList.some( function( option, index ) {
+            if( option == id || ( angular.isObject( option ) && option.id == id ) ) {
+              optionIndex = index;
+              return true;
             }
-          }
-
-          // unselect boolean yes/no answers if they are not selected
-          if( angular.isDefined( data.yes ) && 'yes' != value ) data.yes = false;
-          if( angular.isDefined( data.no ) && 'no' != value ) data.no = false;
-
-          // unselect the dkna/refuse options if they are not selected
-          if( angular.isDefined( data.dkna ) && 'dkna' != value ) data.dkna = false;
-          if( angular.isDefined( data.refuse ) && 'refuse' != value ) data.refuse = false;
-
-          // clear extra data
-          for( var optionId in data.answerExtraList ) {
-            if( data.answerExtraList.hasOwnProperty( optionId ) ) {
-              if( value != optionId && angular.isDefined( data.answerExtraList[optionId] ) ) {
-                var option = self.optionListById[optionId];
-                if( option.multiple_answers ) data.answerExtraList[optionId] = [];
-                else data.answerExtraList[optionId] = [ { id: undefined, value: undefined } ];
-              }
-            }
-          }
+          } );
+          return optionIndex;
         }
 
         angular.extend( this, {
@@ -312,8 +291,6 @@ define( function() {
           questionList: [],
           optionListById: {},
           currentLanguage: null,
-          data: {},
-          backupData: {},
           keyQuestionIndex: null,
           pageComplete: false,
           writePromiseList: [],
@@ -334,55 +311,43 @@ define( function() {
               return promise;
             } );
           },
-          pageIsDone: function() {
-            // loop through the question list until we find a question which is not finished
-            return !this.questionList.some( function( question ) {
-              var answer = self.data[question.id];
 
-              // if the question is not mandatory then it is considered complete
-              // also, if dkna/refuse is allowed then it is also complete if one of those options is selected
-              if( question.mandatory && ( !question.dkna_refuse || ( !answer.dkna && !answer.refuse ) ) ) {
-                if( 'boolean' == question.type ) {
-                  if( !answer.yes && !answer.no ) return true;
-                } else if ( ['number','string','text'].includes( question.type ) ) {
-                  // careful, answers may be the number 0
-                  if( !answer.value && 0 !== snswer.value ) return true;
-                } else if ( 'list' == question.type ) {
-                  // at least one option must be selected for the question to be answered
-                  if( 0 == answer.selectedOptionList.length ) return true;
+          convertValueToModel: function( question ) {
+            if( 'boolean' == question.type ) {
+              question.answer = {
+                yes: true === question.value,
+                no: false === question.value,
+                dkna: angular.isObject( question.value ) && true === question.value.dkna,
+                refuse: angular.isObject( question.value ) && true === question.value.refuse
+              };
+            } else if( 'list' == question.type ) {
+              var selectedOptions = angular.isArray( question.value ) ? question.value : [];
+              question.answer = {
+                optionList: question.optionList.reduce( function( list, option ) {
+                  var optionIndex = searchOptionList( selectedOptions, option.id );
+                  if( !option.multiple_answers ) list[option.id] = { selected: null != optionIndex };
 
-                  var atLeastOne = false;
-                  for( var optionId in answer.selectedOptionList ) {
-                    if( answer.selectedOptionList.hasOwnProperty( optionId ) ) {
-                      if( answer.selectedOptionList[optionId] ) {
-                        atLeastOne = true;
-                        var aeList = answer.answerExtraList[optionId];
-                        // if the option type includes extra data then make sure it's filled out
-                        if( null != self.optionListById[optionId].extra ) {
-                          // make sure that at there is at least one answer-extra with a set value
-                          if( 0 == aeList.length ) return true;
-                          if( !aeList.some( function( ae ) { return ae.value || 0 === ae.value; } ) ) return true;
-                        }
-                      }
+                  if( option.extra ) {
+                    if( null != optionIndex ) {
+                      list[option.id].valueList = option.multiple_answers
+                                                ? selectedOptions[optionIndex].value
+                                                : [selectedOptions[optionIndex].value];
+                    } else {
+                      list[option.id].valueList = option.multiple_answers ? [] : [undefined];
                     }
                   }
-                  if( !atLeastOne ) return true;
 
-                  // if there are answer-extra (without an option) then make sure at least one is filled out
-                  var multipleAnswerOption = false;
-                  var atLeastOne = question.optionList.filter( option => option.multiple_answers ).some( function( option ) {
-                    return answer.answerExtraList[option.id].some( function( ae ) {
-                      multipleAnswerOption = true;
-                      return ae.value || 0 === ae.value;
-                    } );
-                  } );
-
-                  if( multipleAnswerOption && !atLeastOne ) return true;
-                }
+                  return list;
+                }, {} ),
+                dkna: angular.isObject( question.value ) && true === question.value.dkna,
+                refuse: angular.isObject( question.value ) && true === question.value.refuse
               }
+            }
+          },
 
-              return false; // meaning the question is complete
-            } );
+          pageIsDone: function() {
+            // TODO: implement
+            return true;
           },
 
           onLoad: function() {
@@ -393,8 +358,6 @@ define( function() {
               var promiseList = [];
               angular.extend( self, {
                 questionList: response.data,
-                data: {},
-                backupData: {},
                 keyQuestionIndex: null,
                 pageComplete: false
               } );
@@ -404,79 +367,34 @@ define( function() {
                 self.currentLanguage = self.questionList[0].language;
               }
 
-              self.questionList.forEach( function( question, index ) {
+              self.questionList.forEach( function( question, questionIndex ) {
                 question.descriptions = parseDescriptions( question.descriptions );
-
-                // all questions may have no answer
-                var answer = 'comment' == question.type ? {} : { dkna: question.dkna, refuse: question.refuse };
-
-                if( 'boolean' == question.type ) {
-                  angular.extend( answer, {
-                    yes: 1 === parseInt( question.value ),
-                    no: 0 === parseInt( question.value )
-                  } );
-                } else if( 'number' == question.type ) {
-                  answer.value = parseFloat( question.value );
-                } else if( ['string', 'text'].includes( question.type ) ) {
-                  answer.value = question.value;
-                } else if( 'list' == question.type ) {
-                  // parse the question option list
-                  question.question_option_list = null != question.question_option_list
-                                              ? question.question_option_list.split( ',' ).map( v => parseInt( v ) )
-                                              : [];
-
-                  answer.selectedOptionList = {};
-                  answer.answerExtraList = {};
-
-                  promiseList.push(
-                    CnHttpFactory.instance( {
-                      path: ['question', question.id, 'question_option' ].join( '/' ),
-                      data: {
-                        select: { column: [ 'name', 'exclusive', 'extra', 'multiple_answers', 'descriptions' ] },
-                        modifier: { order: 'question_option.rank' }
-                      }
-                    } ).query().then( function( response ) {
-                      var subPromiseList = [];
-                      question.optionList = response.data;
-                      question.optionList.forEach( function( option ) {
-                        self.optionListById[option.id] = option;
-                        option.descriptions = parseDescriptions( option.descriptions );
-                        answer.selectedOptionList[option.id] = question.question_option_list.includes( option.id );
-                        if( null != option.extra ) {
-                          answer.answerExtraList[option.id] = option.multiple_answers ? [] : [ { id: undefined, value: undefined } ];
-
-                          // get answer_extra data one option at a time
-                          if( answer.selectedOptionList[option.id] ) {
-                            subPromiseList.push(
-                              CnHttpFactory.instance( {
-                                path: ['answer', question.answer_id, 'answer_extra'].join( '/' ),
-                                data: {
-                                  select: { column: [ 'id', 'value' ] },
-                                  modifier: { where: { column: 'question_option_id', operator: '=', value: option.id } }
-                                }
-                              } ).query().then( function( response ) {
-                                answer.answerExtraList[option.id] = response.data;
-                              } )
-                            );
-                          }
-                        }
-                      } );
-
-                      return $q.all( subPromiseList );
-                    } )
-                  );
-                } else if( 'comment' != question.type ) {
-                  answer.value = null;
-                }
+                question.value = angular.fromJson( question.value );
+                question.backupValue = angular.copy( self.value );
 
                 // make sure we have the first non-comment question set as the first key question
-                if( null == self.keyQuestionIndex && 'comment' != question.type ) self.keyQuestionIndex = index;
+                if( null == self.keyQuestionIndex && 'comment' != question.type ) self.keyQuestionIndex = questionIndex;
 
-                self.data[question.id] = answer;
+                // if the question is a list type then get the options
+                if( 'list' == question.type ) {
+                  promiseList.push( CnHttpFactory.instance( {
+                    path: ['question', question.id, 'question_option'].join( '/' ),
+                    data: {
+                      select: { column: ['name', 'exclusive', 'extra', 'multiple_answers', 'descriptions'] },
+                      modifier: { order: 'question_option.rank' }
+                    }
+                  } ).query().then( function( response ) {
+                    question.optionList = response.data;
+                    question.optionList.forEach( function( option ) {
+                      option.descriptions = parseDescriptions( option.descriptions );
+                      self.optionListById[option.id] = option;
+                    } );
+                  } ) );
+                }
               } );
 
               return $q.all( promiseList ).then( function() {
-                self.backupData = angular.copy( self.data );
+                self.questionList.forEach( question => self.convertValueToModel( question ) );
                 self.pageComplete = self.pageIsDone();
               } );
             } );
@@ -504,6 +422,7 @@ define( function() {
               // do nothing if we have no key question index (which means the page only has comments)
               if( null == self.keyQuestionIndex ) return;
 
+              /*
               var question = self.questionList[self.keyQuestionIndex];
               var data = self.data[question.id];
 
@@ -543,6 +462,7 @@ define( function() {
                   self.setAnswer( noAnswerType, question );
                 }
               }
+              */
 
               // advance to the next non-comment question, looping back to the first when we're at the end of the list
               do {
@@ -552,226 +472,54 @@ define( function() {
             } );
           },
 
-          setAnswer: function( type, question, value ) {
-            var data = self.data[question.id];
-            var promiseList = [];
-
+          setAnswer: function( question, value ) {
             // first communicate with the server (if we're working with a response)
             if( 'response' == self.parentModel.getSubjectFromState() ) {
-              if( 'option' == type ) {
-                var option = value;
-                if( !option.multiple_answers ) {
-                  // we're adding or removing an option
-                  promiseList.push( this.runQuery( function() {
-                    return data.selectedOptionList[option.id] ?
-                      CnHttpFactory.instance( {
-                        path: ['answer', question.answer_id, 'question_option'].join( '/' ),
-                        data: option.id,
-                        onError: function( response ) {
-                          data = angular.copy( self.backupData[question.id] );
-                          CnModalMessageFactory.httpError( response );
-                        }
-                      } ).post().then( function() {
-                        // if the option has extra data then we need to get the new answer-extra id which was created automatically
-                        if( null != option.extra ) {
-                          return CnHttpFactory.instance( {
-                            path: ['answer', question.answer_id, 'answer_extra'].join( '/' ),
-                            data: {
-                              select: { column: [ 'id', 'value' ] },
-                              modifier: { where: { column: 'question_option_id', operator: '=', value: option.id } }
-                            }
-                          } ).query().then( function( response ) {
-                            // TODONEXT: either keep going or change based on redesign
-                            self.data[question.id].answerExtraList[option.id] = response.data;
-                          } );
-                        }
-                      } ) :
-                      CnHttpFactory.instance( {
-                        path: ['answer', question.answer_id, 'question_option', option.id].join( '/' ),
-                        onError: function( response ) {
-                          // ignore 404's, it just means the client and server are out of sync
-                          if( 404 != response.status ) {
-                            data = angular.copy( self.backupData[question.id] );
-                            CnModalMessageFactory.httpError( response );
-                          }
-                        }
-                      } ).delete();
-                  } ) );
-                }
-              } else {
-                // determine the patch data
-                var patchData = {};
-                if( 'boolean' == type ) {
-                  patchData.value_boolean = data[value] ? 'yes' == value : null;
-                } else if( 'value' == type ) {
-                  patchData['value_' + question.type] = data.value;
-                } else if( 'dkna' == type || 'refuse' == type ) { // must be dkna or refuse
-                  patchData[type] = data[type];
-                } else {
-                  throw new Error( 'Tried to set answer with invalid type "' + type + '"' );
-                }
-
-                promiseList.push( this.runQuery( function() {
-                  return CnHttpFactory.instance( {
-                    path: 'answer/' + question.answer_id,
-                    data: patchData,
-                    onError: function( response ) {
-                      data = angular.copy( self.backupData[question.id] );
-                      CnModalMessageFactory.httpError( response );
-                    }
-                  } ).patch()
-                } ) );
-              }
-            }
-
-            return $q.all( promiseList ).then( function() {
-              if( 'dkna' == type || 'refuse' == type ) {
-                if( data[type] ) setExclusiveAnswer( question.id, type );
-              } else if( 'boolean' == type ) {
-                // unselect all other values
-                for( var property in data ) {
-                  if( data.hasOwnProperty( property ) ) {
-                    if( value != property ) data[property] = false;
-                  }
-                }
-              } else if( 'option' == type ) {
-                var option = value;
-
-                // unselect certain values depending on the chosen option
-                if( data.selectedOptionList[option.id] ) {
-                  if( option.exclusive ) {
-                    setExclusiveAnswer( question.id, option.id );
-                  } else {
-                    // unselect all no-answer and exclusive values
-                    data.dkna = false;
-                    data.refuse = false;
-                    question.optionList.filter( o => o.exclusive ).forEach( function( o ) {
-                      data.selectedOptionList[o.id] = false;
-                    } );
-                  }
-                }
-
-                if( null != option.extra ) {
-                  // if the option has extra data and it has been selected then focus the answer-extra associated with it
-                  if( data.selectedOptionList[option.id] ) {
-                    $timeout( function() { document.getElementById( 'answerExtra' ).focus(); }, 50 );
-                  } else { // if it isn't selected then make sure to blank out the answer extra
-                    self.data[question.id].answerExtraList[option.id][0].value = undefined;
-                  }
-                }
-              }
-
-              // resize any elastic text areas in case their data was changed
-              angular.element( 'textarea[cn-elastic]' ).trigger( 'elastic' );
-
-              // change is successful so overwrite the backup
-              self.backupData[question.id] = angular.copy( data );
-
-              // re-determine whether the page is complete
-              self.pageComplete = self.pageIsDone();
-
-              var deferred = $q.defer();
-              $timeout( function() { deferred.resolve(); }, 50 );
-              return deferred;
-            } );
-          },
-
-          addAnswerExtra: function( question, option ) {
-            var index = self.data[question.id].answerExtraList[option.id].length;
-            self.data[question.id].answerExtraList[option.id].push( { id: undefined, value: undefined, index: index } );
-
-            // wait for the new answer-extra's element to be created then automatically focus it
-            $timeout( function() {
-              var maxIndex = self.data[question.id].answerExtraList[option.id].reduce( function( max, ae ) {
-                if( max < ae.index ) max = ae.index;
-                return max;
-              }, 0 );
-              document.getElementById( 'answerExtra' + maxIndex ).focus();
-            }, 50 );
-
-            // re-determine whether the page is complete
-            self.pageComplete = self.pageIsDone();
-          },
-
-          setAnswerExtra: function( question, option, answerExtra ) {
-            if( angular.isDefined( answerExtra.id ) ) {
-              // the ID already exists
-              if( 0 < answerExtra.value.length ) {
-                if( 'response' == self.parentModel.getSubjectFromState() ) {
-                  // determine the patch data
-                  var patchData = { question_option_id: option.id };
-                  patchData['value_' + option.extra] = answerExtra.value;
-
-                  // patch the existing record
-                  return this.runQuery( function() {
-                    return CnHttpFactory.instance( {
-                      path: ['answer', question.answer_id, 'answer_extra', answerExtra.id].join( '/' ),
-                      data: patchData
-                    } ).patch().then( function() {
-                      self.pageComplete = self.pageIsDone();
-                    } );
-                  } );
-                }
-              } else {
-                // delete the existing record (since the value was set to an empty string)
-                return self.removeAnswerExtra( question, option, answerExtra );
-              }
-            } else {
-              // the ID doesn't exist, so create a new record
-              var promiseList = [];
-
-              if( 'response' == self.parentModel.getSubjectFromState() ) {
-                // determine the patch data
-                var patchData = { question_option_id: option.id };
-                patchData['value_' + option.extra] = answerExtra.value;
-
-                promiseList.push( this.runQuery( function() {
-                  return CnHttpFactory.instance( {
-                    path: ['answer', question.answer_id, 'answer_extra'].join( '/' ),
-                    data: patchData
-                  } ).post().then( function( response ) {
-                    answerExtra.id = response.data;
-                  } );
-                } ) );
-              }
-
-              return $q.all( promiseList ).then( function() {
-                // unselect all no-answer and exclusive values
-                var data = self.data[question.id];
-                data.dkna = false;
-                data.refuse = false;
-                question.optionList.filter( o => o.id != option.id && o.exclusive ).forEach( function( o ) {
-                  data.selectedOptionList[o.id] = false;
+              this.runQuery( function() {
+                return CnHttpFactory.instance( {
+                  path: 'answer/' + question.answer_id,
+                  data: { value: angular.toJson( value ) }
+                } ).patch().then( function() {
+                  question.backupValue = angular.copy( question.value );
+                  question.value = value;
+                  self.convertValueToModel( question );
                 } );
-
-                self.pageComplete = self.pageIsDone();
               } );
             }
           },
 
-          removeAnswerExtra: function( question, option, answerExtra ) {
-            if( !option.multiple_answers ) return;
-            var promiseList = [];
-            if( 'response' == self.parentModel.getSubjectFromState() && answerExtra.id )
-              promiseList.push( this.runQuery( function() {
-                return CnHttpFactory.instance( {
-                  path: 'answer_extra/' + answerExtra.id
-                } ).delete();
-              } ) );
+          addOption: function( question, option ) {
+            var data = option.extra ? { id: option.id, value: option.multiple_answers ? [] : null } : option.id;
+            var value = [];
+            if( option.exclusive ) {
+              value.push( data );
+            } else {
+              // get the current value array, remove exclusive options, add the new option and sort
+              if( angular.isArray( question.value ) ) value = question.value;
+              value = value.filter( o => !self.optionListById[angular.isObject(o) ? o.id : o].exclusive );
+              if( null == searchOptionList( value, option.id ) ) value.push( data );
+              value.sort( function(a,b) { return ( angular.isObject( a ) ? a.id : a ) - ( angular.isObject( b ) ? b.id : b ); } );
+            }
 
-            return $q.all( promiseList ).then( function() {
-              var data = self.data[question.id];
+            this.setAnswer( question, value );
+          },
 
-              // remove the answer extra and renumber the indeces of the remaining items
-              data.answerExtraList[option.id] = data.answerExtraList[option.id].reduce( function( list, ae ) {
-                if( ae.index != answerExtra.index ) {
-                  if( ae.index > answerExtra.index ) ae.index--;
-                  list.push( ae );
-                }
-                return list;
-              }, [] );
-              self.pageComplete = self.pageIsDone();
-            } );
+          removeOption: function( question, option ) {
+            // get the current value array and remove the option from it
+            var value = angular.isArray( question.value ) ? question.value : [];
+            var optionIndex = searchOptionList( value, option.id );
+            if( null != optionIndex ) value.splice( optionIndex, 1 );
+            if( 0 == value.length ) value = null;
+
+            this.setAnswer( question, value );
+          },
+
+          setAnswerExtra: function( question, option, valueIndex, extra ) {
+            var value = question.value;
+            var optionIndex = searchOptionList( value, option.id );
+            value[optionIndex].value = extra ? extra : null;
+
+            this.setAnswer( question, value );
           },
 
           viewPage: function() {

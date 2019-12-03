@@ -60,7 +60,7 @@ CREATE PROCEDURE patch_role_has_service()
         "( subject = 'response' AND method IN( 'GET', 'PATCH' ) AND resource = 1 ) OR "
         "( subject = 'page' AND method = 'GET' AND resource = 1 ) OR "
         "( subject = 'question' AND method = 'GET' ) OR "
-        "( subject IN( 'answer', 'answer_extra', 'question_option' ) ) "
+        "( subject IN( 'answer', 'question_option' ) ) "
       ")"
     );
     PREPARE statement FROM @sql;
