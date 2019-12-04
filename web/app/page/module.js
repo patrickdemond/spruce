@@ -325,7 +325,9 @@ define( function() {
               question.answer = {
                 optionList: question.optionList.reduce( function( list, option ) {
                   var optionIndex = searchOptionList( selectedOptions, option.id );
-                  if( !option.multiple_answers ) list[option.id] = { selected: null != optionIndex };
+                  list[option.id] = option.multiple_answers
+                                  ? { valueList: [] }
+                                  : { selected: null != optionIndex };
 
                   if( option.extra ) {
                     if( null != optionIndex ) {
@@ -333,7 +335,7 @@ define( function() {
                                                 ? selectedOptions[optionIndex].value
                                                 : [selectedOptions[optionIndex].value];
                     } else {
-                      list[option.id].valueList = option.multiple_answers ? [] : [undefined];
+                      list[option.id].valueList = option.multiple_answers ? [] : [null];
                     }
                   }
 
@@ -488,7 +490,7 @@ define( function() {
             }
           },
 
-          addOption: function( question, option ) {
+          getValueForNewOption: function( question, option ) {
             var data = option.extra ? { id: option.id, value: option.multiple_answers ? [] : null } : option.id;
             var value = [];
             if( option.exclusive ) {
@@ -501,7 +503,11 @@ define( function() {
               value.sort( function(a,b) { return ( angular.isObject( a ) ? a.id : a ) - ( angular.isObject( b ) ? b.id : b ); } );
             }
 
-            this.setAnswer( question, value );
+            return value;
+          },
+
+          addOption: function( question, option ) {
+            this.setAnswer( question, this.getValueForNewOption( question, option ) );
           },
 
           removeOption: function( question, option ) {
@@ -514,10 +520,35 @@ define( function() {
             this.setAnswer( question, value );
           },
 
+          addAnswerExtra: function( question, option ) {
+            var value = angular.isArray( question.value ) ? question.value : [];
+            var optionIndex = searchOptionList( value, option.id );
+            if( null == optionIndex ) {
+              value = this.getValueForNewOption( question, option );
+              optionIndex = searchOptionList( value, option.id );
+            }
+
+            value[optionIndex].value.push( null );
+            this.setAnswer( question, value );
+          },
+
+          removeAnswerExtra: function( question, option, valueIndex ) {
+            var value = question.value;
+            var optionIndex = searchOptionList( value, option.id );
+            value[optionIndex].value.splice( valueIndex, 1 );
+            if( 0 == value[optionIndex].value.length ) value.splice( optionIndex, 1 );
+
+            this.setAnswer( question, value );
+          },
+
           setAnswerExtra: function( question, option, valueIndex, extra ) {
             var value = question.value;
             var optionIndex = searchOptionList( value, option.id );
-            value[optionIndex].value = extra ? extra : null;
+            if( option.multiple_answers ) {
+              value[optionIndex].value[valueIndex] = extra ? extra: null;
+            } else {
+              value[optionIndex].value = extra ? extra : null;
+            }
 
             this.setAnswer( question, value );
           },

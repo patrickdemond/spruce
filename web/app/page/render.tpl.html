@@ -108,7 +108,7 @@
                   </label>
                 </div>
                 <div ng-if="null != option.extra"
-                     ng-repeat="value in question.answer.optionList[option.id].valueList">
+                     ng-repeat="value in question.answer.optionList[option.id].valueList track by $index">
                   <div class="col-slim" ng-class="option.multiple_answers ? 'col-xs-11' : 'col-xs-8'" ng-switch="option.extra">
                     <input type="number"
                            ng-switch-when="number"
@@ -141,7 +141,7 @@
                   <button type="button"
                           class="btn btn-danger col-slim col-xs-1"
                           ng-if="option.multiple_answers"
-                          ng-click="model.renderModel.removeAnswerExtra( question, option, value )">
+                          ng-click="model.renderModel.removeAnswerExtra( question, option, $index )">
                     <i class="glyphicon glyphicon-remove"></i>
                   </button>
                 </div>
