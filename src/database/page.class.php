@@ -127,7 +127,7 @@ class page extends base_qnaire_part
       // if there is a next page then make sure to test its precondition if a response is included in the request
       if( !is_null( $db_next_page ) && !$expression_manager->evaluate( $db_response, $db_next_page->precondition ) )
       {
-        $db_response->delete_answers_in_page( $db_page );
+        $db_response->delete_answers_in_page( $db_next_page );
         $db_next_page = $db_next_page->get_next_for_response( $db_response );
       }
     }
