@@ -44,8 +44,8 @@ class expression_manager extends \cenozo\singleton
    *   @NAME@ (response attribute)
    *   $NAME$ (question)
    *   $NAME:empty()$ (true if question hasn't been answered, false if it has)
-   *   dkna (when a question's answer is don't know or no answer)
-   *   refuse (when a question is refused)
+   *   $NAME:dkna()$ (true if a question's answer is don't know or no answer)
+   *   $NAME:refuse()$ (true if a question is refused)
    *   null (when a question has no answer - it's skipped)
    *   true|false (boolean)
    *   123 (number)
@@ -254,8 +254,7 @@ class expression_manager extends \cenozo\singleton
   private function process_constant()
   {
     $type = NULL;
-    if( in_array( $this->term, ['dkna', 'refuse'] ) ) $type = 'no answer';
-    else if( 'null' == $this->term ) $type = 'null';
+    if( 'null' == $this->term ) $type = 'null';
     else if( in_array( $this->term, ['true', 'false'] ) ) $type = 'boolean';
 
     if( is_null( $type ) )
@@ -269,7 +268,7 @@ class expression_manager extends \cenozo\singleton
     $this->last_term = 'operator' == $this->last_term ? 'boolean' : $type;
     $this->active_term = NULL;
 
-    return 'no answer' == $type ? sprintf( '"@%s@"', $this->term ) : $this->term;
+    return $this->term;
   }
 
   /**
@@ -374,14 +373,15 @@ class expression_manager extends \cenozo\singleton
    */
   private function process_question( $db_qnaire, $db_response = NULL )
   {
-    $question_option_class_name = lib::get_class_name( 'database\question_option' );
     $answer_class_name = lib::get_class_name( 'database\answer' );
+    $question_option_class_name = lib::get_class_name( 'database\question_option' );
 
     // figure out the question, and possibly the question option referred to by this term
     $db_question = NULL;
     $db_question_option = NULL;
+    $special_function = NULL;
 
-    // question-options are defined by question:question_option
+    // question-options and certain functions are defined by question:question_option
     if( false !== strpos( $this->term, ':' ) )
     {
       $parts = explode( ':', $this->term );
@@ -392,16 +392,23 @@ class expression_manager extends \cenozo\singleton
       if( is_null( $db_question ) )
         throw lib::create( 'exception\runtime', sprintf( 'Invalid question "%s"', $parts[0] ), __METHOD__ );
 
-      $db_question_option = $question_option_class_name::get_unique_record(
-        array( 'question_id', 'name' ),
-        array( $db_question->id, $parts[1] )
-      );
-      if( is_null( $db_question_option ) )
+      if( in_array( $parts[1], ['empty()', 'dkna()', 'refuse()'] ) )
       {
-        throw lib::create( 'exception\runtime',
-          sprintf( 'Invalid question option "%s" for question "%s"', $parts[1], $parts[0] ),
-          __METHOD__
+        $special_function = substr( $parts[1], 0, -2 );
+      }
+      else
+      {
+        $db_question_option = $question_option_class_name::get_unique_record(
+          array( 'question_id', 'name' ),
+          array( $db_question->id, $parts[1] )
         );
+        if( is_null( $db_question_option ) )
+        {
+          throw lib::create( 'exception\runtime',
+            sprintf( 'Invalid question option "%s" for question "%s"', $parts[1], $parts[0] ),
+            __METHOD__
+          );
+        }
       }
     }
     else // questions are defined by name
@@ -426,31 +433,46 @@ class expression_manager extends \cenozo\singleton
         array( 'response_id', 'question_id' ),
         array( $db_response->id, $db_question->id )
       );
+      $value = is_null( $db_answer ) ? NULL : util::json_decode( $db_answer->value );
+      $dkna = is_object( $value ) && property_exists( $value, 'dkna' ) && $value->dkna;
+      $refuse = is_object( $value ) && property_exists( $value, 'refuse' ) && $value->refuse;
 
-      if( is_null( $db_answer ) ) $compiled = 'NULL';
+      if( 'empty' == $special_function ) $compiled = is_null( $value ) ? 'true' : 'false';
+      else if( 'dkna' == $special_function ) $compiled = $dkna ? 'true' : 'false';
+      else if( 'refuse' == $special_function ) $compiled = $refuse ? 'true' : 'false';
+      else if( is_null( $value ) || $dkna || $refuse ) $compiled = 'NULL';
       else if( !is_null( $db_question_option ) )
       {
         // set whether or not the response checked off the option
-        $modifier = lib::create( 'database\modifier' );
-        $modifier->where( 'question_option_id', '=', $db_question_option->id );
-        $compiled = 0 < $db_answer->get_question_option_count( $modifier ) ? 'true' : 'false';
+        $compiled = 'false';
+        if( is_array( $value ) )
+        {
+          foreach( $value as $selected_option )
+          {
+            if( $db_question_option->id == $selected_option )
+            {
+              $compiled = 'true';
+              break;
+            }
+          }
+        }
       }
       else
       {
-        if( 'boolean' == $db_question->type ) $compiled = $db_answer->value_boolean ? 'true' : 'false';
-        else if( 'number' == $db_question->type ) $compiled = $db_answer->value_number;
-        else if( 'string' == $db_question->type || 'text' == $db_question->type )
-          $compiled = sprintf( '"%s"', addslashes( $db_answer->value_string ) );
+        if( 'boolean' == $db_question->type ) $compiled = $value ? 'true' : 'false';
         else if( 'list' == $db_question->type )
         {
-          $select = lib::create( 'database\select' );
-          $select->add_column( 'name' );
-          $question_option_list = [];
-          foreach( $db_answer->get_question_option_list( $select ) as $question_option )
-            $question_option_list[] = $question_option['name'];
-          $compiled = sprintf( '"%s"', implode( ',', $question_option_list ) );
+          // compile a list of all option values as a CSV
+          $value_list = array();
+          foreach( $value as $selected_option )
+          {
+            $question_option_id = is_object( $selected_option ) ? $selected_option->id : $selected_option;
+            $db_question_option = lib::create( 'database\question_option', $question_option_id );
+            $value_list[] = sprintf( '"%s"', addslashes( $db_question_option->name ) );
+          }
+          $compiled = implode( ',', $value_list );
         }
-        else log::warning( 'Tried to fill question %s which has an invalid type %s.', $this->term, $db_question->type );
+        else $compiled = $value;
       }
     }
 
