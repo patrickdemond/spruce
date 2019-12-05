@@ -89,6 +89,18 @@ define( function() {
     }, {} );
   }
 
+  // used by services below to returns the index of the option matching the second argument
+  function searchOptionList( optionList, id ) {
+    var optionIndex = null;
+    optionList.some( function( option, index ) {
+      if( option == id || ( angular.isObject( option ) && option.id == id ) ) {
+        optionIndex = index;
+        return true;
+      }
+    } );
+    return optionIndex;
+  }
+
   /* ######################################################################################################## */
   cenozo.providers.directive( 'cnPageAdd', [
     'CnPageModelFactory',
@@ -277,18 +289,6 @@ define( function() {
       var object = function( parentModel ) {
         var self = this;
 
-        // returns the index of the option matching the second argument
-        function searchOptionList( optionList, id ) {
-          var optionIndex = null;
-          optionList.some( function( option, index ) {
-            if( option == id || ( angular.isObject( option ) && option.id == id ) ) {
-              optionIndex = index;
-              return true;
-            }
-          } );
-          return optionIndex;
-        }
-
         angular.extend( this, {
           parentModel: parentModel,
           questionList: [],
@@ -352,7 +352,9 @@ define( function() {
 
           pageIsDone: function() {
             return !this.questionList.some( function( question ) {
+              // null values are never complete
               if( null == question.value ) return true;
+
               if( 'list' == question.type ) {
                 // extra options without a value don't count as an answer
                 return angular.isArray( question.value ) && !question.value.some( function( o ) {

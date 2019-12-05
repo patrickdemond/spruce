@@ -61,8 +61,34 @@ class answer extends \cenozo\database\record
    */
   public function is_complete()
   {
-    // everything checks out, so the answer is complete
-    // TODONEXT: rewrite this using the new JSON value column
+    $value = util::json_decode( $this->value );
+
+    // null values are never complete
+    if( is_null( $value ) ) return false;
+
+    if( 'list' == $this->get_question()->type && is_array( $value ) )
+    {
+      // make sure there is at least one selected option
+      foreach( $value as $selected_option )
+      {
+        if( is_object( $selected_option ) )
+        {
+          if( is_array( $selected_option->value ) )
+          {
+            // make sure there is at least one selection option value
+            foreach( $selected_option->value as $selected_option_value ) if( !is_null( $selected_option_value ) ) return true;
+          }
+          else
+          {
+            if( !is_null( $selected_option->value ) ) return true;
+          }
+        }
+        else if( !is_null( $selected_option ) ) return true;
+      }
+
+      return false;
+    }
+
     return true;
   }
 
