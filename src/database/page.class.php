@@ -91,7 +91,7 @@ class page extends base_qnaire_part
       }
 
       // if there is a previous page then make sure to test its precondition if a response is included in the request
-      if( !is_null( $db_next_page ) && !$expression_manager->evaluate( $db_response, $db_previous_page->precondition ) )
+      if( !is_null( $db_previous_page ) && !$expression_manager->evaluate( $db_response, $db_previous_page->precondition ) )
         $db_previous_page = $db_previous_page->get_previous_for_response( $db_response );
     }
 
