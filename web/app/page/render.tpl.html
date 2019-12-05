@@ -102,46 +102,46 @@
                          style="text-align: left"
                          class="rounded-bottom-left rounded-top-left"
                          ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal', 'font-weight': 'normal' }"
-                         ng-click="model.renderModel.addAnswerExtra( question, option )"
+                         ng-click="model.renderModel.addAnswerValue( question, option )"
                          ng-bind-html="option.descriptions[model.renderModel.currentLanguage] +
                                        ' <i class=\'glyphicon glyphicon-plus\'></i>'">
                   </label>
                 </div>
                 <div ng-if="null != option.extra"
-                     ng-repeat="value in question.answer.optionList[option.id].valueList track by $index">
+                     ng-repeat="value in question.answer.optionList[option.id].valueList">
                   <div class="col-slim" ng-class="option.multiple_answers ? 'col-xs-11' : 'col-xs-8'" ng-switch="option.extra">
                     <input type="number"
                            ng-switch-when="number"
-                           id="value{{ $index }}"
+                           id="option{{ option.id }}value{{ $index }}"
                            class="form-control rounded-bottom-left rounded-bottom-right"
                            ng-switch-when="number"
                            ng-model="value"
-                           cn-change="model.renderModel.setAnswerExtra( question, option, $index, value )"
+                           cn-change="model.renderModel.setAnswerValue( question, option, $index, value )"
                            ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
                            class="form-control rounded-bottom-left rounded-bottom-right"></input>
                     <input type="string"
                            ng-switch-when="string"
-                           id="value{{ $index }}"
+                           id="option{{ option.id }}value{{ $index }}"
                            class="form-control rounded-bottom-left rounded-bottom-right"
                            ng-switch-when="string"
                            ng-model="value"
-                           cn-change="model.renderModel.setAnswerExtra( question, option, $index, value )"
+                           cn-change="model.renderModel.setAnswerValue( question, option, $index, value )"
                            ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
                            class="form-control rounded-bottom-left rounded-bottom-right"></input>
                     <textarea cn-elastic
                       ng-switch-when="text"
-                      id="value{{ $index }}"
+                      id="option{{ option.id }}value{{ $index }}"
                       class="form-control"
                       ng-switch-when="text"
                       ng-model="value"
-                      cn-change="model.renderModel.setAnswerExtra( question, option, $index, value )"
+                      cn-change="model.renderModel.setAnswerValue( question, option, $index, value )"
                       ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
                       class="form-control rounded-bottom-left rounded-bottom-right"></textarea>
                   </div>
                   <button type="button"
                           class="btn btn-danger col-slim col-xs-1"
                           ng-if="option.multiple_answers"
-                          ng-click="model.renderModel.removeAnswerExtra( question, option, $index )">
+                          ng-click="model.renderModel.removeAnswerValue( question, option, $index )">
                     <i class="glyphicon glyphicon-remove"></i>
                   </button>
                 </div>

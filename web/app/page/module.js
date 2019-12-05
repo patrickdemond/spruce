@@ -142,11 +142,14 @@ define( function() {
           // bind keypresses (first unbind to prevent duplicates)
           $document.unbind( 'keyup.render' );
           $document.bind( 'keyup.render', function( event ) {
-            // only send keyup events when on the render page and the key is a numpad number
-            if( ['render','run'].includes( $scope.model.getActionFromState() ) && (
+            if(
+              // don't allow hotkeys when focussed on a textarea
+              'TEXTAREA' != document.activeElement.tagName &&
+              // only send keyup events when on the render page and the key is a numpad number
+              ['render','run'].includes( $scope.model.getActionFromState() ) &&
               // keypad enter or number keys
-              13 == event.which || ( 97 <= event.which && event.which <= 105 )
-            ) ) {
+              ( 13 == event.which || ( 97 <= event.which && event.which <= 105 ) )
+            ) {
               $scope.model.renderModel.onKeyup( 13 == event.which ? 'enter' : event.which - 96 );
               $scope.$apply();
             }
@@ -348,8 +351,27 @@ define( function() {
           },
 
           pageIsDone: function() {
-            // TODO: implement
-            return true;
+            return !this.questionList.some( function( question ) {
+              if( null == question.value ) return true;
+              if( 'list' == question.type ) {
+                // extra options without a value don't count as an answer
+                return angular.isArray( question.value ) && !question.value.some( function( o ) {
+                  var option = self.optionListById[angular.isObject( o ) ? o.id : o];
+                  if( option.extra ) {
+                    if( option.multiple_answers ) {
+                      // make sure there is at least one non null value
+                      return angular.isArray( o.value ) && o.value.some( function( value ) { return null != value; } );
+                    } else {
+                      // make sure the value is not null
+                      return null != o.value;
+                    }
+                  } else {
+                    // make sure the option is not null
+                    return null != o;
+                  }
+                } );
+              }
+            } );
           },
 
           onLoad: function() {
@@ -477,17 +499,20 @@ define( function() {
           setAnswer: function( question, value ) {
             // first communicate with the server (if we're working with a response)
             if( 'response' == self.parentModel.getSubjectFromState() ) {
-              this.runQuery( function() {
+              return this.runQuery( function() {
                 return CnHttpFactory.instance( {
                   path: 'answer/' + question.answer_id,
                   data: { value: angular.toJson( value ) }
                 } ).patch().then( function() {
                   question.backupValue = angular.copy( question.value );
                   question.value = value;
+                  self.pageComplete = self.pageIsDone();
                   self.convertValueToModel( question );
                 } );
               } );
             }
+
+            return $q.all();
           },
 
           getValueForNewOption: function( question, option ) {
@@ -507,7 +532,10 @@ define( function() {
           },
 
           addOption: function( question, option ) {
-            this.setAnswer( question, this.getValueForNewOption( question, option ) );
+            this.setAnswer( question, this.getValueForNewOption( question, option ) ).then( function() {
+              // if the option has extra data then focus its associated input
+              if( null != option.extra ) document.getElementById( 'option' + option.id + 'value0' ).focus();
+            } );
           },
 
           removeOption: function( question, option ) {
@@ -520,7 +548,7 @@ define( function() {
             this.setAnswer( question, value );
           },
 
-          addAnswerExtra: function( question, option ) {
+          addAnswerValue: function( question, option ) {
             var value = angular.isArray( question.value ) ? question.value : [];
             var optionIndex = searchOptionList( value, option.id );
             if( null == optionIndex ) {
@@ -528,26 +556,46 @@ define( function() {
               optionIndex = searchOptionList( value, option.id );
             }
 
-            value[optionIndex].value.push( null );
-            this.setAnswer( question, value );
+            var valueIndex = value[optionIndex].value.indexOf( null );
+            if( -1 == valueIndex ) valueIndex = value[optionIndex].value.push( null ) - 1;
+            this.setAnswer( question, value ).then( function() {
+              // focus the new answer value's associated input
+              $timeout( function() { document.getElementById( 'option' + option.id + 'value' + valueIndex ).focus(); }, 50 );
+            } );
           },
 
-          removeAnswerExtra: function( question, option, valueIndex ) {
+          removeAnswerValue: function( question, option, valueIndex ) {
             var value = question.value;
             var optionIndex = searchOptionList( value, option.id );
             value[optionIndex].value.splice( valueIndex, 1 );
             if( 0 == value[optionIndex].value.length ) value.splice( optionIndex, 1 );
+            if( 0 == value.length ) value = null;
 
             this.setAnswer( question, value );
           },
 
-          setAnswerExtra: function( question, option, valueIndex, extra ) {
+          setAnswerValue: function( question, option, valueIndex, answerValue ) {
             var value = question.value;
             var optionIndex = searchOptionList( value, option.id );
             if( option.multiple_answers ) {
-              value[optionIndex].value[valueIndex] = extra ? extra: null;
+              if( 0 < answerValue.trim().length ) {
+                // does the value already exist?
+                var existingValueIndex = value[optionIndex].value.indexOf( answerValue );
+                if( 0 <= existingValueIndex ) {
+                  // don't add the answer, instead focus on the existing one and highlight it
+                  document.getElementById( 'option' + option.id + 'value' + valueIndex ).value = null;
+                  var element = document.getElementById( 'option' + option.id + 'value' + existingValueIndex );
+                  element.focus();
+                  element.select();
+                } else {
+                  value[optionIndex].value[valueIndex] = answerValue;
+                }
+              } else {
+                // if the value is blank then remove it
+                value[optionIndex].value.splice( valueIndex, 1 );
+              }
             } else {
-              value[optionIndex].value = extra ? extra : null;
+              value[optionIndex].value = answerValue ? answerValue : null;
             }
 
             this.setAnswer( question, value );

@@ -61,8 +61,6 @@ class response extends \cenozo\database\record
       return;
     }
 
-    // start by making sure that the current page is complete
-    $complete = true;
     $db_page = $this->get_page();
     
     if( is_null( $db_page ) )
@@ -74,6 +72,9 @@ class response extends \cenozo\database\record
     else // we've already started the qnaire
     {
       // make sure that all questions on the current page are finished
+      $complete = true;
+
+      $object_list = array();
       foreach( $db_page->get_question_object_list() as $db_question )
       {
         $db_answer = $answer_class_name::get_unique_record(
@@ -92,10 +93,17 @@ class response extends \cenozo\database\record
           $complete = false;
           break;
         }
+
+        $object_list[] = array( 'question' => $db_question, 'answer' => $db_answer );
       }
 
       if( $complete )
       {
+        // before proceeding remove any empty option values
+        foreach( $object_list as $objects )
+          if( 'list' == $objects['question']->type )
+            $db_answer->remove_empty_answer_values();
+
         $db_next_page = $db_page->get_next_for_response( $this );
         if( is_null( $db_next_page ) )
         {
