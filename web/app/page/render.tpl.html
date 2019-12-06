@@ -83,57 +83,65 @@
               </div>
               <div ng-switch-when="list" ng-repeat="option in question.optionList">
                 <div ng-if="!option.multiple_answers" ng-class="{ 'col-xs-4 col-slim': null != option.extra }">
-                  <label class="btn btn-default full-width"
-                         style="text-align: left"
-                         ng-class="{ 'rounded-bottom-left rounded-top-left': null != option.extra }"
-                         ng-model="question.answer.optionList[option.id].selected"
-                         ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal', 'font-weight': 'normal' }"
-                         ng-click="question.answer.optionList[option.id].selected ?
-                           model.renderModel.addOption( question, option ) :
-                           model.renderModel.removeOption( question, option )"
-                         ng-bind-html="'<i class=\'glyphicon ' + (
-                           question.answer.optionList[option.id].selected ? 'glyphicon-check' : 'glyphicon-unchecked'
-                         ) + '\'></i> ' + option.descriptions[model.renderModel.currentLanguage]"
-                         uib-btn-checkbox>
+                  <label
+                    class="btn btn-default full-width"
+                    style="text-align: left"
+                    ng-class="{ 'rounded-bottom-left rounded-top-left': null != option.extra }"
+                    ng-model="question.answer.optionList[option.id].selected"
+                    ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal', 'font-weight': 'normal' }"
+                    ng-click="question.answer.optionList[option.id].selected ?
+                      model.renderModel.addOption( question, option ) :
+                      model.renderModel.removeOption( question, option )"
+                    ng-bind-html="'<i class=\'glyphicon ' + (
+                      question.answer.optionList[option.id].selected ? 'glyphicon-check' : 'glyphicon-unchecked'
+                    ) + '\'></i> ' + option.descriptions[model.renderModel.currentLanguage]"
+                    uib-btn-checkbox>
                   </label>
                 </div>
                 <div ng-if="option.multiple_answers">
-                  <label class="btn btn-default full-width"
-                         style="text-align: left"
-                         class="rounded-bottom-left rounded-top-left"
-                         ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal', 'font-weight': 'normal' }"
-                         ng-click="model.renderModel.addAnswerValue( question, option )"
-                         ng-bind-html="option.descriptions[model.renderModel.currentLanguage] +
-                                       ' <i class=\'glyphicon glyphicon-plus\'></i>'">
+                  <label
+                    class="btn btn-default full-width"
+                    style="text-align: left"
+                    class="rounded-bottom-left rounded-top-left"
+                    ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal', 'font-weight': 'normal' }"
+                    ng-click="model.renderModel.addAnswerValue( question, option )"
+                    ng-bind-html="option.descriptions[model.renderModel.currentLanguage] +
+                                  ' <i class=\'glyphicon glyphicon-plus\'></i>'">
                   </label>
                 </div>
                 <div ng-if="null != option.extra"
                      ng-repeat="value in question.answer.optionList[option.id].valueList">
                   <div class="col-slim" ng-class="option.multiple_answers ? 'col-xs-11' : 'col-xs-8'" ng-switch="option.extra">
-                    <input type="number"
-                           ng-switch-when="number"
-                           id="option{{ option.id }}value{{ $index }}"
-                           class="form-control rounded-bottom-left rounded-bottom-right"
-                           ng-switch-when="number"
-                           ng-model="value"
-                           cn-change="model.renderModel.setAnswerValue( question, option, $index, value )"
-                           ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
-                           class="form-control rounded-bottom-left rounded-bottom-right"></input>
-                    <input type="string"
-                           ng-switch-when="string"
-                           id="option{{ option.id }}value{{ $index }}"
-                           class="form-control rounded-bottom-left rounded-bottom-right"
-                           ng-switch-when="string"
-                           ng-model="value"
-                           cn-change="model.renderModel.setAnswerValue( question, option, $index, value )"
-                           ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
-                           class="form-control rounded-bottom-left rounded-bottom-right"></input>
-                    <textarea cn-elastic
-                      ng-switch-when="text"
+                   <input ng-switch-when="number"
+                      type="number"
                       id="option{{ option.id }}value{{ $index }}"
+                      name="answerValue"
+                      class="form-control rounded-bottom-left rounded-bottom-right"
+                      ng-switch-when="number"
+                      ng-model="value"
+                      ng-keydown="validateKeydown( $event )"
+                      cn-change="model.renderModel.setAnswerValue( question, option, $index, value )"
+                      ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
+                      class="form-control rounded-bottom-left rounded-bottom-right"></input>
+                    <input ng-switch-when="string"
+                      type="string"
+                      id="option{{ option.id }}value{{ $index }}"
+                      name="answerValue"
+                      class="form-control rounded-bottom-left rounded-bottom-right"
+                      ng-switch-when="string"
+                      ng-model="value"
+                      ng-keydown="validateKeydown( $event )"
+                      cn-change="model.renderModel.setAnswerValue( question, option, $index, value )"
+                      ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
+                      class="form-control rounded-bottom-left rounded-bottom-right"></input>
+                    <textarea ng-switch-when="text"
+                      cn-elastic
+                      id="option{{ option.id }}value{{ $index }}"
+                      name="answerValue"
                       class="form-control"
                       ng-switch-when="text"
                       ng-model="value"
+                      ng-keydown="validateKeydown( $event )"
                       cn-change="model.renderModel.setAnswerValue( question, option, $index, value )"
                       ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
                       class="form-control rounded-bottom-left rounded-bottom-right"></textarea>
@@ -147,30 +155,27 @@
                 </div>
               </div>
               <input ng-switch-when="number"
-                     class="form-control"
-                     type="number"
-                     ng-model="question.answer.value"
-                     cn-change="model.renderModel.setAnswer( 'value', question )"
-                     ng-disabled="question.answer.dkna || question.answer.refuse"
-                     cn-autofocus
-                     autocomplete="off">
+                class="form-control"
+                type="number"
+                ng-model="question.answer.value"
+                cn-change="model.renderModel.setAnswer( question, question.answer.value )"
+                cn-autofocus
+                autocomplete="off">
               </input>
               <input ng-switch-when="string"
-                     class="form-control"
-                     type="text"
-                     ng-model="question.answer.value"
-                     cn-change="model.renderModel.setAnswer( 'value', question )"
-                     ng-disabled="question.answer.dkna || question.answer.refuse"
-                     cn-autofocus
-                     autocomplete="off">
+                class="form-control"
+                type="text"
+                ng-model="question.answer.value"
+                cn-change="model.renderModel.setAnswer( question, question.answer.value )"
+                cn-autofocus
+                autocomplete="off">
               </input>
               <textarea ng-switch-when="text"
-                        cn-elastic
-                        ng-model="question.answer.value"
-                        cn-change="model.renderModel.setAnswer( 'value', question )"
-                        ng-disabled="question.answer.dkna || question.answer.refuse"
-                        cn-autofocus
-                        class="form-control">
+                cn-elastic
+                ng-model="question.answer.value"
+                cn-change="model.renderModel.setAnswer( question, question.answer.value )"
+                cn-autofocus
+                class="form-control">
               </textarea>
               <div class="btn-group full-width" ng-if="'comment' != question.type">
                 <label class="btn btn-default col-xs-6"

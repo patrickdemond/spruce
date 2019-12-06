@@ -196,7 +196,24 @@ class expression_manager extends \cenozo\singleton
     }
 
     $compiled = strtolower( $compiled );
-    return is_null( $db_response ) ? true : eval( sprintf( 'return (%s);', $compiled ) );
+    try
+    {
+      $response = is_null( $db_response ) ? true : eval( sprintf( 'return (%s);', $compiled ) );
+    }
+    catch( \ParseError $e )
+    {
+      throw lib::create( 'exception\runtime',
+        sprintf(
+          "An error in a precondition has been detected:\n  Expression: %s\n  Compiled: %s\n  Error: %s",
+          $precondition,
+          $compiled,
+          $e->getMessage()
+        ),
+        __METHOD__
+      );
+    }
+
+    return $response;
   }
 
   /**

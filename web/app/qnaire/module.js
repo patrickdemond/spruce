@@ -13,6 +13,10 @@ define( function() {
       name: {
         title: 'Name'
       },
+      debug: {
+        title: 'Debug Mode',
+        type: 'boolean'
+      },
       description: {
         title: 'Description',
         align: 'left'
@@ -28,6 +32,10 @@ define( function() {
     name: {
       title: 'Name',
       type: 'string'
+    },
+    debug: {
+      title: 'Debug Mode',
+      type: 'boolean'
     },
     description: {
       title: 'Description',

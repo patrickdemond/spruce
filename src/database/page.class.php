@@ -81,18 +81,29 @@ class page extends base_qnaire_part
 
     if( !is_null( $db_previous_page ) )
     {
-      // make sure the page's module is valid
-      $db_module = $db_previous_page->get_module();
-      if( !$expression_manager->evaluate( $db_response, $db_module->precondition ) )
+      try
       {
-        do { $db_module = $db_module->get_previous(); }
-        while( !is_null( $db_module ) && !$expression_manager->evaluate( $db_response, $db_module->precondition ) );
-        $db_previous_page = is_null( $db_module ) ? NULL : $db_module->get_last_page();
-      }
+        // make sure the page's module is valid
+        $db_module = $db_previous_page->get_module();
+        if( !$expression_manager->evaluate( $db_response, $db_module->precondition ) )
+        {
+          do { $db_module = $db_module->get_previous(); }
+          while( !is_null( $db_module ) && !$expression_manager->evaluate( $db_response, $db_module->precondition ) );
+          $db_previous_page = is_null( $db_module ) ? NULL : $db_module->get_last_page();
+        }
 
-      // if there is a previous page then make sure to test its precondition if a response is included in the request
-      if( !is_null( $db_previous_page ) && !$expression_manager->evaluate( $db_response, $db_previous_page->precondition ) )
-        $db_previous_page = $db_previous_page->get_previous_for_response( $db_response );
+        // if there is a previous page then make sure to test its precondition if a response is included in the request
+        if( !is_null( $db_previous_page ) && !$expression_manager->evaluate( $db_response, $db_previous_page->precondition ) )
+          $db_previous_page = $db_previous_page->get_previous_for_response( $db_response );
+      }
+      catch( \cenozo\exception\runtime $e )
+      {
+        if( is_null( $db_response ) || $db_response->get_qnaire()->debug )
+          throw lib::create( 'exception\notice', $e->get_raw_message(), __METHOD__ );
+
+        // if we're not in debug mode then log it but otherwise proceed
+        log::error( $e->get_raw_message() );
+      }
     }
 
     return $db_previous_page;
@@ -110,25 +121,36 @@ class page extends base_qnaire_part
 
     if( !is_null( $db_next_page ) )
     {
-      // make sure the page's module is valid
-      $db_module = $db_next_page->get_module();
-      if( !$expression_manager->evaluate( $db_response, $db_module->precondition ) )
+      try
       {
-        do
+        // make sure the page's module is valid
+        $db_module = $db_next_page->get_module();
+        if( !$expression_manager->evaluate( $db_response, $db_module->precondition ) )
         {
-          // delete any answer associated with the skipped module
-          $db_response->delete_answers_in_module( $db_module );
-          $db_module = $db_module->get_next();
+          do
+          {
+            // delete any answer associated with the skipped module
+            $db_response->delete_answers_in_module( $db_module );
+            $db_module = $db_module->get_next();
+          }
+          while( !is_null( $db_module ) && !$expression_manager->evaluate( $db_response, $db_module->precondition ) );
+          $db_next_page = is_null( $db_module ) ? NULL : $db_module->get_first_page();
         }
-        while( !is_null( $db_module ) && !$expression_manager->evaluate( $db_response, $db_module->precondition ) );
-        $db_next_page = is_null( $db_module ) ? NULL : $db_module->get_first_page();
-      }
 
-      // if there is a next page then make sure to test its precondition if a response is included in the request
-      if( !is_null( $db_next_page ) && !$expression_manager->evaluate( $db_response, $db_next_page->precondition ) )
+        // if there is a next page then make sure to test its precondition if a response is included in the request
+        if( !is_null( $db_next_page ) && !$expression_manager->evaluate( $db_response, $db_next_page->precondition ) )
+        {
+          $db_response->delete_answers_in_page( $db_next_page );
+          $db_next_page = $db_next_page->get_next_for_response( $db_response );
+        }
+      }
+      catch( \cenozo\exception\runtime $e )
       {
-        $db_response->delete_answers_in_page( $db_next_page );
-        $db_next_page = $db_next_page->get_next_for_response( $db_response );
+        if( is_null( $db_response ) || $db_response->get_qnaire()->debug )
+          throw lib::create( 'exception\notice', $e->get_raw_message(), __METHOD__ );
+
+        // if we're not in debug mode then log it but otherwise proceed
+        log::error( $e->get_raw_message() );
       }
     }
 

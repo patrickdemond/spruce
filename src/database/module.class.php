@@ -50,10 +50,24 @@ class module extends base_qnaire_part
     $db_previous_module = $this->get_previous();
 
     // if there is a previous module then make sure to test its precondition if a response is included in the request
-    return !is_null( $db_previous_module ) &&
-           !is_null( $db_previous_module->precondition ) &&
-           !$expression_manager->evaluate( $db_response, $db_previous_module->precondition ) ?
-      $db_previous_module->get_previous_for_resposne( $db_response ) : $db_previous_module;
+    try
+    {
+      if( !is_null( $db_previous_module ) &&
+          !is_null( $db_previous_module->precondition ) &&
+          !$expression_manager->evaluate( $db_response, $db_previous_module->precondition ) )
+        $db_previous_module = $db_previous_module->get_previous_for_response( $db_response );
+    }
+    catch( \cenozo\exception\runtime $e )
+    {
+      if( is_null( $db_response ) || $db_response->get_qnaire()->debug )
+        throw lib::create( 'exception\notice', $e->get_raw_message(), __METHOD__ );
+
+      // if we're not in debug mode then log it and assume the precondition failed
+      log::error( $e->get_raw_message() );
+      $db_previous_module = $db_previous_module->get_previous_for_response( $db_response );
+    }
+
+    return $db_previous_module;
   }
 
   /**
@@ -70,25 +84,37 @@ class module extends base_qnaire_part
     // if there is a next module then make sure to test its precondition if a response is included in the request
     if( !is_null( $db_next_module ) && !is_null( $db_next_module->precondition ) )
     {
-      if( !$expression_manager->evaluate( $db_response, $db_next_module->precondition ) )
+      try
       {
-        // before proceeding, delete any answer associated with the skipped module
-        foreach( $db_next_module->get_page_object_list() as $db_page )
+        if( !$expression_manager->evaluate( $db_response, $db_next_module->precondition ) )
         {
-          $select = lib::create( 'database\select' );
-          $select->add_column( 'id' );
-          foreach( $db_page->get_question_list( $select ) as $question )
+          // before proceeding, delete any answer associated with the skipped module
+          foreach( $db_next_module->get_page_object_list() as $db_page )
           {
-            $db_answer = $answer_class_name::get_unique_record(
-              array( 'response_id', 'question_id' ),
-              array( $db_response->id, $question['id'] )
-            );
-            if( !is_null( $db_answer ) ) $db_answer->delete();
+            $select = lib::create( 'database\select' );
+            $select->add_column( 'id' );
+            foreach( $db_page->get_question_list( $select ) as $question )
+            {
+              $db_answer = $answer_class_name::get_unique_record(
+                array( 'response_id', 'question_id' ),
+                array( $db_response->id, $question['id'] )
+              );
+              if( !is_null( $db_answer ) ) $db_answer->delete();
+            }
           }
-        }
 
-        // now advance to the next module
-        $db_next_module = $db_next_module->get_next_for_response( $db_response );
+          // now advance to the next module
+          $db_next_module = $db_next_module->get_next_for_response( $db_response );
+        }
+      }
+      catch( \cenozo\exception\runtime $e )
+      {
+        if( is_null( $db_response ) || $db_response->get_qnaire()->debug )
+          throw lib::create( 'exception\notice', $e->get_raw_message(), __METHOD__ );
+
+        // if we're not in debug mode then log it and assume the precondition failed
+        log::error( $e->get_raw_message() );
+        $db_previous_module = $db_previous_module->get_previous_for_response( $db_response );
       }
     }
 

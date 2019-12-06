@@ -92,7 +92,7 @@ define( function() {
   // used by services below to returns the index of the option matching the second argument
   function searchOptionList( optionList, id ) {
     var optionIndex = null;
-    optionList.some( function( option, index ) {
+    if( angular.isArray( optionList ) ) optionList.some( function( option, index ) {
       if( option == id || ( angular.isObject( option ) && option.id == id ) ) {
         optionIndex = index;
         return true;
@@ -140,6 +140,14 @@ define( function() {
         restrict: 'E',
         scope: { model: '=?' },
         controller: function( $scope ) {
+          function isNumpadInput( event ) {
+            // only send keyup events when on the render page and the key is a numpad number
+            return ['render','run'].includes( $scope.model.getActionFromState() ) && (
+              ( 13 == event.which && 'NumpadEnter' == event.code ) || // numpad enter
+              ( 97 <= event.which && event.which <= 105 ) // numpad 0 to 9
+            );
+          }
+
           $scope.data = {
             page_id: null,
             qnaire_id: null,
@@ -151,21 +159,23 @@ define( function() {
           $scope.isComplete = false;
           if( angular.isUndefined( $scope.model ) ) $scope.model = CnPageModelFactory.root;
 
-          // bind keypresses (first unbind to prevent duplicates)
+          // bind keyup (first unbind to prevent duplicates)
           $document.unbind( 'keyup.render' );
           $document.bind( 'keyup.render', function( event ) {
-            if(
-              // don't allow hotkeys when focussed on a textarea
-              'TEXTAREA' != document.activeElement.tagName &&
-              // only send keyup events when on the render page and the key is a numpad number
-              ['render','run'].includes( $scope.model.getActionFromState() ) &&
-              // keypad enter or number keys
-              ( 13 == event.which || ( 97 <= event.which && event.which <= 105 ) )
-            ) {
+            if( isNumpadInput( event ) ) {
+              event.stopPropagation();
               $scope.model.renderModel.onKeyup( 13 == event.which ? 'enter' : event.which - 96 );
               $scope.$apply();
             }
           } );
+
+          // prevent numpad keys from entering into inputs and textareas
+          $scope.validateKeydown = function( event ) {
+            if( isNumpadInput( event ) ) {
+              event.returnValue = false;
+              event.preventDefault();
+            }
+          };
 
           if( angular.isUndefined( $scope.progress ) ) $scope.progress = 0;
 
@@ -319,9 +329,7 @@ define( function() {
             if( 'boolean' == question.type ) {
               question.answer = {
                 yes: true === question.value,
-                no: false === question.value,
-                dkna: angular.isObject( question.value ) && true === question.value.dkna,
-                refuse: angular.isObject( question.value ) && true === question.value.refuse
+                no: false === question.value
               };
             } else if( 'list' == question.type ) {
               var selectedOptions = angular.isArray( question.value ) ? question.value : [];
@@ -343,11 +351,16 @@ define( function() {
                   }
 
                   return list;
-                }, {} ),
-                dkna: angular.isObject( question.value ) && true === question.value.dkna,
-                refuse: angular.isObject( question.value ) && true === question.value.refuse
+                }, {} )
               }
+            } else {
+              question.answer = {
+                value: angular.isString( question.value ) || angular.isNumber( question.value ) ? question.value : null
+              };
             }
+
+            question.answer.dkna = angular.isObject( question.value ) && true === question.value.dkna;
+            question.answer.refuse = angular.isObject( question.value ) && true === question.value.refuse;
           },
 
           pageIsDone: function() {
@@ -357,19 +370,19 @@ define( function() {
 
               if( 'list' == question.type ) {
                 // extra options without a value don't count as an answer
-                return angular.isArray( question.value ) && !question.value.some( function( o ) {
+                return angular.isArray( question.value ) && question.value.some( function( o ) {
                   var option = self.optionListById[angular.isObject( o ) ? o.id : o];
                   if( option.extra ) {
                     if( option.multiple_answers ) {
                       // make sure there is at least one non null value
-                      return angular.isArray( o.value ) && o.value.some( function( value ) { return null != value; } );
+                      return !angular.isArray( o.value ) || !o.value.some( function( value ) { return null != value; } );
                     } else {
                       // make sure the value is not null
-                      return null != o.value;
+                      return null == o.value;
                     }
                   } else {
                     // make sure the option is not null
-                    return null != o;
+                    return null == o;
                   }
                 } );
               }
@@ -448,34 +461,26 @@ define( function() {
               // do nothing if we have no key question index (which means the page only has comments)
               if( null == self.keyQuestionIndex ) return;
 
-              /*
               var question = self.questionList[self.keyQuestionIndex];
-              var data = self.data[question.id];
 
               if( 'boolean' == question.type ) {
-                // 1 is yes, 2 is no, 3 is dkna and 4 is refuse
-                var answer = 1 == key ? 'yes'
-                           : 2 == key ? 'no'
-                           : 3 == key ? 'dkna'
-                           : 4 == key ? 'refuse'
-                           : null;
+                var value = undefined;
+                if( 1 == key ) value = question.answer.yes ? null: true;
+                else if( 2 == key ) value = question.answer.no ? null : false;
+                else if( 3 == key ) value = question.answer.dkna ? null : { dkna: true };
+                else if( 4 == key ) value = question.answer.refuse ? null : { refuse: true };
 
-                if( null != answer ) {
-                  data[answer] = !data[answer];
-                  self.setAnswer( 'boolean', question, answer );
-                }
+                if( angular.isDefined( value ) ) self.setAnswer( question, value );
               } else if( 'list' == question.type ) {
                 // check if the key is within the option list or the 2 dkna/refuse options
                 if( key <= question.optionList.length ) {
-                  var answer = question.optionList[key-1];
-                  data.selectedOptionList[answer.id] = !data.selectedOptionList[answer.id];
-                  self.setAnswer( 'option', question, answer );
+                  var option = question.optionList[key-1];
+                  if( question.answer.optionList[option.id].selected ) self.removeOption( question, option );
+                  else self.addOption( question, option );
                 } else if( key == question.optionList.length + 1 ) {
-                  data.dkna = !data.dkna;
-                  self.setAnswer( 'dkna', question );
+                  self.setAnswer( question, question.answer.dkna ? null : { dkna: true } );
                 } else if( key == question.optionList.length + 2 ) {
-                  data.refuse = !data.refuse;
-                  self.setAnswer( 'refuse', question );
+                  self.setAnswer( question, question.answer.refuse ? null : { refuse: true } );
                 }
               } else {
                 // 1 is dkna and 2 is refuse
@@ -488,7 +493,6 @@ define( function() {
                   self.setAnswer( noAnswerType, question );
                 }
               }
-              */
 
               // advance to the next non-comment question, looping back to the first when we're at the end of the list
               do {
@@ -499,6 +503,8 @@ define( function() {
           },
 
           setAnswer: function( question, value ) {
+            if( "" === value ) value = null;
+
             // first communicate with the server (if we're working with a response)
             if( 'response' == self.parentModel.getSubjectFromState() ) {
               return this.runQuery( function() {
@@ -510,6 +516,16 @@ define( function() {
                   question.value = value;
                   self.pageComplete = self.pageIsDone();
                   self.convertValueToModel( question );
+
+                  if( 'list' == question.type ) {
+                    for( var element of document.getElementsByName( 'answerValue' ) ) {
+                      var match = element.id.match( /option([0-9]+)value[0-9]+/ );
+                      if( 1 < match.length ) {
+                        var optionId = match[1];
+                        if( null == searchOptionList( question.value, optionId ) ) element.value = null;
+                      }
+                    }
+                  }
                 } );
               } );
             }
@@ -534,13 +550,15 @@ define( function() {
           },
 
           addOption: function( question, option ) {
+            console.log( 'add', question.id, option.id );
             this.setAnswer( question, this.getValueForNewOption( question, option ) ).then( function() {
               // if the option has extra data then focus its associated input
-              if( null != option.extra ) document.getElementById( 'option' + option.id + 'value0' ).focus();
+              if( null != option.extra ) $timeout( function() { document.getElementById( 'option' + option.id + 'value0' ).focus(); }, 50 );
             } );
           },
 
           removeOption: function( question, option ) {
+            console.log( 'remove', question.id, option.id );
             // get the current value array and remove the option from it
             var value = angular.isArray( question.value ) ? question.value : [];
             var optionIndex = searchOptionList( value, option.id );
@@ -577,27 +595,30 @@ define( function() {
           },
 
           setAnswerValue: function( question, option, valueIndex, answerValue ) {
+            console.log( 'set', question.id, option.id, valueIndex, answerValue );
             var value = question.value;
             var optionIndex = searchOptionList( value, option.id );
-            if( option.multiple_answers ) {
-              if( 0 < answerValue.trim().length ) {
-                // does the value already exist?
-                var existingValueIndex = value[optionIndex].value.indexOf( answerValue );
-                if( 0 <= existingValueIndex ) {
-                  // don't add the answer, instead focus on the existing one and highlight it
-                  document.getElementById( 'option' + option.id + 'value' + valueIndex ).value = null;
-                  var element = document.getElementById( 'option' + option.id + 'value' + existingValueIndex );
-                  element.focus();
-                  element.select();
+            if( null != optionIndex ) {
+              if( option.multiple_answers ) {
+                if( 0 < answerValue.trim().length ) {
+                  // does the value already exist?
+                  var existingValueIndex = value[optionIndex].value.indexOf( answerValue );
+                  if( 0 <= existingValueIndex ) {
+                    // don't add the answer, instead focus on the existing one and highlight it
+                    document.getElementById( 'option' + option.id + 'value' + valueIndex ).value = null;
+                    var element = document.getElementById( 'option' + option.id + 'value' + existingValueIndex );
+                    element.focus();
+                    element.select();
+                  } else {
+                    value[optionIndex].value[valueIndex] = answerValue;
+                  }
                 } else {
-                  value[optionIndex].value[valueIndex] = answerValue;
+                  // if the value is blank then remove it
+                  value[optionIndex].value.splice( valueIndex, 1 );
                 }
               } else {
-                // if the value is blank then remove it
-                value[optionIndex].value.splice( valueIndex, 1 );
+                value[optionIndex].value = answerValue ? answerValue : null;
               }
-            } else {
-              value[optionIndex].value = answerValue ? answerValue : null;
             }
 
             this.setAnswer( question, value );
