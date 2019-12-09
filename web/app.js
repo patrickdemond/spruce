@@ -12,6 +12,48 @@ cenozo.controller( 'HeaderCtrl', [
 
 /* ######################################################################################################## */
 cenozoApp.initQnairePartModule = function( module, type ) {
+  angular.extend( module, {
+    identifier: {},
+    name: {
+      singular: type.replace( /_/g, ' ' ),
+      plural: type.replace( /_/g, ' ' ) + '',
+      possessive: type.replace( / /g, ' ' ) + '\'s'
+    },
+    columnList: {
+      rank: {
+        title: 'Rank',
+        type: 'rank'
+      },
+      precondition: {
+        title: 'Precondition'
+      },
+      name: {
+        title: 'Name'
+      }
+    },
+    defaultOrder: {
+      column: 'rank',
+      reverse: false
+    }
+  } );
+
+  module.addInputGroup( '', {
+    rank: {
+      title: 'Rank',
+      type: 'rank'
+    },
+    name: {
+      title: 'Name',
+      type: 'string',
+      regex: '^[a-zA-Z_][a-zA-Z0-9_]*$'
+    },
+    precondition: {
+      title: 'Precondition',
+      type: 'text',
+      help: 'A special expression which restricts whether or not to show this ' + type.replace( /_/g, ' ' ) + '.'
+    }
+  } );
+
   module.addInput( '', 'previous_id', { isExcluded: true } );
   module.addInput( '', 'next_id', { isExcluded: true } );
 
@@ -28,6 +70,102 @@ cenozoApp.initQnairePartModule = function( module, type ) {
     operation: function( $state, model ) { model.viewModel.viewNext(); },
     isDisabled: function( $state, model ) { return null == model.viewModel.record.next_id; }
   } );
+
+  var typeCamel = type.snakeToCamel().ucWords();
+
+  /* ######################################################################################################## */
+  cenozo.providers.directive( 'cn' + typeCamel + 'Add', [
+    'Cn' + typeCamel + 'ModelFactory',
+    function( CnModelFactory ) {
+      return {
+        templateUrl: module.getFileUrl( 'add.tpl.html' ),
+        restrict: 'E',
+        scope: { model: '=?' },
+        controller: function( $scope ) {
+          if( angular.isUndefined( $scope.model ) ) $scope.model = CnModelFactory.root;
+        }
+      };
+    }
+  ] );
+
+  /* ######################################################################################################## */
+  cenozo.providers.directive( 'cn' + typeCamel + 'List', [
+    'Cn' + typeCamel + 'ModelFactory',
+    function( CnModelFactory ) {
+      return {
+        templateUrl: module.getFileUrl( 'list.tpl.html' ),
+        restrict: 'E',
+        scope: { model: '=?' },
+        controller: function( $scope ) {
+          if( angular.isUndefined( $scope.model ) ) $scope.model = CnModelFactory.root;
+        }
+      };
+    }
+  ] );
+
+  /* ######################################################################################################## */
+  cenozo.providers.directive( 'cn' + typeCamel + 'View', [
+    'Cn' + typeCamel + 'ModelFactory',
+    function( CnModelFactory ) {
+      return {
+        templateUrl: module.getFileUrl( 'view.tpl.html' ),
+        restrict: 'E',
+        scope: { model: '=?' },
+        controller: function( $scope ) {
+          if( angular.isUndefined( $scope.model ) ) $scope.model = CnModelFactory.root;
+        }
+      };
+    }
+  ] );
+
+  /* ######################################################################################################## */
+  cenozo.providers.factory( 'Cn' + typeCamel + 'AddFactory', [
+    'CnBaseAddFactory',
+    function( CnBaseAddFactory ) {
+      var object = function( parentModel ) { CnBaseAddFactory.construct( this, parentModel ); };
+      return { instance: function( parentModel ) { return new object( parentModel ); } };
+    }
+  ] );
+
+  /* ######################################################################################################## */
+  cenozo.providers.factory( 'Cn' + typeCamel + 'ListFactory', [
+    'CnBaseListFactory',
+    function( CnBaseListFactory ) {
+      var object = function( parentModel ) { CnBaseListFactory.construct( this, parentModel ); };
+      return { instance: function( parentModel ) { return new object( parentModel ); } };
+    }
+  ] );
+
+  /* ######################################################################################################## */
+  cenozo.providers.factory( 'Cn' + typeCamel + 'ViewFactory', [
+    'CnBaseViewFactory', 'CnBaseQnairePartViewFactory',
+    function( CnBaseViewFactory, CnBaseQnairePartViewFactory ) {
+      var object = function( parentModel, root ) {
+        CnBaseViewFactory.construct( this, parentModel, root );
+        CnBaseQnairePartViewFactory.construct( this, type );
+      }
+      return { instance: function( parentModel, root ) { return new object( parentModel, root ); } };
+    }
+  ] );
+
+  /* ######################################################################################################## */
+  cenozo.providers.factory( 'Cn' + typeCamel + 'ModelFactory', [
+    'CnBaseModelFactory', 'Cn' + typeCamel + 'AddFactory', 'Cn' + typeCamel + 'ListFactory', 'Cn' + typeCamel + 'ViewFactory',
+    function( CnBaseModelFactory, CnAddFactory, CnListFactory, CnViewFactory ) {
+      var object = function( root ) {
+        var self = this;
+        CnBaseModelFactory.construct( this, module );
+        this.addModel = CnAddFactory.instance( this );
+        this.listModel = CnListFactory.instance( this );
+        this.viewModel = CnViewFactory.instance( this, root );
+      };
+
+      return {
+        root: new object( true ),
+        instance: function() { return new object( false ); }
+      };
+    }
+  ] );
 };
 
 /* ######################################################################################################## */

@@ -158,6 +158,7 @@
                 class="form-control"
                 type="number"
                 ng-model="question.answer.value"
+                ng-keydown="validateKeydown( $event )"
                 cn-change="model.renderModel.setAnswer( question, question.answer.value )"
                 cn-autofocus
                 autocomplete="off">
@@ -166,6 +167,7 @@
                 class="form-control"
                 type="text"
                 ng-model="question.answer.value"
+                ng-keydown="validateKeydown( $event )"
                 cn-change="model.renderModel.setAnswer( question, question.answer.value )"
                 cn-autofocus
                 autocomplete="off">
@@ -173,6 +175,7 @@
               <textarea ng-switch-when="text"
                 cn-elastic
                 ng-model="question.answer.value"
+                ng-keydown="validateKeydown( $event )"
                 cn-change="model.renderModel.setAnswer( question, question.answer.value )"
                 cn-autofocus
                 class="form-control">

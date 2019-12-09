@@ -3,66 +3,21 @@ define( function() {
 
   try { var module = cenozoApp.module( 'page', true ); } catch( err ) { console.warn( err ); return; }
 
-  cenozoApp.initQnairePartModule( module );
+  cenozoApp.initQnairePartModule( module, 'page' );
 
-  angular.extend( module, {
-    identifier: {
-      parent: {
-        subject: 'module',
-        column: 'module.id'
-      }
-    },
-    name: {
-      singular: 'page',
-      plural: 'pages',
-      possessive: 'page\'s'
-    },
-    columnList: {
-      rank: {
-        title: 'Rank',
-        type: 'rank'
-      },
-      has_precondition: {
-        title: 'Precondition',
-        type: 'boolean'
-      },
-      name: {
-        title: 'Name'
-      }
-    },
-    defaultOrder: {
-      column: 'rank',
-      reverse: false
-    }
-  } );
+  module.identifier.parent = {
+    subject: 'module',
+    column: 'module.id'
+  };
 
-  module.addInputGroup( '', {
-    rank: {
-      title: 'Rank',
-      type: 'rank'
-    },
-    name: {
-      title: 'Name',
-      type: 'string'
-    },
-    precondition: {
-      title: 'Precondition',
-      type: 'text',
-      help: 'A special expression which restricts whether or not to show this page.'
-    },
-    note: {
-      title: 'Note',
-      type: 'text'
-    },
-
-    qnaire_id: { column: 'qnaire.id', isExcluded: true },
-    qnaire_name: { column: 'qnaire.name', isExcluded: true },
-    base_language: { column: 'base_language.code', isExcluded: true },
-    descriptions: { isExcluded: true },
-    module_descriptions: { isExcluded: true },
-    module_id: { isExcluded: true },
-    module_name: { column: 'module.name', isExcluded: true }
-  } );
+  module.addInput( '', 'note', { title: 'Note', type: 'text' } );
+  module.addInput( '', 'qnaire_id', { column: 'qnaire.id', isExcluded: true }, );
+  module.addInput( '', 'qnaire_name', { column: 'qnaire.name', isExcluded: true }, );
+  module.addInput( '', 'base_language', { column: 'base_language.code', isExcluded: true }, );
+  module.addInput( '', 'descriptions', { isExcluded: true }, );
+  module.addInput( '', 'module_descriptions', { isExcluded: true }, );
+  module.addInput( '', 'module_id', { isExcluded: true }, );
+  module.addInput( '', 'module_name', { column: 'module.name', isExcluded: true } );
 
   module.addExtraOperation( 'view', {
     title: 'Preview',
@@ -100,36 +55,6 @@ define( function() {
     } );
     return optionIndex;
   }
-
-  /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnPageAdd', [
-    'CnPageModelFactory',
-    function( CnPageModelFactory ) {
-      return {
-        templateUrl: module.getFileUrl( 'add.tpl.html' ),
-        restrict: 'E',
-        scope: { model: '=?' },
-        controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnPageModelFactory.root;
-        }
-      };
-    }
-  ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnPageList', [
-    'CnPageModelFactory',
-    function( CnPageModelFactory ) {
-      return {
-        templateUrl: module.getFileUrl( 'list.tpl.html' ),
-        restrict: 'E',
-        scope: { model: '=?' },
-        controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnPageModelFactory.root;
-        }
-      };
-    }
-  ] );
 
   /* ######################################################################################################## */
   cenozo.providers.directive( 'cnPageRender', [
@@ -256,39 +181,6 @@ define( function() {
           }
         }
       };
-    }
-  ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnPageView', [
-    'CnPageModelFactory',
-    function( CnPageModelFactory ) {
-      return {
-        templateUrl: module.getFileUrl( 'view.tpl.html' ),
-        restrict: 'E',
-        scope: { model: '=?' },
-        controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnPageModelFactory.root;
-        }
-      };
-    }
-  ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnPageAddFactory', [
-    'CnBaseAddFactory',
-    function( CnBaseAddFactory ) {
-      var object = function( parentModel ) { CnBaseAddFactory.construct( this, parentModel ); };
-      return { instance: function( parentModel ) { return new object( parentModel ); } };
-    }
-  ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnPageListFactory', [
-    'CnBaseListFactory',
-    function( CnBaseListFactory ) {
-      var object = function( parentModel ) { CnBaseListFactory.construct( this, parentModel ); };
-      return { instance: function( parentModel ) { return new object( parentModel ); } };
     }
   ] );
 
@@ -484,14 +376,8 @@ define( function() {
                 }
               } else {
                 // 1 is dkna and 2 is refuse
-                var noAnswerType = 1 == key ? 'dkna'
-                           : 2 == key ? 'refuse'
-                           : null;
-
-                if( null != noAnswerType ) {
-                  data[noAnswerType] = !data[noAnswerType];
-                  self.setAnswer( noAnswerType, question );
-                }
+                if( 1 == key ) self.setAnswer( question, question.answer.dkna ? null : { dkna: true } );
+                else if( 2 == key ) self.setAnswer( question, question.answer.refuse ? null : { refuse: true } );
               }
 
               // advance to the next non-comment question, looping back to the first when we're at the end of the list
@@ -675,62 +561,65 @@ define( function() {
     }
   ] );
 
-  /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnPageViewFactory', [
-    'CnBaseViewFactory', 'CnBaseQnairePartViewFactory',
-    function( CnBaseViewFactory, CnBaseQnairePartViewFactory ) {
-      var object = function( parentModel, root ) {
-        var self = this;
-        CnBaseViewFactory.construct( this, parentModel, root );
-        CnBaseQnairePartViewFactory.construct( this, 'page' );
+  // extend the view factory created by caling initQnairePartModule()
+  cenozo.providers.decorator( 'CnPageViewFactory', [
+    '$delegate',
+    function( $delegate ) {
+      var instance = $delegate.instance;
+      $delegate.instance = function( parentModel, root ) {
+        var object = instance( parentModel, root );
 
-        angular.extend( this, {
+        // see if the form has a record in the data-entry module
+        angular.extend( object, {
           onView: function( force ) {
+            var self = this;
             return this.$$onView( force ).then( function() {
               self.record.descriptions = parseDescriptions( self.record.descriptions );
               self.record.module_descriptions = parseDescriptions( self.record.module_descriptions );
             } );
           }
         } );
+
+        return object;
+      };
+
+      return $delegate;
+    }
+  ] );
+
+  // extend the base model factory created by caling initQnairePartModule()
+  cenozo.providers.decorator( 'CnPageModelFactory', [
+    '$delegate', 'CnPageRenderFactory', '$state',
+    function( $delegate, CnPageRenderFactory, $state ) {
+      function extendModelObject( object ) {
+        angular.extend( object, {
+          renderModel: CnPageRenderFactory.instance( object ),
+
+          getBreadcrumbParentTitle: function() {
+            return this.viewModel.record.module_name;
+          },
+
+          getServiceResourcePath: function( resource ) {
+            // when we're looking at a response use its token to figure out which page to load
+            return 'response' == this.getSubjectFromState() ?
+              'page/token=' + $state.params.token : this.$$getServiceResourcePath( resource );
+          },
+
+          getServiceCollectionPath: function( ignoreParent ) {
+            var path = this.$$getServiceCollectionPath( ignoreParent );
+            if( 'response' == this.getSubjectFromState() )
+              path = path.replace( 'response/undefined', 'module/token=' + $state.params.token );
+            return path;
+          }
+        } );
+        return object;
       }
-      return { instance: function( parentModel, root ) { return new object( parentModel, root ); } };
+
+      var instance = $delegate.instance;
+      $delegate.root = extendModelObject( $delegate.root );
+      $delegate.instance = function( parentModel, root ) { return extendModelObject( instance( root ) ); };
+
+      return $delegate;
     }
   ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnPageModelFactory', [
-    'CnBaseModelFactory', 'CnPageAddFactory', 'CnPageListFactory', 'CnPageRenderFactory', 'CnPageViewFactory', '$state',
-    function( CnBaseModelFactory, CnPageAddFactory, CnPageListFactory, CnPageRenderFactory, CnPageViewFactory, $state ) {
-      var object = function( root ) {
-        CnBaseModelFactory.construct( this, module );
-        this.addModel = CnPageAddFactory.instance( this );
-        this.listModel = CnPageListFactory.instance( this );
-        this.renderModel = CnPageRenderFactory.instance( this );
-        this.viewModel = CnPageViewFactory.instance( this, root );
-
-        this.getBreadcrumbParentTitle = function() {
-          return this.viewModel.record.module_name;
-        };
-
-        this.getServiceResourcePath = function( resource ) {
-          // when we're looking at a response use its token to figure out which page to load
-          return 'response' == this.getSubjectFromState() ?
-            'page/token=' + $state.params.token : this.$$getServiceResourcePath( resource );
-        };
-
-        this.getServiceCollectionPath = function( ignoreParent ) {
-          var path = this.$$getServiceCollectionPath( ignoreParent );
-          if( 'response' == this.getSubjectFromState() )
-            path = path.replace( 'response/undefined', 'module/token=' + $state.params.token );
-          return path;
-        };
-      };
-
-      return {
-        root: new object( true ),
-        instance: function() { return new object( false ); }
-      };
-    }
-  ] );
-
 } );
