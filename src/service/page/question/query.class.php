@@ -59,7 +59,7 @@ class query extends \cenozo\service\query
       {
         // convert attributes
         preg_match_all( '/@[A-Za-z0-9_]+@/', $record['descriptions'], $matches );
-        foreach( $matches as $match )
+        foreach( $matches[0] as $match )
         {
           $attribute_name = substr( $match, 1, -1 );
           $db_attribute = $attribute_class_name::get_unique_record(
@@ -91,7 +91,7 @@ class query extends \cenozo\service\query
 
         // convert questions
         preg_match_all( '/\$[A-Za-z0-9_]+\$/', $record['descriptions'], $matches );
-        foreach( $matches as $match )
+        foreach( $matches[0] as $match )
         {
           $question_name = substr( $match, 1, -1 );
           $db_question = $db_qnaire->get_question( $question_name );
