@@ -17,7 +17,7 @@ define( function() {
   module.addInput( '', 'descriptions', { isExcluded: true }, );
   module.addInput( '', 'module_descriptions', { isExcluded: true }, );
   module.addInput( '', 'module_id', { isExcluded: true }, );
-  module.addInput( '', 'module_name', { column: 'module.name', isExcluded: true } );
+  module.addInput( '', 'parent_name', { column: 'module.name', isExcluded: true } );
 
   module.addExtraOperation( 'view', {
     title: 'Preview',
@@ -594,10 +594,6 @@ define( function() {
       function extendModelObject( object ) {
         angular.extend( object, {
           renderModel: CnPageRenderFactory.instance( object ),
-
-          getBreadcrumbParentTitle: function() {
-            return this.viewModel.record.module_name;
-          },
 
           getServiceResourcePath: function( resource ) {
             // when we're looking at a response use its token to figure out which page to load

@@ -12,6 +12,7 @@ define( function() {
 
   module.addInput( '', 'note', { title: 'Note', type: 'text' } );
   module.addInput( '', 'first_page_id', { isExcluded: true } );
+  module.addInput( '', 'parent_name', { column: 'qnaire.name', isExcluded: true } );
 
   module.addExtraOperation( 'view', {
     title: 'Preview',

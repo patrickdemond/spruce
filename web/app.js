@@ -120,9 +120,28 @@ cenozoApp.initQnairePartModule = function( module, type ) {
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'Cn' + typeCamel + 'AddFactory', [
-    'CnBaseAddFactory',
-    function( CnBaseAddFactory ) {
-      var object = function( parentModel ) { CnBaseAddFactory.construct( this, parentModel ); };
+    'CnBaseAddFactory', 'CnHttpFactory',
+    function( CnBaseAddFactory, CnHttpFactory ) {
+      var object = function( parentModel ) {
+        CnBaseAddFactory.construct( this, parentModel );
+
+        // get the parent's name for the breadcrumb trail
+        angular.extend( this, {
+          onNew: function( record ) {
+            var self = this;
+            return this.$$onNew( record ).then( function() {
+              // get the parent page's name
+              var parentIdentifier = parentModel.getParentIdentifier();
+              return CnHttpFactory.instance( {
+                path: parentIdentifier.subject + '/' + parentIdentifier.identifier,
+                data: { select: { column: 'name' } }
+              } ).get().then( function( response ) {
+                self.parentName = response.data.name;
+              } );
+            } );
+          }
+        } );
+      };
       return { instance: function( parentModel ) { return new object( parentModel ); } };
     }
   ] );
@@ -158,6 +177,10 @@ cenozoApp.initQnairePartModule = function( module, type ) {
         this.addModel = CnAddFactory.instance( this );
         this.listModel = CnListFactory.instance( this );
         this.viewModel = CnViewFactory.instance( this, root );
+
+        this.getBreadcrumbParentTitle = function() {
+          return 'view' == this.getActionFromState() ? this.viewModel.record.parent_name : this.addModel.parentName;
+        };
       };
 
       return {

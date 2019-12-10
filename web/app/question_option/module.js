@@ -19,4 +19,17 @@ define( function() {
   module.addInput( '', 'exclusive', { title: 'Exclusive', type: 'boolean' } );
   module.addInput( '', 'extra', { title: 'Extra', type: 'enum' } );
   module.addInput( '', 'multiple_answers', { title: 'Multiple Answers', type: 'boolean' } );
+  module.addInput( '', 'minimum', {
+    title: 'Minimum',
+    type: 'string',
+    format: 'float',
+    isExcluded: function( $state, model ) { return 'number' != model.viewModel.record.type; }
+  } );
+  module.addInput( '', 'maximum', {
+    title: 'Maximum',
+    type: 'string',
+    format: 'float',
+    isExcluded: function( $state, model ) { return 'number' != model.viewModel.record.type; }
+  } );
+  module.addInput( '', 'parent_name', { column: 'question.name', isExcluded: true } );
 } );

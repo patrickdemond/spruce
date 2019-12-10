@@ -48,7 +48,6 @@ class response extends \cenozo\database\record
   /**
    * Moves the response to the next valid page
    * 
-   * TODO: page restriction logic still needs to be applied here
    * @access public
    */
   public function move_to_next_page()
@@ -122,7 +121,6 @@ class response extends \cenozo\database\record
   /**
    * Moves the response to the previous valid page
    * 
-   * TODO: page restriction logic still needs to be applied here
    * @access public
    */
   public function move_to_previous_page()

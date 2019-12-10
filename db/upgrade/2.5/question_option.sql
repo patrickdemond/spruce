@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS question_option (
   exclusive TINYINT(1) NOT NULL DEFAULT 0,
   extra ENUM('number', 'string', 'text') NULL DEFAULT NULL,
   multiple_answers TINYINT(1) NOT NULL DEFAULT 0,
+  minimum FLOAT NULL DEFAULT NULL,
+  maximum FLOAT NULL DEFAULT NULL,
   precondition TEXT NULL,
   PRIMARY KEY (id),
   INDEX fk_question_id (question_id ASC),
