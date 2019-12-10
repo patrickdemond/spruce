@@ -910,7 +910,7 @@ class import
       }
 
       // replace attributes
-      if( preg_match_all( '/TOKEN:(ATTRIBUTE_[0-9]+)/', $precondition, $matches ) )
+      if( preg_match_all( '/TOKEN: ?(ATTRIBUTE_[0-9]+)/', $precondition, $matches ) )
         foreach( $matches[1] as $index => $match ) // index 1 will contain the sXgXq code
           $precondition = str_replace( $matches[0][$index], $attribute_list[$page['sid']][$match]['name'], $precondition );
 
@@ -922,6 +922,54 @@ class import
           $page['id']
         );
         if( false === $this->db->query( $sql ) ) error( $this->db->error );
+      }
+    }
+
+    // convert token and question variables in question descriptions
+    $sql = sprintf(
+      'SELECT sid, question_description.id, value '.
+      'FROM question_description '.
+      'JOIN question ON question_description.question_id = question.id '.
+      'JOIN %s.questions ON question.qid = questions.qid AND questions.language = "en" '.
+      'WHERE value LIKE "%%{TOKEN:%%" OR value LIKE "%%{INSERTANS:%%"',
+      $this->lsdb
+    );
+    $result = $this->db->query( $sql );
+    if( false === $result ) error( $this->db->error );
+    foreach( $result as $row )
+    {
+      // replace token attributes (example: {TOKEN: ATTRIBUTE_2})
+      if( preg_match_all( '/{TOKEN: ?(ATTRIBUTE_[0-9]+)}/', $row['value'], $matches ) )
+      {
+        foreach( $matches[1] as $index => $match )
+        {
+          $sql = sprintf(
+            'UPDATE question_description '.
+            'SET value = REPLACE( value, "%s", "%s" ) '.
+            'WHERE id = %d',
+            $matches[0][$index],
+            $attribute_list[$row['sid']][$match]['name'],
+            $row['id']
+          );
+          if( false === $this->db->query( $sql ) ) error( $this->db->error );
+        }
+      }
+
+      // replace question codes (example: {INSERTANS:126673X396X14886EPI_CAUS_SEIZ_TRF2})
+      if( preg_match_all( '/{INSERTANS:[0-9]+X[0-9]+X([0-9]+)([A-Za-z0-9_]+)}/', $row['value'], $matches ) )
+      {
+        foreach( $matches[1] as $index => $match )
+        {
+          $sql = sprintf(
+            'UPDATE question_description '.
+            'SET value = REPLACE( value, "%s", "%s" ) '.
+            'WHERE id = %d',
+            $matches[0][$index],
+            sprintf( '%s_%s', str_replace( '_TRF2', '', $page_list[$match]['name'] ), $matches[2][$index] ),
+            $row['id']
+          );
+          if( false === $this->db->query( $sql ) ) error( $this->db->error );
+        }
       }
     }
 
