@@ -301,7 +301,7 @@ define( function() {
               self.questionList.forEach( function( question, questionIndex ) {
                 question.descriptions = parseDescriptions( question.descriptions );
                 question.value = angular.fromJson( question.value );
-                question.backupValue = angular.copy( self.value );
+                question.backupValue = angular.copy( question.value );
 
                 // make sure we have the first non-comment question set as the first key question
                 if( null == self.keyQuestionIndex && 'comment' != question.type ) self.keyQuestionIndex = questionIndex;
@@ -311,7 +311,7 @@ define( function() {
                   promiseList.push( CnHttpFactory.instance( {
                     path: ['question', question.id, 'question_option'].join( '/' ),
                     data: {
-                      select: { column: ['name', 'exclusive', 'extra', 'multiple_answers', 'descriptions'] },
+                      select: { column: ['name', 'exclusive', 'extra', 'multiple_answers', 'minimum', 'maximum', 'descriptions'] },
                       modifier: { order: 'question_option.rank' }
                     }
                   } ).query().then( function( response ) {
@@ -389,34 +389,65 @@ define( function() {
           },
 
           setAnswer: function( question, value ) {
-            if( "" === value ) value = null;
+            // if the question's type is a number then make sure it falls within the min/max values
+            var tooSmall = 'number' == question.type && null != value &&
+                           ( null != question.minimum && value < question.minimum );
+            var tooLarge = 'number' == question.type && null != value &&
+                           ( null != question.maximum && value > question.maximum );
 
-            // first communicate with the server (if we're working with a response)
-            if( 'response' == self.parentModel.getSubjectFromState() ) {
-              return this.runQuery( function() {
-                return CnHttpFactory.instance( {
-                  path: 'answer/' + question.answer_id,
-                  data: { value: angular.toJson( value ) }
-                } ).patch().then( function() {
-                  question.backupValue = angular.copy( question.value );
+            return this.runQuery(
+              tooSmall || tooLarge ?
+
+              // When the number is out of bounds then alert the user
+              function() {
+                return CnModalMessageFactory.instance( {
+                  title: 'Value is too ' + ( tooSmall ? 'small' : 'large' ),
+                  message: 'Please provide an answer that is ' + (
+                    null == question.maximum ? 'equal to or greater than ' + question.minimum + '.' :
+                    null == question.minimum ? 'equal to or less than ' + question.maximum :
+                    'between ' + question.minimum + ' and ' + question.maximum + '.'
+                  )
+                } ).show().then( function() {
+                  question.value = angular.copy( question.backupValue );
+                  if( 'response' == self.parentModel.getSubjectFromState() ) self.pageComplete = self.pageIsDone();
+                  self.convertValueToModel( question );
+                } );
+              } :
+
+              // No out of bounds detected, so proceed with setting the value
+              function() {
+                if( "" === value ) value = null;
+                var promise = 'response' == self.parentModel.getSubjectFromState() ?
+                  // first communicate with the server (if we're working with a response)
+                  CnHttpFactory.instance( {
+                    path: 'answer/' + question.answer_id,
+                    data: { value: angular.toJson( value ) },
+                    onError: function() {
+                      question.value = angular.copy( question.backupValue );
+                      self.convertValueToModel( question );
+                    }
+                  } ).patch() : $q.all();
+
+                return promise.then( function() {
                   question.value = value;
-                  self.pageComplete = self.pageIsDone();
+                  question.backupValue = angular.copy( question.value );
                   self.convertValueToModel( question );
 
-                  if( 'list' == question.type ) {
-                    for( var element of document.getElementsByName( 'answerValue' ) ) {
-                      var match = element.id.match( /option([0-9]+)value[0-9]+/ );
-                      if( 1 < match.length ) {
-                        var optionId = match[1];
-                        if( null == searchOptionList( question.value, optionId ) ) element.value = null;
+                  if( 'response' == self.parentModel.getSubjectFromState() ) {
+                    self.pageComplete = self.pageIsDone();
+                    if( 'list' == question.type ) {
+                      for( var element of document.getElementsByName( 'answerValue' ) ) {
+                        var match = element.id.match( /option([0-9]+)value[0-9]+/ );
+                        if( 1 < match.length ) {
+                          var optionId = match[1];
+                          if( null == searchOptionList( question.value, optionId ) ) element.value = null;
+                        }
                       }
                     }
                   }
                 } );
-              } );
-            }
-
-            return $q.all();
+              }
+            );
           },
 
           getValueForNewOption: function( question, option ) {
@@ -436,15 +467,15 @@ define( function() {
           },
 
           addOption: function( question, option ) {
-            console.log( 'add', question.id, option.id );
             this.setAnswer( question, this.getValueForNewOption( question, option ) ).then( function() {
               // if the option has extra data then focus its associated input
-              if( null != option.extra ) $timeout( function() { document.getElementById( 'option' + option.id + 'value0' ).focus(); }, 50 );
+              if( null != option.extra ) {
+                $timeout( function() { document.getElementById( 'option' + option.id + 'value0' ).focus(); }, 50 );
+              }
             } );
           },
 
           removeOption: function( question, option ) {
-            console.log( 'remove', question.id, option.id );
             // get the current value array and remove the option from it
             var value = angular.isArray( question.value ) ? question.value : [];
             var optionIndex = searchOptionList( value, option.id );
@@ -481,33 +512,55 @@ define( function() {
           },
 
           setAnswerValue: function( question, option, valueIndex, answerValue ) {
-            console.log( 'set', question.id, option.id, valueIndex, answerValue );
-            var value = question.value;
-            var optionIndex = searchOptionList( value, option.id );
-            if( null != optionIndex ) {
-              if( option.multiple_answers ) {
-                if( 0 < answerValue.trim().length ) {
-                  // does the value already exist?
-                  var existingValueIndex = value[optionIndex].value.indexOf( answerValue );
-                  if( 0 <= existingValueIndex ) {
-                    // don't add the answer, instead focus on the existing one and highlight it
-                    document.getElementById( 'option' + option.id + 'value' + valueIndex ).value = null;
-                    var element = document.getElementById( 'option' + option.id + 'value' + existingValueIndex );
-                    element.focus();
-                    element.select();
+            // if the question option's extra type is a number then make sure it falls within the min/max values
+            var tooSmall = 'number' == option.extra && null != answerValue &&
+                           ( null != option.minimum && answerValue < option.minimum );
+            var tooLarge = 'number' == option.extra && null != answerValue &&
+                           ( null != option.maximum && answerValue > option.maximum );
+
+            if( tooSmall || tooLarge ) {
+              this.runQuery( function() {
+                return CnModalMessageFactory.instance( {
+                  title: 'Value is too ' + ( tooSmall ? 'small' : 'large' ),
+                  message: 'Please provide an answer that is ' + (
+                    null == option.maximum ? 'equal to or greater than ' + option.minimum + '.' :
+                    null == option.minimum ? 'equal to or less than ' + option.maximum :
+                    'between ' + option.minimum + ' and ' + option.maximum + '.'
+                  )
+                } ).show().then( function() {
+                  // put the old value back
+                  var element = document.getElementById( 'option' + option.id + 'value' + valueIndex );
+                  element.value = question.answer.optionList[option.id].valueList[valueIndex];
+                } );
+              } );
+            } else {
+              var value = question.value;
+              var optionIndex = searchOptionList( value, option.id );
+              if( null != optionIndex ) {
+                if( option.multiple_answers ) {
+                  if( null == answerValue || ( angular.isString( answerValue ) && 0 < answerValue.trim().length ) ) {
+                    // if the value is blank then remove it
+                    value[optionIndex].value.splice( valueIndex, 1 );
                   } else {
-                    value[optionIndex].value[valueIndex] = answerValue;
+                    // does the value already exist?
+                    var existingValueIndex = value[optionIndex].value.indexOf( answerValue );
+                    if( 0 <= existingValueIndex ) {
+                      // don't add the answer, instead focus on the existing one and highlight it
+                      document.getElementById( 'option' + option.id + 'value' + valueIndex ).value = null;
+                      var element = document.getElementById( 'option' + option.id + 'value' + existingValueIndex );
+                      element.focus();
+                      element.select();
+                    } else {
+                      value[optionIndex].value[valueIndex] = answerValue;
+                    }
                   }
                 } else {
-                  // if the value is blank then remove it
-                  value[optionIndex].value.splice( valueIndex, 1 );
+                  value[optionIndex].value = answerValue ? answerValue : null;
                 }
-              } else {
-                value[optionIndex].value = answerValue ? answerValue : null;
               }
-            }
 
-            this.setAnswer( question, value );
+              this.setAnswer( question, value );
+            }
           },
 
           viewPage: function() {

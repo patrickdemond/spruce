@@ -104,6 +104,12 @@ BEGIN
       SIGNAL SQLSTATE '23000' SET MESSAGE_TEXT = @sql, MYSQL_ERRNO = 1062;
     END IF;
   END IF;
+
+  -- remove minimum and maximum if type is being changed from number
+  IF( OLD.type != NEW.type AND "number" = OLD.type ) THEN
+    SET NEW.minimum = NULL;
+    SET NEW.maximum = NULL;
+  END IF;
 END$$
 
 DELIMITER ;

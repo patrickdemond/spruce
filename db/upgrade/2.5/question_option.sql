@@ -61,6 +61,12 @@ BEGIN
     SET MESSAGE_TEXT = "Invalid name character string: must RLIKE ^[a-z0-9_]+$",
     MYSQL_ERRNO = 1300;
   END IF;
+
+  -- remove minimum and maximum if extra is being changed from number
+  IF( NOT( OLD.extra <=> NEW.extra ) AND "number" = OLD.extra ) THEN
+    SET NEW.minimum = NULL;
+    SET NEW.maximum = NULL;
+  END IF;
 END$$
 
 DELIMITER ;
