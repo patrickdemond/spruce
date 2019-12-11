@@ -23,13 +23,13 @@ define( function() {
     title: 'Minimum',
     type: 'string',
     format: 'float',
-    isExcluded: function( $state, model ) { return 'number' != model.viewModel.record.extra; }
+    isExcluded: function( $state, model ) { return 'number' != model.viewModel.record.extra ? true : 'add'; }
   } );
   module.addInput( '', 'maximum', {
     title: 'Maximum',
     type: 'string',
     format: 'float',
-    isExcluded: function( $state, model ) { return 'number' != model.viewModel.record.extra; }
+    isExcluded: function( $state, model ) { return 'number' != model.viewModel.record.extra ? true : 'add'; }
   } );
   module.addInput( '', 'parent_name', { column: 'question.name', isExcluded: true } );
 } );

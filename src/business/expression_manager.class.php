@@ -39,6 +39,44 @@ class expression_manager extends \cenozo\singleton
 
   /**
    * TODO: document
+   */
+  public function evaluate( $record, $precondition )
+  {
+    if( is_a( $record, lib::get_class_name( 'database\qnaire' ) ) )
+    {
+      $db_response = NULL;
+      $db_qnaire = $record;
+    }
+    else if( is_a( $record, lib::get_class_name( 'database\response' ) ) )
+    {
+      $db_response = $record;
+      $db_qnaire = $db_response->get_qnaire();
+    }
+    else throw lib::create( 'exception\argument', 'record', $record, __METHOD__ );
+
+    $compiled = $this->compile( $record, $precondition );
+    try
+    {
+      $response = is_null( $db_response ) ? true : eval( sprintf( 'return (%s);', $compiled ) );
+    }
+    catch( \ParseError $e )
+    {
+      throw lib::create( 'exception\runtime',
+        sprintf(
+          "An error in a precondition has been detected:\n  Expression: %s\n  Compiled: %s\n  Error: %s",
+          $precondition,
+          $compiled,
+          $e->getMessage()
+        ),
+        __METHOD__
+      );
+    }
+
+    return $response;
+  }
+
+  /**
+   * TODO: document
    * 
    * values:
    *   @NAME@ (response attribute)
@@ -74,8 +112,14 @@ class expression_manager extends \cenozo\singleton
    *   ( must have same number opening as closing
    *   ) must have same number opening as closing
    */
-  public function evaluate( $record, $precondition )
+  public function compile( $record, $precondition, $override_question_object = NULL )
   {
+    // if an override object is proided then make sure it's either a question or question_option
+    if( !is_null( $override_question_object ) &&
+        !is_a( $override_question_object, lib::get_class_name( 'database\question' ) ) &&
+        !is_a( $override_question_object, lib::get_class_name( 'database\question_option' ) ) )
+      throw lib::create( 'exception\argument', 'override_question_object', $override_question_object, __METHOD__ );
+
     if( is_a( $record, lib::get_class_name( 'database\qnaire' ) ) )
     {
       $db_response = NULL;
@@ -155,13 +199,12 @@ class expression_manager extends \cenozo\singleton
         else if( 'question' == $this->active_term )
         {
           if( '$' != $char ) $this->term .= $char;
-          else $compiled .= $this->process_question( $db_qnaire, $db_response );
+          else $compiled .= $this->process_question( $db_qnaire, $db_response, $override_question_object );
           $process_char = false;
         }
 
         if( $process_char ) $compiled .= $this->process_character( $char );
       }
-
 
       if( 0 != $this->open_bracket ) 
       {
@@ -195,25 +238,7 @@ class expression_manager extends \cenozo\singleton
       );
     }
 
-    $compiled = strtolower( $compiled );
-    try
-    {
-      $response = is_null( $db_response ) ? true : eval( sprintf( 'return (%s);', $compiled ) );
-    }
-    catch( \ParseError $e )
-    {
-      throw lib::create( 'exception\runtime',
-        sprintf(
-          "An error in a precondition has been detected:\n  Expression: %s\n  Compiled: %s\n  Error: %s",
-          $precondition,
-          $compiled,
-          $e->getMessage()
-        ),
-        __METHOD__
-      );
-    }
-
-    return $response;
+    return strtolower( $compiled );
   }
 
   /**
@@ -388,8 +413,23 @@ class expression_manager extends \cenozo\singleton
   /**
    * TODO: document
    */
-  private function process_question( $db_qnaire, $db_response = NULL )
+  private function process_question( $db_qnaire, $db_response = NULL, $override_question_object = NULL )
   {
+    $db_override_question = NULL;
+    $db_override_question_option = NULL;
+    if( !is_null( $override_question_object ) )
+    {
+      if( is_a( $override_question_object, lib::get_class_name( 'database\question' ) ) )
+      {
+        $db_override_question = $override_question_object;
+      }
+      else if( is_a( $override_question_object, lib::get_class_name( 'database\question_option' ) ) )
+      {
+        $db_override_question_option = $override_question_object;
+      }
+      else throw lib::create( 'exception\argument', 'override_question_object', $override_question_object, __METHOD__ );
+    }
+
     $answer_class_name = lib::get_class_name( 'database\answer' );
     $question_option_class_name = lib::get_class_name( 'database\question_option' );
 
@@ -442,10 +482,19 @@ class expression_manager extends \cenozo\singleton
     if( !is_null( $this->last_term ) && 'operator' != $this->last_term )
       throw lib::create( 'exception\runtime', 'Question found but expecting an operator', __METHOD__ );
 
-    // if a response was provided replace the term with the attribute's value
+    // if a response was provided and there is no override then replace the term with the attribute's value
     $compiled = sprintf( '$%s$', $this->term );
-    if( !is_null( $db_response ) )
-    {
+    if( !is_null( $db_response ) && (
+      // make sure the question isn't overridden
+      is_null( $db_override_question ) ||
+      $db_question->page_id != $db_override_question->page_id ||
+      $db_question->rank >= $db_override_question->rank
+    ) && (
+      // make sure the question_option isn't overridden
+      is_null( $db_override_question_option ) ||
+      $db_question_option->question_id != $db_override_question_option->question_id ||
+      $db_question_option->rank >= $db_override_question_option->rank
+    ) ) {
       $db_answer = $answer_class_name::get_unique_record(
         array( 'response_id', 'question_id' ),
         array( $db_response->id, $db_question->id )
@@ -493,10 +542,9 @@ class expression_manager extends \cenozo\singleton
       }
     }
 
-    // the text type is just a long string
-    // if the last term was an operator then assume we now represent a boolean expression
-    $this->last_term = 'operator' == $this->last_term ? 'boolean' : $db_question->type;
-    $this->active_term = NULL;
+    $this->last_term = !is_null( $db_question_option )
+                     ? ( is_null( $db_question_option->extra ) ? 'boolean' : $db_question_option->extra )
+                     : $this->last_term = $db_question->type;
     $this->active_term = NULL;
 
     return $compiled;

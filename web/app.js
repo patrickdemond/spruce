@@ -131,13 +131,16 @@ cenozoApp.initQnairePartModule = function( module, type ) {
             var self = this;
             return this.$$onNew( record ).then( function() {
               // get the parent page's name
+              self.parentName = null;
               var parentIdentifier = parentModel.getParentIdentifier();
-              return CnHttpFactory.instance( {
-                path: parentIdentifier.subject + '/' + parentIdentifier.identifier,
-                data: { select: { column: 'name' } }
-              } ).get().then( function( response ) {
-                self.parentName = response.data.name;
-              } );
+              if( angular.isDefined( parentIdentifier.subject ) ) {
+                return CnHttpFactory.instance( {
+                  path: parentIdentifier.subject + '/' + parentIdentifier.identifier,
+                  data: { select: { column: 'name' } }
+                } ).get().then( function( response ) {
+                  self.parentName = response.data.name;
+                } );
+              }
             } );
           }
         } );

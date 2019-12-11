@@ -74,7 +74,9 @@ class response extends \cenozo\database\record
       $complete = true;
 
       $object_list = array();
-      foreach( $db_page->get_question_object_list() as $db_question )
+      $question_mod = lib::create( 'database\modifier' );
+      $question_mod->where( 'type', '!=', 'comment' ); // comments don't have answers
+      foreach( $db_page->get_question_object_list( $question_mod ) as $db_question )
       {
         $db_answer = $answer_class_name::get_unique_record(
           array( 'response_id', 'question_id' ),

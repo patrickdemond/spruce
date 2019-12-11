@@ -28,7 +28,7 @@ class query extends \cenozo\service\query
       $join_mod->where( 'question.id', '=', 'answer.question_id', false );
       $join_mod->where( 'answer.response_id', '=', $db_response->id );
       $this->modifier->join_modifier( 'answer', $join_mod, 'left' );
-      $this->modifier->join( 'language', 'answer.language_id', 'language.id' );
+      $this->modifier->left_join( 'language', 'answer.language_id', 'language.id' );
 
       $this->select->add_table_column( 'language', 'code', 'language' );
       $this->select->add_table_column( 'answer', 'id', 'answer_id' );
@@ -57,71 +57,84 @@ class query extends \cenozo\service\query
 
       foreach( $list as $index => $record )
       {
-        // convert attributes
-        preg_match_all( '/@[A-Za-z0-9_]+@/', $record['descriptions'], $matches );
-        foreach( $matches[0] as $match )
+        // compile preconditions
+        if( array_key_exists( 'precondition', $record ) )
         {
-          $attribute_name = substr( $match, 1, -1 );
-          $db_attribute = $attribute_class_name::get_unique_record(
-            array( 'qnaire_id', 'name' ),
-            array( $db_qnaire->id, $attribute_name )
+          $list[$index]['precondition'] = $expression_manager->compile(
+            $db_response,
+            $record['precondition'],
+            lib::create( 'database\question', $record['id'] )
           );
-
-          if( is_null( $db_attribute ) )
-          {
-            if( !$db_qnaire->debug )
-            {
-              log::warning( sprintf(
-                'Invalid attribute found in question description for id %d (%s)',
-                $record['id'],
-                $record['name']
-              ) );
-              $list[$index]['descriptions'] = str_replace( $match, '', $record['descriptions'] );
-            }
-          }
-          else
-          {
-            $db_response_attribute = $response_attribute_class_name::get_unique_record(
-              array( 'response_id', 'attribute_id' ),
-              array( $db_response->id, $db_attribute->id )
-            );
-            $list[$index]['descriptions'] = str_replace( $match, $db_response_attribute->value, $record['descriptions'] );
-          }
         }
 
-        // convert questions
-        preg_match_all( '/\$[A-Za-z0-9_]+\$/', $record['descriptions'], $matches );
-        foreach( $matches[0] as $match )
+        if( array_key_exists( 'descriptions', $record ) )
         {
-          $question_name = substr( $match, 1, -1 );
-          $db_question = $db_qnaire->get_question( $question_name );
-          if( is_null( $db_question ) || 'comment' == $db_question->type || 'list' == $db_question->type )
+          // convert attributes
+          preg_match_all( '/@[A-Za-z0-9_]+@/', $record['descriptions'], $matches );
+          foreach( $matches[0] as $match )
           {
-            if( !$db_qnaire->debug )
+            $attribute_name = substr( $match, 1, -1 );
+            $db_attribute = $attribute_class_name::get_unique_record(
+              array( 'qnaire_id', 'name' ),
+              array( $db_qnaire->id, $attribute_name )
+            );
+
+            if( is_null( $db_attribute ) )
             {
-              log::warning( sprintf(
-                'Invalid question found in question description for id %d (%s)',
-                $record['id'],
-                $record['name']
-              ) );
-              $list[$index]['descriptions'] = str_replace( $match, '', $record['descriptions'] );
+              if( !$db_qnaire->debug )
+              {
+                log::warning( sprintf(
+                  'Invalid attribute found in question description for id %d (%s)',
+                  $record['id'],
+                  $record['name']
+                ) );
+                $list[$index]['descriptions'] = str_replace( $match, '', $record['descriptions'] );
+              }
+            }
+            else
+            {
+              $db_response_attribute = $response_attribute_class_name::get_unique_record(
+                array( 'response_id', 'attribute_id' ),
+                array( $db_response->id, $db_attribute->id )
+              );
+              $list[$index]['descriptions'] = str_replace( $match, $db_response_attribute->value, $record['descriptions'] );
             }
           }
-          else
+
+          // convert questions
+          preg_match_all( '/\$[A-Za-z0-9_]+\$/', $record['descriptions'], $matches );
+          foreach( $matches[0] as $match )
           {
-            $db_answer = $answer_class_name::get_unique_record(
-              array( 'response_id', 'question_id' ),
-              array( $db_response->id, $db_question->id )
-            );
-            $value = is_null( $db_answer ) ? NULL : util::json_decode( $db_answer->value );
+            $question_name = substr( $match, 1, -1 );
+            $db_question = $db_qnaire->get_question( $question_name );
+            if( is_null( $db_question ) || 'comment' == $db_question->type || 'list' == $db_question->type )
+            {
+              if( !$db_qnaire->debug )
+              {
+                log::warning( sprintf(
+                  'Invalid question found in question description for id %d (%s)',
+                  $record['id'],
+                  $record['name']
+                ) );
+                $list[$index]['descriptions'] = str_replace( $match, '', $record['descriptions'] );
+              }
+            }
+            else
+            {
+              $db_answer = $answer_class_name::get_unique_record(
+                array( 'response_id', 'question_id' ),
+                array( $db_response->id, $db_question->id )
+              );
+              $value = is_null( $db_answer ) ? NULL : util::json_decode( $db_answer->value );
 
-            if( is_object( $value ) && property_exists( $value, 'dkna' ) && $value->dkna ) $compiled = '(no answer)';
-            else if( is_object( $value ) && property_exists( $value, 'refuse' ) && $value->refuse ) $compiled = '(no answer)';
-            else if( is_null( $value ) ) $compiled = '';
-            else if( 'boolean' == $db_question->type ) $compiled = $value ? 'true' : 'false';
-            else $compiled = $value;
+              if( is_object( $value ) && property_exists( $value, 'dkna' ) && $value->dkna ) $compiled = '(no answer)';
+              else if( is_object( $value ) && property_exists( $value, 'refuse' ) && $value->refuse ) $compiled = '(no answer)';
+              else if( is_null( $value ) ) $compiled = '';
+              else if( 'boolean' == $db_question->type ) $compiled = $value ? 'true' : 'false';
+              else $compiled = $value;
 
-            $list[$index]['descriptions'] = str_replace( $match, $compiled, $record['descriptions'] );
+              $list[$index]['descriptions'] = str_replace( $match, $compiled, $record['descriptions'] );
+            }
           }
         }
       }

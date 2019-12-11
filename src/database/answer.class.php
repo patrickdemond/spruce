@@ -61,12 +61,20 @@ class answer extends \cenozo\database\record
    */
   public function is_complete()
   {
+    $expression_manager = lib::create( 'business\expression_manager' );
     $value = util::json_decode( $this->value );
+    $db_question = $this->get_question();
+
+    // comment questions are always complete
+    if( 'comment' == $db_question->type ) return true;
+
+    // hidden questions are always complete
+    if( !$expression_manager->evaluate( $this->get_response(), $db_question->precondition ) ) return true;
 
     // null values are never complete
     if( is_null( $value ) ) return false;
 
-    if( 'list' == $this->get_question()->type && is_array( $value ) )
+    if( 'list' == $db_question->type && is_array( $value ) )
     {
       // make sure there is at least one selected option
       foreach( $value as $selected_option )

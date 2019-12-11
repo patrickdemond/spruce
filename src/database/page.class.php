@@ -114,9 +114,28 @@ class page extends base_qnaire_part
    */
   public function get_next_for_response( $db_response )
   {
+    $answer_class_name = lib::get_class_name( 'database\answer' );
     $expression_manager = lib::create( 'business\expression_manager' );
 
-    // start by getting the page one rank lower than the current
+    // delete any answer associated with a skipped question on the current page
+    $question_sel = lib::create( 'database\select' );
+    $question_sel->add_column( 'id' );
+    $question_sel->add_column( 'precondition' );
+    $question_mod = lib::create( 'database\modifier' );
+    $question_mod->where( 'question.precondition', '!=', NULL );
+    foreach( $this->get_question_list( $question_sel, $question_mod ) as $question )
+    {
+      if( !$expression_manager->evaluate( $db_response, $question['precondition'] ) )
+      {
+        $db_answer = $answer_class_name::get_unique_record(
+          array( 'response_id', 'question_id' ),
+          array( $db_response->id, $question['id'] )
+        );
+        if( !is_null( $db_answer ) ) $db_answer->delete();
+      }
+    }
+
+    // get the page one rank lower than the current
     $db_next_page = $this->get_next();
 
     if( !is_null( $db_next_page ) )

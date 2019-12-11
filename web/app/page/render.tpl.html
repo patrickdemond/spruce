@@ -52,7 +52,7 @@
                 ng-bind-html="model.viewModel.record.module_descriptions[model.renderModel.currentLanguage] | cnNewlines"></span>
           <span class="text-info"
                 ng-bind-html="model.viewModel.record.descriptions[model.renderModel.currentLanguage] | cnNewlines"></span>
-          <div ng-repeat="question in model.renderModel.questionList">
+          <div ng-repeat="question in model.renderModel.getVisibleQuestionList()">
             <hr ng-if="!$first" />
             <div ng-if="'comment' == question.type"
                  class="vertical-spacer text-info"

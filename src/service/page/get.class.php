@@ -45,7 +45,9 @@ class get extends \cenozo\service\get
       // create answers for all questions on this page if they don't already exist
       $question_sel = lib::create( 'database\select' );
       $question_sel->add_column( 'id' );
-      foreach( $db_page->get_question_list( $question_sel ) as $question )
+      $question_mod = lib::create( 'database\modifier' );
+      $question_mod->where( 'type', '!=', 'comment' ); // comments don't have answers
+      foreach( $db_page->get_question_list( $question_sel, $question_mod ) as $question )
       {
         if( is_null( $answer_class_name::get_unique_record(
           array( 'response_id', 'question_id' ),

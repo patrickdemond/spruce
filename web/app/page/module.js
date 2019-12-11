@@ -56,6 +56,11 @@ define( function() {
     return optionIndex;
   }
 
+  // used by services below to evaluate whether a question or question_option should be visible
+  function evaluatePrecondition( precondition ) {
+    return Function('"use strict"; return ' + precondition + ';')();
+  }
+
   /* ######################################################################################################## */
   cenozo.providers.directive( 'cnPageRender', [
     'CnPageModelFactory', 'CnTranslationHelper', 'CnSession', 'CnHttpFactory', '$q', '$state', '$document',
@@ -257,6 +262,12 @@ define( function() {
 
           pageIsDone: function() {
             return !this.questionList.some( function( question ) {
+              // comment questions are always complete
+              if( 'comment' == question.type ) return false;
+
+              // hidden questions are always complete
+              if( !self.isQuestionVisible( question ) ) return false;
+
               // null values are never complete
               if( null == question.value ) return true;
 
@@ -281,10 +292,85 @@ define( function() {
             } );
           },
 
+          isQuestionVisible: function( question ) {
+            // empty preconditions are always "true"
+            if( null == question.precondition ) return true;
+
+            // boolean preconditions are already evaluated
+            if( true == question.precondition || false == question.precondition ) return question.precondition;
+
+            // everything else needs to be evaluated
+            var precondition = question.precondition;
+            var matches = precondition.match( /\$[^$]+\$/g );
+            if( null != matches ) matches.forEach( function( match ) {
+              var parts = match.slice( 1, -1 ).toLowerCase().split( ':' );
+              var questionName = parts[0];
+              var optionName = 1 < parts.length ? parts[1] : null;
+
+              // find the referenced question
+              var matchedQuestion = null;
+              self.questionList.some( function( question ) {
+                if( questionName == question.name.toLowerCase() ) {
+                  matchedQuestion = question;
+                  return true;
+                }
+              } );
+
+              var compiled = 'null';
+              if( null != matchedQuestion ) {
+                if( 'boolean' == matchedQuestion.type ) {
+                  if( true === matchedQuestion.value ) compiled = 'true';
+                  else if( false === matchedQuestion.value ) compiled = 'false';
+                } else if( 'number' == matchedQuestion.type ) {
+                  if( angular.isNumber( matchedQuestion.value ) ) compiled = matchedQuestion.value;
+                } else if( 'string' == matchedQuestion.type ) {
+                  if( angular.isString( matchedQuestion.value ) ) compiled = "'" + matchedQuestion.value.replace( /'/g, "\\'" ) + "'";
+                } else if( 'list' == matchedQuestion.type ) {
+                  // find the referenced option
+                  var matchedOption = null;
+                  matchedQuestion.optionList.some( function( option ) {
+                    if( optionName == option.name.toLowerCase() ) {
+                      matchedOption = option;
+                      return true;
+                    }
+                  } );
+
+                  if( null != matchedOption && angular.isArray( matchedQuestion.value ) ) {
+                    if( null == matchedOption.extra ) {
+                      compiled = matchedQuestion.value.includes( matchedOption.id ) ? 'true' : 'false';
+                    } else {
+                      var answer = matchedQuestion.value.findByProperty( 'id', matchedOption.id );
+                      if( angular.isObject( answer ) && angular.isDefined( answer.value ) ) {
+                        if( 'number' == matchedOption.extra ) {
+                          if( angular.isNumber( answer.value ) ) compiled = answer.value;
+                        } else if( 'string' == matchedOption.extra ) {
+                          if( angular.isString( answer.value ) ) compiled = "'" + answer.value.replace( /'/g, "\\'" ) + "'";
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+
+              precondition = precondition.replace( match, compiled );
+            } );
+
+            return evaluatePrecondition( precondition );
+          },
+
+          getVisibleQuestionList: function() {
+            return this.questionList.filter( question => self.isQuestionVisible( question ) );
+          },
+
           onLoad: function() {
             return CnHttpFactory.instance( {
               path: this.parentModel.getServiceResourcePath() + '/question',
-              data: { select: { column: [ 'rank', 'name', 'type', 'mandatory', 'dkna_refuse', 'minimum', 'maximum', 'descriptions' ] } }
+              data: {
+                select: { column: [
+                  'rank', 'name', 'type', 'mandatory', 'dkna_refuse', 'minimum', 'maximum', 'precondition', 'descriptions'
+                ] },
+                modifier: { order: 'question.rank' }
+              }
             } ).query().then( function( response ) {
               var promiseList = [];
               angular.extend( self, {
@@ -311,7 +397,9 @@ define( function() {
                   promiseList.push( CnHttpFactory.instance( {
                     path: ['question', question.id, 'question_option'].join( '/' ),
                     data: {
-                      select: { column: ['name', 'exclusive', 'extra', 'multiple_answers', 'minimum', 'maximum', 'descriptions'] },
+                      select: { column: [
+                        'name', 'exclusive', 'extra', 'multiple_answers', 'minimum', 'maximum', 'precondition', 'descriptions'
+                      ] },
                       modifier: { order: 'question_option.rank' }
                     }
                   } ).query().then( function( response ) {
