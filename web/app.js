@@ -20,16 +20,9 @@ cenozoApp.initQnairePartModule = function( module, type ) {
       possessive: type.replace( / /g, ' ' ) + '\'s'
     },
     columnList: {
-      rank: {
-        title: 'Rank',
-        type: 'rank'
-      },
-      precondition: {
-        title: 'Precondition'
-      },
-      name: {
-        title: 'Name'
-      }
+      rank: { title: 'Rank', type: 'rank' },
+      name: { title: 'Name' },
+      precondition: { title: 'Precondition' }
     },
     defaultOrder: {
       column: 'rank',

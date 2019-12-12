@@ -56,11 +56,6 @@ define( function() {
     return optionIndex;
   }
 
-  // used by services below to evaluate whether a question or question_option should be visible
-  function evaluatePrecondition( precondition ) {
-    return Function('"use strict"; return ' + precondition + ';')();
-  }
-
   /* ######################################################################################################## */
   cenozo.providers.directive( 'cnPageRender', [
     'CnPageModelFactory', 'CnTranslationHelper', 'CnSession', 'CnHttpFactory', '$q', '$state', '$document',
@@ -260,47 +255,73 @@ define( function() {
             question.answer.refuse = angular.isObject( question.value ) && true === question.value.refuse;
           },
 
-          pageIsDone: function() {
-            return !this.questionList.some( function( question ) {
-              // comment questions are always complete
-              if( 'comment' == question.type ) return false;
+          questionIsComplete: function( question ) {
+            // comment questions are always complete
+            if( 'comment' == question.type ) return true;
 
-              // hidden questions are always complete
-              if( !self.isQuestionVisible( question ) ) return false;
+            // hidden questions are always complete
+            if( !this.evaluatePrecondition( question.precondition ) ) return true;
 
-              // null values are never complete
-              if( null == question.value ) return true;
+            // null values are never complete
+            if( null == question.value ) return false;
 
-              if( 'list' == question.type ) {
-                // extra options without a value don't count as an answer
-                return angular.isArray( question.value ) && question.value.some( function( o ) {
-                  var option = self.optionListById[angular.isObject( o ) ? o.id : o];
-                  if( option.extra ) {
-                    if( option.multiple_answers ) {
-                      // make sure there is at least one non null value
-                      return !angular.isArray( o.value ) || !o.value.some( function( value ) { return null != value; } );
-                    } else {
-                      // make sure the value is not null
-                      return null == o.value;
-                    }
-                  } else {
-                    // make sure the option is not null
-                    return null == o;
-                  }
-                } );
+            if( 'list' == question.type ) {
+              // get the list of all preconditions for all options belonging to this question
+              var preconditionListById = question.optionList.reduce( function( object, option ) {
+                object[option.id] = option.precondition;
+                return object;
+              }, {} );
+
+              // make sure that any selected item with extra data has provided that data
+              for( var index = 0; index < question.value.length; index++ ) {
+                var selectedOption = question.value[index];
+                var selectedOptionId = angular.isObject( selectedOption ) ? selectedOption.id : selectedOption;
+
+                if( angular.isObject( selectedOption ) ) {
+                  if( this.evaluatePrecondition( preconditionListById[selectedOptionId] ) && (
+                      ( angular.isArray( selectedOption.value ) && 0 == selectedOption.value.length ) ||
+                      null == selectedOption.value
+                  ) ) return false;
+                }
               }
+
+              // make sure there is at least one selected option
+              for( var index = 0; index < question.value.length; index++ ) {
+                var selectedOption = question.value[index];
+                var selectedOptionId = angular.isObject( selectedOption ) ? selectedOption.id : selectedOption;
+
+                if( this.evaluatePrecondition( preconditionListById[selectedOptionId] ) ) {
+                  if( angular.isObject( selectedOption ) ) {
+                    if( angular.isArray( selectedOption.value ) ) {
+                      // make sure there is at least one option value
+                      for( var valueIndex = 0; valueIndex < selectedOption.value; valueIndex++ )
+                        if( null != selectedOption.value[valueIndex] ) return true;
+                    } else if( null != selectedOption.value ) return true;
+                  } else if( null != selectedOption ) return true;
+                }
+              }
+
+              return false;
+            }
+
+            return true;
+          },
+
+          pageIsDone: function() {
+            // determine if any question is incomplete
+            return !this.questionList.some( function( question ) {
+              return !self.questionIsComplete( question );
             } );
           },
 
-          isQuestionVisible: function( question ) {
+          evaluatePrecondition: function( precondition ) {
             // empty preconditions are always "true"
-            if( null == question.precondition ) return true;
+            if( null == precondition ) return true;
 
             // boolean preconditions are already evaluated
-            if( true == question.precondition || false == question.precondition ) return question.precondition;
+            if( true == precondition || false == precondition ) return precondition;
 
             // everything else needs to be evaluated
-            var precondition = question.precondition;
             var matches = precondition.match( /\$[^$]+\$/g );
             if( null != matches ) matches.forEach( function( match ) {
               var parts = match.slice( 1, -1 ).toLowerCase().split( ':' );
@@ -309,9 +330,9 @@ define( function() {
 
               // find the referenced question
               var matchedQuestion = null;
-              self.questionList.some( function( question ) {
-                if( questionName == question.name.toLowerCase() ) {
-                  matchedQuestion = question;
+              self.questionList.some( function( q ) {
+                if( questionName == q.name.toLowerCase() ) {
+                  matchedQuestion = q;
                   return true;
                 }
               } );
@@ -328,9 +349,9 @@ define( function() {
                 } else if( 'list' == matchedQuestion.type ) {
                   // find the referenced option
                   var matchedOption = null;
-                  matchedQuestion.optionList.some( function( option ) {
-                    if( optionName == option.name.toLowerCase() ) {
-                      matchedOption = option;
+                  matchedQuestion.optionList.some( function( o ) {
+                    if( optionName == o.name.toLowerCase() ) {
+                      matchedOption = o;
                       return true;
                     }
                   } );
@@ -355,11 +376,17 @@ define( function() {
               precondition = precondition.replace( match, compiled );
             } );
 
-            return evaluatePrecondition( precondition );
+            // create a function which can be used to evaluate the compiled precondition without calling eval()
+            function evaluateExpression( precondition ) { return Function('"use strict"; return ' + precondition + ';')(); }
+            return evaluateExpression( precondition );
           },
 
           getVisibleQuestionList: function() {
-            return this.questionList.filter( question => self.isQuestionVisible( question ) );
+            return this.questionList.filter( question => self.evaluatePrecondition( question.precondition ) );
+          },
+
+          getVisibleOptionList: function( question ) {
+            return question.optionList.filter( option => self.evaluatePrecondition( option.precondition ) );
           },
 
           onLoad: function() {
@@ -643,7 +670,7 @@ define( function() {
                     }
                   }
                 } else {
-                  value[optionIndex].value = answerValue ? answerValue : null;
+                  value[optionIndex].value = '' !== answerValue ? answerValue : null;
                 }
               }
 

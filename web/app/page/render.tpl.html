@@ -81,7 +81,7 @@
                   {{ text( 'misc.no' ) }}
                 </label>
               </div>
-              <div ng-switch-when="list" ng-repeat="option in question.optionList">
+              <div ng-switch-when="list" ng-repeat="option in model.renderModel.getVisibleOptionList( question )">
                 <div ng-if="!option.multiple_answers" ng-class="{ 'col-xs-4 col-slim': null != option.extra }">
                   <label
                     class="btn btn-default full-width"

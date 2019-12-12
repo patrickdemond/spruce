@@ -515,7 +515,8 @@ class expression_manager extends \cenozo\singleton
         {
           foreach( $value as $selected_option )
           {
-            if( $db_question_option->id == $selected_option )
+            if( ( is_object( $selected_option ) && $db_question_option->id == $selected_option->id ) ||
+                ( !is_object( $selected_option ) && $db_question_option->id == $selected_option ) )
             {
               $compiled = 'true';
               break;
@@ -538,6 +539,7 @@ class expression_manager extends \cenozo\singleton
           }
           $compiled = implode( ',', $value_list );
         }
+        else if( 'string' == $db_question->type ) $compiled = sprintf( "'%s'", str_replace( "'", "\\'", $value ) );
         else $compiled = $value;
       }
     }

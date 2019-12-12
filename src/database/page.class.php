@@ -115,6 +115,7 @@ class page extends base_qnaire_part
   public function get_next_for_response( $db_response )
   {
     $answer_class_name = lib::get_class_name( 'database\answer' );
+    $question_option_class_name = lib::get_class_name( 'database\question_option' );
     $expression_manager = lib::create( 'business\expression_manager' );
 
     // delete any answer associated with a skipped question on the current page
@@ -132,6 +133,29 @@ class page extends base_qnaire_part
           array( $db_response->id, $question['id'] )
         );
         if( !is_null( $db_answer ) ) $db_answer->delete();
+      }
+    }
+
+    // delete any answer associated with a skipped question_option on the current page
+    $question_option_sel = lib::create( 'database\select' );
+    $question_option_sel->add_column( 'id' );
+    $question_option_sel->add_column( 'precondition' );
+    $question_option_sel->add_table_column( 'question', 'id', 'question_id' );
+    $question_option_mod = lib::create( 'database\modifier' );
+    $question_option_mod->join( 'question', 'question_option.question_id', 'question.id' );
+    $question_option_mod->where( 'question.type', '=', 'list' );
+    $question_option_mod->where( 'question.page_id', '=', $this->id );
+    $question_option_mod->where( 'question_option.precondition', '!=', NULL );
+    foreach( $question_option_class_name::select( $question_option_sel, $question_option_mod ) as $question_option )
+    {
+      if( !$expression_manager->evaluate( $db_response, $question_option['precondition'] ) )
+      {
+        $db_answer = $answer_class_name::get_unique_record(
+          array( 'response_id', 'question_id' ),
+          array( $db_response->id, $question_option['question_id'] )
+        );
+
+        $db_answer->remove_answer_value_by_option_id( $question_option['id'] );
       }
     }
 
