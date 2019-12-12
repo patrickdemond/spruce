@@ -124,6 +124,9 @@ cenozoApp.initQnairePartModule = function( module, type ) {
       var object = function( parentModel ) {
         CnBaseAddFactory.construct( this, parentModel );
 
+        // transition to viewing the new record instead of the default functionality
+        this.transitionOnSave = function( record ) { parentModel.transitionToViewState( record ); };
+
         // get the parent's name for the breadcrumb trail
         angular.extend( this, {
           onNew: function( record ) {
