@@ -22,6 +22,14 @@ class question extends base_qnaire_part
   protected static $rank_parent = 'page';
 
   /**
+   * Overview parent method
+   */
+  public function get_qnaire()
+  {
+    return $this->get_page()->get_qnaire();
+  }
+
+  /**
    * TODO: document
    */
   public function get_previous()

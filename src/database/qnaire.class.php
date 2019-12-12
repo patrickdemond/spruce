@@ -64,4 +64,20 @@ class qnaire extends \cenozo\database\record
     $modifier->where( 'module.qnaire_id', '=', $this->id );
     return static::db()->get_one( sprintf( '%s %s', $select->get_sql(), $modifier->get_sql() ) );
   }
+
+  /**
+   * Get this participant's base_language record
+   * @return base_language
+   * @access public
+   */
+  public function get_base_language()
+  {
+    if( is_null( $this->id ) )
+    {
+      log::warning( 'Tried to get base language for qnaire with no primary key.' );
+      return NULL;
+    }
+
+    return is_null( $this->base_language_id ) ? NULL : lib::create( 'database\language', $this->base_language_id );
+  }
 }

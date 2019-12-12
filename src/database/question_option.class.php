@@ -20,4 +20,12 @@ class question_option extends base_qnaire_part
    * @static
    */
   protected static $rank_parent = 'question';
+
+  /**
+   * Overview parent method
+   */
+  public function get_qnaire()
+  {
+    return $this->get_question()->get_qnaire();
+  }
 }

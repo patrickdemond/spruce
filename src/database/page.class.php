@@ -22,6 +22,14 @@ class page extends base_qnaire_part
   protected static $rank_parent = 'module';
 
   /**
+   * Overview parent method
+   */
+  public function get_qnaire()
+  {
+    return $this->get_module()->get_qnaire();
+  }
+
+  /**
    * Override parent method
    */
   public static function get_record_from_identifier( $identifier )

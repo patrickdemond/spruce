@@ -44,6 +44,12 @@ cenozoApp.initQnairePartModule = function( module, type ) {
       title: 'Precondition',
       type: 'text',
       help: 'A special expression which restricts whether or not to show this ' + type.replace( /_/g, ' ' ) + '.'
+    },
+    description: {
+      title: 'Description',
+      type: 'text',
+      help: 'The description in the questionnaire\'s language.',
+      isExcluded: 'view'
     }
   } );
 
@@ -67,8 +73,8 @@ cenozoApp.initQnairePartModule = function( module, type ) {
   var typeCamel = type.snakeToCamel().ucWords();
 
   /* ######################################################################################################## */
-  cenozo.providers.directive( 'cn' + typeCamel + 'Add', [
-    'Cn' + typeCamel + 'ModelFactory',
+  cenozo.providers.directive( 'cn'+typeCamel+'Add', [
+    'Cn'+typeCamel+'ModelFactory',
     function( CnModelFactory ) {
       return {
         templateUrl: module.getFileUrl( 'add.tpl.html' ),
@@ -82,8 +88,8 @@ cenozoApp.initQnairePartModule = function( module, type ) {
   ] );
 
   /* ######################################################################################################## */
-  cenozo.providers.directive( 'cn' + typeCamel + 'List', [
-    'Cn' + typeCamel + 'ModelFactory',
+  cenozo.providers.directive( 'cn'+typeCamel+'List', [
+    'Cn'+typeCamel+'ModelFactory',
     function( CnModelFactory ) {
       return {
         templateUrl: module.getFileUrl( 'list.tpl.html' ),
@@ -97,8 +103,8 @@ cenozoApp.initQnairePartModule = function( module, type ) {
   ] );
 
   /* ######################################################################################################## */
-  cenozo.providers.directive( 'cn' + typeCamel + 'View', [
-    'Cn' + typeCamel + 'ModelFactory',
+  cenozo.providers.directive( 'cn'+typeCamel+'View', [
+    'Cn'+typeCamel+'ModelFactory',
     function( CnModelFactory ) {
       return {
         templateUrl: module.getFileUrl( 'view.tpl.html' ),
@@ -112,7 +118,7 @@ cenozoApp.initQnairePartModule = function( module, type ) {
   ] );
 
   /* ######################################################################################################## */
-  cenozo.providers.factory( 'Cn' + typeCamel + 'AddFactory', [
+  cenozo.providers.factory( 'Cn'+typeCamel+'AddFactory', [
     'CnBaseAddFactory', 'CnHttpFactory',
     function( CnBaseAddFactory, CnHttpFactory ) {
       var object = function( parentModel ) {
@@ -143,7 +149,7 @@ cenozoApp.initQnairePartModule = function( module, type ) {
   ] );
 
   /* ######################################################################################################## */
-  cenozo.providers.factory( 'Cn' + typeCamel + 'ListFactory', [
+  cenozo.providers.factory( 'Cn'+typeCamel+'ListFactory', [
     'CnBaseListFactory',
     function( CnBaseListFactory ) {
       var object = function( parentModel ) { CnBaseListFactory.construct( this, parentModel ); };
@@ -152,7 +158,7 @@ cenozoApp.initQnairePartModule = function( module, type ) {
   ] );
 
   /* ######################################################################################################## */
-  cenozo.providers.factory( 'Cn' + typeCamel + 'ViewFactory', [
+  cenozo.providers.factory( 'Cn'+typeCamel+'ViewFactory', [
     'CnBaseViewFactory', 'CnBaseQnairePartViewFactory',
     function( CnBaseViewFactory, CnBaseQnairePartViewFactory ) {
       var object = function( parentModel, root ) {
@@ -164,9 +170,9 @@ cenozoApp.initQnairePartModule = function( module, type ) {
   ] );
 
   /* ######################################################################################################## */
-  cenozo.providers.factory( 'Cn' + typeCamel + 'ModelFactory', [
-    'CnBaseModelFactory', 'Cn' + typeCamel + 'AddFactory', 'Cn' + typeCamel + 'ListFactory', 'Cn' + typeCamel + 'ViewFactory',
-    function( CnBaseModelFactory, CnAddFactory, CnListFactory, CnViewFactory ) {
+  cenozo.providers.factory( 'Cn'+typeCamel+'ModelFactory', [
+    'CnBaseModelFactory', 'Cn'+typeCamel+'AddFactory', 'Cn'+typeCamel+'ListFactory', 'Cn'+typeCamel+'ViewFactory', 'CnHttpFactory',
+    function( CnBaseModelFactory, CnAddFactory, CnListFactory, CnViewFactory, CnHttpFactory ) {
       var object = function( root ) {
         var self = this;
         CnBaseModelFactory.construct( this, module );
@@ -176,6 +182,22 @@ cenozoApp.initQnairePartModule = function( module, type ) {
 
         this.getBreadcrumbParentTitle = function() {
           return 'view' == this.getActionFromState() ? this.viewModel.record.parent_name : this.addModel.parentName;
+        };
+
+        // extend getMetadata
+        this.getMetadata = function() {
+          return this.$$getMetadata().then( function() {
+            // setup non-record description input
+            return CnHttpFactory.instance( {
+              path: type + '_description'
+            } ).head().then( function( response ) {
+              var columnList = angular.fromJson( response.headers( 'Columns' ) );
+              columnList.value.required = '1' == columnList.value.required;
+              if( angular.isUndefined( self.metadata.columnList.description ) )
+                self.metadata.columnList.description = {};
+              angular.extend( self.metadata.columnList.description, columnList.value );
+            } );
+          } );
         };
       };
 
