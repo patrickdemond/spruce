@@ -26,4 +26,20 @@ define( function() {
   } );
   module.addInput( '', 'note', { title: 'Note', type: 'text' } );
   module.addInput( '', 'parent_name', { column: 'page.name', isExcluded: true } );
+
+  /* ######################################################################################################## */
+  cenozo.providers.directive( 'cnQuestionClone', [
+    'CnQnairePartCloneFactory', 'CnHttpFactory',
+    function( CnQnairePartCloneFactory, CnHttpFactory ) {
+      return {
+        templateUrl: cenozoApp.getFileUrl( 'pine', 'qnaire_part_clone.tpl.html' ),
+        restrict: 'E',
+        scope: { model: '=?' },
+        controller: function( $scope ) {
+          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnairePartCloneFactory.instance( 'question' );
+          $scope.model.onLoad();
+        }
+      };
+    }
+  ] );
 } );

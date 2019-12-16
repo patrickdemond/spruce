@@ -32,4 +32,20 @@ define( function() {
     isExcluded: function( $state, model ) { return 'number' != model.viewModel.record.extra ? true : 'add'; }
   } );
   module.addInput( '', 'parent_name', { column: 'question.name', isExcluded: true } );
+
+  /* ######################################################################################################## */
+  cenozo.providers.directive( 'cnQuestionOptionClone', [
+    'CnQnairePartCloneFactory', 'CnHttpFactory',
+    function( CnQnairePartCloneFactory, CnHttpFactory ) {
+      return {
+        templateUrl: cenozoApp.getFileUrl( 'pine', 'qnaire_part_clone.tpl.html' ),
+        restrict: 'E',
+        scope: { model: '=?' },
+        controller: function( $scope ) {
+          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnairePartCloneFactory.instance( 'question_option' );
+          $scope.model.onLoad();
+        }
+      };
+    }
+  ] );
 } );

@@ -76,6 +76,7 @@ class ui extends \cenozo\ui\ui
     {
       $module->add_child( 'module_description' );
       $module->add_child( 'page' );
+      $module->add_action( 'clone', '/{identifier}' );
     }
 
     $module = $this->get_module( 'page' );
@@ -84,6 +85,7 @@ class ui extends \cenozo\ui\ui
       $module->add_child( 'page_description' );
       $module->add_child( 'question' );
       $module->add_action( 'render', '/{identifier}' );
+      $module->add_action( 'clone', '/{identifier}' );
     }
 
     $module = $this->get_module( 'question' );
@@ -91,12 +93,14 @@ class ui extends \cenozo\ui\ui
     {
       $module->add_child( 'question_description' );
       $module->add_child( 'question_option' );
+      $module->add_action( 'clone', '/{identifier}' );
     }
 
     $module = $this->get_module( 'question_option' );
     if( !is_null( $module ) )
     {
       $module->add_child( 'question_option_description' );
+      $module->add_action( 'clone', '/{identifier}' );
     }
 
     $module = $this->get_module( 'response' );

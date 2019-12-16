@@ -13,5 +13,16 @@ use cenozo\lib, cenozo\log, pine\util;
  */
 class module extends \pine\service\base_qnaire_part_module
 {
-  
+  /**
+   * Extend parent method
+   */
+  public function prepare_read( $select, $modifier )
+  {
+    parent::prepare_read( $select, $modifier );
+
+    $modifier->join( 'question', 'question_option.question_id', 'question.id' );
+    $modifier->join( 'page', 'question.page_id', 'page.id' );
+    $modifier->join( 'module', 'page.module_id', 'module.id' );
+    $modifier->join( 'qnaire', 'module.qnaire_id', 'qnaire.id' );
+  }
 }

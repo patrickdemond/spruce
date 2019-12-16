@@ -70,6 +70,13 @@ cenozoApp.initQnairePartModule = function( module, type ) {
     isDisabled: function( $state, model ) { return null == model.viewModel.record.next_id; }
   } );
 
+  module.addExtraOperation( 'view', {
+    title: 'Clone',
+    operation: function( $state, model ) {
+      $state.go( type + '.clone', { identifier: model.viewModel.record.getIdentifier() } );
+    }
+  } );
+
   var typeCamel = type.snakeToCamel().ucWords();
 
   /* ######################################################################################################## */
@@ -165,6 +172,7 @@ cenozoApp.initQnairePartModule = function( module, type ) {
     'CnBaseViewFactory', 'CnBaseQnairePartViewFactory',
     function( CnBaseViewFactory, CnBaseQnairePartViewFactory ) {
       var object = function( parentModel, root ) {
+        var self = this;
         CnBaseViewFactory.construct( this, parentModel, root );
         CnBaseQnairePartViewFactory.construct( this, type );
       }
@@ -529,6 +537,7 @@ cenozo.directive( 'cnQnaireNavigator', [
   }
 ] );
 
+/* ######################################################################################################## */
 cenozo.service( 'CnTranslationHelper', [
   function() {
     return {
@@ -562,5 +571,221 @@ cenozo.service( 'CnTranslationHelper', [
         }
       }
     };
+  }
+] );
+
+/* ######################################################################################################## */
+cenozo.factory( 'CnQnairePartCloneFactory', [
+  'CnHttpFactory', 'CnModalMessageFactory', '$q', '$filter', '$state',
+  function( CnHttpFactory, CnModalMessageFactory, $q, $filter, $state ) {
+    var object = function( type ) {
+      var self = this;
+
+      angular.extend( this, {
+        type: type.replace( /_/g, ' ' ).ucWords(),
+        sourceId: $state.params.identifier,
+        sourceName: null,
+        data: {
+          qnaireId: null,
+          moduleId: null,
+          pageId: null,
+          questionId: null,
+          rank: null,
+          name: null
+        },
+        qnaireList: [],
+        moduleList: [],
+        pageList: [],
+        questionList: [],
+        rankList: [],
+        nameConflict: false,
+
+        resetData: function( subject ) {
+          // reset data
+          if( angular.isUndefined( subject ) ) self.data.qnaireId = null;
+          if( [ undefined, 'qnaire' ].includes( subject ) ) self.data.moduleId = null;
+          if( [ undefined, 'qnaire', 'module' ].includes( subject ) ) self.data.pageId = null;
+          if( [ undefined, 'qnaire', 'module', 'page' ].includes( subject ) ) self.data.questionId = null;
+          self.data.rank = null;
+          self.data.name = null;
+          self.nameConflict = false;
+
+          // reset lists
+          if( [ undefined, 'qnaire' ].includes( subject ) ) self.moduleList = [];
+          if( [ undefined, 'qnaire', 'module' ].includes( subject ) ) self.pageList = [];
+          if( [ undefined, 'qnaire', 'module', 'page' ].includes( subject ) ) self.questionList = [];
+          if( [ undefined, 'qnaire', 'module', 'page', 'question' ].includes( subject ) ) self.rankList = [];
+        },
+
+        onLoad: function() {
+          this.resetData();
+
+          // TODONEXT: replace column array on line 626 with variable which is defined by type, then keep making code generic
+          return CnHttpFactory.instance( {
+            path: [type, this.sourceId].join( '/' ),
+            data: { select: { column: [
+              'name',
+              'question_id',
+              { table: 'question', column: 'page_id' },
+              { table: 'page', column: 'module_id' },
+              { table: 'module', column: 'qnaire_id' }
+            ] } }
+          } ).get().then( function( response ) {
+            self.sourceName = response.data.name;
+            angular.extend( self.data, {
+              qnaireId: response.data.qnaire_id,
+              moduleId: response.data.module_id,
+              pageId: response.data.page_id,
+              questionId: response.data.question_id
+            } );
+          } ).then( function() {
+            return $q.all( [
+              CnHttpFactory.instance( {
+                path: 'qnaire',
+                data: {
+                  select: { column: [ 'id', 'name' ] },
+                  modifier: { order: { name: false } }
+                },
+              } ).query().then( function( response ) {
+                self.qnaireList = response.data.map( item => ({ value: item.id, name: item.name }) );
+                self.qnaireList.unshift( { value: null, name: '(choose target questionnaire)' } );
+              } ),
+
+              self.setQnaire( true ),
+              self.setModule( true ),
+              self.setPage( true ),
+              self.setQuestion( true )
+            ] );
+          } );
+        },
+
+        setQnaire: function( noReset ) {
+          if( angular.isUndefined( noReset ) ) noReset = false;
+          if( !noReset ) self.resetData( 'qnaire' );
+
+          // define the list of modules which belong to the selected qnaire
+          if( null == self.data.qnaireId ) {
+            self.moduleList = [];
+          } else {
+            return CnHttpFactory.instance( {
+              path: ['qnaire', self.data.qnaireId, 'module'].join( '/' ),
+              data: {
+                select: { column: [ 'id', 'rank', 'name' ] },
+                modifier: { order: { rank: false } }
+              },
+            } ).query().then( function( response ) {
+              self.moduleList = response.data.map( item => ({ value: item.id, name: item.rank + '. ' + item.name }) );
+              self.moduleList.unshift( { value: null, name: '(choose target module)' } );
+            } );
+          }
+        },
+
+        setModule: function( noReset ) {
+          if( angular.isUndefined( noReset ) ) noReset = false;
+          if( !noReset ) self.resetData( 'module' );
+
+          // define the list of pages which belong to the selected module
+          if( null == self.data.moduleId ) {
+            self.pageList = [];
+          } else {
+            return CnHttpFactory.instance( {
+              path: ['module', self.data.moduleId, 'page'].join( '/' ),
+              data: {
+                select: { column: [ 'id', 'rank', 'name' ] },
+                modifier: { order: { rank: false } }
+              },
+            } ).query().then( function( response ) {
+              self.pageList = response.data.map( item => ({ value: item.id, name: item.rank + '. ' + item.name }) );
+              self.pageList.unshift( { value: null, name: '(choose target page)' } );
+            } );
+          }
+        },
+
+        setPage: function( noReset ) {
+          if( angular.isUndefined( noReset ) ) noReset = false;
+          if( !noReset ) self.resetData( 'page' );
+
+          // define the list of modules which belong to the selected page
+          if( null == self.data.pageId ) {
+            self.questionList = [];
+          } else {
+            return CnHttpFactory.instance( {
+              path: ['page', self.data.pageId, 'question'].join( '/' ),
+              data: {
+                select: { column: [ 'id', 'rank', 'name' ] },
+                modifier: { where: { column: 'question.type', operator: '=', value: 'list' }, order: { rank: false } }
+              },
+            } ).query().then( function( response ) {
+              self.questionList = response.data.map( item => ({ value: item.id, name: item.rank + '. ' + item.name }) );
+              self.questionList.unshift( {
+                value: null,
+                name: 0 == self.questionList.length ?
+                  '(the selected page has no list type questions)' : '(choose target list question)'
+              } );
+            } );
+          }
+        },
+
+        setQuestion: function( noReset ) {
+          if( angular.isUndefined( noReset ) ) noReset = false;
+          if( !noReset ) self.resetData( 'question' );
+
+          // define the list of modules which belong to the selected question
+          if( null == self.data.questionId ) {
+            self.rankList = [];
+          } else {
+            return CnHttpFactory.instance( {
+              path: ['question', self.data.questionId, type].join( '/' ),
+              data: {
+                select: { column: { column: 'MAX( ' + type + '.rank )', alias: 'max', table_prefix: false } }
+              },
+            } ).query().then( function( response ) {
+              var maxRank = null == response.data[0].max ? 1 : parseInt( response.data[0].max ) + 1
+              self.rankList = [];
+              for( var rank = 1; rank <= maxRank; rank++ ) {
+                self.rankList.push( { value: rank, name: $filter( 'cnOrdinal' )( rank ) } );
+              }
+              self.rankList.unshift( { value: null, name: '(choose target rank)' } );
+            } );
+          }
+        },
+
+        isComplete: function() {
+          return null != this.data.qnaireId &&
+                 null != this.data.moduleId &&
+                 null != this.data.pageId &&
+                 null != this.data.questionId &&
+                 null != this.data.rank &&
+                 null != this.data.name &&
+                 false == this.nameConflict
+                 false == this.working;
+        },
+
+        cancel: function() {
+          $state.go( type + '.view', { identifier: self.sourceId } );
+        },
+
+        save: function() {
+          this.working = true;
+          return CnHttpFactory.instance( {
+            path: type + '?clone=' + this.sourceId,
+            data: {
+              question_id: this.data.questionId,
+              rank: this.data.rank,
+              name: this.data.name
+            },
+            onError: function( response ) {
+              if( 409 == response.status ) self.nameConflict = true;
+              else CnModalMessageFactory.httpError( response );
+            }
+          } ).post().then( function( response ) {
+            $state.go( type + '.view', { identifier: response.data } );
+          } ).finally( function() {
+            self.working = false;
+          } );
+        }
+      } );
+    }
+    return { instance: function( type ) { return new object( type ); } };
   }
 ] );
