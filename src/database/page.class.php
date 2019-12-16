@@ -163,7 +163,7 @@ class page extends base_qnaire_part
           array( $db_response->id, $question_option['question_id'] )
         );
 
-        $db_answer->remove_answer_value_by_option_id( $question_option['id'] );
+        if( !is_null( $db_answer ) ) $db_answer->remove_answer_value_by_option_id( $question_option['id'] );
       }
     }
 
