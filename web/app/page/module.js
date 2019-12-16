@@ -186,8 +186,8 @@ define( function() {
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnPageRenderFactory', [
-    'CnHttpFactory', 'CnModalMessageFactory', '$q', '$state', '$document', '$transitions', '$timeout',
-    function( CnHttpFactory, CnModalMessageFactory, $q, $state, $document, $transitions, $timeout ) {
+    'CnHttpFactory', 'CnModalMessageFactory', '$q', '$state', '$timeout',
+    function( CnHttpFactory, CnModalMessageFactory, $q, $state, $timeout ) {
       var object = function( parentModel ) {
         var self = this;
 
