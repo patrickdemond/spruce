@@ -653,7 +653,7 @@ define( function() {
               var optionIndex = searchOptionList( value, option.id );
               if( null != optionIndex ) {
                 if( option.multiple_answers ) {
-                  if( null == answerValue || ( angular.isString( answerValue ) && 0 < answerValue.trim().length ) ) {
+                  if( null == answerValue || ( angular.isString( answerValue ) && 0 == answerValue.trim().length ) ) {
                     // if the value is blank then remove it
                     value[optionIndex].value.splice( valueIndex, 1 );
                   } else {
