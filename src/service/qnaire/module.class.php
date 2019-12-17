@@ -20,6 +20,9 @@ class module extends \cenozo\service\module
   {
     parent::prepare_read( $select, $modifier );
 
+    // add the total number of modules
+    $this->add_count_column( 'module_count', 'module', $select, $modifier );
+
     $db_qnaire = $this->get_resource();
     if( !is_null( $db_qnaire ) )
     {

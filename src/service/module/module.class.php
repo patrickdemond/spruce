@@ -20,6 +20,9 @@ class module extends \pine\service\base_qnaire_part_module
   {
     parent::prepare_read( $select, $modifier );
 
+    // add the total number of pages
+    $this->add_count_column( 'page_count', 'page', $select, $modifier );
+
     $modifier->join( 'qnaire', 'module.qnaire_id', 'qnaire.id' );
 
     $db_module = $this->get_resource();

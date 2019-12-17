@@ -12,6 +12,16 @@ cenozo.controller( 'HeaderCtrl', [
 
 /* ######################################################################################################## */
 cenozoApp.initQnairePartModule = function( module, type ) {
+  var columnList = {
+    rank: { title: 'Rank', type: 'rank' },
+    name: { title: 'Name' }
+  };
+
+  if( 'module' == type ) columnList.page_count = { title: 'Pages' };
+  else if( 'page' == type ) columnList.question_count = { title: 'Questions' };
+  else if( 'question' == type ) columnList.question_option_count = { title: 'Question Options' };
+  columnList.precondition = { title: 'Precondition' };
+
   angular.extend( module, {
     identifier: {},
     name: {
@@ -19,17 +29,13 @@ cenozoApp.initQnairePartModule = function( module, type ) {
       plural: type.replace( /_/g, ' ' ) + '',
       possessive: type.replace( / /g, ' ' ) + '\'s'
     },
-    columnList: {
-      rank: { title: 'Rank', type: 'rank' },
-      name: { title: 'Name' },
-      precondition: { title: 'Precondition' }
-    },
+    columnList: columnList,
     defaultOrder: {
       column: 'rank',
       reverse: false
     }
   } );
-
+      
   module.addInputGroup( '', {
     rank: {
       title: 'Rank',

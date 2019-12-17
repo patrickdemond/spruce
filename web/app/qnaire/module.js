@@ -17,6 +17,9 @@ define( function() {
         title: 'Debug Mode',
         type: 'boolean'
       },
+      module_count: {
+        title: 'Modules'
+      },
       description: {
         title: 'Description',
         align: 'left'

@@ -20,6 +20,9 @@ class module extends \pine\service\base_qnaire_part_module
   {
     parent::prepare_read( $select, $modifier );
 
+    // add the total number of questions
+    $this->add_count_column( 'question_count', 'question', $select, $modifier );
+
     $modifier->join( 'module', 'page.module_id', 'module.id' );
     $modifier->join( 'qnaire', 'module.qnaire_id', 'qnaire.id' );
     $modifier->join( 'language', 'qnaire.base_language_id', 'base_language.id', '', 'base_language' );
