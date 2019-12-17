@@ -580,11 +580,16 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
   function( CnHttpFactory, CnModalMessageFactory, $q, $filter, $state ) {
     var object = function( type ) {
       var self = this;
+      var parentType = 'module' == type ? 'qnaire' : 'page' == type ? 'module' : 'question' == type ? 'page' : 'question';
 
       angular.extend( this, {
-        type: type.replace( /_/g, ' ' ).ucWords(),
+        type: type,
+        parentType: parentType,
+        parentIdName: parentType.replace( ' ', '_' ).snakeToCamel() + 'Id',
+        typeName: type.replace( /_/g, ' ' ).ucWords(),
         sourceId: $state.params.identifier,
         sourceName: null,
+        working: false,
         data: {
           qnaireId: null,
           moduleId: null,
@@ -607,7 +612,7 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
           if( [ undefined, 'qnaire', 'module' ].includes( subject ) ) self.data.pageId = null;
           if( [ undefined, 'qnaire', 'module', 'page' ].includes( subject ) ) self.data.questionId = null;
           self.data.rank = null;
-          self.data.name = null;
+          if( angular.isUndefined( subject ) )self.data.name = null;
           self.nameConflict = false;
 
           // reset lists
@@ -620,16 +625,17 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
         onLoad: function() {
           this.resetData();
 
-          // TODONEXT: replace column array on line 626 with variable which is defined by type, then keep making code generic
+          var columnList = [ 'name', { table: 'module', column: 'qnaire_id' } ];
+          if( [ 'page', 'question', 'question_option' ].includes( this.type ) )
+            columnList.push( { table: 'page', column: 'module_id' } );
+          if( [ 'question', 'question_option' ].includes( this.type ) )
+            columnList.push( { table: 'question', column: 'page_id' } );
+          if( 'question_option' == this.type )
+            columnList.push( { table: 'question_option', column: 'question_id' } );
+
           return CnHttpFactory.instance( {
-            path: [type, this.sourceId].join( '/' ),
-            data: { select: { column: [
-              'name',
-              'question_id',
-              { table: 'question', column: 'page_id' },
-              { table: 'page', column: 'module_id' },
-              { table: 'module', column: 'qnaire_id' }
-            ] } }
+            path: [this.type, this.sourceId].join( '/' ),
+            data: { select: { column: columnList } }
           } ).get().then( function( response ) {
             self.sourceName = response.data.name;
             angular.extend( self.data, {
@@ -663,8 +669,10 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
           if( angular.isUndefined( noReset ) ) noReset = false;
           if( !noReset ) self.resetData( 'qnaire' );
 
-          // define the list of modules which belong to the selected qnaire
-          if( null == self.data.qnaireId ) {
+          // either update the rank list or the module list depending on the type
+          if( 'module' == this.type ) {
+            return this.updateRankList();
+          } else if( null == self.data.qnaireId ) {
             self.moduleList = [];
           } else {
             return CnHttpFactory.instance( {
@@ -684,8 +692,10 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
           if( angular.isUndefined( noReset ) ) noReset = false;
           if( !noReset ) self.resetData( 'module' );
 
-          // define the list of pages which belong to the selected module
-          if( null == self.data.moduleId ) {
+          // either update the rank list or the page list depending on the type
+          if( 'page' == this.type ) {
+            return this.updateRankList();
+          } else if( null == self.data.moduleId ) {
             self.pageList = [];
           } else {
             return CnHttpFactory.instance( {
@@ -705,8 +715,10 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
           if( angular.isUndefined( noReset ) ) noReset = false;
           if( !noReset ) self.resetData( 'page' );
 
-          // define the list of modules which belong to the selected page
-          if( null == self.data.pageId ) {
+          // either update the rank list or the question list depending on the type
+          if( 'question' == this.type ) {
+            return this.updateRankList();
+          } else if( null == self.data.pageId ) {
             self.questionList = [];
           } else {
             return CnHttpFactory.instance( {
@@ -729,15 +741,18 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
         setQuestion: function( noReset ) {
           if( angular.isUndefined( noReset ) ) noReset = false;
           if( !noReset ) self.resetData( 'question' );
+          return this.updateRankList();
+        },
 
-          // define the list of modules which belong to the selected question
-          if( null == self.data.questionId ) {
+        updateRankList: function() {
+          // if the parent hasn't been selected then the rank list should be empty
+          if( null == self.data[this.parentIdName] ) {
             self.rankList = [];
           } else {
             return CnHttpFactory.instance( {
-              path: ['question', self.data.questionId, type].join( '/' ),
+              path: [this.parentType, this.data[self.parentIdName], this.type].join( '/' ),
               data: {
-                select: { column: { column: 'MAX( ' + type + '.rank )', alias: 'max', table_prefix: false } }
+                select: { column: { column: 'MAX( ' + this.type + '.rank )', alias: 'max', table_prefix: false } }
               },
             } ).query().then( function( response ) {
               var maxRank = null == response.data[0].max ? 1 : parseInt( response.data[0].max ) + 1
@@ -751,35 +766,48 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
         },
 
         isComplete: function() {
-          return null != this.data.qnaireId &&
-                 null != this.data.moduleId &&
-                 null != this.data.pageId &&
-                 null != this.data.questionId &&
-                 null != this.data.rank &&
-                 null != this.data.name &&
-                 false == this.nameConflict
-                 false == this.working;
+          return (
+            !this.working &&
+            !this.nameConflict &&
+            null != this.data.name &&
+            null != this.data.rank &&
+            null != this.data.qnaireId && (
+              'page' != this.type ||
+              null != this.data.moduleId
+            ) && (
+              'question' != this.type || (
+                null != this.data.moduleId &&
+                null != this.data.pageId
+              )
+            ) && (
+              'question_option' != this.type || (
+                null != this.data.moduleId &&
+                null != this.data.pageId &&
+                null != this.data.questionId
+              )
+            )
+          );
         },
 
         cancel: function() {
-          $state.go( type + '.view', { identifier: self.sourceId } );
+          $state.go( this.type + '.view', { identifier: self.sourceId } );
         },
 
         save: function() {
           this.working = true;
+
+          var data = { rank: this.data.rank, name: this.data.name };
+          data[this.parentType + '_id'] = this.data[this.parentIdName];
+
           return CnHttpFactory.instance( {
-            path: type + '?clone=' + this.sourceId,
-            data: {
-              question_id: this.data.questionId,
-              rank: this.data.rank,
-              name: this.data.name
-            },
+            path: this.type + '?clone=' + this.sourceId,
+            data: data,
             onError: function( response ) {
               if( 409 == response.status ) self.nameConflict = true;
               else CnModalMessageFactory.httpError( response );
             }
           } ).post().then( function( response ) {
-            $state.go( type + '.view', { identifier: response.data } );
+            $state.go( self.type + '.view', { identifier: response.data } );
           } ).finally( function() {
             self.working = false;
           } );

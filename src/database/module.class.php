@@ -144,4 +144,26 @@ class module extends base_qnaire_part
       array( $this->id, $this->get_page_count() )
     );
   }
+
+  /**
+   * TODO: document
+   */
+  public function clone_from( $db_source_module )
+  {
+    parent::clone_from( $db_source_module );
+
+    // replace all existing module options with those from the clone source
+    $modifier = lib::create( 'database\modifier' );
+    $modifier->where( 'module_id', '=', $this->id );
+    static::db()->execute( sprintf( 'DELETE FROM page %s', $modifier->get_sql() ) );
+
+    foreach( $db_source_module->get_page_object_list() as $db_source_page )
+    {
+      $db_page = lib::create( 'database\page' );
+      $db_page->module_id = $this->id;
+      $db_page->rank = $db_source_page->rank;
+      $db_page->name = $db_source_page->name;
+      $db_page->clone_from( $db_source_page );
+    }
+  }
 }

@@ -40,8 +40,15 @@ abstract class base_qnaire_part extends \cenozo\database\has_rank
   /**
    * TODO: document
    */
-  public function copy_descriptions( $db_source )
+  public function clone_from( $db_source )
   {
+    $ignore_columns = array( 'id', 'update_timestamp', 'create_timestamp', static::$rank_parent.'_id', 'qnaire_id', 'rank', 'name' );
+    foreach( $this->get_column_names() as $column_name )
+      if( !in_array( $column_name, $ignore_columns ) )
+        $this->$column_name = $db_source->$column_name;
+    $this->save();
+
+    // now copy the descriptions
     $subject = $this->get_table_name();
     $modifier = lib::create( 'database\modifier' );
     $modifier->where( sprintf( 'destination.%s_id', $subject ), '=', $this->id );

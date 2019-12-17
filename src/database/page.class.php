@@ -248,4 +248,29 @@ class page extends base_qnaire_part
       array( $this->id, $this->get_question_count() )
     );
   }
+
+  /**
+   * TODO: document
+   */
+  public function clone_from( $db_source_page )
+  {
+    parent::clone_from( $db_source_page );
+
+    // replace all existing page options with those from the clone source
+    $modifier = lib::create( 'database\modifier' );
+    $modifier->where( 'page_id', '=', $this->id );
+    static::db()->execute( sprintf( 'DELETE FROM question %s', $modifier->get_sql() ) );
+
+    foreach( $db_source_page->get_question_object_list() as $db_source_question )
+    {
+      $db_question = lib::create( 'database\question' );
+      $db_question->page_id = $this->id;
+      $db_question->rank = $db_source_question->rank;
+      // question names must be unique throughout a questionnaire
+      $db_question->name = $this->get_qnaire()->id == $db_source_page->get_qnaire()->id
+                         ? sprintf( '%s_COPY', $db_source_question->name )
+                         : $db_source_question->name;
+      $db_question->clone_from( $db_source_question );
+    }
+  }
 }
