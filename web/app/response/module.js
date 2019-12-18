@@ -40,6 +40,10 @@ define( [ 'page' ].reduce( function( list, name ) {
         column: 'page.name',
         title: 'Page'
       },
+      time_spent: {
+        title: 'Time Spent',
+        type: 'seconds'
+      },
       start_datetime: {
         title: 'Start',
         type: 'datetime'
@@ -182,7 +186,12 @@ define( [ 'page' ].reduce( function( list, name ) {
   cenozo.providers.factory( 'CnResponseAddFactory', [
     'CnBaseAddFactory',
     function( CnBaseAddFactory ) {
-      var object = function( parentModel ) { CnBaseAddFactory.construct( this, parentModel ); };
+      var object = function( parentModel ) {
+        CnBaseAddFactory.construct( this, parentModel );
+
+        // transition to viewing the new record instead of the default functionality
+        this.transitionOnSave = function( record ) { parentModel.transitionToViewState( record ); };
+      };
       return { instance: function( parentModel ) { return new object( parentModel ); } };
     }
   ] );

@@ -681,8 +681,8 @@ class import
 
     foreach( $page_list as $page )
     {
-      $sql = 'INSERT INTO page( sid, qid, module_id, rank, precondition, name ) VALUES '.sprintf(
-        '( %d, %s, %d, %d, %s, "%s" )',
+      $sql = 'INSERT INTO page( sid, qid, module_id, rank, precondition, name, max_time ) VALUES '.sprintf(
+        '( %d, %s, %d, %d, %s, "%s", 60 )',
         $page['sid'],
         is_null( $page['qid'] ) ? 'NULL' : $page['qid'],
         $page['module_id'],

@@ -22,6 +22,20 @@ class page extends base_qnaire_part
   protected static $rank_parent = 'module';
 
   /**
+   * Override the parent method
+   */
+  public function save()
+  {
+    if( is_null( $this->max_time ) )
+    {
+      $setting_manager = lib::create( 'business\setting_manager' );
+      $this->max_time = $setting_manager->get_setting( 'general', 'default_page_max_time' );
+    }
+
+    parent::save();
+  }
+
+  /**
    * Overview parent method
    */
   public function get_qnaire()

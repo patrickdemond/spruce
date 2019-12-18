@@ -53,6 +53,7 @@ class response extends \cenozo\database\record
   public function move_to_next_page()
   {
     $answer_class_name = lib::get_class_name( 'database\answer' );
+    $page_time_class_name = lib::get_class_name( 'database\page_time' );
 
     if( $this->submitted )
     {
@@ -61,10 +62,12 @@ class response extends \cenozo\database\record
     }
 
     $db_page = $this->get_page();
-    
+    $db_next_page = NULL;
+
     if( is_null( $db_page ) )
     { // the qnaire has never been started
-      $this->page_id = $this->get_qnaire()->get_first_module()->get_first_page()->id;
+      $db_next_page = $this->get_qnaire()->get_first_module()->get_first_page();
+      $this->page_id = $db_next_page->id;
       $this->start_datetime = util::get_datetime_object();
       $this->save();
     }
@@ -105,6 +108,15 @@ class response extends \cenozo\database\record
           if( 'list' == $objects['question']->type )
             $db_answer->remove_empty_answer_values();
 
+        // record the time spent on the page (add time if there is already time set)
+        $db_page_time = $page_time_class_name::get_unique_record(
+          array( 'response_id', 'page_id' ),
+          array( $this->id, $db_page->id )
+        );
+        if( is_null( $db_page_time->time ) ) $db_page_time->time = 0;
+        $db_page_time->time += ( util::get_datetime_object()->getTimestamp() - $db_page_time->datetime->getTimestamp() );
+        $db_page_time->save();
+
         $db_next_page = $db_page->get_next_for_response( $this );
         if( is_null( $db_next_page ) )
         {
@@ -118,6 +130,25 @@ class response extends \cenozo\database\record
         $this->save();
       }
     }
+
+    // set the datetime that this page was started
+    if( !is_null( $db_next_page ) )
+    {
+      $db_next_page_time = $page_time_class_name::get_unique_record(
+        array( 'response_id', 'page_id' ),
+        array( $this->id, $db_next_page->id )
+      );
+
+      if( is_null( $db_next_page_time ) )
+      {
+        $db_next_page_time = lib::create( 'database\page_time' );
+        $db_next_page_time->response_id = $this->id;
+        $db_next_page_time->page_id = $db_next_page->id;
+      }
+
+      $db_next_page_time->datetime = util::get_datetime_object();
+      $db_next_page_time->save();
+    }
   }
 
   /**
@@ -127,17 +158,38 @@ class response extends \cenozo\database\record
    */
   public function move_to_previous_page()
   {
+    $page_time_class_name = lib::get_class_name( 'database\page_time' );
+
     if( $this->submitted )
     {
       log::warning( 'Tried to move submitted response to the previous page.' );
       return;
     }
 
-    $db_previous_page = $this->get_page()->get_previous_for_response( $this );
+    $db_page = $this->get_page();
+
+    // record the time spent on the page (add time if there is already time set)
+    $db_page_time = $page_time_class_name::get_unique_record(
+      array( 'response_id', 'page_id' ),
+      array( $this->id, $db_page->id )
+    );
+    if( is_null( $db_page_time->time ) ) $db_page_time->time = 0;
+    $db_page_time->time += ( util::get_datetime_object()->getTimestamp() - $db_page_time->datetime->getTimestamp() );
+    $db_page_time->save();
+
+    $db_previous_page = $db_page->get_previous_for_response( $this );
     if( !is_null( $db_previous_page ) )
     {
       $this->page_id = $db_previous_page->id;
       $this->save();
+
+      // set the datetime that this page was started
+      $db_previous_page_time = $page_time_class_name::get_unique_record(
+        array( 'response_id', 'page_id' ),
+        array( $this->id, $db_previous_page->id )
+      );
+      $db_previous_page_time->datetime = util::get_datetime_object();
+      $db_previous_page_time->save();
     }
   }
 

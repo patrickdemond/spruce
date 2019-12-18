@@ -30,6 +30,7 @@ SOURCE question_option_description.sql
 SOURCE response.sql
 SOURCE response_attribute.sql
 SOURCE answer.sql
+SOURCE page_time.sql
 
 SOURCE update_version_number.sql
 

@@ -34,6 +34,7 @@ class get extends \cenozo\service\get
   public function finish()
   {
     $answer_class_name = lib::get_class_name( 'database\answer' );
+    $page_time_class_name = lib::get_class_name( 'database\page_time' );
 
     parent::finish();
 
@@ -59,6 +60,18 @@ class get extends \cenozo\service\get
           $db_answer->question_id = $question['id'];
           $db_answer->save();
         }
+      }
+
+      // create a page_time record to track how long it takes to complete this page
+      if( is_null( $page_time_class_name::get_unique_record(
+        array( 'response_id', 'page_id' ),
+        array( $this->db_response->id, $db_page->id )
+      ) ) )
+      {
+        $db_page_time = lib::create( 'database\page_time' );
+        $db_page_time->response_id = $this->db_response->id;
+        $db_page_time->page_id = $db_page->id;
+        $db_page_time->save();
       }
     }
   }

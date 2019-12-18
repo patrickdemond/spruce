@@ -75,6 +75,14 @@ class answer extends \cenozo\database\record
     // null values are never complete
     if( is_null( $value ) ) return false;
 
+    // dkna/refused questions are always complete
+    if( is_object( $value ) )
+    {
+      $dkna = array_key_exists( 'dkna', $value ) && $value->dkna;
+      $refuse = array_key_exists( 'refuse', $value ) && $value->refuse;
+      if( $dkna || $refuse ) return true;
+    }
+
     if( 'list' == $db_question->type )
     {
       // get the list of all preconditions for all options belonging to this question

@@ -10,6 +10,7 @@ define( function() {
     column: 'module.id'
   };
 
+  module.addInput( '', 'max_time', { title: 'Max Time', type: 'string', format: 'integer' } );
   module.addInput( '', 'note', { title: 'Note', type: 'text' } );
   module.addInput( '', 'qnaire_id', { column: 'qnaire.id', isExcluded: true }, );
   module.addInput( '', 'qnaire_name', { column: 'qnaire.name', isExcluded: true }, );
@@ -264,6 +265,11 @@ define( function() {
 
             // null values are never complete
             if( null == question.value ) return false;
+
+            // dkna/refuse questions are always complete
+            if( angular.isObject( question.value ) ) {
+              if( true === question.value.dkna || true === question.value.refuse ) return true;
+            }
 
             if( 'list' == question.type ) {
               // get the list of all preconditions for all options belonging to this question
