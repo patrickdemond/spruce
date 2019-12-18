@@ -94,7 +94,6 @@ define( function() {
           $document.unbind( 'keyup' );
           $document.bind( 'keyup', function( event ) {
             if( isNumpadInput( event ) ) {
-              console.log( event.which );
               event.stopPropagation();
               $scope.model.renderModel.onKeyup( 13 == event.which ? 'enter' : event.which - 96 );
               $scope.$apply();
