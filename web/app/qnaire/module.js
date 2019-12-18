@@ -20,6 +20,9 @@ define( function() {
       module_count: {
         title: 'Modules'
       },
+      response_count: {
+        title: 'Responses'
+      },
       description: {
         title: 'Description',
         align: 'left'
@@ -35,6 +38,13 @@ define( function() {
     name: {
       title: 'Name',
       type: 'string'
+    },
+    average_time: {
+      title: 'Average Time',
+      type: 'string',
+      format: 'seconds',
+      isConstant: true,
+      isExcluded: 'add'
     },
     debug: {
       title: 'Debug Mode',

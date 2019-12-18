@@ -10,6 +10,7 @@ define( function() {
     column: 'module.id'
   };
 
+  module.addInput( '', 'average_time', { title: 'Average Time (seconds)', type: 'string', isConstant: true, isExcluded: 'add' } );
   module.addInput( '', 'max_time', { title: 'Max Time', type: 'string', format: 'integer' } );
   module.addInput( '', 'note', { title: 'Note', type: 'text' } );
   module.addInput( '', 'qnaire_id', { column: 'qnaire.id', isExcluded: true }, );
@@ -19,6 +20,10 @@ define( function() {
   module.addInput( '', 'module_descriptions', { isExcluded: true }, );
   module.addInput( '', 'module_id', { isExcluded: true }, );
   module.addInput( '', 'parent_name', { column: 'module.name', isExcluded: true } );
+  cenozo.insertPropertyAfter( module.columnList, 'question_count', 'average_time', {
+    title: 'Average Time',
+    type: 'seconds'
+  } );
 
   module.addExtraOperation( 'view', {
     title: 'Preview',

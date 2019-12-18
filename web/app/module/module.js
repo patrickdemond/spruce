@@ -10,9 +10,14 @@ define( function() {
     column: 'qnaire.name'
   };
 
+  module.addInput( '', 'average_time', { title: 'Average Time (seconds)', type: 'string', isConstant: true, isExcluded: 'add' } );
   module.addInput( '', 'note', { title: 'Note', type: 'text' } );
   module.addInput( '', 'first_page_id', { isExcluded: true } );
   module.addInput( '', 'parent_name', { column: 'qnaire.name', isExcluded: true } );
+  cenozo.insertPropertyAfter( module.columnList, 'page_count', 'average_time', {
+    title: 'Average Time',
+    type: 'seconds'
+  } );
 
   module.addExtraOperation( 'view', {
     title: 'Preview',

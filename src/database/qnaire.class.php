@@ -80,4 +80,21 @@ class qnaire extends \cenozo\database\record
 
     return is_null( $this->base_language_id ) ? NULL : lib::create( 'database\language', $this->base_language_id );
   }
+
+  /**
+   * TODO: document
+   */
+  public function get_average_time( $submitted = false )
+  {
+    $select = lib::create( 'database\select' );
+    $select->add_column( 'SUM( time ) / COUNT( DISTINCT response.id )', 'average_time', false );
+    $modifier = lib::create( 'database\modifier' );
+    $modifier->join( 'response', 'qnaire.id', 'response.qnaire_id' );
+    $modifier->join( 'page_time', 'response.id', 'page_time.response_id' );
+    $modifier->join( 'page', 'page_time.page_id', 'page.id' );
+    $modifier->where( 'IFNULL( page_time.time, 0 )', '<=', 'page.max_time', false );
+    if( $submitted ) $modifier->where( 'response.submitted', '=', true );
+
+    return current( $this->select( $select, $modifier ) )['average_time'];
+  }
 }

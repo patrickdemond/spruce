@@ -23,6 +23,27 @@ class module extends \pine\service\base_qnaire_part_module
     // add the total number of questions
     $this->add_count_column( 'question_count', 'question', $select, $modifier );
 
+    // add the average time it takes to complete the module
+    if( $select->has_column( 'average_time' ) )
+    {
+      $join_sel = lib::create( 'database\select' );
+      $join_sel->from( 'page' );
+      $join_sel->add_column( 'id', 'page_id' );
+      $join_sel->add_column( 'ROUND( AVG( time ) )', 'time', false );
+
+      $join_mod = lib::create( 'database\modifier' );
+      $join_mod->left_join( 'page_time', 'page.id', 'page_time.page_id' );
+      $join_mod->where( 'IFNULL( page_time.time, 0 )', '<=', 'page.max_time', false );
+      $join_mod->group( 'page.id' );
+
+      $modifier->join(
+        sprintf( '( %s %s ) AS page_average_time', $join_sel->get_sql(), $join_mod->get_sql() ),
+        'page.id',
+        'page_average_time.page_id'
+      );
+      $select->add_table_column( 'page_average_time', 'time', 'average_time' );
+    }
+
     $modifier->join( 'module', 'page.module_id', 'module.id' );
     $modifier->join( 'qnaire', 'module.qnaire_id', 'qnaire.id' );
     $modifier->join( 'language', 'qnaire.base_language_id', 'base_language.id', '', 'base_language' );
