@@ -117,14 +117,27 @@ cenozoApp.initQnairePartModule = function( module, type ) {
 
   /* ######################################################################################################## */
   cenozo.providers.directive( 'cn'+typeCamel+'View', [
-    'Cn'+typeCamel+'ModelFactory',
-    function( CnModelFactory ) {
+    'Cn'+typeCamel+'ModelFactory', '$document', '$transitions',
+    function( CnModelFactory, $document, $transitions ) {
       return {
         templateUrl: module.getFileUrl( 'view.tpl.html' ),
         restrict: 'E',
         scope: { model: '=?' },
         controller: function( $scope ) {
           if( angular.isUndefined( $scope.model ) ) $scope.model = CnModelFactory.root;
+
+          // bind keyup (first unbind to prevent duplicates)
+          $document.unbind( 'keyup' );
+          $document.bind( 'keyup', function( event ) {
+            if( 37 == event.which ) {
+              if( null != $scope.model.viewModel.record.previous_id ) $scope.model.viewModel.viewPrevious();
+            } else if( 39 == event.which ) {
+              if( null != $scope.model.viewModel.record.next_id ) $scope.model.viewModel.viewNext();
+            }
+          } );
+          $transitions.onExit( {}, function( transition ) {
+            $document.unbind( 'keyup' );
+          }, { invokeLimit: 1 } )
         }
       };
     }
