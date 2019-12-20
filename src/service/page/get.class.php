@@ -33,6 +33,7 @@ class get extends \cenozo\service\get
    */
   public function finish()
   {
+    $setting_manager = lib::create( 'business\setting_manager' );
     $answer_class_name = lib::get_class_name( 'database\answer' );
     $page_time_class_name = lib::get_class_name( 'database\page_time' );
 
@@ -41,6 +42,8 @@ class get extends \cenozo\service\get
     // if we're asking for the page based on a response then make sure that all answers have been created
     if( !is_null( $this->db_response ) )
     {
+      $qnaire_username = $setting_manager->get_setting( 'utility', 'qnaire_username' );
+      $db_user = lib::create( 'business\session' )->get_user();
       $db_page = $this->db_response->get_page();
 
       // create answers for all questions on this page if they don't already exist
@@ -58,6 +61,7 @@ class get extends \cenozo\service\get
           $db_answer = lib::create( 'database\answer' );
           $db_answer->response_id = $this->db_response->id;
           $db_answer->question_id = $question['id'];
+          $db_answer->user_id = $qnaire_username == $db_user->name ? NULL : $db_user->id;
           $db_answer->save();
         }
       }

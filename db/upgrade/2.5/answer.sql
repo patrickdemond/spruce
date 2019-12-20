@@ -9,6 +9,7 @@ CREATE PROCEDURE patch_answer()
     SELECT "Creating new answer table" AS "";
 
     SET @sql = CONCAT(
+
       "CREATE TABLE IF NOT EXISTS answer ( ",
         "id INT UNSIGNED NOT NULL AUTO_INCREMENT, ",
         "update_timestamp TIMESTAMP NOT NULL, ",
@@ -16,13 +17,14 @@ CREATE PROCEDURE patch_answer()
         "response_id INT UNSIGNED NOT NULL, ",
         "question_id INT UNSIGNED NOT NULL, ",
         "language_id INT UNSIGNED NOT NULL, ",
-        "value JSON NULL NOT NULL DEFAULT 'null', ",
+        "user_id INT UNSIGNED NULL DEFAULT NULL, ",
+        "value JSON NOT NULL DEFAULT 'null', ",
         "PRIMARY KEY (id), ",
         "INDEX fk_response_id (response_id ASC), ",
         "INDEX fk_question_id (question_id ASC), ",
-        "INDEX fk_language_id (language_id ASC), ",
         "UNIQUE INDEX uq_response_id_question_id (response_id ASC, question_id ASC), ",
-        "CHECK( JSON_VALID( value ) ), ",
+        "INDEX fk_answer_language_id (language_id ASC), ",
+        "INDEX fk_user_id (user_id ASC), ",
         "CONSTRAINT fk_answer_response_id ",
           "FOREIGN KEY (response_id) ",
           "REFERENCES response (id) ",
@@ -36,7 +38,12 @@ CREATE PROCEDURE patch_answer()
         "CONSTRAINT fk_answer_language_id ",
           "FOREIGN KEY (language_id) ",
           "REFERENCES ", @cenozo, ".language (id) ",
-          "ON DELETE CASCADE ",
+          "ON DELETE NO ACTION ",
+          "ON UPDATE NO ACTION, ",
+        "CONSTRAINT fk_answer_user_id ",
+          "FOREIGN KEY (user_id) ",
+          "REFERENCES ", @cenozo, ".user (id) ",
+          "ON DELETE NO ACTION ",
           "ON UPDATE NO ACTION) ",
       "ENGINE = InnoDB"
     );
