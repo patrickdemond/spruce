@@ -114,7 +114,11 @@ class response extends \cenozo\database\record
           array( $this->id, $db_page->id )
         );
         if( is_null( $db_page_time->time ) ) $db_page_time->time = 0;
-        $db_page_time->time += ( util::get_datetime_object()->getTimestamp() - $db_page_time->datetime->getTimestamp() );
+        $microtime = microtime();
+        $db_page_time->time += (
+          util::get_datetime_object()->getTimestamp() + substr( $microtime, 0, strpos( $microtime, ' ' ) ) -
+          $db_page_time->datetime->getTimestamp() - $db_page_time->microtime
+        );
         $db_page_time->save();
 
         $db_next_page = $db_page->get_next_for_response( $this );
@@ -131,7 +135,7 @@ class response extends \cenozo\database\record
       }
     }
 
-    // set the datetime that this page was started
+    // set the datetime/microtime that this page was started
     if( !is_null( $db_next_page ) )
     {
       $db_next_page_time = $page_time_class_name::get_unique_record(
@@ -146,7 +150,9 @@ class response extends \cenozo\database\record
         $db_next_page_time->page_id = $db_next_page->id;
       }
 
+      $microtime = microtime();
       $db_next_page_time->datetime = util::get_datetime_object();
+      $db_next_page_time->microtime = substr( $microtime, 0, strpos( $microtime, ' ' ) );
       $db_next_page_time->save();
     }
   }
@@ -174,7 +180,10 @@ class response extends \cenozo\database\record
       array( $this->id, $db_page->id )
     );
     if( is_null( $db_page_time->time ) ) $db_page_time->time = 0;
-    $db_page_time->time += ( util::get_datetime_object()->getTimestamp() - $db_page_time->datetime->getTimestamp() );
+    $db_page_time->time += (
+      util::get_datetime_object()->getTimestamp() + substr( $microtime, 0, strpos( $microtime, ' ' ) ) -
+      $db_page_time->datetime->getTimestamp() - $db_page_time->microtime
+    );
     $db_page_time->save();
 
     $db_previous_page = $db_page->get_previous_for_response( $this );
@@ -188,7 +197,10 @@ class response extends \cenozo\database\record
         array( 'response_id', 'page_id' ),
         array( $this->id, $db_previous_page->id )
       );
+
+      $microtime = microtime();
       $db_previous_page_time->datetime = util::get_datetime_object();
+      $db_previous_page_time->microtime = substr( $microtime, 0, strpos( $microtime, ' ' ) );
       $db_previous_page_time->save();
     }
   }
