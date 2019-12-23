@@ -180,6 +180,7 @@ class response extends \cenozo\database\record
       array( $this->id, $db_page->id )
     );
     if( is_null( $db_page_time->time ) ) $db_page_time->time = 0;
+    $microtime = microtime();
     $db_page_time->time += (
       util::get_datetime_object()->getTimestamp() + substr( $microtime, 0, strpos( $microtime, ' ' ) ) -
       $db_page_time->datetime->getTimestamp() - $db_page_time->microtime
