@@ -203,7 +203,6 @@ define( function() {
           optionListById: {},
           currentLanguage: null,
           keyQuestionIndex: null,
-          pageComplete: false,
           writePromiseList: [],
           promiseIndex: 0,
           // Used to maintain a semaphore of queries so that they are all executed in sequence without any bumping the queue
@@ -261,6 +260,7 @@ define( function() {
             question.answer.refuse = angular.isObject( question.value ) && true === question.value.refuse;
           },
 
+          // Returns true if complete, false if not and the option ID if an option's extra data is missing
           questionIsComplete: function( question ) {
             // comment questions are always complete
             if( 'comment' == question.type ) return true;
@@ -292,7 +292,7 @@ define( function() {
                   if( this.evaluatePrecondition( preconditionListById[selectedOptionId] ) && (
                       ( angular.isArray( selectedOption.value ) && 0 == selectedOption.value.length ) ||
                       null == selectedOption.value
-                  ) ) return false;
+                  ) ) return null == selectedOption.value ? selectedOption.id : false;
                 }
               }
 
@@ -305,7 +305,7 @@ define( function() {
                   if( angular.isObject( selectedOption ) ) {
                     if( angular.isArray( selectedOption.value ) ) {
                       // make sure there is at least one option value
-                      for( var valueIndex = 0; valueIndex < selectedOption.value; valueIndex++ )
+                      for( var valueIndex = 0; valueIndex < selectedOption.value.length; valueIndex++ )
                         if( null != selectedOption.value[valueIndex] ) return true;
                     } else if( null != selectedOption.value ) return true;
                   } else if( null != selectedOption ) return true;
@@ -316,13 +316,6 @@ define( function() {
             }
 
             return true;
-          },
-
-          pageIsDone: function() {
-            // determine if any question is incomplete
-            return !this.questionList.some( function( question ) {
-              return !self.questionIsComplete( question );
-            } );
           },
 
           evaluatePrecondition: function( precondition ) {
@@ -413,8 +406,7 @@ define( function() {
               var promiseList = [];
               angular.extend( self, {
                 questionList: response.data,
-                keyQuestionIndex: null,
-                pageComplete: false
+                keyQuestionIndex: null
               } );
 
               // set the current language to the first question's language
@@ -423,6 +415,7 @@ define( function() {
               }
 
               self.questionList.forEach( function( question, questionIndex ) {
+                question.incomplete = false;
                 question.descriptions = parseDescriptions( question.descriptions );
                 question.value = angular.fromJson( question.value );
                 question.backupValue = angular.copy( question.value );
@@ -452,7 +445,6 @@ define( function() {
 
               return $q.all( promiseList ).then( function() {
                 self.questionList.forEach( question => self.convertValueToModel( question ) );
-                self.pageComplete = self.pageIsDone();
               } );
             } );
           },
@@ -472,7 +464,7 @@ define( function() {
             $q.all( this.writePromiseList ).then( function() {
               // proceed to the next page when the enter key is clicked
               if( 'enter' == key ) {
-                if( self.pageComplete ) self.proceed();
+                self.proceed();
                 return;
               }
 
@@ -514,7 +506,9 @@ define( function() {
             } );
           },
 
-          setAnswer: function( question, value ) {
+          setAnswer: function( question, value, noCompleteCheck ) {
+            if( angular.isUndefined( noCompleteCheck ) ) noCompleteCheck = false;
+
             // if the question's type is a number then make sure it falls within the min/max values
             var tooSmall = 'number' == question.type && null != value &&
                            ( null != question.minimum && value < question.minimum );
@@ -535,7 +529,6 @@ define( function() {
                   )
                 } ).show().then( function() {
                   question.value = angular.copy( question.backupValue );
-                  if( 'response' == self.parentModel.getSubjectFromState() ) self.pageComplete = self.pageIsDone();
                   self.convertValueToModel( question );
                 } );
               } :
@@ -558,9 +551,14 @@ define( function() {
                   question.value = value;
                   question.backupValue = angular.copy( question.value );
                   self.convertValueToModel( question );
+                  if( !noCompleteCheck ) {
+                    var complete = self.questionIsComplete( question );
+                    question.incomplete = false === complete ? true
+                                        : true === complete ? false
+                                        : complete;
+                  }
 
                   if( 'response' == self.parentModel.getSubjectFromState() ) {
-                    self.pageComplete = self.pageIsDone();
                     if( 'list' == question.type ) {
                       for( var element of document.getElementsByName( 'answerValue' ) ) {
                         var match = element.id.match( /option([0-9]+)value[0-9]+/ );
@@ -621,7 +619,7 @@ define( function() {
 
             var valueIndex = value[optionIndex].value.indexOf( null );
             if( -1 == valueIndex ) valueIndex = value[optionIndex].value.push( null ) - 1;
-            this.setAnswer( question, value ).then( function() {
+            this.setAnswer( question, value, true ).then( function() {
               // focus the new answer value's associated input
               $timeout( function() { document.getElementById( 'option' + option.id + 'value' + valueIndex ).focus(); }, 50 );
             } );
@@ -634,7 +632,7 @@ define( function() {
             if( 0 == value[optionIndex].value.length ) value.splice( optionIndex, 1 );
             if( 0 == value.length ) value = null;
 
-            this.setAnswer( question, value );
+            this.setAnswer( question, value, true );
           },
 
           setAnswerValue: function( question, option, valueIndex, answerValue ) {
@@ -714,14 +712,26 @@ define( function() {
           },
 
           proceed: function() {
-            // proceed to the response's next valid page
-            return this.runQuery( function() {
-              return CnHttpFactory.instance( {
-                path: 'response/token=' + $state.params.token + '?action=proceed'
-              } ).patch().then( function() {
-                self.parentModel.reloadState( true );
-              } );
+            // check to make sure that all questions are complete, and highlight any which aren't
+            var mayProceed = true;
+            this.questionList.forEach( function( question ) {
+              var complete = self.questionIsComplete( question );
+              question.incomplete = false === complete ? true
+                                  : true === complete ? false
+                                  : complete;
+              if( question.incomplete ) mayProceed = false;
             } );
+
+            if( mayProceed ) {
+              // proceed to the response's next valid page
+              return this.runQuery( function() {
+                return CnHttpFactory.instance( {
+                  path: 'response/token=' + $state.params.token + '?action=proceed'
+                } ).patch().then( function() {
+                  self.parentModel.reloadState( true );
+                } );
+              } );
+            }
           },
 
           backup: function() {

@@ -54,30 +54,32 @@
                 ng-bind-html="model.viewModel.record.descriptions[model.renderModel.currentLanguage] | cnNewlines"></span>
           <div ng-repeat="question in model.renderModel.getVisibleQuestionList()">
             <hr ng-if="!$first" />
-            <div ng-if="'comment' == question.type"
-                 class="vertical-spacer text-info"
-                 ng-bind-html="question.descriptions[model.renderModel.currentLanguage] | cnNewlines">
-            </div>
-            <div ng-if="'comment' != question.type"
+            <div ng-class="{
+                   'vertical-spacer text-info': 'comment' == question.type,
+                   'text-danger': true === question.incomplete
+                 }"
                  ng-bind-html="question.descriptions[model.renderModel.currentLanguage] | cnNewlines"></div>
-            <div class="horizontal-spacer" ng-if="'comment' != question" ng-switch="question.type">
+            <div class="horizontal-spacer"
+                 ng-class="{ 'has-error': true === question.incomplete }"
+                 ng-if="'comment' != question"
+                 ng-switch="question.type">
               <div ng-switch-when="boolean">
                 <label class="btn btn-default full-width"
+                       ng-class="{ 'color-red': true === question.incomplete }"
                        style="text-align: left; font-style: italic; font-weight: normal"
                        ng-model="question.answer.yes"
                        ng-click="model.renderModel.setAnswer( question, question.answer.yes ? true : null )"
                        uib-btn-checkbox>
-                  <i class="glyphicon"
-                     ng-class="question.answer.yes ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
+                  <i class="glyphicon" ng-class="question.answer.yes ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
                   {{ text( 'misc.yes' ) }}
                 </label>
                 <label class="btn btn-default full-width"
+                       ng-class="{ 'color-red': true === question.incomplete }"
                        style="text-align: left; font-style: italic; font-weight: normal"
                        ng-model="question.answer.no"
                        ng-click="model.renderModel.setAnswer( question, question.answer.no ? false : null )"
                        uib-btn-checkbox>
-                  <i class="glyphicon"
-                     ng-class="question.answer.no ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
+                  <i class="glyphicon" ng-class="question.answer.no ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
                   {{ text( 'misc.no' ) }}
                 </label>
               </div>
@@ -86,7 +88,10 @@
                   <label
                     class="btn btn-default full-width"
                     style="text-align: left"
-                    ng-class="{ 'rounded-bottom-left rounded-top-left': null != option.extra }"
+                    ng-class="{
+                      'rounded-bottom-left rounded-top-left': null != option.extra,
+                      'color-red': true === question.incomplete || option.id === question.incomplete
+                    }"
                     ng-model="question.answer.optionList[option.id].selected"
                     ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal', 'font-weight': 'normal' }"
                     ng-click="question.answer.optionList[option.id].selected ?
@@ -100,23 +105,24 @@
                 </div>
                 <div ng-if="option.multiple_answers">
                   <label
-                    class="btn btn-default full-width"
+                    class="btn btn-default full-width rounded-bottom-left rounded-top-left"
+                    ng-class="{ 'color-red': true === question.incomplete }"
                     style="text-align: left"
-                    class="rounded-bottom-left rounded-top-left"
                     ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal', 'font-weight': 'normal' }"
-                    ng-click="model.renderModel.addAnswerValue( question, option )"
                     ng-bind-html="option.descriptions[model.renderModel.currentLanguage] +
-                                  ' <i class=\'glyphicon glyphicon-plus\'></i>'">
+                                  ' <i class=\'glyphicon glyphicon-plus\'></i>'"
+                    ng-click="model.renderModel.addAnswerValue( question, option )">
                   </label>
                 </div>
                 <div ng-if="null != option.extra"
                      ng-repeat="value in question.answer.optionList[option.id].valueList">
                   <div class="col-slim" ng-class="option.multiple_answers ? 'col-xs-11' : 'col-xs-8'" ng-switch="option.extra">
-                   <input ng-switch-when="number"
+                    <input ng-switch-when="number"
                       type="number"
                       id="option{{ option.id }}value{{ $index }}"
                       name="answerValue"
                       class="form-control rounded-bottom-left rounded-bottom-right"
+                      ng-class="{ 'color-red': true === question.incomplete || option.id === question.incomplete }"
                       ng-switch-when="number"
                       ng-model="value"
                       ng-keydown="validateKeydown( $event )"
@@ -128,6 +134,7 @@
                       id="option{{ option.id }}value{{ $index }}"
                       name="answerValue"
                       class="form-control rounded-bottom-left rounded-bottom-right"
+                      ng-class="{ 'color-red': true === question.incomplete || option.id === question.incomplete }"
                       ng-switch-when="string"
                       ng-model="value"
                       ng-keydown="validateKeydown( $event )"
@@ -139,6 +146,7 @@
                       id="option{{ option.id }}value{{ $index }}"
                       name="answerValue"
                       class="form-control"
+                      ng-class="{ 'color-red': true === question.incomplete || option.id === question.incomplete }"
                       ng-switch-when="text"
                       ng-model="value"
                       ng-keydown="validateKeydown( $event )"
@@ -156,6 +164,7 @@
               </div>
               <input ng-switch-when="number"
                 class="form-control"
+                ng-class="{ 'color-red': true === question.incomplete }"
                 type="number"
                 ng-model="question.answer.value"
                 ng-keydown="validateKeydown( $event )"
@@ -165,6 +174,7 @@
               </input>
               <input ng-switch-when="string"
                 class="form-control"
+                ng-class="{ 'color-red': true === question.incomplete }"
                 type="text"
                 ng-model="question.answer.value"
                 ng-keydown="validateKeydown( $event )"
@@ -173,30 +183,31 @@
                 autocomplete="off">
               </input>
               <textarea ng-switch-when="text"
-                cn-elastic
+                class="form-control"
+                ng-class="{ 'color-red': true === question.incomplete }"
                 ng-model="question.answer.value"
                 ng-keydown="validateKeydown( $event )"
                 cn-change="model.renderModel.setAnswer( question, question.answer.value )"
                 cn-autofocus
-                class="form-control">
+                cn-elastic>
               </textarea>
               <div class="btn-group full-width" ng-if="'comment' != question.type">
                 <label class="btn btn-default col-xs-6"
-                       style="text-align: left; font-style: italic; font-weight: normal"
+                       ng-class="{ 'color-red': true === question.incomplete }"
+                       style="text-align: left; font-style: italic; font-weight: normal;"
                        ng-model="question.answer.dkna"
                        ng-click="model.renderModel.setAnswer( question, question.answer.dkna ? { dkna: true } : null )"
                        uib-btn-checkbox>
-                  <i class="glyphicon"
-                     ng-class="question.answer.dkna ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
+                  <i class="glyphicon" ng-class="question.answer.dkna ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
                   {{ text( 'misc.dkna' ) }}
                 </label>
                 <label class="btn btn-default col-xs-6"
-                       style="text-align: left; font-style: italic; font-weight: normal"
+                       ng-class="{ 'color-red': true === question.incomplete }"
+                       style="text-align: left; font-style: italic; font-weight: normal;"
                        ng-model="question.answer.refuse"
                        ng-click="model.renderModel.setAnswer( question, question.answer.refuse ? { refuse: true } : null )"
                        uib-btn-checkbox>
-                  <i class="glyphicon"
-                     ng-class="question.answer.refuse ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
+                  <i class="glyphicon" ng-class="question.answer.refuse ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
                   {{ text( 'misc.refuse' ) }}
                 </label>
               </div>
@@ -240,7 +251,7 @@
           </button>
           <button type="button"
                   ng-if="'response' == model.getSubjectFromState()"
-                  ng-disabled="!isComplete || !model.renderModel.pageComplete"
+                  ng-disabled="!isComplete"
                   ng-click="model.renderModel.proceed()"
                   class="btn"
                   ng-class="null != model.viewModel.record.next_id ? 'btn-default' : 'btn-success'"
