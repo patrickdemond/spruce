@@ -9,8 +9,8 @@ DROP PROCEDURE IF EXISTS patch_user;
     SELECT "Adding generic qnaire respondent user" AS "";
 
     SET @sql = CONCAT(
-      "INSERT IGNORE INTO ", @cenozo, ".user( name, first_name, last_name, use_12hour_clock ) ",
-      "VALUES ( 'pine', 'utility', 'account', 1 )" );
+      "INSERT IGNORE INTO ", @cenozo, ".user( name, first_name, last_name, use_12hour_clock, email ) ",
+      "VALUES ( 'pine', 'utility', 'account', 1, 'pine@clsa-elcv.ca' )" );
     PREPARE statement FROM @sql;
     EXECUTE statement;
     DEALLOCATE PREPARE statement;
