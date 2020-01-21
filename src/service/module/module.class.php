@@ -32,9 +32,9 @@ class module extends \pine\service\base_qnaire_part_module
       $join_sel->add_column( 'ROUND( AVG( time ) )', 'time', false );
 
       $join_mod = lib::create( 'database\modifier' );
-      $join_mod->join( 'page', 'module.id', 'page.module_id' );
+      $join_mod->left_join( 'page', 'module.id', 'page.module_id' );
       $join_mod->left_join( 'page_time', 'page.id', 'page_time.page_id' );
-      $join_mod->where( 'IFNULL( page_time.time, 0 )', '<=', 'page.max_time', false );
+      $join_mod->where( 'IFNULL( page_time.time, 0 )', '<=', 'IFNULL( page.max_time, 0 )', false );
       $join_mod->group( 'module.id' );
 
       $modifier->join(
