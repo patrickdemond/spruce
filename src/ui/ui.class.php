@@ -69,6 +69,7 @@ class ui extends \cenozo\ui\ui
       $module->add_child( 'qnaire_description' );
       $module->add_child( 'module' );
       $module->add_child( 'attribute' );
+      $module->add_choose( 'language' );
     }
 
     $module = $this->get_module( 'module' );

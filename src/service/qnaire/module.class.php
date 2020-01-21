@@ -20,6 +20,8 @@ class module extends \cenozo\service\module
   {
     parent::prepare_read( $select, $modifier );
 
+    $modifier->join( 'language', 'qnaire.base_language_id', 'base_language.id', '', 'base_language' );
+
     // add the total number of modules
     $this->add_count_column( 'module_count', 'module', $select, $modifier );
 

@@ -13,6 +13,10 @@ define( function() {
       name: {
         title: 'Name'
       },
+      base_language_id: {
+        title: 'Base Language',
+        column: 'base_language.name'
+      },
       debug: {
         title: 'Debug Mode',
         type: 'boolean'
@@ -38,6 +42,10 @@ define( function() {
     name: {
       title: 'Name',
       type: 'string'
+    },
+    base_language_id: {
+      title: 'Base Language',
+      type: 'enum'
     },
     average_time: {
       title: 'Average Time',
@@ -147,15 +155,41 @@ define( function() {
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnQnaireModelFactory', [
-    'CnBaseModelFactory', 'CnQnaireAddFactory', 'CnQnaireListFactory', 'CnQnaireViewFactory',
-    function( CnBaseModelFactory, CnQnaireAddFactory, CnQnaireListFactory, CnQnaireViewFactory ) {
+    'CnBaseModelFactory', 'CnQnaireAddFactory', 'CnQnaireListFactory', 'CnQnaireViewFactory', 'CnHttpFactory',
+    function( CnBaseModelFactory, CnQnaireAddFactory, CnQnaireListFactory, CnQnaireViewFactory, CnHttpFactory ) {
       var object = function( root ) {
+        var self = this;
         CnBaseModelFactory.construct( this, module );
         this.addModel = CnQnaireAddFactory.instance( this );
         this.listModel = CnQnaireListFactory.instance( this );
         this.viewModel = CnQnaireViewFactory.instance( this, root );
 
         this.getBreadcrumbTitle = function() { return this.viewModel.record.name; };
+
+        // extend getMetadata
+        this.getMetadata = function() {
+          return this.$$getMetadata().then( function() {
+            return CnHttpFactory.instance( {
+              path: 'language',
+              data: {
+                select: { column: [ 'id', 'name', 'code' ] },
+                modifier: {
+                  where: { column: 'active', operator: '=', value: true },
+                  order: 'name'
+                }
+              }
+            } ).query().then( function success( response ) {
+              self.metadata.columnList.base_language_id.enumList = [];
+              response.data.forEach( function( item ) {
+                self.metadata.columnList.base_language_id.enumList.push( {
+                  value: item.id,
+                  name: item.name,
+                  code: item.code // code is needed by the withdraw action
+                } );
+              } );
+            } );
+          } );
+        };
       };
 
       return {
