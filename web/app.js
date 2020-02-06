@@ -622,6 +622,7 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
         pageList: [],
         questionList: [],
         rankList: [],
+        formatError: false,
         nameConflict: false,
 
         resetData: function( subject ) {
@@ -632,6 +633,7 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
           if( [ undefined, 'qnaire', 'module', 'page' ].includes( subject ) ) self.data.questionId = null;
           self.data.rank = null;
           if( angular.isUndefined( subject ) )self.data.name = null;
+          self.formatError = false;
           self.nameConflict = false;
 
           // reset lists
@@ -787,6 +789,7 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
         isComplete: function() {
           return (
             !this.working &&
+            !this.formatError &&
             !this.nameConflict &&
             null != this.data.name &&
             null != this.data.rank &&
@@ -815,21 +818,26 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
         save: function() {
           this.working = true;
 
-          var data = { rank: this.data.rank, name: this.data.name };
-          data[this.parentType + '_id'] = this.data[this.parentIdName];
+          // make sure the name fits into the regex
+          if( null == this.data.name.match( /^[a-zA-Z_][a-zA-Z0-9_]*$/ ) ) {
+            this.formatError = true;
+          } else {
+            var data = { rank: this.data.rank, name: this.data.name };
+            data[this.parentType + '_id'] = this.data[this.parentIdName];
 
-          return CnHttpFactory.instance( {
-            path: this.type + '?clone=' + this.sourceId,
-            data: data,
-            onError: function( response ) {
-              if( 409 == response.status ) self.nameConflict = true;
-              else CnModalMessageFactory.httpError( response );
-            }
-          } ).post().then( function( response ) {
-            $state.go( self.type + '.view', { identifier: response.data } );
-          } ).finally( function() {
-            self.working = false;
-          } );
+            return CnHttpFactory.instance( {
+              path: this.type + '?clone=' + this.sourceId,
+              data: data,
+              onError: function( response ) {
+                if( 409 == response.status ) self.nameConflict = true;
+                else CnModalMessageFactory.httpError( response );
+              }
+            } ).post().then( function( response ) {
+              $state.go( self.type + '.view', { identifier: response.data } );
+            } ).finally( function() {
+              self.working = false;
+            } );
+          }
         }
       } );
     }

@@ -64,7 +64,7 @@
           ng-required="true"></select>
         </div>
     </div>
-    <div class="form-group" ng-class="{'has-feedback has-error': model.nameConflict}">
+    <div class="form-group" ng-class="{'has-feedback has-error': model.formatError || model.nameConflict}">
       <label for="name" class="control-label col-sm-2">Name</label>
       <div class="col-sm-10">
         <input
@@ -74,7 +74,8 @@
           ng-model="model.data.name"
           ng-change="model.nameConflict = false"
           ng-required="true"></select>
-      <div class="help-block" ng-if="model.nameConflict">Conflicts with existing record</div>
+      <div class="help-block" ng-if="model.formatError">Invalid format: name must start with a letter and be followed by alphanumeric characters and underscores only.</div>
+      <div class="help-block" ng-if="model.nameConflict">Conflicts with existing record.</div>
       </div>
     </div>
   </div>
