@@ -81,6 +81,13 @@ define( function() {
     }
   } );
 
+  module.addExtraOperation( 'view', {
+    title: 'Clone',
+    operation: function( $state, model ) {
+      $state.go( 'qnaire.clone', { identifier: model.viewModel.record.getIdentifier() } );
+    }
+  } );
+
   /* ######################################################################################################## */
   cenozo.providers.directive( 'cnQnaireAdd', [
     'CnQnaireModelFactory',
@@ -91,6 +98,22 @@ define( function() {
         scope: { model: '=?' },
         controller: function( $scope ) {
           if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnaireModelFactory.root;
+        }
+      };
+    }
+  ] );
+
+  /* ######################################################################################################## */
+  cenozo.providers.directive( 'cnQnaireClone', [
+    'CnQnaireCloneFactory', 'CnHttpFactory',
+    function( CnQnaireCloneFactory, CnHttpFactory ) {
+      return {
+        templateUrl: module.getFileUrl( 'clone.tpl.html' ),
+        restrict: 'E',
+        scope: { model: '=?' },
+        controller: function( $scope ) {
+          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnaireCloneFactory.instance( 'module' );
+          $scope.model.onLoad();
         }
       };
     }
@@ -132,6 +155,55 @@ define( function() {
     function( CnBaseAddFactory ) {
       var object = function( parentModel ) { CnBaseAddFactory.construct( this, parentModel ); };
       return { instance: function( parentModel ) { return new object( parentModel ); } };
+    }
+  ] );
+
+  /* ######################################################################################################## */
+  cenozo.providers.factory( 'CnQnaireCloneFactory', [
+    'CnHttpFactory', 'CnModalMessageFactory', '$state',
+    function( CnHttpFactory, CnModalMessageFactory, $state ) {
+      var object = function() {
+        var self = this;
+        angular.extend( this, {
+          parentQnaireId: $state.params.identifier,
+          sourceName: null,
+          working: false,
+          name: null,
+          nameConflict: false,
+
+          onLoad: function() {
+            // reset data
+            this.name = null;
+            this.nameConflict = false;
+            CnHttpFactory.instance( {
+              path: 'qnaire/' + this.parentQnaireId,
+              data: { select: { column: 'name' } }
+            } ).get().then( function( response ) {
+              self.sourceName = response.data.name;
+            } );
+          },
+          isComplete: function() { return !this.working && !this.nameConflict && null != this.name; },
+          cancel: function() { $state.go( 'qnaire.view', { identifier: this.parentQnaireId } ); },
+
+          save: function() {
+            this.working = true;
+
+            return CnHttpFactory.instance( {
+              path: 'qnaire?clone=' + this.parentQnaireId,
+              data: { name: this.name },
+              onError: function( response ) {
+                if( 409 == response.status ) self.nameConflict = true;
+                else CnModalMessageFactory.httpError( response );
+              }
+            } ).post().then( function( response ) {
+              $state.go( 'qnaire.view', { identifier: response.data } );
+            } ).finally( function() {
+              self.working = false;
+            } );
+          }
+        } );
+      }
+      return { instance: function() { return new object(); } };
     }
   ] );
 

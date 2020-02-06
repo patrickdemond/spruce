@@ -1,0 +1,27 @@
+<div class="container-fluid bg-primary rounded-top"><h4>Clone Questionnaire "{{ model.sourceName }}"</h4></div>
+<form name="form" class="form-horizontal" novalidate>
+  <div class="form-body">
+    <div class="spacer text-info">
+      Provide the name of the cloned questionnaire:
+    </div>
+    <div class="form-group" ng-class="{'has-feedback has-error': model.nameConflict}">
+      <label for="name" class="control-label col-sm-2">Name</label>
+      <div class="col-sm-10">
+        <input
+          id="name"
+          class="col-sm-10 form-control"
+          type="text"
+          ng-model="model.name"
+          ng-change="model.nameConflict = false"
+          ng-required="true"></select>
+      <div class="help-block" ng-if="model.nameConflict">Conflicts with existing record</div>
+      </div>
+    </div>
+  </div>
+  <div class="form-footer text-right rounded-bottom bg-info">
+    <button type="button" class="btn btn-default" ng-click="model.cancel()">Cancel</button>
+    <button type="button" class="btn btn-primary" ng-click="model.save()" ng-disabled="!model.isComplete()">
+      <i class="glyphicon glyphicon-cloud-upload"></i> Save
+    </button>
+  </div>
+</form>
