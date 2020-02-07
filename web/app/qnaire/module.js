@@ -5,9 +5,9 @@ define( function() {
   angular.extend( module, {
     identifier: {},
     name: {
-      singular: 'qnaire',
-      plural: 'qnaires',
-      possessive: 'qnaire\'s'
+      singular: 'questionnaire',
+      plural: 'questionnaires',
+      possessive: 'questionnaire\'s'
     },
     columnList: {
       name: {
@@ -105,15 +105,26 @@ define( function() {
 
   /* ######################################################################################################## */
   cenozo.providers.directive( 'cnQnaireClone', [
-    'CnQnaireCloneFactory', 'CnHttpFactory',
-    function( CnQnaireCloneFactory, CnHttpFactory ) {
+    'CnQnaireCloneFactory', 'CnSession', '$state',
+    function( CnQnaireCloneFactory, CnSession, $state ) {
       return {
         templateUrl: module.getFileUrl( 'clone.tpl.html' ),
         restrict: 'E',
         scope: { model: '=?' },
         controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnaireCloneFactory.instance( 'module' );
-          $scope.model.onLoad();
+          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnaireCloneFactory.instance();
+          
+          $scope.model.onLoad().then( function() {
+            CnSession.setBreadcrumbTrail( [ {
+              title: 'Questionnaires', 
+              go: function() { return $state.go( 'qnaire.list' ); }
+            }, {
+              title: $scope.model.sourceName,
+              go: function() { return $state.go( 'qnaire.view', { identifier: $scope.model.parentQnaireId } ); }
+            }, {
+              title: 'move/copy'
+            } ] );
+          } );
         }
       };
     }
@@ -175,7 +186,7 @@ define( function() {
             // reset data
             this.name = null;
             this.nameConflict = false;
-            CnHttpFactory.instance( {
+            return CnHttpFactory.instance( {
               path: 'qnaire/' + this.parentQnaireId,
               data: { select: { column: 'name' } }
             } ).get().then( function( response ) {

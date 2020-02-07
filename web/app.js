@@ -653,7 +653,11 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
         onLoad: function() {
           this.resetData();
 
-          var columnList = [ 'name', { table: 'module', column: 'qnaire_id' } ];
+          var columnList = [
+            'name',
+            { table: 'module', column: 'qnaire_id' },
+            { table: this.parentType, column: 'name', alias: 'parentName' }
+          ];
           if( [ 'page', 'question', 'question_option' ].includes( this.type ) )
             columnList.push( { table: 'page', column: 'module_id' } );
           if( [ 'question', 'question_option' ].includes( this.type ) )
@@ -667,6 +671,7 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
           } ).get().then( function( response ) {
             self.data.name = response.data.name;
             self.sourceName = response.data.name;
+            self.parentSourceName = response.data.parentName;
             self.sourceParentId = response.data[self.parentType + '_id'];
             angular.extend( self.data, {
               qnaireId: 'qnaire' == self.parentType ? null : response.data.qnaire_id,

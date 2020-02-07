@@ -33,15 +33,31 @@ define( function() {
 
   /* ######################################################################################################## */
   cenozo.providers.directive( 'cnModuleClone', [
-    'CnQnairePartCloneFactory', 'CnHttpFactory',
-    function( CnQnairePartCloneFactory, CnHttpFactory ) {
+    'CnQnairePartCloneFactory', 'CnSession', '$state',
+    function( CnQnairePartCloneFactory, CnSession, $state ) {
       return {
         templateUrl: cenozoApp.getFileUrl( 'pine', 'qnaire_part_clone.tpl.html' ),
         restrict: 'E',
         scope: { model: '=?' },
         controller: function( $scope ) {
           if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnairePartCloneFactory.instance( 'module' );
-          $scope.model.onLoad();
+          
+          $scope.model.onLoad().then( function() {
+            CnSession.setBreadcrumbTrail( [ {
+              title: 'Questionnaire', 
+              go: function() { return $state.go( 'qnaire.list' ); }
+            }, {
+              title: $scope.model.parentSourceName,
+              go: function() { return $state.go( 'qnaire.view', { identifier: $scope.model.sourceParentId } ); }
+            }, {
+              title: 'Modules'
+            }, {
+              title: $scope.model.sourceName,
+              go: function() { return $state.go( 'module.view', { identifier: $scope.model.sourceId } ); }
+            }, {
+              title: 'move/copy'
+            } ] );
+          } );
         }
       };
     }
