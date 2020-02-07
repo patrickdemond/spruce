@@ -129,10 +129,14 @@ cenozoApp.initQnairePartModule = function( module, type ) {
           // bind keyup (first unbind to prevent duplicates)
           $document.unbind( 'keyup' );
           $document.bind( 'keyup', function( event ) {
-            if( 37 == event.which ) {
-              if( null != $scope.model.viewModel.record.previous_id ) $scope.model.viewModel.viewPrevious();
-            } else if( 39 == event.which ) {
-              if( null != $scope.model.viewModel.record.next_id ) $scope.model.viewModel.viewNext();
+            // don't process hotkeys when we're focussed on input-based UI elements
+            if( !['input','select','textarea'].includes( event.target.localName ) ) {
+              event.stopPropagation();
+              if( 37 == event.which ) {
+                if( null != $scope.model.viewModel.record.previous_id ) $scope.model.viewModel.viewPrevious();
+              } else if( 39 == event.which ) {
+                if( null != $scope.model.viewModel.record.next_id ) $scope.model.viewModel.viewNext();
+              }
             }
           } );
           $transitions.onExit( {}, function( transition ) {
