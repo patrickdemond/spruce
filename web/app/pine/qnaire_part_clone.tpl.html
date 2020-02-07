@@ -1,10 +1,24 @@
-<div class="container-fluid bg-primary rounded-top"><h4>Clone {{ model.typeName }} "{{ model.sourceName }}"</h4></div>
+<div class="container-fluid bg-primary rounded-top"><h4>Move/Copy {{ model.typeName }} "{{ model.sourceName }}"</h4></div>
 <form name="form" class="form-horizontal" novalidate>
   <div class="form-body">
     <div class="spacer text-info">
-      Provide the target destination for the cloned {{ model.typeName | lowercase }}:
+      Provide the target destination for the {{ model.typeName | lowercase }}:
     </div>
-    <div class="form-group first-form-group" ng-if="0 < model.qnaireList.length">
+    <div class="form-group first-form-group">
+      <label for="operation" class="control-label col-sm-2">Operation</label>
+      <div class="col-sm-10">
+        <select
+          id="operation"
+          class="form-control"
+          ng-model="model.operation"
+          ng-change="model.setOperation()"
+          ng-required="true">
+          <option value="move">Move {{ model.typeName }} (the parent {{ model.parentTypeName | lowercase }} will be deleted if it has no remaining {{ model.typeName | lowercase }}s)</option>
+          <option value="clone">Copy {{ model.typeName }}</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group" ng-if="0 < model.qnaireList.length">
       <label for="qnaireId" class="control-label col-sm-2">Questionnaire</label>
       <div class="col-sm-10">
         <select
@@ -64,8 +78,10 @@
           ng-required="true"></select>
         </div>
     </div>
-    <div class="form-group" ng-class="{'has-feedback has-error': model.formatError || model.nameConflict}">
-      <label for="name" class="control-label col-sm-2">Name</label>
+    <div class="form-group"
+         ng-class="{'has-feedback has-error': model.formatError || model.nameConflict}"
+         ng-if="'clone' == model.operation">
+      <label for="name" class="control-label col-sm-2">New Name</label>
       <div class="col-sm-10">
         <input
           id="name"

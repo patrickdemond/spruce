@@ -14,6 +14,58 @@ use cenozo\lib, cenozo\log, pine\util;
 abstract class base_qnaire_part extends \cenozo\database\has_rank
 {
   /**
+   * Overrides the parent class
+   */
+  public function save()
+  {
+    $column_name = sprintf( '%s_id', static::$rank_parent );
+
+    // if we've changed the rank parent id then re-order all other objects in the old parent which came after this record
+    $old_rank_parent_id = NULL;
+    $old_rank = NULL;
+    if( $this->has_column_changed( $column_name ) )
+    {
+      $old_rank_parent_id = $this->get_passive_column_value( $column_name );
+      $old_rank = $this->get_passive_column_value( 'rank' );
+    }
+
+    // make room in the ranks of the new parent
+    if( !is_null( $old_rank_parent_id ) && !is_null( $old_rank ) )
+    {
+      $sql = sprintf(
+        'UPDATE %s '.
+        'SET rank = rank + 1 '.
+        'WHERE %s = %d '.
+        'AND rank >= %d '.
+        'ORDER by rank DESC',
+        static::get_table_name(),
+        $column_name,
+        $this->$column_name,
+        $this->rank
+      );
+      static::db()->execute( $sql );
+    }
+
+    parent::save();
+
+    // reorder the ranks in the old parent
+    if( !is_null( $old_rank_parent_id ) && !is_null( $old_rank ) )
+    {
+      $sql = sprintf(
+        'UPDATE %s '.
+        'SET rank = rank - 1 '.
+        'WHERE %s = %d '.
+        'AND rank > %d',
+        static::get_table_name(),
+        $column_name,
+        $old_rank_parent_id,
+        $old_rank
+      );
+      static::db()->execute( $sql );
+    }
+  }
+
+  /**
    * TODO: document
    */
   public function get_previous()

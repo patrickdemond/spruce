@@ -77,7 +77,7 @@ cenozoApp.initQnairePartModule = function( module, type ) {
   } );
 
   module.addExtraOperation( 'view', {
-    title: 'Clone',
+    title: 'Move/Copy',
     operation: function( $state, model ) {
       $state.go( type + '.clone', { identifier: model.viewModel.record.getIdentifier() } );
     }
@@ -599,8 +599,8 @@ cenozo.service( 'CnTranslationHelper', [
 
 /* ######################################################################################################## */
 cenozo.factory( 'CnQnairePartCloneFactory', [
-  'CnHttpFactory', 'CnModalMessageFactory', '$q', '$filter', '$state',
-  function( CnHttpFactory, CnModalMessageFactory, $q, $filter, $state ) {
+  'CnHttpFactory', 'CnModalMessageFactory', 'CnModalConfirmFactory', '$q', '$filter', '$state',
+  function( CnHttpFactory, CnModalMessageFactory, CnModalConfirmFactory, $q, $filter, $state ) {
     var object = function( type ) {
       var self = this;
       var parentType = 'module' == type ? 'qnaire' : 'page' == type ? 'module' : 'question' == type ? 'page' : 'question';
@@ -610,9 +610,12 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
         parentType: parentType,
         parentIdName: parentType.replace( ' ', '_' ).snakeToCamel() + 'Id',
         typeName: type.replace( /_/g, ' ' ).ucWords(),
+        parentTypeName: 'qnaire' == parentType ? 'questionnaire' : parentType.replace( /_/g, ' ' ).ucWords(),
         sourceId: $state.params.identifier,
         sourceName: null,
+        sourceParentId: null,
         working: false,
+        operation: 'move',
         data: {
           qnaireId: null,
           moduleId: null,
@@ -636,7 +639,7 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
           if( [ undefined, 'qnaire', 'module' ].includes( subject ) ) self.data.pageId = null;
           if( [ undefined, 'qnaire', 'module', 'page' ].includes( subject ) ) self.data.questionId = null;
           self.data.rank = null;
-          if( angular.isUndefined( subject ) )self.data.name = null;
+          if( angular.isUndefined( subject ) ) self.data.name = null;
           self.formatError = false;
           self.nameConflict = false;
 
@@ -662,31 +665,51 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
             path: [this.type, this.sourceId].join( '/' ),
             data: { select: { column: columnList } }
           } ).get().then( function( response ) {
+            self.data.name = response.data.name;
             self.sourceName = response.data.name;
+            self.sourceParentId = response.data[self.parentType + '_id'];
             angular.extend( self.data, {
-              qnaireId: response.data.qnaire_id,
-              moduleId: response.data.module_id,
-              pageId: response.data.page_id,
-              questionId: response.data.question_id
+              qnaireId: 'qnaire' == self.parentType ? null : response.data.qnaire_id,
+              moduleId: 'module' == self.parentType ? null : response.data.module_id,
+              pageId: 'page' == self.parentType ? null : response.data.page_id,
+              questionId: 'question' == self.parentTYpe ? null : response.data.question_id
             } );
           } ).then( function() {
             return $q.all( [
-              CnHttpFactory.instance( {
-                path: 'qnaire',
-                data: {
-                  select: { column: [ 'id', 'name' ] },
-                  modifier: { order: { name: false } }
-                },
-              } ).query().then( function( response ) {
-                self.qnaireList = response.data.map( item => ({ value: item.id, name: item.name }) );
-                self.qnaireList.unshift( { value: null, name: '(choose target questionnaire)' } );
-              } ),
-
+              self.resetQnaireList(),
               self.setQnaire( true ),
               self.setModule( true ),
               self.setPage( true ),
               self.setQuestion( true )
             ] );
+          } );
+        },
+
+        setOperation: function() {
+          // update the parent list when the operation type changes
+          if( 'qnaire' == this.parentType ) {
+            return this.resetQnaireList();
+          } else if( 'module' == this.parentType ) {
+            return this.setQnaire( true );
+          } else if( 'page' == this.parentType ) {
+            return this.setModule( true );
+          } else if( 'question' == this.parentType ) {
+            return this.setPage( true );
+          }
+        },
+
+        resetQnaireList: function() {
+          return CnHttpFactory.instance( {
+            path: 'qnaire',
+            data: {
+              select: { column: [ 'id', 'name' ] },
+              modifier: { order: { name: false } }
+            },
+          } ).query().then( function( response ) {
+            self.qnaireList = response.data
+              .filter( item => 'move' != self.operation || 'qnaire' != self.parentType || self.sourceParentId != item.id )
+              .map( item => ({ value: item.id, name: item.name }) );
+            self.qnaireList.unshift( { value: null, name: '(choose target questionnaire)' } );
           } );
         },
 
@@ -707,7 +730,9 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
                 modifier: { order: { rank: false } }
               },
             } ).query().then( function( response ) {
-              self.moduleList = response.data.map( item => ({ value: item.id, name: item.rank + '. ' + item.name }) );
+              self.moduleList = response.data
+                .filter( item => 'move' != self.operation || 'module' != self.parentType || self.sourceParentId != item.id )
+                .map( item => ({ value: item.id, name: item.rank + '. ' + item.name }) );
               self.moduleList.unshift( { value: null, name: '(choose target module)' } );
             } );
           }
@@ -730,7 +755,9 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
                 modifier: { order: { rank: false } }
               },
             } ).query().then( function( response ) {
-              self.pageList = response.data.map( item => ({ value: item.id, name: item.rank + '. ' + item.name }) );
+              self.pageList = response.data
+                .filter( item => 'move' != self.operation || 'page' != self.parentType || self.sourceParentId != item.id )
+                .map( item => ({ value: item.id, name: item.rank + '. ' + item.name }) );
               self.pageList.unshift( { value: null, name: '(choose target page)' } );
             } );
           }
@@ -753,7 +780,9 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
                 modifier: { where: { column: 'question.type', operator: '=', value: 'list' }, order: { rank: false } }
               },
             } ).query().then( function( response ) {
-              self.questionList = response.data.map( item => ({ value: item.id, name: item.rank + '. ' + item.name }) );
+              self.questionList = response.data
+                .filter( item => 'move' != self.operation || 'question' != self.parentType || self.sourceParentId != item.id )
+                .map( item => ({ value: item.id, name: item.rank + '. ' + item.name }) );
               self.questionList.unshift( {
                 value: null,
                 name: 0 == self.questionList.length ?
@@ -780,7 +809,7 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
                 select: { column: { column: 'MAX( ' + this.type + '.rank )', alias: 'max', table_prefix: false } }
               },
             } ).query().then( function( response ) {
-              var maxRank = null == response.data[0].max ? 1 : parseInt( response.data[0].max ) + 1
+              var maxRank = null == response.data[0].max ? 1 : parseInt( response.data[0].max ) + 1;
               self.rankList = [];
               for( var rank = 1; rank <= maxRank; rank++ ) {
                 self.rankList.push( { value: rank, name: $filter( 'cnOrdinal' )( rank ) } );
@@ -793,9 +822,6 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
         isComplete: function() {
           return (
             !this.working &&
-            !this.formatError &&
-            !this.nameConflict &&
-            null != this.data.name &&
             null != this.data.rank &&
             null != this.data.qnaireId && (
               'page' != this.type ||
@@ -811,6 +837,12 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
                 null != this.data.pageId &&
                 null != this.data.questionId
               )
+            ) && (
+              'move' == this.operation || (
+                !this.nameConflict &&
+                !this.formatError &&
+                null != this.data.name
+              )
             )
           );
         },
@@ -822,25 +854,63 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
         save: function() {
           this.working = true;
 
-          // make sure the name fits into the regex
-          if( null == this.data.name.match( /^[a-zA-Z_][a-zA-Z0-9_]*$/ ) ) {
-            this.formatError = true;
-          } else {
-            var data = { rank: this.data.rank, name: this.data.name };
-            data[this.parentType + '_id'] = this.data[this.parentIdName];
+          if( 'move' == this.operation ) {
+            // a private function that moves the record (used below)
+            function move() {
+              var data = { rank: self.data.rank };
+              data[self.parentType + '_id'] = self.data[self.parentIdName];
 
-            return CnHttpFactory.instance( {
-              path: this.type + '?clone=' + this.sourceId,
-              data: data,
-              onError: function( response ) {
-                if( 409 == response.status ) self.nameConflict = true;
-                else CnModalMessageFactory.httpError( response );
-              }
-            } ).post().then( function( response ) {
-              $state.go( self.type + '.view', { identifier: response.data } );
-            } ).finally( function() {
-              self.working = false;
+              return CnHttpFactory.instance( {
+                path: self.type + '/' + self.sourceId,
+                data: data
+              } ).patch().then( function() {
+                $state.go( self.type + '.view', { identifier: self.sourceId } );
+              } ).finally( function() {
+                self.working = false;
+              } );
+            }
+
+            // see if we'll be leaving the parent without any children
+            CnHttpFactory.instance( {
+              path: this.type,
+              data: { modifier: { where: { column: this.parentType + '_id', operator: '=', value: this.sourceParentId } } }
+            } ).count().then( function( response ) {
+              if( 1 == parseInt( response.headers( 'Total' ) ) ) {
+                CnModalConfirmFactory.instance( {
+                  message:
+                    'This is the only ' + self.typeName.toLowerCase() + ' belonging to its parent ' +
+                    self.parentTypeName.toLowerCase() + '.  Do you wish to delete the ' + self.parentTypeName.toLowerCase() +
+                    ' after the ' + self.typeName.toLowerCase() + ' is moved?'
+                } ).show().then( function( response ) {
+                  // first move the record
+                  move();
+
+                  // now remove the parent if requested to
+                  if( response ) CnHttpFactory.instance( { path: self.parentType + '/' + self.sourceParentId } ).delete();
+                } );
+              } else move();
             } );
+          } else { // clone
+            // make sure the name is valid
+            if( null == this.data.name.match( /^[a-zA-Z_][a-zA-Z0-9_]*$/ ) ) {
+              this.formatError = true;
+            } else {
+              var data = { rank: this.data.rank, name: this.data.name };
+              data[this.parentType + '_id'] = this.data[this.parentIdName];
+
+              return CnHttpFactory.instance( {
+                path: this.type + '?clone=' + this.sourceId,
+                data: data,
+                onError: function( response ) {
+                  if( 409 == response.status ) self.nameConflict = true;
+                  else CnModalMessageFactory.httpError( response );
+                }
+              } ).post().then( function( response ) {
+                $state.go( self.type + '.view', { identifier: response.data } );
+              } ).finally( function() {
+                self.working = false;
+              } );
+            }
           }
         }
       } );
