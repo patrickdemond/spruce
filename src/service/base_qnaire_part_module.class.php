@@ -87,8 +87,8 @@ abstract class base_qnaire_part_module extends \cenozo\service\module
         $subject = $this->get_subject();
         $description_class_name = lib::get_class_name( sprintf( 'database\%s_description', $subject ) );
         $db_description = $description_class_name::get_unique_record(
-          array( sprintf( '%s_id', $subject ), 'language_id' ),
-          array( $record->id, $record->get_qnaire()->base_language_id )
+          array( sprintf( '%s_id', $subject ), 'language_id', 'type' ),
+          array( $record->id, $record->get_qnaire()->base_language_id, 'prompt' )
         );
 
         $db_description->value = $post_array['description'];

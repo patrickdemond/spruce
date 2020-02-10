@@ -26,9 +26,9 @@ DELIMITER $$
 DROP TRIGGER IF EXISTS module_AFTER_INSERT $$
 CREATE DEFINER = CURRENT_USER TRIGGER module_AFTER_INSERT AFTER INSERT ON module FOR EACH ROW
 BEGIN
-  INSERT INTO module_description( module_id, language_id )
-  SELECT NEW.id, language_id
-  FROM qnaire_has_language
+  INSERT INTO module_description( module_id, language_id, type )
+  SELECT NEW.id, language_id, type.name
+  FROM ( SELECT "prompt" AS name UNION SELECT "popup" AS name ) AS type, qnaire_has_language
   WHERE qnaire_id = NEW.qnaire_id;
 END$$
 

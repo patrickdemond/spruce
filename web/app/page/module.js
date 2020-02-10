@@ -11,7 +11,7 @@ define( function() {
   };
 
   module.addInput( '', 'average_time', { title: 'Average Time (seconds)', type: 'string', isConstant: true, isExcluded: 'add' } );
-  module.addInput( '', 'max_time', { title: 'Max Time', type: 'string', format: 'integer' } );
+  module.addInput( '', 'max_time', { title: 'Max Time (seconds)', type: 'string', format: 'integer' } );
   module.addInput( '', 'note', { title: 'Note', type: 'text' } );
   module.addInput( '', 'qnaire_id', { column: 'qnaire.id', isExcluded: true }, );
   module.addInput( '', 'qnaire_name', { column: 'qnaire.name', isExcluded: true }, );

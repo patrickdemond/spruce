@@ -27,9 +27,9 @@ DELIMITER $$
 DROP TRIGGER IF EXISTS page_AFTER_INSERT $$
 CREATE DEFINER = CURRENT_USER TRIGGER page_AFTER_INSERT AFTER INSERT ON page FOR EACH ROW
 BEGIN
-  INSERT INTO page_description( page_id, language_id )
-  SELECT NEW.id, language_id
-  FROM qnaire_has_language
+  INSERT INTO page_description( page_id, language_id, type )
+  SELECT NEW.id, language_id, type.name
+  FROM ( SELECT "prompt" AS name UNION SELECT "popup" AS name ) AS type, qnaire_has_language
   JOIN module ON qnaire_has_language.qnaire_id = module.qnaire_id
   WHERE module.id = NEW.module_id;
 END$$

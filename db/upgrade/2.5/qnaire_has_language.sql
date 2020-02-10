@@ -49,27 +49,27 @@ BEGIN
   ( NEW.qnaire_id, NEW.language_id, 'introduction' ),
   ( NEW.qnaire_id, NEW.language_id, 'conclusion' );
 
-  INSERT IGNORE INTO module_description( module_id, language_id )
-  SELECT module.id, NEW.language_id
-  FROM module
+  INSERT IGNORE INTO module_description( module_id, language_id, type )
+  SELECT module.id, NEW.language_id, type.name
+  FROM ( SELECT "prompt" AS name UNION SELECT "popup" AS name ) AS type, module
   WHERE module.qnaire_id = NEW.qnaire_id;
   
-  INSERT IGNORE INTO page_description( page_id, language_id )
-  SELECT page.id, NEW.language_id
-  FROM page
+  INSERT IGNORE INTO page_description( page_id, language_id, type )
+  SELECT page.id, NEW.language_id, type.name
+  FROM ( SELECT "prompt" AS name UNION SELECT "popup" AS name ) AS type, page
   JOIN module ON page.module_id = module.id
   WHERE module.qnaire_id = NEW.qnaire_id;
   
-  INSERT IGNORE INTO question_description( question_id, language_id )
-  SELECT question.id, NEW.language_id
-  FROM question
+  INSERT IGNORE INTO question_description( question_id, language_id, type )
+  SELECT question.id, NEW.language_id, type.name
+  FROM ( SELECT "prompt" AS name UNION SELECT "popup" AS name ) AS type, question
   JOIN page ON question.page_id = page.id
   JOIN module ON page.module_id = module.id
   WHERE module.qnaire_id = NEW.qnaire_id;
   
-  INSERT IGNORE INTO question_option_description( question_option_id, language_id )
-  SELECT question_option.id, NEW.language_id
-  FROM question_option
+  INSERT IGNORE INTO question_option_description( question_option_id, language_id, type )
+  SELECT question_option.id, NEW.language_id, type.name
+  FROM ( SELECT "prompt" AS name UNION SELECT "popup" AS name ) AS type, question_option
   JOIN question ON question_option.question_id = question.id
   JOIN page ON question.page_id = page.id
   JOIN module ON page.module_id = module.id

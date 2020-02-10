@@ -262,6 +262,9 @@ cenozoApp.initDescriptionModule = function( module, type ) {
         column: 'language.code',
         title: 'Langauge'
       },
+      type: {
+        title: 'Type'
+      },
       value: {
         title: 'Value',
         align: 'left'
@@ -278,6 +281,10 @@ cenozoApp.initDescriptionModule = function( module, type ) {
       column: 'language.code',
       type: 'string',
       isConstant: true
+    },
+    type: {
+      title: 'Type',
+      type: 'enum'
     },
     value: {
       title: 'Value',

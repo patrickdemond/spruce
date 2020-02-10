@@ -5,14 +5,6 @@ define( function() {
 
   cenozoApp.initDescriptionModule( module, 'qnaire' );
 
-  module.columnList = {
-    language: module.columnList.language,
-    type: { title: 'Type' },
-    value: module.columnList.value
-  }
-
-  module.addInput( '', 'type', { title: 'Type', type: 'enum' }, 'language' );
-
   /* ######################################################################################################## */
   cenozo.providers.directive( 'cnQnaireDescriptionList', [
     'CnQnaireDescriptionModelFactory',
