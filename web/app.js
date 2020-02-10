@@ -35,7 +35,7 @@ cenozoApp.initQnairePartModule = function( module, type ) {
       reverse: false
     }
   } );
-      
+
   module.addInputGroup( '', {
     rank: {
       title: 'Rank',
@@ -364,9 +364,34 @@ cenozo.directive( 'cnQnaireNavigator', [
           currentModule: null,
           currentPage: null,
           currentQuestion: null,
+          qnaireList: [],
           moduleList: [],
           pageList: [],
           questionList: [],
+
+          viewQnaire: function( id ) {
+            var languageId = null;
+            var promiseList = [];
+            if( 'qnaire_description.view' == $state.current.name ) {
+              promiseList.push(
+                CnHttpFactory.instance( {
+                  path: 'qnaire_description/' + $state.params.identifier,
+                  data: { select: { column: 'language_id' }, modifier: { limit: 1000 } }
+                } ).get().then( function( response ) {
+                  languageId = response.data.language_id;
+                } )
+              );
+            }
+
+            return $q.all( promiseList ).then( function() {
+              return $state.go(
+                null != languageId ? 'qnaire_description.view' : 'qnaire.view',
+                { identifier: null != languageId ? 'qnaire_id=' + id + ';language_id=' + languageId : id },
+                { reload: true }
+              );
+            } );
+          },
+
           viewModule: function( id ) {
             var languageId = null;
             var promiseList = [];
@@ -389,6 +414,7 @@ cenozo.directive( 'cnQnaireNavigator', [
               );
             } );
           },
+
           viewPage: function( id ) {
             var languageId = null;
             var promiseList = [];
@@ -411,6 +437,7 @@ cenozo.directive( 'cnQnaireNavigator', [
               );
             } );
           },
+
           viewQuestion: function( id ) {
             var languageId = null;
             var promiseList = [];
@@ -454,6 +481,7 @@ cenozo.directive( 'cnQnaireNavigator', [
           pageDetails = true;
         } else if( ['module', 'module_description'].includes( $scope.subject ) ) {
           moduleDetails = true;
+        } else if( ['qnaire', 'qnaire_description'].includes( $scope.subject ) ) {
         }
 
         // if we're looking at a module, page or question then get the module's details
@@ -516,8 +544,18 @@ cenozo.directive( 'cnQnaireNavigator', [
             };
           }
 
-          // get the list of modules, pages and questions (depending on what we're looking at)
+          // get the list of qnaires, modules, pages and questions (depending on what we're looking at)
           var promiseList = [
+            CnHttpFactory.instance( {
+              path: 'qnaire',
+              data: {
+                select: { column: [ 'id', 'name' ] },
+                modifier: { order: 'name', limit: 1000 }
+              }
+            } ).query().then( function( response ) {
+              $scope.qnaireList = response.data;
+            } ),
+
             CnHttpFactory.instance( {
               path: [ 'qnaire', $scope.currentQnaire.id, 'module' ].join( '/' ),
               data: {

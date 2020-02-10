@@ -1,5 +1,24 @@
   <div class="container-fluid vertical-spacer">
-    <div class="col-sm-4">
+    <div class="col-sm-3">
+      <div class="full-width text-center">Questionnaire</div>
+      <button class="btn full-width"
+              ng-class="'qnaire' == subject ? 'btn-primary' : 'btn-info'"
+              ng-disabled="0 == qnaireList.length"
+              type="button"
+              id="qnaire"
+              data-toggle="dropdown"
+              aria-haspopup="true"
+              aria-expanded="false">
+        <span ng-if="currentQnaire">{{ currentQnaire.name }}</span>
+        <span class="caret"></span>
+      </button>
+      <ul class="dropdown-menu" aria-labelledby="qnaire">
+        <li ng-repeat="qnaire in qnaireList" style="width: 50%" class="full-width">
+          <a ng-attr-id="Qnaire{{ qnaire.id }}" ng-click="viewQnaire( qnaire.id )">{{ qnaire.name }}</a>
+        </li>
+      </ul>
+    </div>
+    <div class="col-sm-3">
       <div class="full-width text-center">Module</div>
       <button class="btn full-width"
               ng-class="'module' == subject ? 'btn-primary' : 'btn-info'"
@@ -18,7 +37,7 @@
         </li>
       </ul>
     </div>
-    <div class="col-sm-4">
+    <div class="col-sm-3">
       <div class="full-width text-center">Page</div>
       <button class="btn full-width"
               ng-class="'page' == subject ? 'btn-primary' : 'btn-info'"
@@ -37,7 +56,7 @@
         </li>
       </ul>
     </div>
-    <div class="col-sm-4">
+    <div class="col-sm-3">
       <div class="full-width text-center">Question</div>
       <button class="btn full-width"
               ng-class="'question' == subject ? 'btn-primary' : 'btn-info'"
