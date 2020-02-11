@@ -147,7 +147,7 @@ class qnaire extends \cenozo\database\record
     $update_mod->where( 'source.qnaire_id', '=', $db_source_qnaire->id );
     $sql = sprintf(
       'UPDATE qnaire_description AS destination '.
-      'JOIN qnaire_description AS source ON destination.language_id = source.language_id '.
+      'JOIN qnaire_description AS source ON destination.language_id = source.language_id AND destination.type = source.type '.
       'SET destination.value = source.value %s',
       $update_mod->get_sql()
     );

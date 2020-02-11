@@ -51,13 +51,54 @@ class module extends \pine\service\base_qnaire_part_module
     $modifier->join( 'qnaire', 'module.qnaire_id', 'qnaire.id' );
     $modifier->join( 'language', 'qnaire.base_language_id', 'base_language.id', '', 'base_language' );
 
-    if( $select->has_column( 'module_descriptions' ) )
+    if( $select->has_column( 'module_prompts' ) )
     {
-      $modifier->left_join( 'module_description', 'module.id', 'module_description.module_id' );
-      $modifier->left_join( 'language', 'module_description.language_id', 'module_language.id', 'module_language' );
+      $modifier->where( 'IFNULL( module_prompt_description.type, "prompt" )', '=', 'prompt' );
+      $modifier->left_join(
+        'module_description',
+        'module.id',
+        'module_prompt_description.module_id',
+        'module_prompt_description'
+      );
+      $modifier->left_join(
+        'language',
+        'module_prompt_description.language_id',
+        'module_prompt_language.id',
+        'module_prompt_language'
+      );
       $select->add_column(
-        'GROUP_CONCAT( DISTINCT CONCAT_WS( "`", module_language.code, IFNULL( module_description.value, "" ) ) SEPARATOR "`" )',
-        'module_descriptions',
+        'GROUP_CONCAT( DISTINCT CONCAT_WS( '.
+          '"`", '.
+          'module_prompt_language.code, '.
+          'IFNULL( module_prompt_description.value, "" ) '.
+        ') SEPARATOR "`" )',
+        'module_prompts',
+        false
+      );
+    }
+
+    if( $select->has_column( 'module_popups' ) )
+    {
+      $modifier->where( 'IFNULL( module_popup_description.type, "popup" )', '=', 'popup' );
+      $modifier->left_join(
+        'module_description',
+        'module.id',
+        'module_popup_description.module_id',
+        'module_popup_description'
+      );
+      $modifier->left_join(
+        'language',
+        'module_popup_description.language_id',
+        'module_popup_language.id',
+        'module_popup_language'
+      );
+      $select->add_column(
+        'GROUP_CONCAT( DISTINCT CONCAT_WS( '.
+          '"`", '.
+          'module_popup_language.code, '.
+          'IFNULL( module_popup_description.value, "" ) '.
+        ') SEPARATOR "`" )',
+        'module_popups',
         false
       );
     }

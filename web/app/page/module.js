@@ -16,8 +16,10 @@ define( function() {
   module.addInput( '', 'qnaire_id', { column: 'qnaire.id', isExcluded: true }, );
   module.addInput( '', 'qnaire_name', { column: 'qnaire.name', isExcluded: true }, );
   module.addInput( '', 'base_language', { column: 'base_language.code', isExcluded: true }, );
-  module.addInput( '', 'descriptions', { isExcluded: true }, );
-  module.addInput( '', 'module_descriptions', { isExcluded: true }, );
+  module.addInput( '', 'prompts', { isExcluded: true }, );
+  module.addInput( '', 'module_prompts', { isExcluded: true }, );
+  module.addInput( '', 'popups', { isExcluded: true }, );
+  module.addInput( '', 'module_popups', { isExcluded: true }, );
   module.addInput( '', 'module_id', { isExcluded: true }, );
   module.addInput( '', 'parent_name', { column: 'module.name', isExcluded: true } );
   cenozo.insertPropertyAfter( module.columnList, 'question_count', 'average_time', {
@@ -430,7 +432,7 @@ define( function() {
               path: this.parentModel.getServiceResourcePath() + '/question',
               data: {
                 select: { column: [
-                  'rank', 'name', 'type', 'mandatory', 'dkna_refuse', 'minimum', 'maximum', 'precondition', 'descriptions'
+                  'rank', 'name', 'type', 'mandatory', 'dkna_refuse', 'minimum', 'maximum', 'precondition', 'prompts', 'popups'
                 ] },
                 modifier: { order: 'question.rank' }
               }
@@ -448,7 +450,8 @@ define( function() {
 
               self.questionList.forEach( function( question, questionIndex ) {
                 question.incomplete = false;
-                question.descriptions = parseDescriptions( question.descriptions );
+                question.prompts = parseDescriptions( question.prompts );
+                question.popups = parseDescriptions( question.popups );
                 question.value = angular.fromJson( question.value );
                 question.backupValue = angular.copy( question.value );
 
@@ -461,14 +464,15 @@ define( function() {
                     path: ['question', question.id, 'question_option'].join( '/' ),
                     data: {
                       select: { column: [
-                        'name', 'exclusive', 'extra', 'multiple_answers', 'minimum', 'maximum', 'precondition', 'descriptions'
+                        'name', 'exclusive', 'extra', 'multiple_answers', 'minimum', 'maximum', 'precondition', 'prompts', 'popups'
                       ] },
                       modifier: { order: 'question_option.rank' }
                     }
                   } ).query().then( function( response ) {
                     question.optionList = response.data;
                     question.optionList.forEach( function( option ) {
-                      option.descriptions = parseDescriptions( option.descriptions );
+                      option.prompts = parseDescriptions( option.prompts );
+                      option.popups = parseDescriptions( option.popups );
                       self.optionListById[option.id] = option;
                     } );
                   } ) );
@@ -795,8 +799,10 @@ define( function() {
           onView: function( force ) {
             var self = this;
             return this.$$onView( force ).then( function() {
-              self.record.descriptions = parseDescriptions( self.record.descriptions );
-              self.record.module_descriptions = parseDescriptions( self.record.module_descriptions );
+              self.record.prompts = parseDescriptions( self.record.prompts );
+              self.record.popups = parseDescriptions( self.record.popups );
+              self.record.module_prompts = parseDescriptions( self.record.module_prompts );
+              self.record.module_popups = parseDescriptions( self.record.module_popups );
             } );
           }
         } );

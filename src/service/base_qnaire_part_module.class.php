@@ -27,28 +27,54 @@ abstract class base_qnaire_part_module extends \cenozo\service\module
     // add empty values for description field (it is only used when adding new records so they will be ignored)
     if( $select->has_column( 'description' ) ) $select->add_constant( NULL, 'description' ); 
 
-    if( $select->has_column( 'descriptions' ) )
+    if( $select->has_column( 'prompts' ) )
     {
+      // join to the prompts
+      $modifier->where( 'prompt_description.type', '=', 'prompt' );
       $modifier->join(
         sprintf( '%s_description', $subject ),
         sprintf( '%s.id', $subject ),
-        sprintf( '%s_description.%s_id', $subject, $subject )
+        sprintf( 'prompt_description.%s_id', $subject ),
+        '',
+        'prompt_description'
       );
       $modifier->join(
         'language',
-        sprintf( '%s_description.language_id', $subject ),
-        sprintf( '%s_language.id', $subject ),
+        'prompt_description.language_id',
+        'prompt_language.id',
         '',
-        sprintf( '%s_language', $subject )
+        'prompt_language'
       );
       $modifier->group( sprintf( '%s.id', $subject ) );
       $select->add_column(
-        sprintf(
-          'GROUP_CONCAT( DISTINCT CONCAT_WS( "`", %s_language.code, IFNULL( %s_description.value, "" ) ) SEPARATOR "`" )',
-          $subject,
-          $subject
-        ),
-        'descriptions',
+        'GROUP_CONCAT( DISTINCT CONCAT_WS( "`", prompt_language.code, IFNULL( prompt_description.value, "" ) ) SEPARATOR "`" )',
+        'prompts',
+        false
+      );
+    }
+
+    if( $select->has_column( 'popups' ) )
+    {
+      // join to the popups
+      $modifier->where( 'popup_description.type', '=', 'popup' );
+      $modifier->join(
+        sprintf( '%s_description', $subject ),
+        sprintf( '%s.id', $subject ),
+        sprintf( 'popup_description.%s_id', $subject ),
+        '',
+        'popup_description'
+      );
+      $modifier->join(
+        'language',
+        'popup_description.language_id',
+        'popup_language.id',
+        '',
+        'popup_language'
+      );
+      $modifier->group( sprintf( '%s.id', $subject ) );
+      $select->add_column(
+        'GROUP_CONCAT( DISTINCT CONCAT_WS( "`", popup_language.code, IFNULL( popup_description.value, "" ) ) SEPARATOR "`" )',
+        'popups',
         false
       );
     }

@@ -107,7 +107,7 @@ abstract class base_qnaire_part extends \cenozo\database\has_rank
     $modifier->where( sprintf( 'source.%s_id', $subject ), '=', $db_source->id );
     $sql = sprintf(
       'UPDATE %s_description AS destination '.
-      'JOIN %s_description AS source ON destination.language_id = source.language_id '.
+      'JOIN %s_description AS source ON destination.language_id = source.language_id AND destination.type = source.type '.
       'SET destination.value = source.value %s',
       $subject,
       $subject,

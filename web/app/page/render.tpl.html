@@ -49,16 +49,19 @@
       <div class="spacer">
         <div class="container-fluid vertical-spacer">
           <span class="text-info"
-                ng-bind-html="model.viewModel.record.module_descriptions[model.renderModel.currentLanguage] | cnNewlines"></span>
+                ng-bind-html="model.viewModel.record.module_prompts[model.renderModel.currentLanguage] | cnNewlines"
+                uib-tooltip-html="model.viewModel.record.module_popups[model.renderModel.currentLanguage] | cnNewlines"></span>
           <span class="text-info"
-                ng-bind-html="model.viewModel.record.descriptions[model.renderModel.currentLanguage] | cnNewlines"></span>
+                ng-bind-html="model.viewModel.record.prompts[model.renderModel.currentLanguage] | cnNewlines"
+                uib-tooltip-html="model.viewModel.record.popups[model.renderModel.currentLanguage] | cnNewlines"></span>
           <div ng-repeat="question in model.renderModel.getVisibleQuestionList()">
             <hr ng-if="!$first" />
             <div ng-class="{
                    'vertical-spacer text-info': 'comment' == question.type,
                    'text-danger': true === question.incomplete
                  }"
-                 ng-bind-html="question.descriptions[model.renderModel.currentLanguage] | cnNewlines"></div>
+                 ng-bind-html="question.prompts[model.renderModel.currentLanguage] | cnNewlines"
+                 uib-tooltip-html="question.popups[model.renderModel.currentLanguage] | cnNewlines"></div>
             <div class="horizontal-spacer"
                  ng-class="{ 'has-error': true === question.incomplete }"
                  ng-if="'comment' != question"
@@ -99,7 +102,10 @@
                       model.renderModel.removeOption( question, option )"
                     ng-bind-html="'<i class=\'glyphicon ' + (
                       question.answer.optionList[option.id].selected ? 'glyphicon-check' : 'glyphicon-unchecked'
-                    ) + '\'></i> ' + option.descriptions[model.renderModel.currentLanguage]"
+                    ) + '\'></i> ' + option.prompts[model.renderModel.currentLanguage] + (
+                      option.popups[model.renderModel.currentLanguage] ? ' ⓘ' : ''
+                    )"
+                    uib-tooltip-html="option.popups[model.renderModel.currentLanguage] | cnNewlines"
                     uib-btn-checkbox>
                   </label>
                 </div>
@@ -109,8 +115,11 @@
                     ng-class="{ 'color-red': true === question.incomplete }"
                     style="text-align: left"
                     ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal', 'font-weight': 'normal' }"
-                    ng-bind-html="option.descriptions[model.renderModel.currentLanguage] +
-                                  ' <i class=\'glyphicon glyphicon-plus\'></i>'"
+                    ng-bind-html="
+                      option.prompts[model.renderModel.currentLanguage] + (
+                        option.popups[model.renderModel.currentLanguage] ? ' ⓘ' : ''
+                      ) + ' <i class=\'glyphicon glyphicon-plus\'></i>'"
+                    uib-tooltip-html="option.popups[model.renderModel.currentLanguage] | cnNewlines"
                     ng-click="model.renderModel.addAnswerValue( question, option )">
                   </label>
                 </div>
