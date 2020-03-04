@@ -15,13 +15,11 @@ define( function() {
   module.addInput( '', 'minimum', {
     title: 'Minimum',
     type: 'string',
-    format: 'float',
     isExcluded: function( $state, model ) { return 'number' != model.viewModel.record.type ? true : 'add'; }
   } );
   module.addInput( '', 'maximum', {
     title: 'Maximum',
     type: 'string',
-    format: 'float',
     isExcluded: function( $state, model ) { return 'number' != model.viewModel.record.type ? true : 'add'; }
   } );
   module.addInput( '', 'note', { title: 'Note', type: 'text' } );
