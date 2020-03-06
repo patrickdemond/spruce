@@ -42,6 +42,7 @@ class get extends \cenozo\service\get
     // if we're asking for the page based on a response then make sure that all answers have been created
     if( !is_null( $this->db_response ) )
     {
+      $expression_manager = lib::create( 'business\expression_manager' );
       $qnaire_username = $setting_manager->get_setting( 'utility', 'qnaire_username' );
       $db_user = lib::create( 'business\session' )->get_user();
       $db_page = $this->db_response->get_page();
@@ -49,6 +50,7 @@ class get extends \cenozo\service\get
       // create answers for all questions on this page if they don't already exist
       $question_sel = lib::create( 'database\select' );
       $question_sel->add_column( 'id' );
+      $question_sel->add_column( 'default_answer' );
       $question_mod = lib::create( 'database\modifier' );
       $question_mod->where( 'type', '!=', 'comment' ); // comments don't have answers
       foreach( $db_page->get_question_list( $question_sel, $question_mod ) as $question )
@@ -62,6 +64,8 @@ class get extends \cenozo\service\get
           $db_answer->response_id = $this->db_response->id;
           $db_answer->question_id = $question['id'];
           $db_answer->user_id = $qnaire_username == $db_user->name ? NULL : $db_user->id;
+          if( !is_null( $question['default_answer'] ) )
+            $db_answer->value = $expression_manager->evaluate( $this->db_response, $question['default_answer'] );
           $db_answer->save();
         }
       }

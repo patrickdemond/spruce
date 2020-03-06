@@ -22,6 +22,10 @@ define( function() {
     type: 'string',
     isExcluded: function( $state, model ) { return 'number' != model.viewModel.record.type ? true : 'add'; }
   } );
+  module.addInput( '', 'default_answer', {
+    title: 'Default Answer',
+    type: 'string'
+  } );
   module.addInput( '', 'note', { title: 'Note', type: 'text' } );
   module.addInput( '', 'parent_name', { column: 'page.name', isExcluded: true } );
 

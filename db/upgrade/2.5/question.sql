@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS question (
   dkna_refuse TINYINT(1) NOT NULL DEFAULT 1,
   minimum VARCHAR(127) NULL DEFAULT NULL,
   maximum VARCHAR(127) NULL DEFAULT NULL,
+  default_answer VARCHAR(255) NULL DEFAULT NULL,
   precondition TEXT NULL,
   note TEXT NULL,
   PRIMARY KEY (id),
