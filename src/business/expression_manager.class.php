@@ -400,7 +400,7 @@ class expression_manager extends \cenozo\singleton
         array( 'response_id', 'attribute_id' ),
         array( $db_response->id, $db_attribute->id )
       );
-      $compiled = sprintf( '"%s"', addslashes( $db_response_attribute->value ) );
+      $compiled = sprintf( '%s', addslashes( $db_response_attribute->value ) );
     }
 
     // if the last term was an operator then assume we now represent a boolean expression

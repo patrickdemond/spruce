@@ -5,37 +5,11 @@
  * @author Patrick Emond <emondpd@mcmaster.ca>
  */
 
-namespace pine\service\page\question;
+namespace pine\service\question\question_option;
 use cenozo\lib, cenozo\log, pine\util;
 
 class query extends \cenozo\service\query
 {
-  /**
-   * Extend parent method
-   */
-  public function setup()
-  {
-    $response_class_name = lib::get_class_name( 'database\response' );
-
-    parent::setup();
-
-    // if we got the question from a response then add the response answers to the record
-    if( 1 == preg_match( '/^token=([^;\/]+)/', $this->get_resource_value( 0 ), $parts ) )
-    {
-      $db_response = $response_class_name::get_unique_record( 'token', $parts[1] );
-
-      $join_mod = lib::create( 'database\modifier' );
-      $join_mod->where( 'question.id', '=', 'answer.question_id', false );
-      $join_mod->where( 'answer.response_id', '=', $db_response->id );
-      $this->modifier->join_modifier( 'answer', $join_mod, 'left' );
-      $this->modifier->left_join( 'language', 'answer.language_id', 'language.id' );
-
-      $this->select->add_table_column( 'language', 'code', 'language' );
-      $this->select->add_table_column( 'answer', 'id', 'answer_id' );
-      $this->select->add_table_column( 'answer', 'value' );
-    }
-  }
-
   /**
    * Extend parent method
    */
@@ -45,30 +19,22 @@ class query extends \cenozo\service\query
 
     $list = parent::get_record_list();
 
-    // if we got the question from a response then compile any attribute or response variables in the description
-    if( 1 == preg_match( '/^token=([^;\/]+)/', $this->get_resource_value( 0 ), $parts ) )
+    // if we got the question_option from a response then compile any attribute or response variables in the description
+    $token = $this->get_argument( 'token', false );
+    if( $token )
     {
-      $db_response = $response_class_name::get_unique_record( 'token', $parts[1] );
+      $db_response = $response_class_name::get_unique_record( 'token', $token );
       $expression_manager = lib::create( 'business\expression_manager' );
 
       foreach( $list as $index => $record )
       {
         // compile preconditions
-        if( array_key_exists( 'precondition', $record ) )
-        {
-          $list[$index]['precondition'] = $expression_manager->compile(
-            $db_response,
-            $record['precondition'],
-            lib::create( 'database\question', $record['id'] )
-          );
-        }
-
         if( array_key_exists( 'minimum', $record ) )
         {
           $list[$index]['minimum'] = $expression_manager->compile(
             $db_response,
             $record['minimum'],
-            lib::create( 'database\question', $record['id'] )
+            lib::create( 'database\question_option', $record['id'] )
           );
         }
 
@@ -77,7 +43,7 @@ class query extends \cenozo\service\query
           $list[$index]['maximum'] = $expression_manager->compile(
             $db_response,
             $record['maximum'],
-            lib::create( 'database\question', $record['id'] )
+            lib::create( 'database\question_option', $record['id'] )
           );
         }
 

@@ -461,7 +461,11 @@ define( function() {
                 // if the question is a list type then get the options
                 if( 'list' == question.type ) {
                   promiseList.push( CnHttpFactory.instance( {
-                    path: ['question', question.id, 'question_option'].join( '/' ),
+                    path: ['question', question.id, 'question_option'].join( '/' ) + (
+                      'response' == self.parentModel.getSubjectFromState() ?
+                      '?token=' + $state.params.token :
+                      ''
+                    ),
                     data: {
                       select: { column: [
                         'name', 'exclusive', 'extra', 'multiple_answers', 'minimum', 'maximum', 'precondition', 'prompts', 'popups'
