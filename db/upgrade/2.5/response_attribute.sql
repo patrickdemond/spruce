@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS response_attribute (
   create_timestamp TIMESTAMP NOT NULL,
   response_id INT UNSIGNED NOT NULL,
   attribute_id INT UNSIGNED NOT NULL,
-  value VARCHAR(127) NULL,
+  value VARCHAR(255) NULL,
   PRIMARY KEY (id),
   INDEX fk_response_id (response_id ASC),
   INDEX fk_attribute_id (attribute_id ASC),

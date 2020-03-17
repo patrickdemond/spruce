@@ -14,7 +14,7 @@ CREATE PROCEDURE patch_qnaire()
         "update_timestamp TIMESTAMP NOT NULL, ",
         "create_timestamp TIMESTAMP NOT NULL, ",
         "base_language_id INT UNSIGNED NOT NULL, ",
-        "name VARCHAR(45) NOT NULL, ",
+        "name VARCHAR(255) NOT NULL, ",
         "debug TINYINT(1) NOT NULL DEFAULT 0, ",
         "description TEXT NULL, ",
         "note TEXT NULL, ",

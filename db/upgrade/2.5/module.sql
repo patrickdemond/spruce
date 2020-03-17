@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS module (
   create_timestamp TIMESTAMP NOT NULL,
   qnaire_id INT UNSIGNED NOT NULL,
   rank INT UNSIGNED NOT NULL,
-  name VARCHAR(127) NOT NULL,
+  name VARCHAR(255) NOT NULL,
   precondition TEXT NULL,
   note TEXT NULL,
   PRIMARY KEY (id),

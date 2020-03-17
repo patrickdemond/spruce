@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS page (
   create_timestamp TIMESTAMP NOT NULL,
   module_id INT UNSIGNED NOT NULL,
   rank INT UNSIGNED NOT NULL,
-  name VARCHAR(127) NOT NULL,
+  name VARCHAR(255) NOT NULL,
   max_time INT UNSIGNED NOT NULL,
   precondition TEXT NULL,
   note TEXT NULL,
