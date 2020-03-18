@@ -401,6 +401,10 @@ class expression_manager extends \cenozo\singleton
         array( $db_response->id, $db_attribute->id )
       );
       $compiled = sprintf( '%s', addslashes( $db_response_attribute->value ) );
+
+      // add quotes if required
+      if( 'null' != $compiled && !util::string_matches_int( $compiled ) && !util::string_matches_float( $compiled ) )
+        $compiled = sprintf( "'%s'", $compiled );
     }
 
     // if the last term was an operator then assume we now represent a boolean expression

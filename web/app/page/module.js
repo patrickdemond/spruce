@@ -359,6 +359,9 @@ define( function() {
             // boolean preconditions are already evaluated
             if( true == precondition || false == precondition ) return precondition;
 
+            // replace any attriutes with null (they will only appear unevaluated when previewing)
+            if( 'response' != self.parentModel.getSubjectFromState() ) precondition = precondition.replace( /@[^@]+@/g, 'null' );
+
             // everything else needs to be evaluated
             var matches = precondition.match( /\$[^$]+\$/g );
             if( null != matches ) matches.forEach( function( match ) {
@@ -415,7 +418,9 @@ define( function() {
             } );
 
             // create a function which can be used to evaluate the compiled precondition without calling eval()
-            function evaluateExpression( precondition ) { return Function('"use strict"; return ' + precondition + ';')(); }
+            function evaluateExpression( precondition ) {
+              return Function('"use strict"; return ' + precondition + ';')();
+            }
             return evaluateExpression( precondition );
           },
 

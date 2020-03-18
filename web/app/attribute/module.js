@@ -11,14 +11,15 @@ define( function() {
     },
     columnList: {
       name: {
-        title: 'Name'
+        title: 'Name',
+        column: 'attribute.name'
       },
       code: {
         title: 'Code'
       }
     },
     defaultOrder: {
-      column: 'name',
+      column: 'attribute.name',
       reverse: false
     }
   } );
