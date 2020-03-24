@@ -66,14 +66,14 @@ cenozoApp.initQnairePartModule = function( module, type ) {
     title: '<i class="glyphicon glyphicon-chevron-left"></i>',
     classes: 'btn-info',
     operation: function( $state, model ) { model.viewModel.viewPrevious(); },
-    isDisabled: function( $state, model ) { return null == model.viewModel.record.previous_id; }
+    isDisabled: function( $state, model ) { return model.viewModel.navigating || null == model.viewModel.record.previous_id; }
   } );
 
   module.addExtraOperation( 'view', {
     title: '<i class="glyphicon glyphicon-chevron-right"></i>',
     classes: 'btn-info',
     operation: function( $state, model ) { model.viewModel.viewNext(); },
-    isDisabled: function( $state, model ) { return null == model.viewModel.record.next_id; }
+    isDisabled: function( $state, model ) { return model.viewModel.navigating || null == model.viewModel.record.next_id; }
   } );
 
   module.addExtraOperation( 'view', {
@@ -299,14 +299,18 @@ cenozoApp.initDescriptionModule = function( module, type ) {
     title: '<i class="glyphicon glyphicon-chevron-left"></i>',
     classes: 'btn-info',
     operation: function( $state, model ) { model.viewModel.viewPreviousDescription(); },
-    isDisabled: function( $state, model ) { return null == model.viewModel.record.previous_description_id; }
+    isDisabled: function( $state, model ) {
+      return model.viewModel.navigating || null == model.viewModel.record.previous_description_id;
+    }
   } );
 
   module.addExtraOperation( 'view', {
     title: '<i class="glyphicon glyphicon-chevron-right"></i>',
     classes: 'btn-info',
     operation: function( $state, model ) { model.viewModel.viewNextDescription(); },
-    isDisabled: function( $state, model ) { return null == model.viewModel.record.next_description_id; }
+    isDisabled: function( $state, model ) {
+      return model.viewModel.navigating || null == model.viewModel.record.next_description_id;
+    }
   } );
 };
 
@@ -317,11 +321,22 @@ cenozo.factory( 'CnBaseQnairePartViewFactory', [
     return {
       construct: function( object, type ) {
         angular.extend( object, {
+          navigating: false,
           viewPrevious: function() {
-            $state.go( type + '.view', { identifier: this.record.previous_id }, { reload: true } );
+            if( !this.navigating && this.record.previous_id ) {
+              this.navigating = true;
+              $state.go( type + '.view', { identifier: this.record.previous_id }, { reload: true } ).finally( function() {
+                object.navigating = false;
+              } );
+            }
           },
           viewNext: function() {
-            $state.go( type + '.view', { identifier: this.record.next_id }, { reload: true } );
+            if( !this.navigating && this.record.next_id ) {
+              this.navigating = true;
+              $state.go( type + '.view', { identifier: this.record.next_id }, { reload: true } ).finally( function() {
+                object.navigating = false;
+              } );
+            }
           }
         } );
       }
@@ -336,19 +351,30 @@ cenozo.factory( 'CnBaseDescriptionViewFactory', [
     return {
       construct: function( object, type ) {
         angular.extend( object, {
+          navigating: false,
           viewPreviousDescription: function() {
-            $state.go(
-              type + '_description.view',
-              { identifier: this.record.previous_description_id },
-              { reload: true }
-            );
+            if( !this.navigating && this.record.previous_description_id ) {
+              this.navigating = true;
+              $state.go(
+                type + '_description.view',
+                { identifier: this.record.previous_description_id },
+                { reload: true }
+              ).finally( function() {
+                object.navigating = false;
+              } );
+            }
           },
           viewNextDescription: function() {
-            $state.go(
-              type + '_description.view',
-              { identifier: this.record.next_description_id },
-              { reload: true }
-            );
+            if( !this.navigating && this.record.next_description_id ) {
+              this.navigating = true;
+              $state.go(
+                type + '_description.view',
+                { identifier: this.record.next_description_id },
+                { reload: true }
+              ).finally( function() {
+                object.navigating = false;
+              } );
+            }
           }
         } );
       }
