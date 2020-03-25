@@ -233,6 +233,7 @@ define( function() {
 
         angular.extend( this, {
           parentModel: parentModel,
+          activeAttributeList: [],
           questionList: [],
           optionListById: {},
           currentLanguage: null,
@@ -360,7 +361,30 @@ define( function() {
             if( true == precondition || false == precondition ) return precondition;
 
             // replace any attriutes with null (they will only appear unevaluated when previewing)
-            if( 'response' != self.parentModel.getSubjectFromState() ) precondition = precondition.replace( /@[^@]+@/g, 'null' );
+            if( 'response' != self.parentModel.getSubjectFromState() ) {
+              self.activeAttributeList.forEach( function( attribute ) {
+                var re = new RegExp( '@' + attribute.name + '@' );
+                var value = attribute.value;
+                if( null == value ) {
+                  // do nothing
+                } else if( '' == value ) {
+                  value = null;
+                } else if( 'true' == value ) {
+                  value = true;
+                } else if( 'false' == value ) {
+                  value = false;
+                } else {
+                  var num = parseFloat( value );
+                  if( num == value ) value = num;
+                  else value = '"' + value + '"';
+                }
+
+                precondition = precondition.replace( re, value );
+              } );
+
+              // replace any remaining preconditions with null
+              precondition = precondition.replace( /@[^@]+@/g, 'null' );
+            }
 
             // everything else needs to be evaluated
             var matches = precondition.match( /\$[^$]+\$/g );
@@ -433,6 +457,16 @@ define( function() {
           },
 
           onLoad: function() {
+            function getAttributeNames( precondition ) {
+              // scan the precondition for active attributes
+              var list = [];
+              if( angular.isString( precondition ) ) {
+                var matches = precondition.match( /@[^@]+@/g );
+                if( null != matches && 0 < matches.length ) list = matches.map( m => m.replace( /@/g, '' ) );
+              }
+              return list;
+            }
+
             return CnHttpFactory.instance( {
               path: this.parentModel.getServiceResourcePath() + '/question',
               data: {
@@ -445,7 +479,8 @@ define( function() {
               var promiseList = [];
               angular.extend( self, {
                 questionList: response.data,
-                keyQuestionIndex: null
+                keyQuestionIndex: null,
+                activeAttributeList: []
               } );
 
               // set the current language to the first question's language
@@ -453,12 +488,14 @@ define( function() {
                 self.currentLanguage = self.questionList[0].language;
               }
 
+              var activeAttributeList = [];
               self.questionList.forEach( function( question, questionIndex ) {
                 question.incomplete = false;
                 question.prompts = parseDescriptions( question.prompts );
                 question.popups = parseDescriptions( question.popups );
                 question.value = angular.fromJson( question.value );
                 question.backupValue = angular.copy( question.value );
+                activeAttributeList = activeAttributeList.concat( getAttributeNames( question.precondition ) );
 
                 // make sure we have the first non-comment question set as the first key question
                 if( null == self.keyQuestionIndex && 'comment' != question.type ) self.keyQuestionIndex = questionIndex;
@@ -480,6 +517,7 @@ define( function() {
                   } ).query().then( function( response ) {
                     question.optionList = response.data;
                     question.optionList.forEach( function( option ) {
+                      activeAttributeList = activeAttributeList.concat( getAttributeNames( option.precondition ) );
                       option.prompts = parseDescriptions( option.prompts );
                       option.popups = parseDescriptions( option.popups );
                       self.optionListById[option.id] = option;
@@ -490,6 +528,12 @@ define( function() {
 
               return $q.all( promiseList ).then( function() {
                 self.questionList.forEach( question => self.convertValueToModel( question ) );
+
+                // sort active attribute and make a unique list
+                self.activeAttributeList = activeAttributeList
+                  .sort()
+                  .filter( ( attribute, index, array ) => index === array.indexOf( attribute ) )
+                  .map( attribute => ( { name: attribute, value: null } ) );
               } );
             } );
           },

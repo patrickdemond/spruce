@@ -29,6 +29,15 @@ class query extends \cenozo\service\query
       foreach( $list as $index => $record )
       {
         // compile preconditions
+        if( array_key_exists( 'precondition', $record ) )
+        {
+          $list[$index]['precondition'] = $expression_manager->compile(
+            $db_response,
+            $record['precondition'],
+            lib::create( 'database\question_option', $record['id'] )
+          );
+        }
+
         if( array_key_exists( 'minimum', $record ) )
         {
           $list[$index]['minimum'] = $expression_manager->compile(
