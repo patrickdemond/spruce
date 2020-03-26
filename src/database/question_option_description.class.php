@@ -11,4 +11,4 @@ use cenozo\lib, cenozo\log, pine\util;
 /**
  * question_option_description: record
  */
-class question_option_description extends \cenozo\database\record {}
+class question_option_description extends base_description {}

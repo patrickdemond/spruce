@@ -56,7 +56,8 @@ cenozoApp.initQnairePartModule = function( module, type ) {
       type: 'text',
       help: 'The description in the questionnaire\'s language.',
       isExcluded: 'view'
-    }
+    },
+    readonly: { column: 'qnaire.readonly', type: 'hidden' }
   } );
 
   module.addInput( '', 'previous_id', { isExcluded: true } );
@@ -233,6 +234,9 @@ cenozoApp.initQnairePartModule = function( module, type ) {
             } );
           } );
         };
+
+        // extend getEditEnabled
+        this.getEditEnabled = function() { return !this.viewModel.record.readonly && this.$$getEditEnabled(); };
       };
 
       return {
@@ -292,7 +296,8 @@ cenozoApp.initDescriptionModule = function( module, type ) {
     },
 
     previous_description_id: { isExcluded: true },
-    next_description_id: { isExcluded: true }
+    next_description_id: { isExcluded: true },
+    readonly: { column: 'qnaire.readonly', type: 'hidden' }
   } );
 
   module.addExtraOperation( 'view', {

@@ -49,7 +49,6 @@ define( function() {
     'CnBaseViewFactory', 'CnBaseDescriptionViewFactory',
     function( CnBaseViewFactory, CnBaseDescriptionViewFactory ) {
       var object = function( parentModel, root ) {
-        var self = this;
         CnBaseViewFactory.construct( this, parentModel, root );
         CnBaseDescriptionViewFactory.construct( this, 'question_option' );
       }
@@ -62,10 +61,10 @@ define( function() {
     'CnBaseModelFactory', 'CnQuestionOptionDescriptionListFactory', 'CnQuestionOptionDescriptionViewFactory',
     function( CnBaseModelFactory, CnQuestionOptionDescriptionListFactory, CnQuestionOptionDescriptionViewFactory ) {
       var object = function( root ) {
-        var self = this;
         CnBaseModelFactory.construct( this, module );
         this.listModel = CnQuestionOptionDescriptionListFactory.instance( this );
         this.viewModel = CnQuestionOptionDescriptionViewFactory.instance( this, root );
+        this.getEditEnabled = function() { return !this.viewModel.record.readonly && this.$$getEditEnabled(); };
       };
 
       return {

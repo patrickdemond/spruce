@@ -61,10 +61,10 @@ define( function() {
     'CnBaseModelFactory', 'CnModuleDescriptionListFactory', 'CnModuleDescriptionViewFactory',
     function( CnBaseModelFactory, CnModuleDescriptionListFactory, CnModuleDescriptionViewFactory ) {
       var object = function( root ) {
-        var self = this;
         CnBaseModelFactory.construct( this, module );
         this.listModel = CnModuleDescriptionListFactory.instance( this );
         this.viewModel = CnModuleDescriptionViewFactory.instance( this, root );
+        this.getEditEnabled = function() { return !this.viewModel.record.readonly && this.$$getEditEnabled(); };
       };
 
       return {

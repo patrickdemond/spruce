@@ -11,4 +11,4 @@ use cenozo\lib, cenozo\log, pine\util;
 /**
  * module_description: record
  */
-class module_description extends \cenozo\database\record {}
+class module_description extends base_description {}

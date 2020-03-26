@@ -18,6 +18,11 @@ abstract class base_qnaire_part extends \cenozo\database\has_rank
    */
   public function save()
   {
+    if( $this->get_qnaire()->readonly ) throw lib::create( 'exception\notice',
+      'You cannot make changes to this questionnaire because it is in read-only mode.',
+      __METHOD__
+    );
+
     $column_name = sprintf( '%s_id', static::$rank_parent );
 
     // if we've changed the rank parent id then re-order all other objects in the old parent which came after this record

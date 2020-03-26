@@ -14,6 +14,19 @@ use cenozo\lib, cenozo\log, pine\util;
 class qnaire extends \cenozo\database\record
 {
   /**
+   * Overrides the parent class
+   */
+  public function save()
+  {
+    if( $this->readonly ) throw lib::create( 'exception\notice',
+      'You cannot make changes to this questionnaire because it is in read-only mode.',
+      __METHOD__
+    );
+
+    parent::save();
+  }
+
+  /**
    * TODO: document
    */
   public function get_first_module()

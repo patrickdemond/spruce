@@ -21,6 +21,10 @@ define( function() {
         title: 'Debug Mode',
         type: 'boolean'
       },
+      readonly: {
+        title: 'Read-Only',
+        type: 'boolean'
+      },
       module_count: {
         title: 'Modules'
       },
@@ -56,6 +60,10 @@ define( function() {
     },
     debug: {
       title: 'Debug Mode',
+      type: 'boolean'
+    },
+    readonly: {
+      title: 'Read-Only',
       type: 'boolean'
     },
     description: {
@@ -273,6 +281,9 @@ define( function() {
             } );
           } );
         };
+
+        // extend getEditEnabled
+        this.getEditEnabled = function() { return !this.viewModel.record.readonly && this.$$getEditEnabled(); };
       };
 
       return {

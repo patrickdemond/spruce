@@ -11,4 +11,4 @@ use cenozo\lib, cenozo\log, pine\util;
 /**
  * qnaire_description: record
  */
-class qnaire_description extends \cenozo\database\record {}
+class qnaire_description extends base_description {}
