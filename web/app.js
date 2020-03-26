@@ -235,8 +235,9 @@ cenozoApp.initQnairePartModule = function( module, type ) {
           } );
         };
 
-        // extend getEditEnabled
+        // extend getEditEnabled and getDeleteEnabled based on the parent qnaire readonly column
         this.getEditEnabled = function() { return !this.viewModel.record.readonly && this.$$getEditEnabled(); };
+        this.getDeleteEnabled = function() { return !this.viewModel.record.readonly && this.$$getDeleteEnabled(); };
       };
 
       return {

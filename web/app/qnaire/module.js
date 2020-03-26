@@ -45,11 +45,13 @@ define( function() {
   module.addInputGroup( '', {
     name: {
       title: 'Name',
-      type: 'string'
+      type: 'string',
+      isConstant: function( $state, model ) { return model.viewModel.record.readonly; }
     },
     base_language_id: {
       title: 'Base Language',
-      type: 'enum'
+      type: 'enum',
+      isConstant: function( $state, model ) { return model.viewModel.record.readonly; }
     },
     average_time: {
       title: 'Average Time',
@@ -60,7 +62,8 @@ define( function() {
     },
     debug: {
       title: 'Debug Mode',
-      type: 'boolean'
+      type: 'boolean',
+      isConstant: function( $state, model ) { return model.viewModel.record.readonly; }
     },
     readonly: {
       title: 'Read-Only',
@@ -68,11 +71,13 @@ define( function() {
     },
     description: {
       title: 'Description',
-      type: 'text'
+      type: 'text',
+      isConstant: function( $state, model ) { return model.viewModel.record.readonly; }
     },
     note: {
       title: 'Note',
-      type: 'text'
+      type: 'text',
+      isConstant: function( $state, model ) { return model.viewModel.record.readonly; }
     },
     first_page_id: { isExcluded: true }
   } );
@@ -239,7 +244,32 @@ define( function() {
   cenozo.providers.factory( 'CnQnaireViewFactory', [
     'CnBaseViewFactory',
     function( CnBaseViewFactory ) {
-      var object = function( parentModel, root ) { CnBaseViewFactory.construct( this, parentModel, root ); }
+      var object = function( parentModel, root ) {
+        var self = this;
+        CnBaseViewFactory.construct( this, parentModel, root );
+
+        this.deferred.promise.then( function() {
+          if( angular.isDefined( self.moduleModel ) ) {
+            self.moduleModel.getAddEnabled = function() {
+              return !self.record.readonly && self.moduleModel.$$getAddEnabled();
+            }
+            self.moduleModel.getDeleteEnabled = function() {
+              return !self.record.readonly && self.moduleModel.$$getDeleteEnabled();
+            }
+          }
+        } );
+
+        this.deferred.promise.then( function() {
+          if( angular.isDefined( self.attributeModel ) ) {
+            self.attributeModel.getAddEnabled = function() {
+              return !self.record.readonly && self.attributeModel.$$getAddEnabled();
+            }
+            self.attributeModel.getDeleteEnabled = function() {
+              return !self.record.readonly && self.attributeModel.$$getDeleteEnabled();
+            }
+          }
+        } );
+      }
       return { instance: function( parentModel, root ) { return new object( parentModel, root ); } };
     }
   ] );
@@ -281,9 +311,6 @@ define( function() {
             } );
           } );
         };
-
-        // extend getEditEnabled
-        this.getEditEnabled = function() { return !this.viewModel.record.readonly && this.$$getEditEnabled(); };
       };
 
       return {

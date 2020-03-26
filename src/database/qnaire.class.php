@@ -18,10 +18,21 @@ class qnaire extends \cenozo\database\record
    */
   public function save()
   {
-    if( $this->readonly ) throw lib::create( 'exception\notice',
-      'You cannot make changes to this questionnaire because it is in read-only mode.',
-      __METHOD__
-    );
+    if( $this->readonly )
+    {
+      // only allow changes to the readonly columns
+      if( $this->has_column_changed( 'base_language_id' ) || 
+          $this->has_column_changed( 'name' ) || 
+          $this->has_column_changed( 'debug' ) || 
+          $this->has_column_changed( 'description' ) || 
+          $this->has_column_changed( 'note' ) )
+      {
+        throw lib::create( 'exception\notice',
+          'You cannot make changes to this questionnaire because it is in read-only mode.',
+          __METHOD__
+        );
+      }
+    }
 
     parent::save();
   }
