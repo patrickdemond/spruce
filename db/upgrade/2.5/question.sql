@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS question (
   page_id INT UNSIGNED NOT NULL,
   rank INT UNSIGNED NOT NULL,
   name VARCHAR(255) NOT NULL,
-  type ENUM('boolean', 'list', 'number', 'string', 'text', 'comment') NOT NULL,
+  type ENUM('boolean', 'comment', 'date', 'list', 'number', 'string', 'text') NOT NULL,
   mandatory TINYINT(1) NOT NULL DEFAULT 1,
   dkna_refuse TINYINT(1) NOT NULL DEFAULT 1,
   minimum VARCHAR(1023) NULL DEFAULT NULL,

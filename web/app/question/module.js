@@ -15,12 +15,12 @@ define( function() {
   module.addInput( '', 'minimum', {
     title: 'Minimum',
     type: 'string',
-    isExcluded: function( $state, model ) { return 'number' != model.viewModel.record.type ? true : 'add'; }
+    isExcluded: function( $state, model ) { return !['date', 'number'].includes( model.viewModel.record.type ) ? true : 'add'; }
   } );
   module.addInput( '', 'maximum', {
     title: 'Maximum',
     type: 'string',
-    isExcluded: function( $state, model ) { return 'number' != model.viewModel.record.type ? true : 'add'; }
+    isExcluded: function( $state, model ) { return !['date', 'number'].includes( model.viewModel.record.type ) ? true : 'add'; }
   } );
   module.addInput( '', 'default_answer', {
     title: 'Default Answer',

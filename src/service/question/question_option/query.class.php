@@ -38,7 +38,8 @@ class query extends \cenozo\service\query
           );
         }
 
-        if( array_key_exists( 'minimum', $record ) )
+        // convert minimum answers that aren't in a date format
+        if( array_key_exists( 'minimum', $record ) && !preg_match( '/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/', $record['minimum'] ) )
         {
           $list[$index]['minimum'] = $expression_manager->compile(
             $db_response,
@@ -47,7 +48,8 @@ class query extends \cenozo\service\query
           );
         }
 
-        if( array_key_exists( 'maximum', $record ) )
+        // convert maximum answers that aren't in a date format
+        if( array_key_exists( 'maximum', $record ) && !preg_match( '/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/', $record['maximum'] ) )
         {
           $list[$index]['maximum'] = $expression_manager->compile(
             $db_response,

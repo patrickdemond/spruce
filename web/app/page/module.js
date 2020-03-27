@@ -226,10 +226,13 @@ define( function() {
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnPageRenderFactory', [
-    'CnHttpFactory', 'CnModalMessageFactory', '$q', '$state', '$timeout',
-    function( CnHttpFactory, CnModalMessageFactory, $q, $state, $timeout ) {
+    'CnHttpFactory', 'CnModalMessageFactory', 'CnModalDatetimeFactory', '$q', '$state', '$timeout',
+    function( CnHttpFactory, CnModalMessageFactory, CnModalDatetimeFactory, $q, $state, $timeout ) {
       var object = function( parentModel ) {
         var self = this;
+
+        function getDate( date ) { return date ? moment( new Date( date ) ) : null; }
+        function formatDate( date ) { var m = getDate( date ); return m ? m.format( 'dddd, MMMM Do YYYY' ) : null; }
 
         angular.extend( this, {
           parentModel: parentModel,
@@ -269,16 +272,24 @@ define( function() {
                 optionList: question.optionList.reduce( function( list, option ) {
                   var optionIndex = searchOptionList( selectedOptions, option.id );
                   list[option.id] = option.multiple_answers
-                                  ? { valueList: [] }
+                                  ? { valueList: [], formattedValueList: [] }
                                   : { selected: null != optionIndex };
 
                   if( option.extra ) {
                     if( null != optionIndex ) {
-                      list[option.id].valueList = option.multiple_answers
+                      list[option.id].valueList = 'date' != option.extra
+                                                ? null
+                                                : option.multiple_answers
                                                 ? selectedOptions[optionIndex].value
                                                 : [selectedOptions[optionIndex].value];
+                      list[option.id].formattedValueList = 'date' != option.extra
+                                                         ? null
+                                                         : option.multiple_answers
+                                                         ? formatDate( selectedOptions[optionIndex].value )
+                                                         : [formatDate( selectedOptions[optionIndex].value )];
                     } else {
                       list[option.id].valueList = option.multiple_answers ? [] : [null];
+                      list[option.id].formattedValueList = option.multiple_answers ? [] : [null];
                     }
                   }
 
@@ -287,7 +298,8 @@ define( function() {
               }
             } else {
               question.answer = {
-                value: angular.isString( question.value ) || angular.isNumber( question.value ) ? question.value : null
+                value: angular.isString( question.value ) || angular.isNumber( question.value ) ? question.value : null,
+                formattedValue: 'date' != question.type ? null : formatDate( question.value )
               };
             }
 
@@ -724,6 +736,39 @@ define( function() {
             this.setAnswer( question, value, true );
           },
 
+          selectDateForOption: function( question, option, valueIndex, answerValue ) {
+            CnModalDatetimeFactory.instance( {
+              date: answerValue,
+              pickerType: 'date',
+              minDate: getDate( option.minimum ),
+              maxDate: getDate( option.maximum ),
+              emptyAllowed: true
+            } ).show().then( function( response ) {
+              if( false !== response ) self.setAnswerValue(
+                question,
+                option,
+                valueIndex,
+                null == response ? null : response.replace( /T.*/, '' )
+              );
+            } );
+          },
+
+          selectDate: function( question, value ) {
+            console.log( question );
+            CnModalDatetimeFactory.instance( {
+              date: value,
+              pickerType: 'date',
+              minDate: getDate( question.minimum ),
+              maxDate: getDate( question.maximum ),
+              emptyAllowed: true
+            } ).show().then( function( response ) {
+              if( false !== response ) self.setAnswer(
+                question,
+                null == response ? null : response.replace( /T.*/, '' )
+              );
+            } );
+          },
+
           setAnswerValue: function( question, option, valueIndex, answerValue ) {
             // if the question option's extra type is a number then make sure it falls within the min/max values
             var tooSmall = 'number' == option.extra && null != answerValue &&
@@ -769,6 +814,9 @@ define( function() {
                   }
                 } else {
                   value[optionIndex].value = '' !== answerValue ? answerValue : null;
+                  
+                  if( 'date' == option.extra )
+                    question.answer.optionList[option.id].formattedValueList[valueIndex] = formatDate( value[optionIndex].value );
                 }
               }
 

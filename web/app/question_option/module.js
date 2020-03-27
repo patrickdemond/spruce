@@ -22,12 +22,12 @@ define( function() {
   module.addInput( '', 'minimum', {
     title: 'Minimum',
     type: 'string',
-    isExcluded: function( $state, model ) { return 'number' != model.viewModel.record.extra ? true : 'add'; }
+    isExcluded: function( $state, model ) { return !['date', 'number'].includes( model.viewModel.record.extra ) ? true : 'add'; }
   } );
   module.addInput( '', 'maximum', {
     title: 'Maximum',
     type: 'string',
-    isExcluded: function( $state, model ) { return 'number' != model.viewModel.record.extra ? true : 'add'; }
+    isExcluded: function( $state, model ) { return !['date', 'number'].includes( model.viewModel.record.extra ) ? true : 'add'; }
   } );
   module.addInput( '', 'parent_name', { column: 'question.name', isExcluded: true } );
 
