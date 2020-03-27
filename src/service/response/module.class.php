@@ -21,7 +21,7 @@ class module extends \cenozo\service\module
     parent::prepare_read( $select, $modifier );
 
     // add the total time spent
-    $this->add_count_column( 'time_spent', 'page_time', $select, $modifier, NULL, 'SUM( time )' );
+    $this->add_count_column( 'time_spent', 'page_time', $select, $modifier, NULL, 'ROUND( SUM( time ) )' );
 
     $modifier->join( 'qnaire', 'response.qnaire_id', 'qnaire.id' );
     $modifier->join( 'participant', 'response.participant_id', 'participant.id' );

@@ -25,6 +25,10 @@ define( function() {
         title: 'Read-Only',
         type: 'boolean'
       },
+      repeated: {
+        title: 'Repeated',
+        type: 'boolean'
+      },
       module_count: {
         title: 'Modules'
       },
@@ -65,8 +69,8 @@ define( function() {
       type: 'boolean',
       isConstant: function( $state, model ) { return model.viewModel.record.readonly; }
     },
-    readonly: {
-      title: 'Read-Only',
+    repeated: {
+      title: 'Repeated',
       type: 'boolean'
     },
     description: {

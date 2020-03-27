@@ -11,8 +11,16 @@ use cenozo\lib, cenozo\log, pine\util;
 /**
  * response: record
  */
-class response extends \cenozo\database\record
+class response extends \cenozo\database\has_rank
 {
+  /**
+   * The type of record which the record has a rank for.
+   * @var string
+   * @access protected
+   * @static
+   */
+  protected static $rank_parent = 'qnaire';
+
   /**
    * Override the parent method
    */
@@ -26,9 +34,18 @@ class response extends \cenozo\database\record
     // setup new responses
     if( $new )
     {
+      $select = lib::create( 'database\select' );
+      $select->from( 'response' );
+      $select->add_column( 'MAX( rank )', 'max_rank', false );
+      $modifier = lib::create( 'database\modifier' );
+      $modifier->where( 'qnaire_id', '=', $this->qnaire_id );
+      $modifier->where( 'participant_id', '=', $this->participant_id );
+      $max_rank = static::db()->get_one( sprintf( '%s %s', $select->get_sql(), $modifier->get_sql() ) );
+
       $db_participant = lib::create( 'database\participant', $this->participant_id );
       $this->language_id = $db_participant->language_id;
       $this->token = static::generate_token();
+      $this->rank = is_null( $max_rank ) ? 1 : $max_rank + 1;
     }
 
     parent::save();

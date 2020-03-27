@@ -17,6 +17,7 @@ CREATE PROCEDURE patch_qnaire()
         "name VARCHAR(255) NOT NULL, ",
         "debug TINYINT(1) NOT NULL DEFAULT 0, ",
         "readonly TINYINT(1) NOT NULL DEFAULT 0, ",
+        "repeated TINYINT(1) NOT NULL DEFAULT 0, ",
         "description TEXT NULL, ",
         "note TEXT NULL, ",
         "PRIMARY KEY (id), ",

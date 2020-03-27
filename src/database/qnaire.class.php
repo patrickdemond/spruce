@@ -177,4 +177,17 @@ class qnaire extends \cenozo\database\record
     );
     static::db()->execute( $sql );
   }
+
+  // TODO: DOCUMENT
+  public function has_duplicates()
+  {
+    $response_class_name = lib::get_class_name( 'database\response' );
+
+    $modifier = lib::create( 'database\modifier' );
+    $modifier->where( 'qnaire_id', '=', $this->id );
+    $modifier->group( 'participant_id' );
+    $modifier->having( 'COUNT(*)', '>', 1 );
+
+    return 0 < $response_class_name::count( $modifier );
+  }
 }
