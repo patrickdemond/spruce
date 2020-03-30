@@ -277,9 +277,7 @@ define( function() {
 
                   if( option.extra ) {
                     if( null != optionIndex ) {
-                      list[option.id].valueList = 'date' != option.extra
-                                                ? null
-                                                : option.multiple_answers
+                      list[option.id].valueList = option.multiple_answers
                                                 ? selectedOptions[optionIndex].value
                                                 : [selectedOptions[optionIndex].value];
                       list[option.id].formattedValueList = 'date' != option.extra
@@ -754,7 +752,6 @@ define( function() {
           },
 
           selectDate: function( question, value ) {
-            console.log( question );
             CnModalDatetimeFactory.instance( {
               date: value,
               pickerType: 'date',
