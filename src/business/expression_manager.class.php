@@ -549,7 +549,7 @@ class expression_manager extends \cenozo\singleton
 
     $this->last_term = !is_null( $db_question_option )
                      ? ( is_null( $db_question_option->extra ) ? 'boolean' : $db_question_option->extra )
-                     : $this->last_term = $db_question->type;
+                     : ( is_null( $special_function ) ? $db_question->type : 'boolean' );
     $this->active_term = NULL;
 
     return $compiled;
