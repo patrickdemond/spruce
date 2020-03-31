@@ -443,30 +443,29 @@ class expression_manager extends \cenozo\singleton
     $special_function = NULL;
 
     // question-options and certain functions are defined by question:question_option
-    if( false !== strpos( $this->term, ':' ) )
+    if( preg_match( '/([^.:]+)([.:])([^.:]+)/', $this->term, $matches ) )
     {
-      $parts = explode( ':', $this->term );
-      if( 2 != count( $parts ) )
+      if( 4 != count( $matches ) )
         throw lib::create( 'exception\runtime', sprintf( 'Invalid question "%s"', $this->term ), __METHOD__ );
 
-      $db_question = $db_qnaire->get_question( $parts[0] );
+      $db_question = $db_qnaire->get_question( $matches[1] );
       if( is_null( $db_question ) )
-        throw lib::create( 'exception\runtime', sprintf( 'Invalid question "%s"', $parts[0] ), __METHOD__ );
+        throw lib::create( 'exception\runtime', sprintf( 'Invalid question "%s"', $matches[1] ), __METHOD__ );
 
-      if( in_array( $parts[1], ['empty()', 'dkna()', 'refuse()'] ) )
+      if( '.' == $matches[2] && in_array( $matches[3], ['empty()', 'dkna()', 'refuse()'] ) )
       {
-        $special_function = substr( $parts[1], 0, -2 );
+        $special_function = substr( $matches[3], 0, -2 );
       }
-      else
+      else if( ':' == $matches[2] )
       {
         $db_question_option = $question_option_class_name::get_unique_record(
           array( 'question_id', 'name' ),
-          array( $db_question->id, $parts[1] )
+          array( $db_question->id, $matches[3] )
         );
         if( is_null( $db_question_option ) )
         {
           throw lib::create( 'exception\runtime',
-            sprintf( 'Invalid question option "%s" for question "%s"', $parts[1], $parts[0] ),
+            sprintf( 'Invalid question option "%s" for question "%s"', $matches[3], $matches[1] ),
             __METHOD__
           );
         }
