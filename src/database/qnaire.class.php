@@ -34,6 +34,20 @@ class qnaire extends \cenozo\database\record
       }
     }
 
+    if( $this->has_column_changed( 'repeated' ) )
+    {
+      if( !is_null( $this->repeated ) )
+      {
+        if( is_null( $this->repeat_offset ) ) $this->repeat_offset = 0;
+        if( is_null( $this->max_responses ) ) $this->max_responses = 0;
+      }
+      else
+      {
+        $this->repeat_offset = NULL;
+        $this->max_responses = NULL;
+      }
+    }
+
     parent::save();
   }
 
@@ -113,7 +127,8 @@ class qnaire extends \cenozo\database\record
     $select = lib::create( 'database\select' );
     $select->add_column( 'SUM( time ) / COUNT( DISTINCT response.id )', 'average_time', false );
     $modifier = lib::create( 'database\modifier' );
-    $modifier->join( 'response', 'qnaire.id', 'response.qnaire_id' );
+    $modifier->join( 'respondent', 'qnaire.id', 'respondent.qnaire_id' );
+    $modifier->join( 'response', 'respondent.id', 'response.respondent_id' );
     $modifier->join( 'page_time', 'response.id', 'page_time.response_id' );
     $modifier->join( 'page', 'page_time.page_id', 'page.id' );
     $modifier->where( 'IFNULL( page_time.time, 0 )', '<=', 'page.max_time', false );
@@ -184,8 +199,9 @@ class qnaire extends \cenozo\database\record
     $response_class_name = lib::get_class_name( 'database\response' );
 
     $modifier = lib::create( 'database\modifier' );
-    $modifier->where( 'qnaire_id', '=', $this->id );
-    $modifier->group( 'participant_id' );
+    $modifier->join( 'respondent', 'response.respondent_id', 'respondent.id' );
+    $modifier->where( 'respondent.qnaire_id', '=', $this->id );
+    $modifier->group( 'respondent.participant_id' );
     $modifier->having( 'COUNT(*)', '>', 1 );
 
     return 0 < $response_class_name::count( $modifier );

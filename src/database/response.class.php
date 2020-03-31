@@ -19,7 +19,7 @@ class response extends \cenozo\database\has_rank
    * @access protected
    * @static
    */
-  protected static $rank_parent = 'qnaire';
+  protected static $rank_parent = 'respondent';
 
   /**
    * Override the parent method
@@ -30,36 +30,83 @@ class response extends \cenozo\database\has_rank
 
     $new = is_null( $this->id );
     $submitted = $this->has_column_changed( 'submitted' ) && $this->submitted;
+    $db_respondent = NULL;
 
     // setup new responses
     if( $new )
     {
+      $db_respondent = lib::create( 'database\respondent', $this->respondent_id );
+      $db_qnaire = $db_respondent->get_qnaire();
+
       $select = lib::create( 'database\select' );
       $select->from( 'response' );
       $select->add_column( 'MAX( rank )', 'max_rank', false );
       $modifier = lib::create( 'database\modifier' );
-      $modifier->where( 'qnaire_id', '=', $this->qnaire_id );
-      $modifier->where( 'participant_id', '=', $this->participant_id );
+      $modifier->where( 'respondent_id', '=', $db_respondent->id );
       $max_rank = static::db()->get_one( sprintf( '%s %s', $select->get_sql(), $modifier->get_sql() ) );
 
-      $db_participant = lib::create( 'database\participant', $this->participant_id );
-      $this->language_id = $db_participant->language_id;
-      $this->token = static::generate_token();
+      if( is_null( $db_qnaire->repeated ) && 0 < $max_rank )
+      {
+        throw lib::create( 'exception\runtime', sprintf(
+          'Tried to create second response for participant %s answering qnaire "%s" which is not repeated.',
+          $db_respondent->get_participant()->uid,
+          $db_qnaire->name
+        ), __METHOD__ );
+      }
+      else if( 0 < $db_qnaire->max_responses && $db_qnaire->max_responses <= $max_rank )
+      {
+        throw lib::create( 'exception\runtime', sprintf(
+          'Tried to create more than the maximum allowed responses for participant %s answering qnaire "%s" (maximum responses %d).',
+          $db_respondent->get_participant()->uid,
+          $db_qnaire->name,
+          $db_qnaire->max_responses
+        ), __METHOD__ );
+      }
+
+      // set the language to the last response, or the participant default there isn't one
+      $this->language_id = 0 < $max_rank
+                         ? static::get_unique_record(
+                             array( 'respondent_id', 'rank' ),
+                             array( $db_respondent->id, $max_rank )
+                           )->language_id
+                         : $db_respondent->get_participant()->language_id;
       $this->rank = is_null( $max_rank ) ? 1 : $max_rank + 1;
-    }
+   }
 
     parent::save();
+
+    // create the new response's attributes
+    if( $new ) $this->create_attributes();
 
     // see if the qnaire exists as a script and apply the started/finished events if it does
     if( $new || $submitted )
     {
-      $db_script = $script_class_name::get_unique_record( 'pine_qnaire_id', $this->qnaire_id );
+      if( is_null( $db_respondent ) ) $db_respondent = $this->get_respondent();
+      $db_script = $script_class_name::get_unique_record( 'pine_qnaire_id', $db_respondent->qnaire_id );
       if( !is_null( $db_script ) )
       {
         if( $new ) $db_script->add_started_event( $this->get_participant(), $this->last_datetime );
         else if( $submitted ) $db_script->add_finished_event( $this->get_participant(), $this->last_datetime );
       }
     }
+  }
+
+  /**
+   * Convenience method to return this response's participant
+   * @return database\participant $db_participant
+   */
+  public function get_participant()
+  {
+    return $this->get_respondent()->get_participant();
+  }
+
+  /**
+   * Convenience method to return this response's qnaire
+   * @return database\qnaire $db_qnaire
+   */
+  public function get_qnaire()
+  {
+    return $this->get_respondent()->get_qnaire();
   }
 
   /**
@@ -290,33 +337,6 @@ class response extends \cenozo\database\has_rank
      $sql = sprintf( 'DELETE FROM answer %s', $modifier->get_sql() );
      static::db()->execute( $sql );
    }
-
-  /**
-   * Creates a unique token to be used for identifying a response
-   * 
-   * @access private
-   */
-  private static function generate_token()
-  {
-    $created = false;
-    $count = 0;
-    while( 100 > $count++ )
-    {
-      $token = sprintf(
-        '%s-%s-%s-%s',
-        bin2hex( openssl_random_pseudo_bytes( 2 ) ),
-        bin2hex( openssl_random_pseudo_bytes( 2 ) ),
-        bin2hex( openssl_random_pseudo_bytes( 2 ) ),
-        bin2hex( openssl_random_pseudo_bytes( 2 ) )
-      );
-
-      // make sure it isn't already in use
-      if( null == static::get_unique_record( 'token', $token ) ) return $token;
-    }
-
-    // if we get here then something is wrong
-    if( !$created ) throw lib::create( 'exception\runtime', 'Unable to create unique response token.', __METHOD__ );
-  }
 
   public function create_attributes()
   {

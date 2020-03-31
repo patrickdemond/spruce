@@ -46,8 +46,9 @@ class answer extends \cenozo\database\record
       $index = array_search( 'token', $column );
       if( false !== $index )
       {
-        $response_class_name = lib::get_class_name( 'database\response' );
-        $db_response = $response_class_name::get_unique_record( 'token', $value[$index] );
+        $respondent_class_name = lib::get_class_name( 'database\respondent' );
+        $db_respondent = $respondent_class_name::get_unique_record( 'token', $value[$index] );
+        $db_response = is_null( $db_respondent ) ? NULL : $db_respondent->get_current_response();
         $column[$index] = 'response_id';
         $value[$index] = is_null( $db_response ) ? 0 : $db_response->id;
       }

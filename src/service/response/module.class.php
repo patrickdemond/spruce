@@ -23,8 +23,9 @@ class module extends \cenozo\service\module
     // add the total time spent
     $this->add_count_column( 'time_spent', 'page_time', $select, $modifier, NULL, 'ROUND( SUM( time ) )' );
 
-    $modifier->join( 'qnaire', 'response.qnaire_id', 'qnaire.id' );
-    $modifier->join( 'participant', 'response.participant_id', 'participant.id' );
+    $modifier->join( 'respondent', 'response.respondent_id', 'respondent.id' );
+    $modifier->join( 'qnaire', 'respondent.qnaire_id', 'qnaire.id' );
+    $modifier->join( 'participant', 'respondent.participant_id', 'participant.id' );
     $modifier->join( 'language', 'response.language_id', 'language.id' );
     $modifier->left_join( 'page', 'response.page_id', 'page.id' );
     $modifier->left_join( 'module', 'page.module_id', 'module.id' );
@@ -63,13 +64,6 @@ class module extends \cenozo\service\module
 
     if( !is_null( $this->get_resource() ) )
     {
-      // include the participant first/last/uid as supplemental data
-      $select->add_column(
-        'CONCAT( participant.first_name, " ", participant.last_name, " (", participant.uid, ")" )',
-        'formatted_participant_id',
-        false
-      );
-
       // include the language first/last/uid as supplemental data
       $select->add_column(
         'CONCAT( language.name, " [", language.code, "]" )',

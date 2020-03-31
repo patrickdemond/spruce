@@ -26,7 +26,20 @@ class module extends \cenozo\service\module
     $this->add_count_column( 'module_count', 'module', $select, $modifier );
 
     // add the total time spent
-    $this->add_count_column( 'response_count', 'response', $select, $modifier );
+    $this->add_count_column( 'respondent_count', 'respondent', $select, $modifier );
+
+    if( $select->has_column( 'repeat_detail' ) )
+    {
+      $select->add_column(
+        'CASE repeat_offset '.
+          'WHEN NULL THEN "no" '.
+          'WHEN "every time" THEN repeat_offset '.
+          'ELSE IF( 1 < qnaire.repeat_offset, CONCAT( qnaire.repeat_offset, " ", qnaire.repeated, "s" ), qnaire.repeated ) '.
+        'END',
+        'repeat_detail',
+        false
+      );
+    }
 
     $db_qnaire = $this->get_resource();
     if( !is_null( $db_qnaire ) )

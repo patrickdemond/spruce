@@ -15,13 +15,14 @@ class get extends \cenozo\service\get
    */
   public function execute()
   {
-    $response_class_name = lib::get_class_name( 'database\response' );
+    $respondent_class_name = lib::get_class_name( 'database\respondent' );
 
     parent::execute();
 
     if( 1 == preg_match( '/^token=([^;\/]+)/', $this->get_resource_value( 0 ), $parts ) )
     {
-      $this->db_response = $response_class_name::get_unique_record( 'token', $parts[1] );
+      $db_respondent = $respondent_class_name::get_unique_record( 'token', $parts[1] );
+      $this->db_response = is_null( $db_respondent ) ? NULL : $db_respondent->get_current_response();
       $data = $this->data;
       $data['uid'] = $this->db_response->get_participant()->uid;
       $this->set_data( $data );

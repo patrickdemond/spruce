@@ -65,12 +65,25 @@ class ui extends \cenozo\ui\ui
     $module = $this->get_module( 'qnaire' );
     if( !is_null( $module ) )
     {
-      $module->add_child( 'response' );
+      $module->add_child( 'respondent' );
       $module->add_child( 'qnaire_description' );
       $module->add_child( 'module' );
       $module->add_child( 'attribute' );
       $module->add_choose( 'language' );
       $module->add_action( 'clone', '/{identifier}' );
+    }
+
+    $module = $this->get_module( 'respondent' );
+    if( !is_null( $module ) )
+    {
+      $module->add_child( 'response' );
+      $module->add_action( 'run', '/{token}', true );
+    }
+
+    $module = $this->get_module( 'response' );
+    if( !is_null( $module ) )
+    {
+      $module->add_child( 'response_attribute' );
     }
 
     $module = $this->get_module( 'module' );
@@ -103,13 +116,6 @@ class ui extends \cenozo\ui\ui
     {
       $module->add_child( 'question_option_description' );
       $module->add_action( 'clone', '/{identifier}' );
-    }
-
-    $module = $this->get_module( 'response' );
-    if( !is_null( $module ) )
-    {
-      $module->add_child( 'response_attribute' );
-      $module->add_action( 'run', '/{token}', true );
     }
   }
 

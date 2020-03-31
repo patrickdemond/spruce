@@ -21,7 +21,7 @@ class patch extends \cenozo\service\patch
     {
       // do not allow a qnaire to be set to not repeated if it already has repeated qnaires
       $patch_array = $this->get_file_as_array();
-      if( array_key_exists( 'repeated', $patch_array ) && false == $patch_array['repeated'] )
+      if( array_key_exists( 'repeated', $patch_array ) && is_null( $patch_array['repeated'] ) )
       {
         $db_qnaire = $this->get_leaf_record();
         if( $db_qnaire->has_duplicates() )

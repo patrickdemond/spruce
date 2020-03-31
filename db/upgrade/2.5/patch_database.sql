@@ -27,10 +27,14 @@ SOURCE question.sql
 SOURCE question_description.sql
 SOURCE question_option.sql
 SOURCE question_option_description.sql
+SOURCE respondent.sql
 SOURCE response.sql
+SOURCE respondent_current_response.sql
 SOURCE response_attribute.sql
 SOURCE answer.sql
 SOURCE page_time.sql
+
+SOURCE update_respondent_current_response.sql
 
 SOURCE update_version_number.sql
 

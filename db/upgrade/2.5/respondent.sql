@@ -1,6 +1,6 @@
-DROP PROCEDURE IF EXISTS patch_qnaire_description;
+DROP PROCEDURE IF EXISTS patch_respondent;
 DELIMITER //
-CREATE PROCEDURE patch_qnaire_description()
+CREATE PROCEDURE patch_respondent()
   BEGIN
 
     -- determine the cenozo database name
@@ -10,30 +10,29 @@ CREATE PROCEDURE patch_qnaire_description()
       WHERE constraint_schema = DATABASE()
       AND constraint_name = "fk_access_site_id"
     );
-
-    SELECT "Creating new qnaire_description table" AS "";
+    
+    SELECT "Creating new respondent table" AS "";
 
     SET @sql = CONCAT(
-      "CREATE TABLE IF NOT EXISTS qnaire_description ( ",
+      "CREATE TABLE IF NOT EXISTS respondent ( ",
         "id INT UNSIGNED NOT NULL AUTO_INCREMENT, ",
         "update_timestamp TIMESTAMP NOT NULL, ",
         "create_timestamp TIMESTAMP NOT NULL, ",
         "qnaire_id INT UNSIGNED NOT NULL, ",
-        "language_id INT UNSIGNED NOT NULL, ",
-        "type ENUM('introduction', 'conclusion') NOT NULL, ",
-        "value TEXT NULL, ",
+        "participant_id INT UNSIGNED NOT NULL, ",
+        "token CHAR(19) NOT NULL, ",
         "PRIMARY KEY (id), ",
         "INDEX fk_qnaire_id (qnaire_id ASC), ",
-        "INDEX fk_language_id (language_id ASC), ",
-        "UNIQUE INDEX uq_qnaire_id_language_id_type (qnaire_id ASC, language_id ASC, type ASC), ",
-        "CONSTRAINT fk_qnaire_description_qnaire_id ",
+        "INDEX fk_participant_id (participant_id ASC), ",
+        "UNIQUE INDEX uq_token (token ASC), ",
+        "CONSTRAINT fk_respondent_qnaire_id ",
           "FOREIGN KEY (qnaire_id) ",
           "REFERENCES qnaire (id) ",
-          "ON DELETE CASCADE ",
+          "ON DELETE NO ACTION ",
           "ON UPDATE NO ACTION, ",
-        "CONSTRAINT fk_qnaire_description_language_id ",
-          "FOREIGN KEY (language_id) ",
-          "REFERENCES ", @cenozo, ".language (id) ",
+        "CONSTRAINT fk_respondent_participant_id ",
+          "FOREIGN KEY (participant_id) ",
+          "REFERENCES ", @cenozo, ".participant (id) ",
           "ON DELETE NO ACTION ",
           "ON UPDATE NO ACTION) ",
       "ENGINE = InnoDB"
@@ -45,5 +44,5 @@ CREATE PROCEDURE patch_qnaire_description()
   END //
 DELIMITER ;
 
-CALL patch_qnaire_description();
-DROP PROCEDURE IF EXISTS patch_qnaire_description;
+CALL patch_respondent();
+DROP PROCEDURE IF EXISTS patch_respondent;

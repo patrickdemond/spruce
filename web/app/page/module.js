@@ -150,23 +150,27 @@ define( function() {
 
           function render() {
             var promiseList = [];
-            if( 'response' != $scope.model.getSubjectFromState() || null != $scope.data.page_id ) promiseList.push(
-              $scope.model.viewModel.onView( true ).then( function() {
-                $scope.data = {
-                  page_id: $scope.model.viewModel.record.id,
-                  qnaire_id: $scope.model.viewModel.record.qnaire_id,
-                  qnaire_name: $scope.model.viewModel.record.qnaire_name,
-                  base_language: $scope.model.viewModel.record.base_language,
-                  title: $scope.model.viewModel.record.module_name,
-                  uid: null
-                };
+            if( 'respondent' != $scope.model.getSubjectFromState() || null != $scope.data.page_id ) {
+              promiseList.push(
+                $scope.model.viewModel.onView( true ).then( function() {
+                  $scope.data = {
+                    page_id: $scope.model.viewModel.record.id,
+                    qnaire_id: $scope.model.viewModel.record.qnaire_id,
+                    qnaire_name: $scope.model.viewModel.record.qnaire_name,
+                    base_language: $scope.model.viewModel.record.base_language,
+                    title: $scope.model.viewModel.record.module_name,
+                    uid: null
+                  };
 
-                $scope.progress = Math.round(
-                  100 * $scope.model.viewModel.record.qnaire_page / $scope.model.viewModel.record.qnaire_pages
-                );
-                return $scope.model.renderModel.onLoad();
-              } )
-            );
+                  $scope.progress = Math.round(
+                    100 * $scope.model.viewModel.record.qnaire_page / $scope.model.viewModel.record.qnaire_pages
+                  );
+                  return $scope.model.renderModel.onLoad();
+                } )
+              );
+            } else if( null == $scope.data.page_id ) {
+              promiseList.push( $scope.model.renderModel.reset() );
+            }
 
             $q.all( promiseList ).then( function() {
               CnHttpFactory.instance( {
@@ -192,13 +196,15 @@ define( function() {
             } );
           }
 
-          if( 'response' != $scope.model.getSubjectFromState() ) render();
+          if( 'respondent' != $scope.model.getSubjectFromState() ) render();
           else {
-            // test to see if the response has a current page
+            // test to see if the respondent has a current page
             CnHttpFactory.instance( {
-              path: 'response/token=' + $state.params.token,
+              path: 'respondent/token=' + $state.params.token + '?assert_response=1',
               data: { select: { column: [
-                'qnaire_id', 'page_id', 'submitted', 'introductions', 'conclusions',
+                'qnaire_id', 'introductions', 'conclusions',
+                { table: 'response', column: 'page_id' },
+                { table: 'response', column: 'submitted' },
                 { table: 'participant', column: 'uid' },
                 { table: 'language', column: 'code', alias: 'base_language' },
                 { table: 'qnaire', column: 'name', alias: 'qnaire_name' },
@@ -371,7 +377,7 @@ define( function() {
             if( true == precondition || false == precondition ) return precondition;
 
             // replace any attriutes with null (they will only appear unevaluated when previewing)
-            if( 'response' != self.parentModel.getSubjectFromState() ) {
+            if( 'respondent' != self.parentModel.getSubjectFromState() ) {
               self.activeAttributeList.forEach( function( attribute ) {
                 var re = new RegExp( '@' + attribute.name + '@' );
                 var value = attribute.value;
@@ -466,6 +472,14 @@ define( function() {
             return question.optionList.filter( option => self.evaluatePrecondition( option.precondition ) );
           },
 
+          reset: function() {
+            angular.extend( this, {
+              questionList: [],
+              keyQuestionIndex: null,
+              activeAttributeList: []
+            } );
+          },
+
           onLoad: function() {
             function getAttributeNames( precondition ) {
               // scan the precondition for active attributes
@@ -477,6 +491,7 @@ define( function() {
               return list;
             }
 
+            this.reset();
             return CnHttpFactory.instance( {
               path: this.parentModel.getServiceResourcePath() + '/question',
               data: {
@@ -487,11 +502,7 @@ define( function() {
               }
             } ).query().then( function( response ) {
               var promiseList = [];
-              angular.extend( self, {
-                questionList: response.data,
-                keyQuestionIndex: null,
-                activeAttributeList: []
-              } );
+              self.questionList = response.data;
 
               // set the current language to the first question's language
               if( 0 < self.questionList.length && angular.isDefined( self.questionList[0].language ) ) {
@@ -514,7 +525,7 @@ define( function() {
                 if( 'list' == question.type ) {
                   promiseList.push( CnHttpFactory.instance( {
                     path: ['question', question.id, 'question_option'].join( '/' ) + (
-                      'response' == self.parentModel.getSubjectFromState() ?
+                      'respondent' == self.parentModel.getSubjectFromState() ?
                       '?token=' + $state.params.token :
                       ''
                     ),
@@ -549,10 +560,10 @@ define( function() {
           },
 
           setLanguage: function() {
-            if( 'response' == this.parentModel.getSubjectFromState() && null != this.currentLanguage ) {
+            if( 'respondent' == this.parentModel.getSubjectFromState() && null != this.currentLanguage ) {
               return this.runQuery( function() {
                 return CnHttpFactory.instance( {
-                  path: self.parentModel.getServiceResourcePath().replace( 'page/', 'response/' ) +
+                  path: self.parentModel.getServiceResourcePath().replace( 'page/', 'respondent/' ) +
                     '?action=set_language&code=' + self.currentLanguage
                 } ).patch();
               } );
@@ -635,8 +646,8 @@ define( function() {
               // No out of bounds detected, so proceed with setting the value
               function() {
                 if( "" === value ) value = null;
-                var promise = 'response' == self.parentModel.getSubjectFromState() ?
-                  // first communicate with the server (if we're working with a response)
+                var promise = 'respondent' == self.parentModel.getSubjectFromState() ?
+                  // first communicate with the server (if we're working with a respondent)
                   CnHttpFactory.instance( {
                     path: 'answer/' + question.answer_id,
                     data: { value: angular.toJson( value ) },
@@ -657,7 +668,7 @@ define( function() {
                                         : complete;
                   }
 
-                  if( 'response' == self.parentModel.getSubjectFromState() ) {
+                  if( 'respondent' == self.parentModel.getSubjectFromState() ) {
                     if( 'list' == question.type ) {
                       for( var element of document.getElementsByName( 'answerValue' ) ) {
                         var match = element.id.match( /option([0-9]+)value[0-9]+/ );
@@ -848,19 +859,22 @@ define( function() {
           proceed: function() {
             // check to make sure that all questions are complete, and highlight any which aren't
             var mayProceed = true;
-            this.questionList.forEach( function( question ) {
+            this.questionList.some( function( question ) {
               var complete = self.questionIsComplete( question );
               question.incomplete = false === complete ? true
                                   : true === complete ? false
                                   : complete;
-              if( question.incomplete ) mayProceed = false;
+              if( question.incomplete ) {
+                mayProceed = false;
+                return true;
+              }
             } );
 
             if( mayProceed ) {
-              // proceed to the response's next valid page
+              // proceed to the respondent's next valid page
               return this.runQuery( function() {
                 return CnHttpFactory.instance( {
-                  path: 'response/token=' + $state.params.token + '?action=proceed'
+                  path: 'respondent/token=' + $state.params.token + '?action=proceed'
                 } ).patch().then( function() {
                   self.parentModel.reloadState( true );
                 } );
@@ -869,10 +883,10 @@ define( function() {
           },
 
           backup: function() {
-            // back up to the response's previous page
+            // back up to the respondent's previous page
             return this.runQuery( function() {
               return CnHttpFactory.instance( {
-                path: 'response/token=' + $state.params.token + '?action=backup'
+                path: 'respondent/token=' + $state.params.token + '?action=backup'
               } ).patch().then( function() {
                 self.parentModel.reloadState( true );
               } );
@@ -921,15 +935,15 @@ define( function() {
           renderModel: CnPageRenderFactory.instance( object ),
 
           getServiceResourcePath: function( resource ) {
-            // when we're looking at a response use its token to figure out which page to load
-            return 'response' == this.getSubjectFromState() ?
+            // when we're looking at a respondent use its token to figure out which page to load
+            return 'respondent' == this.getSubjectFromState() ?
               'page/token=' + $state.params.token : this.$$getServiceResourcePath( resource );
           },
 
           getServiceCollectionPath: function( ignoreParent ) {
             var path = this.$$getServiceCollectionPath( ignoreParent );
-            if( 'response' == this.getSubjectFromState() )
-              path = path.replace( 'response/undefined', 'module/token=' + $state.params.token );
+            if( 'respondent' == this.getSubjectFromState() )
+              path = path.replace( 'respondent/undefined', 'module/token=' + $state.params.token );
             return path;
           }
         } );

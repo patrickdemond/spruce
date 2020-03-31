@@ -258,7 +258,7 @@
               <i class="glyphicon glyphicon-chevron-right"></i>
             </button>
             <button type="button"
-                    ng-if="'response' == model.getSubjectFromState()"
+                    ng-if="'respondent' == model.getSubjectFromState()"
                     ng-show="null != model.viewModel.record.previous_id"
                     ng-disabled="!isComplete"
                     ng-click="model.renderModel.backup()"
@@ -276,7 +276,7 @@
               View Page
             </button>
             <button type="button"
-                    ng-if="'response' == model.getSubjectFromState()"
+                    ng-if="'respondent' == model.getSubjectFromState()"
                     ng-disabled="!isComplete"
                     ng-click="model.renderModel.proceed()"
                     class="btn"
@@ -292,7 +292,10 @@
   </div>
 </div>
 <div class="vertical-spacer"></div>
-<div ng-if="isComplete && data.page_id && 'response' != model.getSubjectFromState() && 0 < model.renderModel.activeAttributeList.length"
+<div ng-if="isComplete &&
+            data.page_id &&
+            'respondent' != model.getSubjectFromState() &&
+            0 < model.renderModel.activeAttributeList.length"
      class="utility-view rounded">
   <div class="container-fluid bg-primary rounded-top">
     <h4>Active Attribute List</h4>

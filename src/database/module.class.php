@@ -26,12 +26,13 @@ class module extends base_qnaire_part
    */
   public static function get_record_from_identifier( $identifier )
   {
-    $response_class_name = lib::get_class_name( 'database\response' );
+    $respondent_class_name = lib::get_class_name( 'database\respondent' );
 
     if( 1 == preg_match( '/^token=([^;\/]+)/', $identifier, $parts ) )
     {
-      // return the current module for the provided response's page
-      $db_response = $response_class_name::get_unique_record( 'token', $parts[1] );
+      // return the current module for the provided respondent's current response's page
+      $db_respondent = $respondent_class_name::get_unique_record( 'token', $parts[1] );
+      $db_response = is_null( $db_respondent ) ? NULL : $db_respondent->get_current_response();
       if( is_null( $db_response ) ) return NULL;
       $db_page = $db_response->get_page();
       return is_null( $db_page ) ? NULL : lib::create( 'database\module', $db_page->module_id );

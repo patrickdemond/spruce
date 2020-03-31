@@ -25,15 +25,19 @@ define( function() {
         title: 'Read-Only',
         type: 'boolean'
       },
-      repeated: {
+      repeat_detail: {
         title: 'Repeated',
-        type: 'boolean'
+        type: 'string'
+      },
+      max_responses: {
+        title: 'Max Responses',
+        type: 'string'
       },
       module_count: {
         title: 'Modules'
       },
-      response_count: {
-        title: 'Responses'
+      respondent_count: {
+        title: 'Participants'
       },
       description: {
         title: 'Description',
@@ -71,7 +75,22 @@ define( function() {
     },
     repeated: {
       title: 'Repeated',
-      type: 'boolean'
+      type: 'enum'
+    },
+    repeat_offset: {
+      title: 'Repeat Offset',
+      type: 'string',
+      format: 'integer',
+      isExcluded: function( $state, model ) {
+        return !model.viewModel.record.repeated || 'every time' == model.viewModel.record.repeated;
+      }
+    },
+    max_responses: {
+      title: 'Maximum Number of Responses',
+      type: 'string',
+      format: 'integer',
+      isExcluded: function( $state, model ) { return !model.viewModel.record.repeated; },
+      help: 'If set to 0 then there will be no maximum number of responses'
     },
     description: {
       title: 'Description',
@@ -115,6 +134,37 @@ define( function() {
         scope: { model: '=?' },
         controller: function( $scope ) {
           if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnaireModelFactory.root;
+
+          // a special function to define whether to show certain inputs based on the new record properties
+          function defineInputExcludes() {
+            var mainInputGroup = $scope.model.module.inputGroupList.findByProperty( 'title', '' );
+
+            mainInputGroup.inputList.repeat_offset.isExcluded = function( $state, model ) {
+              var repeated = 'add' == model.getActionFromState() ? cnRecordAddScope.record.repeated : model.viewModel.record.repeated;
+              return !repeated || 'every time' == repeated;
+            };
+
+            mainInputGroup.inputList.max_responses.isExcluded = function( $state, model ) {
+              var repeated = 'add' == model.getActionFromState() ? cnRecordAddScope.record.repeated : model.viewModel.record.repeated;
+              return !repeated;
+            };
+          }
+
+          var cnRecordAddScope = null;
+          $scope.$on( 'cnRecordAdd ready', function( event, data ) {
+            cnRecordAddScope = data;
+
+            // add/remove inputs based on whether repeated is set to true or false
+            var checkFunction = cnRecordAddScope.check;
+            cnRecordAddScope.check = function( property ) {
+              // run the original check function first
+              checkFunction( property );
+              if( 'repeated' == property ) defineInputExcludes();
+            };
+
+            defineInputExcludes();
+          }, 500 );
+
         }
       };
     }
@@ -130,10 +180,10 @@ define( function() {
         scope: { model: '=?' },
         controller: function( $scope ) {
           if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnaireCloneFactory.instance();
-          
+
           $scope.model.onLoad().then( function() {
             CnSession.setBreadcrumbTrail( [ {
-              title: 'Questionnaires', 
+              title: 'Questionnaires',
               go: function() { return $state.go( 'qnaire.list' ); }
             }, {
               title: $scope.model.sourceName,
@@ -261,9 +311,7 @@ define( function() {
               return !self.record.readonly && self.moduleModel.$$getDeleteEnabled();
             }
           }
-        } );
 
-        this.deferred.promise.then( function() {
           if( angular.isDefined( self.attributeModel ) ) {
             self.attributeModel.getAddEnabled = function() {
               return !self.record.readonly && self.attributeModel.$$getAddEnabled();
@@ -273,6 +321,12 @@ define( function() {
             }
           }
         } );
+
+        this.onPatch = function( data ) {
+          return this.$$onPatch( data ).then( function() {
+            if( angular.isDefined( data.repeated ) && data.repeated ) self.onView();
+          } );
+        };
       }
       return { instance: function( parentModel, root ) { return new object( parentModel, root ); } };
     }

@@ -22,6 +22,8 @@ class module extends \cenozo\service\module
 
     $modifier->join( 'attribute', 'response_attribute.attribute_id', 'attribute.id' );
     $modifier->join( 'response', 'response_attribute.response_id', 'response.id' );
-    $modifier->join( 'participant', 'response.participant_id', 'participant.id' );
+    $modifier->join( 'respondent', 'response.respondent_id', 'respondent.id' );
+    $modifier->join( 'participant', 'respondent.participant_id', 'participant.id' );
+    $modifier->join( 'qnaire', 'respondent.participant_id', 'qnaire.id' );
   }
 }

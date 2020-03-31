@@ -3,8 +3,13 @@ DELIMITER //
 CREATE PROCEDURE patch_page_description()
   BEGIN
 
-    -- determine the @cenozo database name
-    SET @cenozo = ( SELECT REPLACE( DATABASE(), "pine", "cenozo" ) );
+    -- determine the cenozo database name
+    SET @cenozo = (
+      SELECT unique_constraint_schema
+      FROM information_schema.referential_constraints
+      WHERE constraint_schema = DATABASE()
+      AND constraint_name = "fk_access_site_id"
+    );
 
     SELECT "Creating new page_description table" AS "";
 

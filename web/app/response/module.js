@@ -7,8 +7,8 @@ define( [ 'page' ].reduce( function( list, name ) {
   angular.extend( module, {
     identifier: {
       parent: {
-        subject: 'qnaire',
-        column: 'qnaire.id'
+        subject: 'respondent',
+        column: 'respondent.id'
       }
     },
     name: {
@@ -17,16 +17,13 @@ define( [ 'page' ].reduce( function( list, name ) {
       possessive: 'response\'s'
     },
     columnList: {
-      uid: {
-        column: 'participant.uid',
-        title: 'Participant'
+      rank: {
+        title: 'Rank',
+        type: 'rank'
       },
       language: {
         column: 'language.code',
         title: 'Language'
-      },
-      token: {
-        title: 'Token'
       },
       submitted: {
         title: 'Submitted',
@@ -60,26 +57,21 @@ define( [ 'page' ].reduce( function( list, name ) {
   } );
 
   module.addInputGroup( '', {
-    participant_id: {
-      column: 'response.participant_id',
+    uid: {
+      column: 'participant.uid',
       title: 'Participant',
-      type: 'lookup-typeahead',
-      typeahead: {
-        table: 'participant',
-        select: 'CONCAT( participant.first_name, " ", participant.last_name, " (", uid, ")" )',
-        where: [ 'participant.first_name', 'participant.last_name', 'uid' ]
-      },
-      isConstant: 'view'
+      type: 'string',
+      isConstant: true
+    },
+    rank: {
+      title: 'rank',
+      type: 'rank',
+      isConstant: true
     },
     language_id: {
       column: 'response.language_id',
       title: 'Language',
       type: 'enum',
-      isExcluded: 'add'
-    },
-    token: {
-      title: 'Token',
-      type: 'string',
       isExcluded: 'add'
     },
     submitted: {
@@ -105,21 +97,16 @@ define( [ 'page' ].reduce( function( list, name ) {
     start_datetime: {
       title: 'Start Date & Time',
       type: 'datetime',
+      isConstant: true,
       isExcluded: 'add'
     },
     last_datetime: {
       title: 'Last Date & Time',
       type: 'datetime',
+      isConstant: true,
       isExcluded: 'add'
     },
     page_id: { isExcluded: true }
-  } );
-
-  module.addExtraOperation( 'view', {
-    title: 'Launch',
-    operation: function( $state, model ) {
-      $state.go( 'response.run', { token: model.viewModel.record.token } );
-    }
   } );
 
   /* ######################################################################################################## */

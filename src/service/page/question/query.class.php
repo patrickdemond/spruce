@@ -15,14 +15,15 @@ class query extends \cenozo\service\query
    */
   public function setup()
   {
-    $response_class_name = lib::get_class_name( 'database\response' );
+    $respondent_class_name = lib::get_class_name( 'database\respondent' );
 
     parent::setup();
 
-    // if we got the question from a response then add the response answers to the record
+    // if we got the question from a respondent then add the respondent's current response answers to the record
     if( 1 == preg_match( '/^token=([^;\/]+)/', $this->get_resource_value( 0 ), $parts ) )
     {
-      $db_response = $response_class_name::get_unique_record( 'token', $parts[1] );
+      $db_respondent = $respondent_class_name::get_unique_record( 'token', $parts[1] );
+      $db_response = is_null( $db_respondent ) ? NULL : $db_respondent->get_current_response();
 
       $join_mod = lib::create( 'database\modifier' );
       $join_mod->where( 'question.id', '=', 'answer.question_id', false );
@@ -41,14 +42,15 @@ class query extends \cenozo\service\query
    */
   protected function get_record_list()
   {
-    $response_class_name = lib::get_class_name( 'database\response' );
+    $respondent_class_name = lib::get_class_name( 'database\respondent' );
 
     $list = parent::get_record_list();
 
-    // if we got the question from a response then compile any attribute or response variables in the description
+    // if we got the question from a respondent then compile any attribute or response variables in the description
     if( 1 == preg_match( '/^token=([^;\/]+)/', $this->get_resource_value( 0 ), $parts ) )
     {
-      $db_response = $response_class_name::get_unique_record( 'token', $parts[1] );
+      $db_respondent = $respondent_class_name::get_unique_record( 'token', $parts[1] );
+      $db_response = is_null( $db_respondent ) ? NULL : $db_respondent->get_current_response();
       $expression_manager = lib::create( 'business\expression_manager' );
 
       foreach( $list as $index => $record )

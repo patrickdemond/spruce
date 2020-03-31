@@ -48,12 +48,13 @@ class page extends base_qnaire_part
    */
   public static function get_record_from_identifier( $identifier )
   {
-    $response_class_name = lib::get_class_name( 'database\response' );
+    $respondent_class_name = lib::get_class_name( 'database\respondent' );
 
     if( 1 == preg_match( '/^token=([^;\/]+)/', $identifier, $parts ) )
     {
-      // return the current page for the provided response
-      $db_response = $response_class_name::get_unique_record( 'token', $parts[1] );
+      // return the current page for the provided respondent's current response
+      $db_respondent = $respondent_class_name::get_unique_record( 'token', $parts[1] );
+      $db_response = is_null( $db_respondent ) ? NULL : $db_respondent->get_current_response();
       return is_null( $db_response ) || is_null( $db_response->page_id ) ? NULL : lib::create( 'database\page', $db_response->page_id );
     }
     else return parent::get_record_from_identifier( $identifier );
