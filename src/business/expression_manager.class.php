@@ -356,7 +356,7 @@ class expression_manager extends \cenozo\singleton
     }
     else if( in_array( $this->term, ['&&', '||'] ) )
     { // logical operator
-      if( !in_array( $this->last_term, ['boolean'] ) )
+      if( 'boolean' != $this->last_term )
       {
         throw lib::create( 'exception\runtime', sprintf(
           'Expecting a boolean before "%s"', $this->term
@@ -452,8 +452,10 @@ class expression_manager extends \cenozo\singleton
       if( is_null( $db_question ) )
         throw lib::create( 'exception\runtime', sprintf( 'Invalid question "%s"', $matches[1] ), __METHOD__ );
 
-      if( '.' == $matches[2] && in_array( $matches[3], ['empty()', 'dkna()', 'refuse()'] ) )
+      if( '.' == $matches[2] )
       {
+        if( !in_array( $matches[3], ['empty()', 'dkna()', 'refuse()'] ) )
+          throw lib::create( 'exception\runtime', sprintf( 'Invalid function "%s"', $matches[3] ), __METHOD__ );
         $special_function = substr( $matches[3], 0, -2 );
       }
       else if( ':' == $matches[2] )
