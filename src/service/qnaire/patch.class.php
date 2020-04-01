@@ -33,6 +33,31 @@ class patch extends \cenozo\service\patch
           );
         }
       }
+
+      // if the qnaire is repeated the offset must be >= 1
+      if( array_key_exists( 'repeat_offset', $patch_array ) )
+      {
+        $db_qnaire = $this->get_leaf_record();
+        if( ( array_key_exists( 'repeated', $patch_array ) && !is_null( $patch_array['repeated'] ) ) ||
+            !is_null( $db_qnaire->repeated ) )
+        {
+          if( 1 > $patch_array['repeat_offset'] )
+          {
+            $this->status->set_code( 306 );
+            $this->set_data( 'The repeat offset must be greater than or equal to 1.' );
+          }
+        }
+      }
+
+      // if the qnaire is repeated the offset must be >= 1
+      if( array_key_exists( 'max_responses', $patch_array ) )
+      {
+        if( 0 > $patch_array['max_responses'] )
+        {
+          $this->status->set_code( 306 );
+          $this->set_data( 'The maximum number of responses must be greater than or equal to 0.' );
+        }
+      }
     }
   }
 }

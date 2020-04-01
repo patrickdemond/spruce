@@ -31,11 +31,11 @@ class module extends \cenozo\service\module
     if( $select->has_column( 'repeat_detail' ) )
     {
       $select->add_column(
-        'CASE repeat_offset '.
-          'WHEN NULL THEN "no" '.
-          'WHEN "every time" THEN repeat_offset '.
-          'ELSE IF( 1 < qnaire.repeat_offset, CONCAT( qnaire.repeat_offset, " ", qnaire.repeated, "s" ), qnaire.repeated ) '.
-        'END',
+        'IF( '.
+          'repeated IS NOT NULL, '.
+          'CONCAT( "every ", IF( 1 < repeat_offset, CONCAT( repeat_offset, " ", repeated, "s" ), repeated ) ), '.
+          '"no" '.
+        ')',
         'repeat_detail',
         false
       );

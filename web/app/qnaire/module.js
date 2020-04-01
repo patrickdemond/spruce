@@ -81,9 +81,7 @@ define( function() {
       title: 'Repeat Offset',
       type: 'string',
       format: 'integer',
-      isExcluded: function( $state, model ) {
-        return !model.viewModel.record.repeated || 'every time' == model.viewModel.record.repeated;
-      }
+      isExcluded: function( $state, model ) { return !model.viewModel.record.repeated; }
     },
     max_responses: {
       title: 'Maximum Number of Responses',
@@ -140,13 +138,11 @@ define( function() {
             var mainInputGroup = $scope.model.module.inputGroupList.findByProperty( 'title', '' );
 
             mainInputGroup.inputList.repeat_offset.isExcluded = function( $state, model ) {
-              var repeated = 'add' == model.getActionFromState() ? cnRecordAddScope.record.repeated : model.viewModel.record.repeated;
-              return !repeated || 'every time' == repeated;
+              return !( 'add' == model.getActionFromState() ? cnRecordAddScope.record.repeated : model.viewModel.record.repeated );
             };
 
             mainInputGroup.inputList.max_responses.isExcluded = function( $state, model ) {
-              var repeated = 'add' == model.getActionFromState() ? cnRecordAddScope.record.repeated : model.viewModel.record.repeated;
-              return !repeated;
+              return !( 'add' == model.getActionFromState() ? cnRecordAddScope.record.repeated : model.viewModel.record.repeated );
             };
           }
 

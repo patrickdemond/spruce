@@ -31,18 +31,17 @@ class get extends \cenozo\service\get
         // always create the first response
         $create_new_response = true;
       }
-      else if( 'every time' == $db_qnaire->repeated )
-      {
-        // create a new response if there is no limit or we haven't reached it yet
-        $create_new_response = 0 == $db_qnaire->max_responses
-                             ? true
-                             : $db_respondent->get_response_count() < $db_qnaire->max_responses;
-      }
       else if( !is_null( $db_qnaire->repeated ) )
       {
         // create a new response if the repeat span has passed since the last response
         $diff = $db_response->start_datetime->diff( util::get_datetime_object() );
-        if( 'day' == $db_qnaire->repeated )
+        if( 'hour' == $db_qnaire->repeated )
+        {
+          // count hours
+          $hours = 24 * $diff->days + $diff->h;
+          $create_new_response = $hours >= $db_qnaire->repeat_offset;
+        }
+        else if( 'day' == $db_qnaire->repeated )
         {
           $create_new_response = $diff->days >= $db_qnaire->repeat_offset;
         }
@@ -60,6 +59,7 @@ class get extends \cenozo\service\get
 
       if( $create_new_response )
       {
+        log::debug( 'creating new response' );
         $db_response = lib::create( 'database\response' );
         $db_response->respondent_id = $db_respondent->id;
         $db_response->save();

@@ -198,7 +198,7 @@ define( function() {
 
           if( 'respondent' != $scope.model.getSubjectFromState() ) render();
           else {
-            // test to see if the respondent has a current page
+            // check for the respondent using the token
             CnHttpFactory.instance( {
               path: 'respondent/token=' + $state.params.token + '?assert_response=1',
               data: { select: { column: [
@@ -237,7 +237,7 @@ define( function() {
       var object = function( parentModel ) {
         var self = this;
 
-        function getDate( date ) { return date ? moment( new Date( date ) ) : null; }
+        function getDate( date ) { return date && !angular.isObject( date ) ? moment( new Date( date ) ) : null; }
         function formatDate( date ) { var m = getDate( date ); return m ? m.format( 'dddd, MMMM Do YYYY' ) : null; }
 
         angular.extend( this, {

@@ -11,11 +11,9 @@ BEGIN
   FROM respondent
   LEFT JOIN response ON respondent.id = response.respondent_id
   AND response.rank <=> (
-    SELECT rank
+    SELECT MAX( rank )
     FROM response
     WHERE respondent.id = response.respondent_id
-    GROUP BY response.respondent_id
-    LIMIT 1
   )
   WHERE respondent.id = proc_respondent_id;
 END$$
