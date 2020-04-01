@@ -59,7 +59,6 @@ class get extends \cenozo\service\get
 
       if( $create_new_response )
       {
-        log::debug( 'creating new response' );
         $db_response = lib::create( 'database\response' );
         $db_response->respondent_id = $db_respondent->id;
         $db_response->save();

@@ -48,6 +48,18 @@ class qnaire extends \cenozo\database\record
       }
     }
 
+    if( $this->has_column_changed( 'email_reminder' ) )
+    {
+      if( !is_null( $this->email_reminder ) )
+      {
+        if( is_null( $this->email_reminder_offset ) ) $this->email_reminder_offset = 0;
+      }
+      else
+      {
+        $this->email_reminder_offset = NULL;
+      }
+    }
+
     parent::save();
   }
 
@@ -193,7 +205,9 @@ class qnaire extends \cenozo\database\record
     static::db()->execute( $sql );
   }
 
-  // TODO: DOCUMENT
+  /**
+   * TODO: document
+   */
   public function has_duplicates()
   {
     $response_class_name = lib::get_class_name( 'database\response' );
@@ -205,5 +219,22 @@ class qnaire extends \cenozo\database\record
     $modifier->having( 'COUNT(*)', '>', 1 );
 
     return 0 < $response_class_name::count( $modifier );
+  }
+
+  /**
+   * TODO: document
+   */
+  public function mass_respondent( $uid_list )
+  {
+    $participant_class_name = lib::get_class_name( 'database\participant' );
+
+    foreach( $uid_list as $uid )
+    {
+      $db_participant = $participant_class_name::get_unique_record( 'uid', $uid );
+      $db_respondent = lib::create( 'database\respondent' );
+      $db_respondent->qnaire_id = $this->id;
+      $db_respondent->participant_id = $db_participant->id;
+      $db_respondent->save();
+    }
   }
 }

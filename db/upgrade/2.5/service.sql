@@ -35,6 +35,7 @@ INSERT INTO service ( subject, method, resource, restricted ) VALUES
 ( 'overview', 'GET', 1, 0 ),
 ( 'participant', 'GET', 0, 1 ),
 ( 'participant', 'GET', 1, 1 ),
+( 'participant', 'POST', 0, 1 ),
 ( 'report', 'DELETE', 1, 1 ),
 ( 'report', 'GET', 0, 1 ),
 ( 'report', 'GET', 1, 1 ),

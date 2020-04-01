@@ -1,0 +1,59 @@
+<div class="utility-view rounded">
+  <div class="container-fluid bg-primary rounded-top"><h4>Mass Respondent "{{ model.qnaireName }}"</h4></div>
+  <form name="form" class="form-horizontal" novalidate>
+    <div class="form-body container-fluid">
+      <div class="container-fluid text-info">
+        This utility allows you to create a batch of respondent records for the <strong>{{ model.qnaireName }}</strong>
+        questionnaire.  In order to proceed you must first select which participants to affect.  This can be done by
+        typing the unique identiiers (ie: A123456) of all participants you wish to have included in the operation, then
+        confirm that list to ensure each of the identifiers can be linked to a participant.
+      </div>
+      <hr />
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <strong>Participant selection</strong>
+          <span class="pull-right">
+            <span ng-if="model.confirmInProgress">working, please wait...</span>
+            <span ng-if="!model.confirmInProgress">
+              {{ model.confirmedCount ?
+                 model.confirmedCount + ' participants confirmed' :
+                 'no confirmed participants' }}
+              <i class="glyphicon" ng-class="model.confirmedCount ? 'glyphicon-ok' : 'glyphicon-remove'"></i>
+            </span>
+          </span>
+        </div>
+        <textarea id="uidListString"
+                  name="uidListString"
+                  cn-elastic
+                  ng-change="model.uidListStringChanged()"
+                  ng-model="model.uidListString"
+                  ng-disabled="model.confirmInProgress"
+                  class="form-control no-rounding"></textarea>
+        <div class="form-footer text-right rounded-bottom bg-info">
+          <button type="button"
+                  class="btn btn-primary"
+                  ng-disabled=" null != model.confirmedCount || model.confirmInProgress"
+                  ng-click="model.confirm()">Confirm List</button>
+        </div>
+      </div>
+      <div ng-if="model.confirmedCount">
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <strong>Confirm selection</strong>
+          </div>
+          <div class="container-fluid panel-body">
+            You have selected a total of {{ model.confirmedCount }} new participants to make respondents for this questionnaire.
+            If you wish to proceed you may click the "Create Respondents" button below, or you may make changes to the participant
+            selection list above.
+          </div>
+          <div class="form-footer text-right rounded-bottom bg-info">
+            <button type="button"
+                    class="btn btn-primary"
+                    cn-really-message="Are you sure you wish to create {{ model.confirmedCount }} respondent records?"
+                    ng-click="model.proceed()">Create Respondents</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>

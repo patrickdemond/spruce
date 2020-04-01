@@ -90,6 +90,20 @@ define( function() {
       isExcluded: function( $state, model ) { return !model.viewModel.record.repeated; },
       help: 'If set to 0 then there will be no maximum number of responses'
     },
+    email_invitation: {
+      title: 'Send Invitation Email',
+      type: 'boolean'
+    },
+    email_reminder: {
+      title: 'Send Reminder Email',
+      type: 'enum'
+    },
+    email_reminder_offset: {
+      title: 'Reminder Email Offset',
+      type: 'string',
+      format: 'integer',
+      isExcluded: function( $state, model ) { return !model.viewModel.record.email_reminder; }
+    },
     description: {
       title: 'Description',
       type: 'text',
@@ -122,6 +136,14 @@ define( function() {
     }
   } );
 
+  module.addExtraOperation( 'view', {
+    title: 'Mass Respondent',
+    operation: function( $state, model ) {
+      $state.go( 'qnaire.mass_respondent', { identifier: model.viewModel.record.getIdentifier() } );
+    }
+  } );
+
+
   /* ######################################################################################################## */
   cenozo.providers.directive( 'cnQnaireAdd', [
     'CnQnaireModelFactory',
@@ -133,16 +155,37 @@ define( function() {
         controller: function( $scope ) {
           if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnaireModelFactory.root;
 
-          // a special function to define whether to show certain inputs based on the new record properties
-          function defineInputExcludes() {
+          // a special function to define whether to show certain inputs based on the repeated property
+          function defineRepeatedExcludes() {
             var mainInputGroup = $scope.model.module.inputGroupList.findByProperty( 'title', '' );
 
             mainInputGroup.inputList.repeat_offset.isExcluded = function( $state, model ) {
-              return !( 'add' == model.getActionFromState() ? cnRecordAddScope.record.repeated : model.viewModel.record.repeated );
+              return !(
+                'add' == model.getActionFromState() ?
+                cnRecordAddScope.record.repeated :
+                model.viewModel.record.repeated
+              );
             };
 
             mainInputGroup.inputList.max_responses.isExcluded = function( $state, model ) {
-              return !( 'add' == model.getActionFromState() ? cnRecordAddScope.record.repeated : model.viewModel.record.repeated );
+              return !(
+                'add' == model.getActionFromState() ?
+                cnRecordAddScope.record.repeated :
+                model.viewModel.record.repeated
+              );
+            };
+          }
+
+          // a special function to define whether to show certain inputs based on the email_reminder property
+          function defineEmailReminderExcludes() {
+            var mainInputGroup = $scope.model.module.inputGroupList.findByProperty( 'title', '' );
+
+            mainInputGroup.inputList.email_reminder_offset.isExcluded = function( $state, model ) {
+              return !(
+                'add' == model.getActionFromState() ?
+                cnRecordAddScope.record.email_reminder :
+                model.viewModel.record.email_reminder
+              );
             };
           }
 
@@ -155,10 +198,11 @@ define( function() {
             cnRecordAddScope.check = function( property ) {
               // run the original check function first
               checkFunction( property );
-              if( 'repeated' == property ) defineInputExcludes();
+              if( 'repeated' == property ) defineRepeatedExcludes();
+              else if( 'email_reminder' == property ) defineEmailReminderExcludes();
             };
 
-            defineInputExcludes();
+            defineRepeatedExcludes();
           }, 500 );
 
         }
@@ -186,6 +230,33 @@ define( function() {
               go: function() { return $state.go( 'qnaire.view', { identifier: $scope.model.parentQnaireId } ); }
             }, {
               title: 'move/copy'
+            } ] );
+          } );
+        }
+      };
+    }
+  ] );
+
+  /* ######################################################################################################## */
+  cenozo.providers.directive( 'cnQnaireMassRespondent', [
+    'CnQnaireMassRespondentFactory', 'CnSession', '$state',
+    function( CnQnaireMassRespondentFactory, CnSession, $state ) {
+      return {
+        templateUrl: module.getFileUrl( 'mass_respondent.tpl.html' ),
+        restrict: 'E',
+        scope: { model: '=?' },
+        controller: function( $scope ) {
+          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnaireMassRespondentFactory.instance();
+
+          $scope.model.onLoad().then( function() {
+            CnSession.setBreadcrumbTrail( [ {
+              title: 'Questionnaires',
+              go: function() { return $state.go( 'qnaire.list' ); }
+            }, {
+              title: $scope.model.qnaireName,
+              go: function() { return $state.go( 'qnaire.view', { identifier: $scope.model.qnaireId } ); }
+            }, {
+              title: 'Mass Respondent'
             } ] );
           } );
         }
@@ -275,6 +346,94 @@ define( function() {
               self.working = false;
             } );
           }
+        } );
+      }
+      return { instance: function() { return new object(); } };
+    }
+  ] );
+
+  /* ######################################################################################################## */
+  cenozo.providers.factory( 'CnQnaireMassRespondentFactory', [
+    'CnSession', 'CnHttpFactory', 'CnModalMessageFactory', '$state',
+    function( CnSession, CnHttpFactory, CnModalMessageFactory, $state ) {
+      var object = function() {
+        var self = this;
+        angular.extend( this, {
+          qnaireId: $state.params.identifier,
+          qnaireName: null,
+          confirmInProgress: false,
+          confirmedCount: null,
+          uidListString: '',
+          uidList: [],
+
+          onLoad: function() {
+            // reset data
+            return CnHttpFactory.instance( {
+              path: 'qnaire/' + this.qnaireId,
+              data: { select: { column: 'name' } }
+            } ).get().then( function( response ) {
+              self.qnaireName = response.data.name;
+              self.confirmInProgress = false;
+              self.confirmedCount = null;
+              self.uidListString = '';
+              self.uidList = [];
+            } );
+          },
+
+          uidListStringChanged: function() {
+            this.confirmedCount = null;
+          },
+
+          confirm: function() {
+            this.confirmInProgress = true;
+            this.confirmedCount = null;
+            var uidRegex = new RegExp( CnSession.application.uidRegex );
+
+            // clean up the uid list
+            this.uidList =
+              this.uidListString.toUpperCase() // convert to uppercase
+                          .replace( /[\s,;|\/]/g, ' ' ) // replace whitespace and separation chars with a space
+                          .replace( /[^a-zA-Z0-9 ]/g, '' ) // remove anything that isn't a letter, number of space
+                          .split( ' ' ) // delimite string by spaces and create array from result
+                          .filter( function( uid ) { // match UIDs (eg: A123456)
+                            return null != uid.match( uidRegex );
+                          } )
+                          .filter( function( uid, index, array ) { // make array unique
+                            return index <= array.indexOf( uid );
+                          } )
+                          .sort(); // sort the array
+
+            // now confirm UID list with server
+            if( 0 == this.uidList.length ) {
+              this.uidListString = '';
+              this.confirmInProgress = false;
+            } else {
+              CnHttpFactory.instance( {
+                path: ['qnaire', this.qnaireId, 'participant'].join( '/' ),
+                data: { mode: 'confirm', uid_list: this.uidList }
+              } ).post().then( function( response ) {
+                self.confirmedCount = response.data.length;
+                self.uidListString = response.data.join( ' ' );
+                self.confirmInProgress = false;
+              } );
+            }
+          },
+
+          proceed: function() {
+            if( !this.confirmInProgress && 0 < this.confirmedCount ) {
+              CnHttpFactory.instance( {
+                path: ['qnaire', this.qnaireId, 'participant'].join( '/' ),
+                data: { mode: 'release', uid_list: this.uidList }
+              } ).post().then( function( response ) {
+                CnModalMessageFactory.instance( {
+                  title: 'Recipients Created',
+                  message: 'You have successfully created ' + self.confirmedCount + ' new recipients for the "' +
+                           self.qnaireName + '" questionnaire.'
+                } ).show().then( function() { self.onLoad(); } );
+              } );
+            }
+          }
+
         } );
       }
       return { instance: function() { return new object(); } };

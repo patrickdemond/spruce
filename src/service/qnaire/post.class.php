@@ -45,6 +45,21 @@ class post extends \cenozo\service\post
           $this->set_data( 'The maximum number of responses must be greater than or equal to 0.' );
         }
       }
+
+      // if the qnaire is email_reminder the offset must be >= 1
+      if( array_key_exists( 'email_reminder_offset', $post_array ) )
+      {
+        $db_qnaire = $this->get_leaf_record();
+        if( ( array_key_exists( 'email_reminder', $post_array ) && !is_null( $post_array['email_reminder'] ) ) ||
+            !is_null( $db_qnaire->email_reminder ) )
+        {
+          if( 1 > $post_array['email_reminder_offset'] )
+          {
+            $this->status->set_code( 306 );
+            $this->set_data( 'The reminder email offset must be greater than or equal to 1.' );
+          }
+        }
+      }
     }
   }
 

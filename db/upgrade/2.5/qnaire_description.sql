@@ -20,7 +20,7 @@ CREATE PROCEDURE patch_qnaire_description()
         "create_timestamp TIMESTAMP NOT NULL, ",
         "qnaire_id INT UNSIGNED NOT NULL, ",
         "language_id INT UNSIGNED NOT NULL, ",
-        "type ENUM('introduction', 'conclusion') NOT NULL, ",
+        "type ENUM('introduction', 'conclusion', 'invitation', 'reminder') NOT NULL, ",
         "value TEXT NULL, ",
         "PRIMARY KEY (id), ",
         "INDEX fk_qnaire_id (qnaire_id ASC), ",
