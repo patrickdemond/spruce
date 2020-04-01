@@ -479,6 +479,14 @@ class expression_manager extends \cenozo\singleton
       if( is_null( $db_question ) )
         throw lib::create( 'exception\runtime', sprintf( 'Invalid question "%s"', $this->term ), __METHOD__ );
 
+      if( 'list' == $db_question->type )
+      {
+        throw lib::create( 'exception\runtime', sprintf(
+          'Question "%s" is a list type so you must reference a question option using the QUESTION:OPTION format.',
+          $this->term
+        ), __METHOD__ );
+      }
+
       if( 'text' == $db_question->type || 'comment' == $db_question->type )
         throw lib::create( 'exception\runtime', sprintf( 'Cannot use question type "%s"', $db_question->type ), __METHOD__ );
     }
@@ -532,26 +540,12 @@ class expression_manager extends \cenozo\singleton
       else
       {
         if( 'boolean' == $db_question->type ) $compiled = $value ? 'true' : 'false';
-        else if( 'list' == $db_question->type )
-        {
-          // compile a list of all option values as a CSV
-          $value_list = array();
-          foreach( $value as $selected_option )
-          {
-            $question_option_id = is_object( $selected_option ) ? $selected_option->id : $selected_option;
-            $db_question_option = lib::create( 'database\question_option', $question_option_id );
-            $value_list[] = sprintf( '"%s"', addslashes( $db_question_option->name ) );
-          }
-          $compiled = implode( ',', $value_list );
-        }
         else if( 'string' == $db_question->type ) $compiled = sprintf( "'%s'", str_replace( "'", "\\'", $value ) );
         else $compiled = $value;
       }
     }
 
-    $this->last_term = !is_null( $db_question_option )
-                     ? ( is_null( $db_question_option->extra ) ? 'boolean' : $db_question_option->extra )
-                     : ( is_null( $special_function ) ? $db_question->type : 'boolean' );
+    $this->last_term = !is_null( $db_question_option ) || !is_null( $special_function ) ? 'boolean' : $db_question->type;
     $this->active_term = NULL;
 
     return $compiled;

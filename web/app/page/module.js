@@ -442,12 +442,11 @@ define( function() {
                       compiled = matchedQuestion.value.includes( matchedOption.id ) ? 'true' : 'false';
                     } else {
                       var answer = matchedQuestion.value.findByProperty( 'id', matchedOption.id );
-                      if( angular.isObject( answer ) && angular.isDefined( answer.value ) ) {
-                        if( 'number' == matchedOption.extra ) {
-                          if( angular.isNumber( answer.value ) ) compiled = answer.value;
-                        } else if( 'string' == matchedOption.extra ) {
-                          if( angular.isString( answer.value ) ) compiled = "'" + answer.value.replace( /'/g, "\\'" ) + "'";
-                        }
+                      if( matchedOption.multiple_answers ) {
+                        // make sure at least one of the answers isn't null
+                        compiled = answer.value.some( v => v != null ) ? 'true' : 'false';
+                      } else {
+                        compiled = null != answer.value ? 'true' : 'false';
                       }
                     }
                   }
