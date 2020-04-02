@@ -442,11 +442,15 @@ define( function() {
                       compiled = matchedQuestion.value.includes( matchedOption.id ) ? 'true' : 'false';
                     } else {
                       var answer = matchedQuestion.value.findByProperty( 'id', matchedOption.id );
-                      if( matchedOption.multiple_answers ) {
-                        // make sure at least one of the answers isn't null
-                        compiled = answer.value.some( v => v != null ) ? 'true' : 'false';
+                      if( !angular.isObject( answer ) ) {
+                        compiled = 'false';
                       } else {
-                        compiled = null != answer.value ? 'true' : 'false';
+                        if( matchedOption.multiple_answers ) {
+                          // make sure at least one of the answers isn't null
+                          compiled = answer.value.some( v => v != null ) ? 'true' : 'false';
+                        } else {
+                          compiled = null != answer.value ? 'true' : 'false';
+                        }
                       }
                     }
                   }
