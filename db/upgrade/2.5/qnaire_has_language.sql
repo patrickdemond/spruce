@@ -52,7 +52,11 @@ CREATE DEFINER = CURRENT_USER TRIGGER qnaire_has_language_AFTER_INSERT AFTER INS
 BEGIN
   INSERT IGNORE INTO qnaire_description( qnaire_id, language_id, type ) VALUES
   ( NEW.qnaire_id, NEW.language_id, 'introduction' ),
-  ( NEW.qnaire_id, NEW.language_id, 'conclusion' );
+  ( NEW.qnaire_id, NEW.language_id, 'conclusion' ),
+  ( NEW.qnaire_id, NEW.language_id, 'invitation subject' ),
+  ( NEW.qnaire_id, NEW.language_id, 'invitation body' ),
+  ( NEW.qnaire_id, NEW.language_id, 'reminder subject' ),
+  ( NEW.qnaire_id, NEW.language_id, 'reminder body' );
 
   INSERT IGNORE INTO module_description( module_id, language_id, type )
   SELECT module.id, NEW.language_id, type.name

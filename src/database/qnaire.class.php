@@ -208,6 +208,18 @@ class qnaire extends \cenozo\database\record
   /**
    * TODO: document
    */
+  public function get_description( $type, $db_language )
+  {
+    $qnaire_description = lib::get_class_name( 'database\qnaire_description' );
+    return $qnaire_description::get_unique_record(
+      array( 'qnaire_id', 'language_id', 'type' ),
+      array( $this->id, $db_language->id, $type )
+    );
+  }
+
+  /**
+   * TODO: document
+   */
   public function has_duplicates()
   {
     $response_class_name = lib::get_class_name( 'database\response' );

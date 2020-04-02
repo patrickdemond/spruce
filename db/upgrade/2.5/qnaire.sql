@@ -25,6 +25,8 @@ CREATE PROCEDURE patch_qnaire()
         "repeated ENUM('hour', 'day', 'week', 'month') NULL DEFAULT NULL, ",
         "repeat_offset INT UNSIGNED NULL DEFAULT NULL, ",
         "max_responses INT UNSIGNED NULL DEFAULT NULL, ",
+        "email_from_name VARCHAR(255) NULL DEFAULT NULL, ",
+        "email_from_address VARCHAR(127) NULL DEFAULT NULL, ",
         "email_invitation TINYINT(1) NOT NULL DEFAULT 0, ",
         "email_reminder ENUM('hour', 'day', 'week', 'month') NULL DEFAULT NULL, ",
         "email_reminder_offset INT UNSIGNED NULL DEFAULT NULL, ",

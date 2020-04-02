@@ -37,15 +37,9 @@ class response extends \cenozo\database\has_rank
     {
       $db_respondent = lib::create( 'database\respondent', $this->respondent_id );
       $db_qnaire = $db_respondent->get_qnaire();
+      $db_current_response = $db_respondent->get_current_response();
 
-      $select = lib::create( 'database\select' );
-      $select->from( 'response' );
-      $select->add_column( 'MAX( rank )', 'max_rank', false );
-      $modifier = lib::create( 'database\modifier' );
-      $modifier->where( 'respondent_id', '=', $db_respondent->id );
-      $max_rank = static::db()->get_one( sprintf( '%s %s', $select->get_sql(), $modifier->get_sql() ) );
-
-      if( is_null( $db_qnaire->repeated ) && 0 < $max_rank )
+      if( is_null( $db_qnaire->repeated ) && !is_null( $db_current_response ) )
       {
         throw lib::create( 'exception\runtime', sprintf(
           'Tried to create second response for participant %s answering qnaire "%s" which is not repeated.',
@@ -53,7 +47,9 @@ class response extends \cenozo\database\has_rank
           $db_qnaire->name
         ), __METHOD__ );
       }
-      else if( 0 < $db_qnaire->max_responses && $db_qnaire->max_responses <= $max_rank )
+      else if( 0 < $db_qnaire->max_responses &&
+               !is_null( $db_current_response ) &&
+               $db_qnaire->max_responses <= $db_current_response->rank )
       {
         throw lib::create( 'exception\runtime', sprintf(
           'Tried to create more than the maximum allowed responses for participant %s answering qnaire "%s" (maximum responses %d).',
@@ -63,14 +59,9 @@ class response extends \cenozo\database\has_rank
         ), __METHOD__ );
       }
 
-      // set the language to the last response, or the participant default there isn't one
-      $this->language_id = 0 < $max_rank
-                         ? static::get_unique_record(
-                             array( 'respondent_id', 'rank' ),
-                             array( $db_respondent->id, $max_rank )
-                           )->language_id
-                         : $db_respondent->get_participant()->language_id;
-      $this->rank = is_null( $max_rank ) ? 1 : $max_rank + 1;
+      // let the respondent figure out what the language should be
+      $this->language_id = $db_respondent->get_language()->id;
+      $this->rank = is_null( $db_current_response ) ? 1 : $db_current_response->rank + 1;
    }
 
     parent::save();

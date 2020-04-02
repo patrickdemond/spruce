@@ -104,6 +104,21 @@ define( function() {
       format: 'integer',
       isExcluded: function( $state, model ) { return !model.viewModel.record.email_reminder; }
     },
+    email_from_name: {
+      title: 'Email From Name',
+      type: 'string',
+      isExcluded: function( $state, model ) {
+        return !model.viewModel.record.email_invitation && !model.viewModel.record.email_reminder;
+      }
+    },
+    email_from_address: {
+      title: 'Email From Address',
+      type: 'string',
+      format: 'email',
+      isExcluded: function( $state, model ) {
+        return !model.viewModel.record.email_invitation && !model.viewModel.record.email_reminder;
+      }
+    },
     description: {
       title: 'Description',
       type: 'text',
@@ -185,6 +200,22 @@ define( function() {
                 'add' == model.getActionFromState() ?
                 cnRecordAddScope.record.email_reminder :
                 model.viewModel.record.email_reminder
+              );
+            };
+
+            mainInputGroup.inputList.email_from_name.isExcluded = function( $state, model ) {
+              return !(
+                'add' == model.getActionFromState() ?
+                cnRecordAddScope.record.email_invitation || cnRecordAddScope.record.email_reminder :
+                model.viewModel.record.email_invitation || model.viewModel.record.email_reminder
+              );
+            };
+
+            mainInputGroup.inputList.email_from_address.isExcluded = function( $state, model ) {
+              return !(
+                'add' == model.getActionFromState() ?
+                cnRecordAddScope.record.email_invitation || cnRecordAddScope.record.email_reminder :
+                model.viewModel.record.email_invitation || model.viewModel.record.email_reminder
               );
             };
           }

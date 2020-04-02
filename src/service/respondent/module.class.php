@@ -22,6 +22,27 @@ class module extends \cenozo\service\module
 
     $modifier->join( 'qnaire', 'respondent.qnaire_id', 'qnaire.id' );
     $modifier->join( 'participant', 'respondent.participant_id', 'participant.id' );
+
+    if( $select->has_column( 'invitation' ) )
+    {
+      $modifier->left_join( 'mail', 'respondent.invitation_mail_id', 'invitation_mail.id', 'invitation_mail' );
+      $select->add_column(
+        'IF( invitation_mail.id IS NULL, "none", IF( invitation_mail.sent_datetime IS NULL, "pending", "sent" ) )',
+        'invitation',
+        false
+      );
+    }
+
+    if( $select->has_column( 'reminder' ) )
+    {
+      $modifier->left_join( 'mail', 'respondent.reminder_mail_id', 'reminder_mail.id', 'reminder_mail' );
+      $select->add_column(
+        'IF( reminder_mail.id IS NULL, "none", IF( reminder_mail.sent_datetime IS NULL, "pending", "sent" ) )',
+        'reminder',
+        false
+      );
+    }
+
     if( $select->has_table_columns( 'response' ) ||
         $select->has_table_columns( 'language' ) ||
         $select->has_table_columns( 'module' ) ||
