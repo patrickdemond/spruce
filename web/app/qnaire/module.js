@@ -73,40 +73,51 @@ define( function() {
       type: 'boolean',
       isConstant: function( $state, model ) { return model.viewModel.record.readonly; }
     },
+    readonly: {
+      title: 'Read Only',
+      type: 'boolean'
+    },
     repeated: {
       title: 'Repeated',
-      type: 'enum'
+      type: 'enum',
+      isConstant: function( $state, model ) { return model.viewModel.record.readonly; }
     },
     repeat_offset: {
       title: 'Repeat Offset',
       type: 'string',
       format: 'integer',
+      isConstant: function( $state, model ) { return model.viewModel.record.readonly; },
       isExcluded: function( $state, model ) { return !model.viewModel.record.repeated; }
     },
     max_responses: {
       title: 'Maximum Number of Responses',
       type: 'string',
       format: 'integer',
+      isConstant: function( $state, model ) { return model.viewModel.record.readonly; },
       isExcluded: function( $state, model ) { return !model.viewModel.record.repeated; },
       help: 'If set to 0 then there will be no maximum number of responses'
     },
     email_invitation: {
       title: 'Send Invitation Email',
-      type: 'boolean'
+      type: 'boolean',
+      isConstant: function( $state, model ) { return model.viewModel.record.readonly; }
     },
     email_reminder: {
       title: 'Send Reminder Email',
-      type: 'enum'
+      type: 'enum',
+      isConstant: function( $state, model ) { return model.viewModel.record.readonly; }
     },
     email_reminder_offset: {
       title: 'Reminder Email Offset',
       type: 'string',
       format: 'integer',
+      isConstant: function( $state, model ) { return model.viewModel.record.readonly; },
       isExcluded: function( $state, model ) { return !model.viewModel.record.email_reminder; }
     },
     email_from_name: {
       title: 'Email From Name',
       type: 'string',
+      isConstant: function( $state, model ) { return model.viewModel.record.readonly; },
       isExcluded: function( $state, model ) {
         return !model.viewModel.record.email_invitation && !model.viewModel.record.email_reminder;
       }
@@ -115,6 +126,7 @@ define( function() {
       title: 'Email From Address',
       type: 'string',
       format: 'email',
+      isConstant: function( $state, model ) { return model.viewModel.record.readonly; },
       isExcluded: function( $state, model ) {
         return !model.viewModel.record.email_invitation && !model.viewModel.record.email_reminder;
       }
