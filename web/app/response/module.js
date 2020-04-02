@@ -1,6 +1,4 @@
-define( [ 'page' ].reduce( function( list, name ) {
-  return list.concat( cenozoApp.module( name ).getRequiredFiles() );
-}, [] ), function() {
+define( function() {
   'use strict';
 
   try { var module = cenozoApp.module( 'response', true ); } catch( err ) { console.warn( err ); return; }
@@ -71,58 +69,37 @@ define( [ 'page' ].reduce( function( list, name ) {
     language_id: {
       column: 'response.language_id',
       title: 'Language',
-      type: 'enum',
-      isExcluded: 'add'
+      type: 'enum'
     },
     submitted: {
       title: 'Submitted',
       type: 'boolean',
-      isConstant: true,
-      isExcluded: 'add'
+      isConstant: true
     },
     module: {
       column: 'module.name',
       title: 'Module',
       type: 'string',
-      isConstant: true,
-      isExcluded: 'add'
+      isConstant: true
     },
     page: {
       column: 'page.name',
       title: 'Page',
       type: 'string',
-      isConstant: true,
-      isExcluded: 'add'
+      isConstant: true
     },
     start_datetime: {
       title: 'Start Date & Time',
       type: 'datetime',
-      isConstant: true,
-      isExcluded: 'add'
+      isConstant: true
     },
     last_datetime: {
       title: 'Last Date & Time',
       type: 'datetime',
-      isConstant: true,
-      isExcluded: 'add'
+      isConstant: true
     },
     page_id: { isExcluded: true }
   } );
-
-  /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnResponseAdd', [
-    'CnResponseModelFactory',
-    function( CnResponseModelFactory ) {
-      return {
-        templateUrl: module.getFileUrl( 'add.tpl.html' ),
-        restrict: 'E',
-        scope: { model: '=?' },
-        controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnResponseModelFactory.root;
-        }
-      };
-    }
-  ] );
 
   /* ######################################################################################################## */
   cenozo.providers.directive( 'cnResponseList', [
@@ -170,20 +147,6 @@ define( [ 'page' ].reduce( function( list, name ) {
   ] );
 
   /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnResponseAddFactory', [
-    'CnBaseAddFactory',
-    function( CnBaseAddFactory ) {
-      var object = function( parentModel ) {
-        CnBaseAddFactory.construct( this, parentModel );
-
-        // transition to viewing the new record instead of the default functionality
-        this.transitionOnSave = function( record ) { parentModel.transitionToViewState( record ); };
-      };
-      return { instance: function( parentModel ) { return new object( parentModel ); } };
-    }
-  ] );
-
-  /* ######################################################################################################## */
   cenozo.providers.factory( 'CnResponseListFactory', [
     'CnBaseListFactory',
     function( CnBaseListFactory ) {
@@ -203,12 +166,11 @@ define( [ 'page' ].reduce( function( list, name ) {
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnResponseModelFactory', [
-    'CnBaseModelFactory', 'CnResponseAddFactory', 'CnResponseListFactory', 'CnResponseViewFactory', 'CnHttpFactory',
-    function( CnBaseModelFactory, CnResponseAddFactory, CnResponseListFactory, CnResponseViewFactory, CnHttpFactory ) {
+    'CnBaseModelFactory', 'CnResponseListFactory', 'CnResponseViewFactory', 'CnHttpFactory',
+    function( CnBaseModelFactory, CnResponseListFactory, CnResponseViewFactory, CnHttpFactory ) {
       var object = function( root ) {
         var self = this;
         CnBaseModelFactory.construct( this, module );
-        this.addModel = CnResponseAddFactory.instance( this );
         this.listModel = CnResponseListFactory.instance( this );
         this.viewModel = CnResponseViewFactory.instance( this, root );
 

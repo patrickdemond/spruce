@@ -107,6 +107,7 @@ INSERT INTO service ( subject, method, resource, restricted ) VALUES
 ( 'respondent', 'GET', 1, 0 ),
 ( 'respondent', 'PATCH', 1, 1 ),
 ( 'respondent', 'POST', 0, 1 ),
+( 'respondent_mail', 'GET', 0, 0 ),
 ( 'question', 'DELETE', 1, 1 ),
 ( 'question', 'GET', 0, 0 ),
 ( 'question', 'GET', 1, 0 ),

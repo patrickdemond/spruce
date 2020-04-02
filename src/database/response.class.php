@@ -80,6 +80,13 @@ class response extends \cenozo\database\has_rank
         else if( $submitted ) $db_script->add_finished_event( $this->get_participant(), $this->last_datetime );
       }
     }
+
+    // when submitting the response remove any pending email reminders
+    if( $submitted )
+    {
+      $db_reminder_mail = $this->get_respondent()->get_reminder_mail();
+      if( !is_null( $db_reminder_mail ) && is_null( $db_reminder_mail->sent_datetime ) ) $db_reminder_mail->delete();
+    }
   }
 
   /**

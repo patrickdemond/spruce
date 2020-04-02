@@ -26,12 +26,6 @@ define( [ 'page' ].reduce( function( list, name ) {
       },
       response_count: {
         title: 'Respondents'
-      },
-      invitation: {
-        title: 'Invitation'
-      },
-      reminder: {
-        title: 'Reminder'
       }
     },
     defaultOrder: {
@@ -55,18 +49,6 @@ define( [ 'page' ].reduce( function( list, name ) {
     token: {
       title: 'Token',
       type: 'string',
-      isExcluded: 'add'
-    },
-    invitation: {
-      title: 'Invitation',
-      type: 'string',
-      isConstant: true,
-      isExcluded: 'add'
-    },
-    reminder: {
-      title: 'Reminder',
-      type: 'string',
-      isConstant: true,
       isExcluded: 'add'
     }
   } );

@@ -29,21 +29,60 @@ class respondent extends \cenozo\database\record
 
     parent::save();
 
-    // send invitation emails if the qnaire requires it
+    // schedule invitation and reminder emails if the qnaire requires it
     if( $new )
     {
       $db_qnaire = $this->get_qnaire();
-      if( $db_qnaire->email_invitation ) $this->add_mail( 'invitation' );
+      $number_of_iterations = $db_qnaire->repeated ? $db_qnaire->max_responses : 1;
+      if( 0 == $number_of_iterations ) $number_of_iterations = 1; // infinitely repeated qnaires only get one invitation
+
+      if( $db_qnaire->email_invitation )
+      {
+        // create an invitation for all iterations of the questionnaire;
+        for( $rank = 1; $rank <= $number_of_iterations; $rank++ )
+        {
+          $datetime = util::get_datetime_object();
+
+          if( 1 < $rank )
+          { // add repeated span for iterations beyond the first
+            $datetime->add( new \DateInterval( sprintf(
+              'P%s%d%s',
+              'hour' == $db_qnaire->repeated ? 'T' : '',
+              $db_qnaire->repeat_offset * ( $rank - 1 ),
+              strtoupper( substr( $db_qnaire->repeated, 0, 1 ) )
+            ) ) );
+          }
+
+          $this->add_mail( 'invitation', $rank, $datetime );
+        }
+      }
+
       if( $db_qnaire->email_reminder )
       {
-        $datetime = util::get_datetime_object();
-        $datetime->add( new \DateInterval( sprintf(
-          'P%s%d%s',
-          'hour' == $db_qnaire->email_reminder ? 'T' : '',
-          $db_qnaire->email_reminder_offset,
-          strtoupper( substr( $db_qnaire->email_reminder, 0, 1 ) )
-        ) ) );
-        $this->add_mail( 'reminder', $datetime );
+        // create a reminder for all iterations of the questionnaire;
+        for( $rank = 1; $rank <= $number_of_iterations; $rank++ )
+        {
+          $datetime = util::get_datetime_object();
+
+          $datetime->add( new \DateInterval( sprintf(
+            'P%s%d%s',
+            'hour' == $db_qnaire->email_reminder ? 'T' : '',
+            $db_qnaire->email_reminder_offset,
+            strtoupper( substr( $db_qnaire->email_reminder, 0, 1 ) )
+          ) ) );
+
+          if( 1 < $rank )
+          { // add repeated span for iterations beyond the first
+            $datetime->add( new \DateInterval( sprintf(
+              'P%s%d%s',
+              'hour' == $db_qnaire->repeated ? 'T' : '',
+              $db_qnaire->repeat_offset * ( $rank - 1 ),
+              strtoupper( substr( $db_qnaire->repeated, 0, 1 ) )
+            ) ) );
+          }
+
+          $this->add_mail( 'reminder', $rank, $datetime );
+        }
       }
     }
   }
@@ -53,30 +92,42 @@ class respondent extends \cenozo\database\record
    */
   public function delete()
   {
-    $db_invitation_mail = $this->get_invitation_mail();
-    $db_reminder_mail = $this->get_reminder_mail();
+    // get a list of all mail that wasn't sent
+    $modifier = lib::create( 'database\modifier' );
+    $modifier->join( 'mail', 'respondent_mail.mail_id', 'mail.id' );
+    $modifier->where( 'mail.sent_datetime', '=', NULL );
+    $responent_mail_list = $this->get_respondent_mail_object_list( $modifier );
 
     parent::delete();
 
-    // also delete any unsent mail
-    if( !is_null( $db_invitation_mail ) && is_null( $db_invitation_mail->sent_datetime ) ) $db_invitation_mail->delete();
-    if( !is_null( $db_reminder_mail ) && is_null( $db_reminder_mail->sent_datetime ) ) $db_reminder_mail->delete();
+    // now delete the mail which isn't no longer needed
+    foreach( $respondent_mail_list as $db_respondent_mail ) $db_respondent_mail->get_mail()->delete();
   }
 
   /**
    * TODO: document
    */
-  public function get_invitation_mail()
+  public function get_invitation_mail( $rank )
   {
-    return is_null( $this->invitation_mail_id ) ?  NULL : lib::create( 'database\mail', $this->invitation_mail_id );
+    $respondent_mail_class_name = lib::get_class_name( 'database\respondent_mail' );
+    $db_respondent_mail = $respondent_mail_class_name::get_unique_record(
+      array( 'respondent_id', 'type', 'rank' ),
+      array( $this->id, 'invitation', $rank )
+    );
+    return is_null( $db_respondent_mail ) ? NULL : $db_respondent_mail->get_mail();
   }
 
   /**
    * TODO: document
    */
-  public function get_reminder_mail()
+  public function get_reminder_mail( $rank )
   {
-    return is_null( $this->reminder_mail_id ) ?  NULL : lib::create( 'database\mail', $this->reminder_mail_id );
+    $respondent_mail_class_name = lib::get_class_name( 'database\respondent_mail' );
+    $db_respondent_mail = $respondent_mail_class_name::get_unique_record(
+      array( 'respondent_id', 'type', 'rank' ),
+      array( $this->id, 'reminder', $rank )
+    );
+    return is_null( $db_respondent_mail ) ? NULL : $db_respondent_mail->get_mail();
   }
 
   /**
@@ -117,8 +168,10 @@ class respondent extends \cenozo\database\record
   /**
    * TODO: document
    */
-  public function add_mail( $type, $datetime = NULL )
+  public function add_mail( $type, $rank, $datetime = NULL )
   {
+    $respondent_mail_class_name = lib::get_class_name( 'database\respondent_mail' );
+
     $db_qnaire = $this->get_qnaire();
     $db_subject_description = $db_qnaire->get_description( sprintf( '%s subject', $type ), $this->get_language() );
     $db_body_description = $db_qnaire->get_description( sprintf( '%s body', $type ), $this->get_language() );
@@ -129,18 +182,16 @@ class respondent extends \cenozo\database\record
 
       if( $db_participant->email && $db_qnaire->email_from_name && $db_qnaire->email_from_address )
       {
-        $function_name = sprintf( 'get_%s_mail', $type );
-        $db_mail = $this->$function_name();
-        if( !is_null( $db_mail ) && !is_null( $db_mail->sent_datetime ) )
-        { // don't send an email if it has already been sent
-          log::warning( sprintf(
-            'Tried to send %s email for participant %s on qnaire "%s" which has already been sent.',
-            $type,
-            $db_participant->uid,
-            $db_qnaire->name
-          ) );
-        }
-        else
+        $db_respondent_mail = $respondent_mail_class_name::get_unique_record(
+          array( 'respondent_id', 'type', 'rank' ),
+          array( $this->id, $type, $rank )
+        );
+
+        $db_mail = NULL;
+        if( !is_null( $db_respondent_mail ) ) $db_mail = $db_respondent_mail->get_mail();
+
+        // don't schedule an email if it has already been sent
+        if( is_null( $db_mail ) || is_null( $db_mail->sent_datetime ) )
         {
           if( is_null( $db_mail ) ) $db_mail = lib::create( 'database\mail' );
           $db_mail->participant_id = $db_participant->id;
@@ -151,13 +202,19 @@ class respondent extends \cenozo\database\record
           $db_mail->schedule_datetime = $datetime;
           $db_mail->subject = $db_subject_description->get_compiled_value( $this );
           $db_mail->body = $db_body_description->get_compiled_value( $this );
-          $db_mail->note = sprintf( 'Automatically added from a Pine questionnaire %s.', $type );
+          $db_mail->note = sprintf( 'Automatically added from a Pine questionnaire %s iteration #%d.', $type, $rank );
           $db_mail->save();
+        }
 
-          // now store the mail in the record
-          $column_name = sprintf( '%s_mail_id', $type );
-          $this->$column_name = $db_mail->id;
-          $this->save();
+        // now record the respondent mail if we don't have one yet
+        if( is_null( $db_respondent_mail ) )
+        {
+          $db_respondent_mail = lib::create( 'database\respondent_mail' );
+          $db_respondent_mail->respondent_id = $this->id;
+          $db_respondent_mail->mail_id = $db_mail->id;
+          $db_respondent_mail->type = $type;
+          $db_respondent_mail->rank = $rank;
+          $db_respondent_mail->save();
         }
       }
     }

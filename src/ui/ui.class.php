@@ -78,6 +78,7 @@ class ui extends \cenozo\ui\ui
     if( !is_null( $module ) )
     {
       $module->add_child( 'response' );
+      $module->add_child( 'respondent_mail' );
       $module->add_action( 'run', '/{token}', true );
     }
 

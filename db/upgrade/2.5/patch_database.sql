@@ -28,6 +28,7 @@ SOURCE question_description.sql
 SOURCE question_option.sql
 SOURCE question_option_description.sql
 SOURCE respondent.sql
+SOURCE respondent_mail.sql
 SOURCE response.sql
 SOURCE respondent_current_response.sql
 SOURCE response_attribute.sql
