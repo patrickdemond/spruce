@@ -754,7 +754,7 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
               qnaireId: 'qnaire' == self.parentType ? null : response.data.qnaire_id,
               moduleId: 'module' == self.parentType ? null : response.data.module_id,
               pageId: 'page' == self.parentType ? null : response.data.page_id,
-              questionId: 'question' == self.parentTYpe ? null : response.data.question_id
+              questionId: 'question' == self.parentType ? null : response.data.question_id
             } );
           } ).then( function() {
             return $q.all( [
