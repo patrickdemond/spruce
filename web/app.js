@@ -44,7 +44,7 @@ cenozoApp.initQnairePartModule = function( module, type ) {
     name: {
       title: 'Name',
       type: 'string',
-      regex: '^[a-zA-Z_][a-zA-Z0-9_]*$'
+      regex: 'question_option' == type ? '^[a-zA-Z0-9_]*$' : '^[a-zA-Z_][a-zA-Z0-9_]*$'
     },
     precondition: {
       title: 'Precondition',
@@ -663,7 +663,7 @@ cenozo.service( 'CnTranslationHelper', [
           yes: { en: 'Yes', fr: 'Oui' },
           no: { en: 'No', fr: 'Non' },
           dkna: { en: 'Don\'t Know / No Answer', fr: 'Ne sait pas / pas de réponse' },
-          refuse: { en: 'Refuse', fr: 'Refus' },
+          refuse: { en: 'Prefer not to answer', fr: 'TODO' },
           begin: { en: 'Begin', fr: 'Commencer' },
           next: { en: 'Next', fr: 'Suivant' },
           previous: { en: 'Previous', fr: 'Précédent' },
@@ -974,7 +974,8 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
             } );
           } else { // clone
             // make sure the name is valid
-            if( null == this.data.name.match( /^[a-zA-Z_][a-zA-Z0-9_]*$/ ) ) {
+            var re = new RegExp( 'question_option' == self.type ? '^[a-zA-Z0-9_]*$' : '^[a-zA-Z_][a-zA-Z0-9_]*$' );
+            if( null == re.test( this.data.name ) ) {
               this.formatError = true;
             } else {
               var data = { rank: this.data.rank, name: this.data.name };

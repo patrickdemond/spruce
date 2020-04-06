@@ -48,16 +48,17 @@
       <form name="form" novalidate>
         <div class="spacer">
           <div class="container-fluid vertical-spacer">
-            <span class="text-info"
+            <span class="text-info vertical-spacer"
                   ng-bind-html="model.viewModel.record.module_prompts[model.renderModel.currentLanguage] | cnNewlines"
                   uib-tooltip-html="model.viewModel.record.module_popups[model.renderModel.currentLanguage] | cnNewlines"></span>
-            <span class="text-info"
+            <span class="text-info vertical-spacer"
                   ng-bind-html="model.viewModel.record.prompts[model.renderModel.currentLanguage] | cnNewlines"
                   uib-tooltip-html="model.viewModel.record.popups[model.renderModel.currentLanguage] | cnNewlines"></span>
             <div ng-repeat="question in model.renderModel.getVisibleQuestionList()">
               <hr ng-if="!$first" />
-              <div ng-class="{
-                     'vertical-spacer text-info': 'comment' == question.type,
+              <div class="vertical-spacer"
+                   ng-class="{
+                     'text-info': 'comment' == question.type,
                      'text-danger': true === question.incomplete
                    }"
                    ng-bind-html="question.prompts[model.renderModel.currentLanguage] | cnNewlines"
