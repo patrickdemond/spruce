@@ -29,6 +29,7 @@ class ui extends \cenozo\ui\ui
       $qnaire_username = $setting_manager->get_setting( 'utility', 'qnaire_username' );
       $db_user = $session->get_user();
 
+      log::debug( $db_user->name, $qnaire_username );
       if( !is_null( $db_user ) && $qnaire_username == $db_user->name )
       {
         // prepare the framework module list (used to identify which modules are provided by the framework)

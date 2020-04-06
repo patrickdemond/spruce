@@ -70,11 +70,11 @@ class session extends \cenozo\business\session
       {
         $self_path = substr( $_SERVER['PHP_SELF'], 0, strrpos( $_SERVER['PHP_SELF'], '/' ) + 1 );
         $path = str_replace( $self_path, '', $_SERVER['REDIRECT_URL'] );
-        if( preg_match( '#^response/run/([^/]+)$#', $path, $matches ) )
+        if( preg_match( '#^respondent/run/([^/]+)$#', $path, $matches ) )
         {
           $respondent_class_name = lib::get_class_name( 'database\respondent' );
           $db_respondent = $respondent_class_name::get_unique_record( 'token', $matches[1] );
-          $this->db_response = is_null( $db_respondent ) ? NULL : $db_respondent->get_response();
+          $this->db_response = is_null( $db_respondent ) ? NULL : $db_respondent->get_current_response();
         }
       }
     }
