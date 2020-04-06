@@ -17,11 +17,8 @@
     <div ng-if="!data.page_id">
       <div class="spacer" style="min-height: 8em;">
         <div class="container-fluid vertical-spacer">
-          <span class="text-info"
-               ng-bind-html="
-                 data.submitted ?
-                 data.conclusions[model.renderModel.currentLanguage] :
-                 data.introductions[model.renderModel.currentLanguage]">
+          <span ng-bind-html="data.submitted ?
+            data.conclusions[model.renderModel.currentLanguage] : data.introductions[model.renderModel.currentLanguage]">
           </span>
         </div>
       </div>
