@@ -630,8 +630,14 @@ define( function() {
             // if the question's type is a number then make sure it falls within the min/max values
             var minimum = this.evaluateLimit( question.minimum );
             var maximum = this.evaluateLimit( question.maximum );
-            var tooSmall = 'number' == question.type && null != value && ( null != minimum && value < minimum );
-            var tooLarge = 'number' == question.type && null != value && ( null != maximum && value > maximum );
+            var tooSmall = 'number' == question.type &&
+                           null != value &&
+                           !angular.isObject( value ) &&
+                           ( null != minimum && value < minimum );
+            var tooLarge = 'number' == question.type &&
+                           null != value &&
+                           !angular.isObject( value ) &&
+                           ( null != maximum && value > maximum );
 
             return this.runQuery(
               tooSmall || tooLarge ?
