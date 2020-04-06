@@ -25,7 +25,7 @@ define( [ 'page' ].reduce( function( list, name ) {
         title: 'Token'
       },
       response_count: {
-        title: 'Respondents'
+        title: 'Responses'
       }
     },
     defaultOrder: {
