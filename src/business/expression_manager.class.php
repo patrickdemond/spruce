@@ -433,6 +433,7 @@ class expression_manager extends \cenozo\singleton
       }
       else throw lib::create( 'exception\argument', 'override_question_object', $override_question_object, __METHOD__ );
     }
+    if( !is_null( $db_override_question_option ) ) $db_override_question = $db_override_question_option->get_question();
 
     $answer_class_name = lib::get_class_name( 'database\answer' );
     $question_option_class_name = lib::get_class_name( 'database\question_option' );
@@ -504,6 +505,7 @@ class expression_manager extends \cenozo\singleton
       $db_question->rank >= $db_override_question->rank
     ) && (
       // make sure the question_option isn't overridden
+      is_null( $db_question_option ) ||
       is_null( $db_override_question_option ) ||
       $db_question_option->question_id != $db_override_question_option->question_id ||
       $db_question_option->rank >= $db_override_question_option->rank

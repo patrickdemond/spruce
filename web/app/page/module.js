@@ -317,7 +317,7 @@ define( function() {
             if( 'comment' == question.type ) return true;
 
             // hidden questions are always complete
-            if( !this.evaluatePrecondition( question.precondition ) ) return true;
+            if( !this.evaluate( question.precondition ) ) return true;
 
             // null values are never complete
             if( null == question.value ) return false;
@@ -340,7 +340,7 @@ define( function() {
                 var selectedOptionId = angular.isObject( selectedOption ) ? selectedOption.id : selectedOption;
 
                 if( angular.isObject( selectedOption ) ) {
-                  if( this.evaluatePrecondition( preconditionListById[selectedOptionId] ) && (
+                  if( this.evaluate( preconditionListById[selectedOptionId] ) && (
                       ( angular.isArray( selectedOption.value ) && 0 == selectedOption.value.length ) ||
                       null == selectedOption.value
                   ) ) return null == selectedOption.value ? selectedOption.id : false;
@@ -352,7 +352,7 @@ define( function() {
                 var selectedOption = question.value[index];
                 var selectedOptionId = angular.isObject( selectedOption ) ? selectedOption.id : selectedOption;
 
-                if( this.evaluatePrecondition( preconditionListById[selectedOptionId] ) ) {
+                if( this.evaluate( preconditionListById[selectedOptionId] ) ) {
                   if( angular.isObject( selectedOption ) ) {
                     if( angular.isArray( selectedOption.value ) ) {
                       // make sure there is at least one option value
@@ -369,14 +369,17 @@ define( function() {
             return true;
           },
 
-          evaluatePrecondition: function( precondition ) {
-            // empty preconditions are always "true"
-            if( null == precondition ) return true;
+          evaluateLimit: function( limit ) { return this.evaluate( limit, true ); },
+          evaluate: function( expression, isLimit ) {
+            if( angular.isUndefined( isLimit ) ) isLimit = false;
 
-            // boolean preconditions are already evaluated
-            if( true == precondition || false == precondition ) return precondition;
+            // handle empty expressions
+            if( null == expression ) return isLimit ? null : true;
 
-            // replace any attriutes with null (they will only appear unevaluated when previewing)
+            // non-limit boolean expressions are already evaluated
+            if( !isLimit && true == expression || false == expression ) return expression;
+
+            // replace any attributes
             if( 'respondent' != self.parentModel.getSubjectFromState() ) {
               self.activeAttributeList.forEach( function( attribute ) {
                 var re = new RegExp( '@' + attribute.name + '@' );
@@ -395,15 +398,15 @@ define( function() {
                   else value = '"' + value + '"';
                 }
 
-                precondition = precondition.replace( re, value );
+                expression = expression.replace( re, value );
               } );
 
-              // replace any remaining preconditions with null
-              precondition = precondition.replace( /@[^@]+@/g, 'null' );
+              // replace any remaining expressions with null
+              expression = expression.replace( /@[^@]+@/g, isLimit ? null : 'null' );
             }
 
             // everything else needs to be evaluated
-            var matches = precondition.match( /\$[^$]+\$/g );
+            var matches = expression.match( /\$[^$]+\$/g );
             if( null != matches ) matches.forEach( function( match ) {
               var parts = match.slice( 1, -1 ).toLowerCase().split( ':' );
               var questionName = parts[0];
@@ -457,22 +460,24 @@ define( function() {
                 }
               }
 
-              precondition = precondition.replace( match, compiled );
+              expression = expression.replace( match, compiled );
             } );
+
+            if( isLimit ) return expression;
 
             // create a function which can be used to evaluate the compiled precondition without calling eval()
             function evaluateExpression( precondition ) {
               return Function('"use strict"; return ' + precondition + ';')();
             }
-            return evaluateExpression( precondition );
+            return evaluateExpression( expression );
           },
 
           getVisibleQuestionList: function() {
-            return this.questionList.filter( question => self.evaluatePrecondition( question.precondition ) );
+            return this.questionList.filter( question => self.evaluate( question.precondition ) );
           },
 
           getVisibleOptionList: function( question ) {
-            return question.optionList.filter( option => self.evaluatePrecondition( option.precondition ) );
+            return question.optionList.filter( option => self.evaluate( option.precondition ) );
           },
 
           reset: function() {
@@ -623,10 +628,10 @@ define( function() {
             if( angular.isUndefined( noCompleteCheck ) ) noCompleteCheck = false;
 
             // if the question's type is a number then make sure it falls within the min/max values
-            var tooSmall = 'number' == question.type && null != value &&
-                           ( null != question.minimum && value < question.minimum );
-            var tooLarge = 'number' == question.type && null != value &&
-                           ( null != question.maximum && value > question.maximum );
+            var minimum = this.evaluateLimit( question.minimum );
+            var maximum = this.evaluateLimit( question.maximum );
+            var tooSmall = 'number' == question.type && null != value && ( null != minimum && value < minimum );
+            var tooLarge = 'number' == question.type && null != value && ( null != maximum && value > maximum );
 
             return this.runQuery(
               tooSmall || tooLarge ?
@@ -636,9 +641,9 @@ define( function() {
                 return CnModalMessageFactory.instance( {
                   title: 'Value is too ' + ( tooSmall ? 'small' : 'large' ),
                   message: 'Please provide an answer that is ' + (
-                    null == question.maximum ? 'equal to or greater than ' + question.minimum + '.' :
-                    null == question.minimum ? 'equal to or less than ' + question.maximum :
-                    'between ' + question.minimum + ' and ' + question.maximum + '.'
+                    null == maximum ? 'equal to or greater than ' + minimum + '.' :
+                    null == minimum ? 'equal to or less than ' + maximum :
+                    'between ' + minimum + ' and ' + maximum + '.'
                   )
                 } ).show().then( function() {
                   question.value = angular.copy( question.backupValue );
@@ -752,8 +757,8 @@ define( function() {
             CnModalDatetimeFactory.instance( {
               date: answerValue,
               pickerType: 'date',
-              minDate: getDate( option.minimum ),
-              maxDate: getDate( option.maximum ),
+              minDate: getDate( this.evaluateLimit( option.minimum ) ),
+              maxDate: getDate( this.evaluateLimit( option.maximum ) ),
               emptyAllowed: true
             } ).show().then( function( response ) {
               if( false !== response ) self.setAnswerValue(
@@ -769,8 +774,8 @@ define( function() {
             CnModalDatetimeFactory.instance( {
               date: value,
               pickerType: 'date',
-              minDate: getDate( question.minimum ),
-              maxDate: getDate( question.maximum ),
+              minDate: getDate( this.evaluateLimit( question.minimum ) ),
+              maxDate: getDate( this.evaluateLimit( question.maximum ) ),
               emptyAllowed: true
             } ).show().then( function( response ) {
               if( false !== response ) self.setAnswer(
@@ -782,19 +787,19 @@ define( function() {
 
           setAnswerValue: function( question, option, valueIndex, answerValue ) {
             // if the question option's extra type is a number then make sure it falls within the min/max values
-            var tooSmall = 'number' == option.extra && null != answerValue &&
-                           ( null != option.minimum && answerValue < option.minimum );
-            var tooLarge = 'number' == option.extra && null != answerValue &&
-                           ( null != option.maximum && answerValue > option.maximum );
+            var minimum = this.evaluateLimit( option.minimum );
+            var maximum = this.evaluateLimit( option.maximum );
+            var tooSmall = 'number' == option.extra && null != answerValue && ( null != minimum && answerValue < minimum );
+            var tooLarge = 'number' == option.extra && null != answerValue && ( null != maximum && answerValue > maximum );
 
             if( tooSmall || tooLarge ) {
               this.runQuery( function() {
                 return CnModalMessageFactory.instance( {
                   title: 'Value is too ' + ( tooSmall ? 'small' : 'large' ),
                   message: 'Please provide an answer that is ' + (
-                    null == option.maximum ? 'equal to or greater than ' + option.minimum + '.' :
-                    null == option.minimum ? 'equal to or less than ' + option.maximum :
-                    'between ' + option.minimum + ' and ' + option.maximum + '.'
+                    null == maximum ? 'equal to or greater than ' + minimum + '.' :
+                    null == minimum ? 'equal to or less than ' + maximum :
+                    'between ' + minimum + ' and ' + maximum + '.'
                   )
                 } ).show().then( function() {
                   // put the old value back
