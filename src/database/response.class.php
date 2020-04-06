@@ -84,7 +84,7 @@ class response extends \cenozo\database\has_rank
     // when submitting the response remove any pending email reminders
     if( $submitted )
     {
-      $db_reminder_mail = $this->get_respondent()->get_reminder_mail();
+      $db_reminder_mail = $this->get_respondent()->get_reminder_mail( $this->rank );
       if( !is_null( $db_reminder_mail ) && is_null( $db_reminder_mail->sent_datetime ) ) $db_reminder_mail->delete();
     }
   }
