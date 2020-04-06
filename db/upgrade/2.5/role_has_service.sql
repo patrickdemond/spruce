@@ -62,7 +62,7 @@ CREATE PROCEDURE patch_role_has_service()
       "AND service.restricted = 1 "
       "AND ( "
         "( subject = 'qnaire' AND method = 'GET' AND resource = 1 ) OR "
-        "( subject = 'response' AND method IN( 'GET', 'PATCH' ) AND resource = 1 ) OR "
+        "( subject = 'respondent' AND method IN( 'GET', 'PATCH' ) AND resource = 1 ) OR "
         "( subject = 'page' AND method = 'GET' AND resource = 1 ) OR "
         "( subject = 'question' AND method = 'GET' ) OR "
         "( subject IN( 'answer', 'question_option' ) ) "
