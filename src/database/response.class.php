@@ -321,22 +321,25 @@ class response extends \cenozo\database\has_rank
   /**
    * TODO: document
    */
-   public function delete_answers_in_page( $db_page )
-   {
-     $question_sel = lib::create( 'database\select' );
-     $question_sel->from( 'question' );
-     $question_sel->add_column( 'id' );
-     $question_mod = lib::create( 'database\modifier' );
-     $question_mod->where( 'question.page_id', '=', $db_page->id );
-     $question_sql = sprintf( '%s %s', $question_sel->get_sql(), $question_mod->get_sql() );
+  public function delete_answers_in_page( $db_page )
+  {
+    $question_sel = lib::create( 'database\select' );
+    $question_sel->from( 'question' );
+    $question_sel->add_column( 'id' );
+    $question_mod = lib::create( 'database\modifier' );
+    $question_mod->where( 'question.page_id', '=', $db_page->id );
+    $question_sql = sprintf( '%s %s', $question_sel->get_sql(), $question_mod->get_sql() );
 
-     $modifier = lib::create( 'database\modifier' );
-     $modifier->where( 'response_id', '=', $this->id );
-     $modifier->where( 'question_id', 'IN', $question_sql, false );
-     $sql = sprintf( 'DELETE FROM answer %s', $modifier->get_sql() );
-     static::db()->execute( $sql );
-   }
+    $modifier = lib::create( 'database\modifier' );
+    $modifier->where( 'response_id', '=', $this->id );
+    $modifier->where( 'question_id', 'IN', $question_sql, false );
+    $sql = sprintf( 'DELETE FROM answer %s', $modifier->get_sql() );
+    static::db()->execute( $sql );
+  }
 
+  /**
+   * TODO: document
+   */
   public function create_attributes()
   {
     $db_participant = $this->get_participant();
@@ -349,5 +352,79 @@ class response extends \cenozo\database\has_rank
       $db_response_attribute->value = $db_attribute->get_participant_value( $db_participant );
       $db_response_attribute->save();
     }
+  }
+
+  /**
+   * TODO: document
+   */
+  public function compile_description( $description )
+  {
+    $attribute_class_name = lib::get_class_name( 'database\attribute' );
+    $response_attribute_class_name = lib::get_class_name( 'database\response_attribute' );
+    $answer_class_name = lib::get_class_name( 'database\answer' );
+
+    $db_qnaire = $this->get_qnaire();
+
+    // convert attributes
+    preg_match_all( '/@[A-Za-z0-9_]+@/', $description, $matches );
+    foreach( $matches[0] as $match )
+    {
+      $attribute_name = substr( $match, 1, -1 );
+      $db_attribute = $attribute_class_name::get_unique_record(
+        array( 'qnaire_id', 'name' ),
+        array( $db_qnaire->id, $attribute_name )
+      );
+
+      if( is_null( $db_attribute ) )
+      {
+        if( !$db_qnaire->debug )
+        {
+          log::warning( sprintf( 'Invalid attribute "%s" found while compiling description', $attribute_name ) );
+          $description = str_replace( $match, '', $description );
+        }
+      }
+      else
+      {
+        $db_response_attribute = $response_attribute_class_name::get_unique_record(
+          array( 'response_id', 'attribute_id' ),
+          array( $this->id, $db_attribute->id )
+        );
+        $description = str_replace( $match, $db_response_attribute->value, $description );
+      }
+    }
+
+    // convert questions
+    preg_match_all( '/\$[A-Za-z0-9_]+\$/', $description, $matches );
+    foreach( $matches[0] as $match )
+    {
+      $question_name = substr( $match, 1, -1 );
+      $db_question = $db_qnaire->get_question( $question_name );
+      if( is_null( $db_question ) || 'comment' == $db_question->type || 'list' == $db_question->type )
+      {
+        if( !$db_qnaire->debug )
+        {
+          log::warning( sprintf( 'Invalid question "%s" found while compiling description', $question_name ) );
+          $description = str_replace( $match, '', $description );
+        }
+      }
+      else
+      {
+        $db_answer = $answer_class_name::get_unique_record(
+          array( 'response_id', 'question_id' ),
+          array( $this->id, $db_question->id )
+        );
+        $value = is_null( $db_answer ) ? NULL : util::json_decode( $db_answer->value );
+
+        if( is_object( $value ) && property_exists( $value, 'dkna' ) && $value->dkna ) $compiled = '(no answer)';
+        else if( is_object( $value ) && property_exists( $value, 'refuse' ) && $value->refuse ) $compiled = '(no answer)';
+        else if( is_null( $value ) ) $compiled = '';
+        else if( 'boolean' == $db_question->type ) $compiled = $value ? 'true' : 'false';
+        else $compiled = $value;
+
+        $description = str_replace( $match, $compiled, $description );
+      }
+    }
+
+    return $description;
   }
 }
