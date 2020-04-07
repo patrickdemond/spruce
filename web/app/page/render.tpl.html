@@ -68,20 +68,20 @@
                   <label class="btn btn-default full-width"
                          ng-class="{ 'color-red': true === question.incomplete }"
                          style="text-align: left; font-style: italic; font-weight: normal"
-                         ng-model="question.answer.yes"
-                         ng-click="model.renderModel.setAnswer( question, question.answer.yes ? true : null )"
-                         uib-btn-checkbox>
-                    <i class="glyphicon" ng-class="question.answer.yes ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
-                    {{ text( 'misc.yes' ) }}
-                  </label>
-                  <label class="btn btn-default full-width"
-                         ng-class="{ 'color-red': true === question.incomplete }"
-                         style="text-align: left; font-style: italic; font-weight: normal"
                          ng-model="question.answer.no"
                          ng-click="model.renderModel.setAnswer( question, question.answer.no ? false : null )"
                          uib-btn-checkbox>
                     <i class="glyphicon" ng-class="question.answer.no ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
                     {{ text( 'misc.no' ) }}
+                  </label>
+                  <label class="btn btn-default full-width"
+                         ng-class="{ 'color-red': true === question.incomplete }"
+                         style="text-align: left; font-style: italic; font-weight: normal"
+                         ng-model="question.answer.yes"
+                         ng-click="model.renderModel.setAnswer( question, question.answer.yes ? true : null )"
+                         uib-btn-checkbox>
+                    <i class="glyphicon" ng-class="question.answer.yes ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
+                    {{ text( 'misc.yes' ) }}
                   </label>
                 </div>
                 <div ng-switch-when="list" ng-repeat="option in model.renderModel.getVisibleOptionList( question )">
