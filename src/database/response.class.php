@@ -151,8 +151,9 @@ class response extends \cenozo\database\has_rank
         if( !$db_answer->is_complete() )
         {
           log::warning( sprintf(
-            'Tried to advance response for %s to the next page but the current page "%s" is incomplete.',
+            'Tried to advance response for %s to the next page but question, "%s", on the current page, "%s", is incomplete.',
             $this->get_participant()->uid,
+            $db_question->name,
             $db_page->name
           ) );
 
