@@ -408,9 +408,13 @@ define( function() {
             // everything else needs to be evaluated
             var matches = expression.match( /\$[^$]+\$/g );
             if( null != matches ) matches.forEach( function( match ) {
-              var parts = match.slice( 1, -1 ).toLowerCase().split( ':' );
-              var questionName = parts[0];
-              var optionName = 1 < parts.length ? parts[1] : null;
+              var parts = match.slice( 1, -1 ).toLowerCase().split( '.' );
+              var fnName = 1 < parts.length ? parts[1] : null;
+
+              var subparts = parts[0].toLowerCase().split( ':' );
+              var questionName = subparts[0];
+              var optionName = 1 < subparts.length ? subparts[1] : null;
+
 
               // find the referenced question
               var matchedQuestion = null;
@@ -423,7 +427,13 @@ define( function() {
 
               var compiled = 'null';
               if( null != matchedQuestion ) {
-                if( 'boolean' == matchedQuestion.type ) {
+                if( 'empty()' == fnName ) {
+                  compiled = null == matchedQuestion.value ? 'true' : 'false';
+                } else if( 'dkna()' == fnName ) {
+                  compiled = angular.isObject( matchedQuestion.value ) && matchedQuestion.value.dkna ? 'true' : 'false';
+                } else if( 'refuse()' == fnName ) {
+                  compiled = angular.isObject( matchedQuestion.value ) && matchedQuestion.value.refuse ? 'true' : 'false';
+                }else if( 'boolean' == matchedQuestion.type ) {
                   if( true === matchedQuestion.value ) compiled = 'true';
                   else if( false === matchedQuestion.value ) compiled = 'false';
                 } else if( 'number' == matchedQuestion.type ) {
