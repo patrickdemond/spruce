@@ -51,6 +51,18 @@ class ui extends \cenozo\ui\ui
         return ob_get_clean();
       }
     }
+    else if( array_key_exists( 'REDIRECT_URL', $_SERVER ) )
+    {
+      $self_path = substr( $_SERVER['PHP_SELF'], 0, strrpos( $_SERVER['PHP_SELF'], '/' ) + 1 );
+      $path = str_replace( $self_path, '', $_SERVER['REDIRECT_URL'] );
+      if( preg_match( '#\brun\b#', $path, $matches ) )
+      {
+        $error = array(
+          'title' => 'Please Note: 404 Page Not Found',
+          'message' => 'The address you have provided is either not valid or server was unable to find the page your are looking for.'
+        );
+      }
+    }
 
     return parent::get_interface( $maintenance, $error );
   }
