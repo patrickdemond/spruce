@@ -272,7 +272,7 @@ define( function() {
               title: $scope.model.sourceName,
               go: function() { return $state.go( 'qnaire.view', { identifier: $scope.model.parentQnaireId } ); }
             }, {
-              title: 'move/copy'
+              title: 'copy/export'
             } ] );
           } );
         }
@@ -356,6 +356,7 @@ define( function() {
           parentQnaireId: $state.params.identifier,
           sourceName: null,
           working: false,
+          operation: 'clone',
           name: null,
           nameConflict: false,
 
@@ -376,15 +377,25 @@ define( function() {
           save: function() {
             this.working = true;
 
-            return CnHttpFactory.instance( {
-              path: 'qnaire?clone=' + this.parentQnaireId,
-              data: { name: this.name },
+            var httpObj = {
               onError: function( response ) {
                 if( 409 == response.status ) self.nameConflict = true;
                 else CnModalMessageFactory.httpError( response );
               }
-            } ).post().then( function( response ) {
-              $state.go( 'qnaire.view', { identifier: response.data } );
+            };
+
+            if( 'clone' == this.operation ) {
+              httpObj.path = 'qnaire?clone=' + this.parentQnaireId;
+              httpObj.data = { name: this.name };
+            } else {
+              httpObj.path = 'qnaire/' + this.parentQnaireId + '?export=' + this.name;
+              httpObj.format = 'txt';
+            }
+
+            var http = CnHttpFactory.instance( httpObj );
+            var promise = 'clone' == this.operation ? http.post() : http.file();
+            return promise.then( function( response ) {
+              if( 'clone' == self.operation ) $state.go( 'qnaire.view', { identifier: response.data } );
             } ).finally( function() {
               self.working = false;
             } );

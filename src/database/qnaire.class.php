@@ -249,4 +249,174 @@ class qnaire extends \cenozo\database\record
       $db_respondent->save();
     }
   }
+
+  /**
+   * TODO: document
+   */
+  public function generate_export( $qnaire_name = NULL )
+  {
+    $export = array(
+      'base_language' => $this->get_base_language()->code,
+      'name' => is_null( $qnaire_name ) ? $this->name : $qnaire_name,
+      'debug' => $this->debug,
+      'readonly' => $this->readonly,
+      'repeated' => $this->repeated,
+      'repeat_offset' => $this->repeat_offset,
+      'max_responses' => $this->max_responses,
+      'email_from_name' => $this->email_from_name,
+      'email_from_address' => $this->email_from_address,
+      'email_invitation' => $this->email_invitation,
+      'email_reminder' => $this->email_reminder,
+      'email_reminder_offset' => $this->email_reminder_offset,
+      'description' => $this->description,
+      'note' => $this->note,
+      'language_list' => array(),
+      'attribute_list' => array(),
+      'qnaire_description_list' => array(),
+      'module_list' => array()
+    );
+
+    $language_sel = lib::create( 'database\select' );
+    $language_sel->add_column( 'code' );
+    foreach( $this->get_language_list( $language_sel ) as $item ) $export['language_list'][] = $item['code'];
+
+    $attribute_sel = lib::create( 'database\select' );
+    $attribute_sel->add_column( 'name' );
+    $attribute_sel->add_column( 'code' );
+    $attribute_sel->add_column( 'note' );
+    foreach( $this->get_attribute_list( $attribute_sel ) as $item ) $export['attribute_list'][] = $item;
+
+    $qnaire_description_sel = lib::create( 'database\select' );
+    $qnaire_description_sel->add_table_column( 'language', 'code', 'language' );
+    $qnaire_description_sel->add_column( 'type' );
+    $qnaire_description_sel->add_column( 'value' );
+    $qnaire_description_mod = lib::create( 'database\modifier' );
+    $qnaire_description_mod->join( 'language', 'qnaire_description.language_id', 'language.id' );
+    foreach( $this->get_qnaire_description_list( $qnaire_description_sel, $qnaire_description_mod ) as $item )
+      $export['qnaire_description_list'][] = $item;
+
+    $module_mod = lib::create( 'database\modifier' );
+    $module_mod->order( 'rank' );
+    foreach( $this->get_module_object_list() as $db_module )
+    {
+      $module = array(
+        'rank' => $db_module->rank,
+        'name' => $db_module->name,
+        'precondition' => $db_module->precondition,
+        'note' => $db_module->note,
+        'module_description_list' => array(),
+        'page_list' => array()
+      );
+
+      $module_description_sel = lib::create( 'database\select' );
+      $module_description_sel->add_table_column( 'language', 'code', 'language' );
+      $module_description_sel->add_column( 'type' );
+      $module_description_sel->add_column( 'value' );
+      $module_description_mod = lib::create( 'database\modifier' );
+      $module_description_mod->join( 'language', 'module_description.language_id', 'language.id' );
+      foreach( $db_module->get_module_description_list( $module_description_sel, $module_description_mod ) as $item )
+        $module['module_description_list'][] = $item;
+
+      $page_mod = lib::create( 'database\modifier' );
+      $page_mod->order( 'rank' );
+      foreach( $db_module->get_page_object_list() as $db_page )
+      {
+        $page = array(
+          'rank' => $db_page->rank,
+          'name' => $db_page->name,
+          'max_time' => $db_page->max_time,
+          'precondition' => $db_page->precondition,
+          'note' => $db_page->note,
+          'page_description_list' => array(),
+          'question_list' => array()
+        );
+
+        $page_description_sel = lib::create( 'database\select' );
+        $page_description_sel->add_table_column( 'language', 'code', 'language' );
+        $page_description_sel->add_column( 'type' );
+        $page_description_sel->add_column( 'value' );
+        $page_description_mod = lib::create( 'database\modifier' );
+        $page_description_mod->join( 'language', 'page_description.language_id', 'language.id' );
+        foreach( $db_page->get_page_description_list( $page_description_sel, $page_description_mod ) as $item )
+          $page['page_description_list'][] = $item;
+
+        $question_mod = lib::create( 'database\modifier' );
+        $question_mod->order( 'rank' );
+        foreach( $db_page->get_question_object_list() as $db_question )
+        {
+          $question = array(
+            'rank' => $db_question->rank,
+            'name' => $db_question->name,
+            'type' => $db_question->type,
+            'mandatory' => $db_question->mandatory,
+            'dkna_refuse' => $db_question->dkna_refuse,
+            'minimum' => $db_question->minimum,
+            'maximum' => $db_question->maximum,
+            'default_answer' => $db_question->default_answer,
+            'precondition' => $db_question->precondition,
+            'note' => $db_question->note,
+            'question_description_list' => array(),
+            'question_option_list' => array()
+          );
+
+          $question_description_sel = lib::create( 'database\select' );
+          $question_description_sel->add_table_column( 'language', 'code', 'language' );
+          $question_description_sel->add_column( 'type' );
+          $question_description_sel->add_column( 'value' );
+          $question_description_mod = lib::create( 'database\modifier' );
+          $question_description_mod->join( 'language', 'question_description.language_id', 'language.id' );
+          foreach( $db_question->get_question_description_list( $question_description_sel, $question_description_mod ) as $item )
+            $question['question_description_list'][] = $item;
+
+          $question_option_mod = lib::create( 'database\modifier' );
+          $question_option_mod->order( 'rank' );
+          foreach( $db_question->get_question_option_object_list() as $db_question_option )
+          {
+            $question_option = array(
+              'rank' => $db_question_option->rank,
+              'name' => $db_question_option->name,
+              'exclusive' => $db_question_option->exclusive,
+              'extra' => $db_question_option->extra,
+              'multiple_answers' => $db_question_option->multiple_answers,
+              'minimum' => $db_question_option->minimum,
+              'maximum' => $db_question_option->maximum,
+              'precondition' => $db_question_option->precondition,
+              'question_option_description_list' => array(),
+              'question_option_option_list' => array()
+            );
+
+            $qod_sel = lib::create( 'database\select' );
+            $qod_sel->add_table_column( 'language', 'code', 'language' );
+            $qod_sel->add_column( 'type' );
+            $qod_sel->add_column( 'value' );
+            $qod_mod = lib::create( 'database\modifier' );
+            $qod_mod->join( 'language', 'question_option_description.language_id', 'language.id' );
+            foreach( $db_question_option->get_question_option_description_list( $qod_sel, $qod_mod ) as $item )
+              $question_option['question_option_description_list'][] = $item;
+
+            $question['question_option_list'][] = $question_option;
+          } 
+
+          $page['question_list'][] = $question;
+        } 
+
+        $module['page_list'][] = $page;
+      }
+
+      $export['module_list'][] = $module;
+    }
+
+    $filename = sprintf( '%s/%s.json', QNAIRE_EXPORT_PATH, $this->id );
+    if( false === file_put_contents( $filename, util::json_encode( $export, JSON_PRETTY_PRINT ), LOCK_EX ) )
+    {
+      throw lib::create( 'exception\runtime',
+        sprintf(
+          'Failed to generate qnaire export json file "%s" for qnaire %s',
+          $filename,
+          $this->name
+        ),
+        __METHOD__
+      );
+    }
+  }
 }
