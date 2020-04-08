@@ -136,7 +136,7 @@ class respondent extends \cenozo\database\record
    * @return database\response
    * @access public
    */
-  public function get_current_response()
+  public function get_current_response( $create = false )
   {
     // check the primary key value
     if( is_null( $this->id ) )
@@ -152,6 +152,16 @@ class respondent extends \cenozo\database\record
     $modifier->where( 'respondent_id', '=', $this->id );
 
     $response_id = static::db()->get_one( sprintf( '%s %s', $select->get_sql(), $modifier->get_sql() ) );
+
+    // if asked create a response if one doesn't exist yet
+    if( !$response_id && $create )
+    {
+      $db_response = lib::create( 'database\response' );
+      $db_response->respondent_id = $this->id;
+      $db_response->save();
+      $response_id = $db_response->id;
+    }
+
     return $response_id ? lib::create( 'database\response', $response_id ) : NULL;
   }
 
