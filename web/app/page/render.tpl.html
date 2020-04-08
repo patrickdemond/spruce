@@ -49,6 +49,7 @@
                   ng-bind-html="model.viewModel.record.module_prompts[model.renderModel.currentLanguage] | cnNewlines"
                   uib-tooltip-html="model.viewModel.record.module_popups[model.renderModel.currentLanguage] | cnNewlines"></span>
             <span class="text-info vertical-spacer"
+                  style="font-size:larger"
                   ng-bind-html="model.viewModel.record.prompts[model.renderModel.currentLanguage] | cnNewlines"
                   uib-tooltip-html="model.viewModel.record.popups[model.renderModel.currentLanguage] | cnNewlines"></span>
             <div ng-repeat="question in model.renderModel.getVisibleQuestionList()">
@@ -58,6 +59,7 @@
                      'text-info': 'comment' == question.type,
                      'text-danger': true === question.incomplete
                    }"
+                   style="font-size:larger"
                    ng-bind-html="question.prompts[model.renderModel.currentLanguage] | cnNewlines"
                    uib-tooltip-html="question.popups[model.renderModel.currentLanguage] | cnNewlines"></div>
               <div class="horizontal-spacer"
@@ -67,7 +69,7 @@
                 <div ng-switch-when="boolean">
                   <label class="btn btn-default full-width"
                          ng-class="{ 'color-red': true === question.incomplete }"
-                         style="text-align: left; font-style: italic; font-weight: normal"
+                         style="text-align: left; font-size: larger; font-style: italic; font-weight: normal"
                          ng-model="question.answer.no"
                          ng-click="model.renderModel.setAnswer( question, question.answer.no ? false : null )"
                          uib-btn-checkbox>
@@ -76,7 +78,7 @@
                   </label>
                   <label class="btn btn-default full-width"
                          ng-class="{ 'color-red': true === question.incomplete }"
-                         style="text-align: left; font-style: italic; font-weight: normal"
+                         style="text-align: left; font-size: larger; font-style: italic; font-weight: normal"
                          ng-model="question.answer.yes"
                          ng-click="model.renderModel.setAnswer( question, question.answer.yes ? true : null )"
                          uib-btn-checkbox>
@@ -88,7 +90,7 @@
                   <div ng-if="!option.multiple_answers" ng-class="{ 'col-xs-4 col-slim': null != option.extra }">
                     <label
                       class="btn btn-default full-width"
-                      style="text-align: left"
+                      style="text-align: left; font-size: larger"
                       ng-class="{
                         'rounded-bottom-left rounded-top-left': null != option.extra,
                         'color-red': true === question.incomplete || option.id === question.incomplete
@@ -111,7 +113,7 @@
                     <label
                       class="btn btn-default full-width rounded-bottom-left rounded-top-left"
                       ng-class="{ 'color-red': true === question.incomplete }"
-                      style="text-align: left"
+                      style="text-align: left; font-size: larger"
                       ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal', 'font-weight': 'normal' }"
                       ng-bind-html="
                         option.prompts[model.renderModel.currentLanguage] + (
@@ -218,7 +220,7 @@
                 <div class="btn-group full-width" ng-if="'comment' != question.type">
                   <label class="btn btn-default col-xs-6"
                          ng-class="{ 'color-red': true === question.incomplete }"
-                         style="text-align: left; font-style: italic; font-weight: normal;"
+                         style="text-align: left; font-size: larger; font-style: italic; font-weight: normal;"
                          ng-model="question.answer.dkna"
                          ng-click="model.renderModel.setAnswer( question, question.answer.dkna ? { dkna: true } : null )"
                          uib-btn-checkbox>
@@ -227,7 +229,7 @@
                   </label>
                   <label class="btn btn-default col-xs-6"
                          ng-class="{ 'color-red': true === question.incomplete }"
-                         style="text-align: left; font-style: italic; font-weight: normal;"
+                         style="text-align: left; font-size: larger; font-style: italic; font-weight: normal;"
                          ng-model="question.answer.refuse"
                          ng-click="model.renderModel.setAnswer( question, question.answer.refuse ? { refuse: true } : null )"
                          uib-btn-checkbox>
