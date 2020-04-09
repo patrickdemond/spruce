@@ -474,6 +474,7 @@ define( function() {
       var object = function() {
         var self = this;
         angular.extend( this, {
+          working: false,
           qnaireId: $state.params.identifier,
           qnaireName: null,
           confirmInProgress: false,
@@ -535,6 +536,7 @@ define( function() {
           },
 
           proceed: function() {
+            this.working = true;
             if( !this.confirmInProgress && 0 < this.confirmedCount ) {
               CnHttpFactory.instance( {
                 path: ['qnaire', this.qnaireId, 'participant'].join( '/' ),
@@ -544,7 +546,7 @@ define( function() {
                   title: 'Recipients Created',
                   message: 'You have successfully created ' + self.confirmedCount + ' new recipients for the "' +
                            self.qnaireName + '" questionnaire.'
-                } ).show().then( function() { self.onLoad(); } );
+                } ).show().then( function() { self.onLoad(); } ).finally( function() { self.working = false; } );
               } );
             }
           }

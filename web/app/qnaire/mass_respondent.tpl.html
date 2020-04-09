@@ -49,8 +49,9 @@
           <div class="form-footer text-right rounded-bottom bg-info">
             <button type="button"
                     class="btn btn-primary"
+                    ng-disabled="model.working"
                     cn-really-message="Are you sure you wish to create {{ model.confirmedCount }} respondent records?"
-                    ng-click="model.proceed()">Create Respondents</button>
+                    ng-click="model.proceed()">{{ model.working ? 'Working...' : 'Create Respondents' }}</button>
           </div>
         </div>
       </div>
