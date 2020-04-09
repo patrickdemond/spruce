@@ -84,6 +84,7 @@ class ui extends \cenozo\ui\ui
       $module->add_choose( 'language' );
       $module->add_action( 'clone', '/{identifier}' );
       $module->add_action( 'mass_respondent', '/{identifier}' );
+      $module->add_action( 'import' );
     }
 
     $module = $this->get_module( 'respondent' );

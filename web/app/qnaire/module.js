@@ -144,6 +144,13 @@ define( function() {
     first_page_id: { isExcluded: true }
   } );
 
+  module.addExtraOperation( 'list', {
+    title: 'Import',
+    operation: function( $state, model ) {
+      $state.go( 'qnaire.import' );
+    }
+  } );
+
   module.addExtraOperation( 'view', {
     title: 'Preview',
     isDisabled: function( $state, model ) { return !model.viewModel.record.first_page_id; },
@@ -281,6 +288,28 @@ define( function() {
   ] );
 
   /* ######################################################################################################## */
+  cenozo.providers.directive( 'cnQnaireImport', [
+    'CnQnaireImportFactory', 'CnSession', '$state',
+    function( CnQnaireImportFactory, CnSession, $state ) {
+      return {
+        templateUrl: module.getFileUrl( 'import.tpl.html' ),
+        restrict: 'E',
+        scope: { model: '=?' },
+        controller: function( $scope ) {
+          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnaireImportFactory.instance();
+
+          CnSession.setBreadcrumbTrail( [ {
+            title: 'Questionnaires',
+            go: function() { return $state.go( 'qnaire.list' ); }
+          }, {
+            title: 'Import'
+          } ] );
+        }
+      };
+    }
+  ] );
+
+  /* ######################################################################################################## */
   cenozo.providers.directive( 'cnQnaireMassRespondent', [
     'CnQnaireMassRespondentFactory', 'CnSession', '$state',
     function( CnQnaireMassRespondentFactory, CnSession, $state ) {
@@ -399,6 +428,38 @@ define( function() {
             } ).finally( function() {
               self.working = false;
             } );
+          }
+        } );
+      }
+      return { instance: function() { return new object(); } };
+    }
+  ] );
+
+  /* ######################################################################################################## */
+  cenozo.providers.factory( 'CnQnaireImportFactory', [
+    'CnHttpFactory', '$state',
+    function( CnHttpFactory, $state ) {
+      var object = function() {
+        var self = this;
+        angular.extend( this, {
+          working: false,
+          file: null,
+
+          cancel: function() { $state.go( 'qnaire.list' ); },
+
+          import: function() {
+            this.working = true;
+
+            var data = new FormData();
+            data.append( 'file', this.file );
+            var fileDetails = data.get( 'file' );
+
+            return CnHttpFactory.instance( {
+              path: 'qnaire?import=1',
+              data: self.file
+            } ).post().then( function( response ) {
+              $state.go( 'qnaire.view', { identifier: response.data } );
+            } ).finally( function() { self.working = false; } );
           }
         } );
       }

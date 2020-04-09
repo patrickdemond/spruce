@@ -25,10 +25,7 @@ class get extends \cenozo\service\downloadable
    */
   protected function get_downloadable_public_name()
   {
-    return sprintf(
-      'Questionnaire %s export.json',
-      $this->get_leaf_record()->name
-    );
+    return sprintf( '%s.json', $this->get_leaf_record()->name );
   }
 
   /**

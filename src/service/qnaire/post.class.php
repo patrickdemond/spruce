@@ -82,6 +82,22 @@ class post extends \cenozo\service\post
   /**
    * Extends parent method
    */
+  protected function execute()
+  {
+    if( $this->get_argument( 'import', false ) )
+    {
+      $qnaire_class_name = lib::get_class_name( 'database\qnaire' );
+      $this->set_data( $qnaire_class_name::import( util::json_decode( $this->get_file_as_raw() ) ) );
+    }
+    else
+    {
+      parent::execute();
+    }
+  }
+
+  /**
+   * Extends parent method
+   */
   protected function finish()
   {
     parent::finish();

@@ -73,6 +73,19 @@ abstract class base_qnaire_part extends \cenozo\database\has_rank
   /**
    * TODO: document
    */
+  public function get_description( $type, $db_language )
+  {
+    $subject = $this->get_table_name();
+    $description_class_name = lib::get_class_name( sprintf( 'database\%s_description', $subject ) );
+    return $description_class_name::get_unique_record(
+      array( sprintf( '%s_id', $subject ), 'language_id', 'type' ),
+      array( $this->id, $db_language->id, $type )
+    );
+  }
+
+  /**
+   * TODO: document
+   */
   public function get_previous()
   {
     $column_name = sprintf( '%s_id', static::$rank_parent );

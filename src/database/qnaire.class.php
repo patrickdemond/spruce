@@ -21,10 +21,10 @@ class qnaire extends \cenozo\database\record
     if( $this->readonly )
     {
       // only allow changes to the readonly columns
-      if( $this->has_column_changed( 'base_language_id' ) || 
-          $this->has_column_changed( 'name' ) || 
-          $this->has_column_changed( 'debug' ) || 
-          $this->has_column_changed( 'description' ) || 
+      if( $this->has_column_changed( 'base_language_id' ) ||
+          $this->has_column_changed( 'name' ) ||
+          $this->has_column_changed( 'debug' ) ||
+          $this->has_column_changed( 'description' ) ||
           $this->has_column_changed( 'note' ) )
       {
         throw lib::create( 'exception\notice',
@@ -210,8 +210,8 @@ class qnaire extends \cenozo\database\record
    */
   public function get_description( $type, $db_language )
   {
-    $qnaire_description = lib::get_class_name( 'database\qnaire_description' );
-    return $qnaire_description::get_unique_record(
+    $qnaire_description_class_name = lib::get_class_name( 'database\qnaire_description' );
+    return $qnaire_description_class_name::get_unique_record(
       array( 'qnaire_id', 'language_id', 'type' ),
       array( $this->id, $db_language->id, $type )
     );
@@ -395,10 +395,10 @@ class qnaire extends \cenozo\database\record
               $question_option['question_option_description_list'][] = $item;
 
             $question['question_option_list'][] = $question_option;
-          } 
+          }
 
           $page['question_list'][] = $question;
-        } 
+        }
 
         $module['page_list'][] = $page;
       }
@@ -418,5 +418,146 @@ class qnaire extends \cenozo\database\record
         __METHOD__
       );
     }
+  }
+
+  /**
+   * TODO: document
+   */
+  public static function import( $qnaire_object )
+  {
+    $language_class_name = lib::get_class_name( 'database\language' );
+
+    $db_qnaire = lib::create( 'database\qnaire' );
+    $db_qnaire->base_language_id = $language_class_name::get_unique_record( 'code', $qnaire_object->base_language )->id;
+    $db_qnaire->name = $qnaire_object->name;
+    $db_qnaire->debug = $qnaire_object->debug;
+    $db_qnaire->repeated = $qnaire_object->repeated;
+    $db_qnaire->repeat_offset = $qnaire_object->repeat_offset;
+    $db_qnaire->max_responses = $qnaire_object->max_responses;
+    $db_qnaire->email_from_name = $qnaire_object->email_from_name;
+    $db_qnaire->email_from_address = $qnaire_object->email_from_address;
+    $db_qnaire->email_invitation = $qnaire_object->email_invitation;
+    $db_qnaire->email_reminder = $qnaire_object->email_reminder;
+    $db_qnaire->email_reminder_offset = $qnaire_object->email_reminder_offset;
+    $db_qnaire->description = $qnaire_object->description;
+    $db_qnaire->note = $qnaire_object->note;
+    $db_qnaire->save();
+
+    foreach( $qnaire_object->language_list as $language )
+      $db_qnaire->add_language( $language_class_name::get_unique_record( 'code', $language )->id );
+
+    foreach( $qnaire_object->attribute_list as $attribute )
+    {
+      $db_attribute = lib::create( 'database\attribute' );
+      $db_attribute->qnaire_id = $db_qnaire->id;
+      $db_attribute->name = $attribute->name;
+      $db_attribute->code = $attribute->code;
+      $db_attribute->note = $attribute->note;
+      $db_attribute->save();
+    }
+
+    foreach( $qnaire_object->qnaire_description_list as $qnaire_description )
+    {
+      $db_language = $language_class_name::get_unique_record( 'code', $qnaire_description->language );
+      $db_qnaire_description = $db_qnaire->get_description( $qnaire_description->type, $db_language );
+      $db_qnaire_description->value = $qnaire_description->value;
+      $db_qnaire_description->save();
+    }
+
+    foreach( $qnaire_object->module_list as $module_object )
+    {
+      $db_module = lib::create( 'database\module' );
+      $db_module->qnaire_id = $db_qnaire->id;
+      $db_module->rank = $module_object->rank;
+      $db_module->name = $module_object->name;
+      $db_module->precondition = $module_object->precondition;
+      $db_module->note = $module_object->note;
+      $db_module->save();
+
+      foreach( $module_object->module_description_list as $module_description )
+      {
+        $db_language = $language_class_name::get_unique_record( 'code', $module_description->language );
+        $db_module_description = $db_module->get_description( $module_description->type, $db_language );
+        $db_module_description->value = $module_description->value;
+        $db_module_description->save();
+      }
+
+      foreach( $module_object->page_list as $page_object )
+      {
+        $db_page = lib::create( 'database\page' );
+        $db_page->module_id = $db_module->id;
+        $db_page->rank = $page_object->rank;
+        $db_page->name = $page_object->name;
+        $db_page->max_time = $page_object->max_time;
+        $db_page->precondition = $page_object->precondition;
+        $db_page->note = $page_object->note;
+        $db_page->save();
+
+        foreach( $page_object->page_description_list as $page_description )
+        {
+          $db_language = $language_class_name::get_unique_record( 'code', $page_description->language );
+          $db_page_description = $db_page->get_description( $page_description->type, $db_language );
+          $db_page_description->value = $page_description->value;
+          $db_page_description->save();
+        }
+
+        foreach( $page_object->question_list as $question_object )
+        {
+          $db_question = lib::create( 'database\question' );
+          $db_question->page_id = $db_page->id;
+          $db_question->rank = $question_object->rank;
+          $db_question->name = $question_object->name;
+          $db_question->type = $question_object->type;
+          $db_question->mandatory = $question_object->mandatory;
+          $db_question->dkna_refuse = $question_object->dkna_refuse;
+          $db_question->minimum = $question_object->minimum;
+          $db_question->maximum = $question_object->maximum;
+          $db_question->default_answer = $question_object->default_answer;
+          $db_question->precondition = $question_object->precondition;
+          $db_question->note = $question_object->note;
+          $db_question->save();
+
+          foreach( $question_object->question_description_list as $question_description )
+          {
+            $db_language = $language_class_name::get_unique_record( 'code', $question_description->language );
+            $db_question_description = $db_question->get_description( $question_description->type, $db_language );
+            $db_question_description->value = $question_description->value;
+            $db_question_description->save();
+          }
+
+          foreach( $question_object->question_option_list as $question_option_object )
+          {
+            $db_question_option = lib::create( 'database\question_option' );
+            $db_question_option->question_id = $db_question->id;
+            $db_question_option->rank = $question_option_object->rank;
+            $db_question_option->name = $question_option_object->name;
+            $db_question_option->exclusive = $question_option_object->exclusive;
+            $db_question_option->extra = $question_option_object->extra;
+            $db_question_option->multiple_answers = $question_option_object->multiple_answers;
+            $db_question_option->minimum = $question_option_object->minimum;
+            $db_question_option->maximum = $question_option_object->maximum;
+            $db_question_option->precondition = $question_option_object->precondition;
+            $db_question_option->save();
+
+            foreach( $question_option_object->question_option_description_list as $question_option_description )
+            {
+              $db_language = $language_class_name::get_unique_record( 'code', $question_option_description->language );
+              $db_question_option_description =
+                $db_question_option->get_description( $question_option_description->type, $db_language );
+              $db_question_option_description->value = $question_option_description->value;
+              $db_question_option_description->save();
+            }
+          }
+        }
+      }
+    }
+
+    if( $qnaire_object->readonly )
+    {
+      $db_qnaire->readonly = $qnaire_object->readonly;
+      $db_qnaire->save();
+    }
+
+    return $db_qnaire->id;
   }
 }
