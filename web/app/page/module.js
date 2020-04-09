@@ -41,6 +41,7 @@ define( function() {
   // used by services below to convert a list of descriptions into an object
   function parseDescriptions( descriptionList ) {
     var code = null;
+    if( !angular.isString( descriptionList ) ) descriptionList = '';
     return descriptionList.split( '`' ).reduce( function( list, part ) {
       if( null == code ) {
         code = part;
