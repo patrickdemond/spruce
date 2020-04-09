@@ -148,10 +148,12 @@ class response extends \cenozo\database\has_rank
           array( $this->id, $db_question->id )
         );
 
-        if( !$db_answer->is_complete() )
+        if( is_null( $db_answer ) || !$db_answer->is_complete() )
         {
           log::warning( sprintf(
-            'Tried to advance response for %s to the next page but question, "%s", on the current page, "%s", is incomplete.',
+            'Tried to advance response for %s to the next page for question "%s", on the current page "%s", '.(
+              is_null( $db_answer ) ? 'but the answer doesn\'t exist.' : 'but the answer is incomplete.'
+            ),
             $this->get_participant()->uid,
             $db_question->name,
             $db_page->name
