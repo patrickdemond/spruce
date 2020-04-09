@@ -667,7 +667,14 @@ cenozo.service( 'CnTranslationHelper', [
           begin: { en: 'Begin', fr: 'Commencer' },
           next: { en: 'Next', fr: 'Suivant' },
           previous: { en: 'Previous', fr: 'Précédent' },
-          submit: { en: 'Submit', fr: 'Envoyer' }
+          submit: { en: 'Submit', fr: 'Envoyer' },
+          minimumTitle: { en: 'Value is too small', fr: 'La valeur est trop petite' },
+          maximumTitle: { en: 'Value is too large', fr: 'La valeur est trop grande' },
+          limitMessage: { en: 'Please provide an answer that is', fr: 'Veuillez fournir une réponse' },
+          equalOrGreater: { en: 'equal to or greater than', fr: 'égale ou supérieure à' },
+          equalOrLess: { en: 'equal to or less than', fr: 'égale ou inférieure à' },
+          between: { en: 'between', fr: 'comprise entre' },
+          and: { en: 'and', fr: 'et' },
         }
       }
     };

@@ -98,8 +98,8 @@ define( function() {
 
   /* ######################################################################################################## */
   cenozo.providers.directive( 'cnPageRender', [
-    'CnPageModelFactory', 'CnTranslationHelper', 'CnSession', 'CnHttpFactory', '$q', '$state', '$document',
-    function( CnPageModelFactory, CnTranslationHelper, CnSession, CnHttpFactory, $q, $state, $document ) {
+    'CnPageModelFactory', 'CnSession', 'CnHttpFactory', '$q', '$state', '$document',
+    function( CnPageModelFactory, CnSession, CnHttpFactory, $q, $state, $document ) {
       return {
         templateUrl: module.getFileUrl( 'render.tpl.html' ),
         restrict: 'E',
@@ -144,9 +144,7 @@ define( function() {
 
           if( angular.isUndefined( $scope.progress ) ) $scope.progress = 0;
 
-          $scope.text = function( address, language ) {
-            return CnTranslationHelper.translate( address, $scope.model.renderModel.currentLanguage );
-          };
+          $scope.text = function( address, language ) { return $scope.model.renderModel.text( address ); };
 
           function render() {
             var promiseList = [];
@@ -232,8 +230,8 @@ define( function() {
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnPageRenderFactory', [
-    'CnHttpFactory', 'CnModalMessageFactory', 'CnModalDatetimeFactory', '$q', '$state', '$timeout',
-    function( CnHttpFactory, CnModalMessageFactory, CnModalDatetimeFactory, $q, $state, $timeout ) {
+    'CnHttpFactory', 'CnTranslationHelper', 'CnModalMessageFactory', 'CnModalDatetimeFactory', '$q', '$state', '$timeout',
+    function( CnHttpFactory, CnTranslationHelper, CnModalMessageFactory, CnModalDatetimeFactory, $q, $state, $timeout ) {
       var object = function( parentModel ) {
         var self = this;
 
@@ -655,11 +653,11 @@ define( function() {
               // When the number is out of bounds then alert the user
               function() {
                 return CnModalMessageFactory.instance( {
-                  title: 'Value is too ' + ( tooSmall ? 'small' : 'large' ),
-                  message: 'Please provide an answer that is ' + (
-                    null == maximum ? 'equal to or greater than ' + minimum + '.' :
-                    null == minimum ? 'equal to or less than ' + maximum :
-                    'between ' + minimum + ' and ' + maximum + '.'
+                  title: self.text( tooSmall ? 'misc.minimumTitle' : 'misc.maximumTitle' ),
+                  message: self.text( 'misc.limitMessage' ) + ' ' + (
+                    null == maximum ? self.text( 'misc.equalOrGreater' ) + ' ' + minimum + '.' :
+                    null == minimum ? self.text( 'misc.equalOrLess' ) + ' ' + maximum + '.' :
+                    [self.text( 'misc.between' ), minimum, self.text( 'misc.and' ), maximum + '.'].join( ' ' )
                   )
                 } ).show().then( function() {
                   question.value = angular.copy( question.backupValue );
@@ -811,11 +809,11 @@ define( function() {
             if( tooSmall || tooLarge ) {
               this.runQuery( function() {
                 return CnModalMessageFactory.instance( {
-                  title: 'Value is too ' + ( tooSmall ? 'small' : 'large' ),
-                  message: 'Please provide an answer that is ' + (
-                    null == maximum ? 'equal to or greater than ' + minimum + '.' :
-                    null == minimum ? 'equal to or less than ' + maximum :
-                    'between ' + minimum + ' and ' + maximum + '.'
+                  title: self.text( tooSmall ? 'misc.minimumTitle' : 'misc.maximumTitle' ),
+                  message: self.text( 'misc.limitMessage' ) + ' ' + (
+                    null == maximum ? self.text( 'misc.equalOrGreater' ) + ' ' + minimum + '.' :
+                    null == minimum ? self.text( 'misc.equalOrLess' ) + ' ' + maximum + '.' :
+                    [self.text( 'misc.between' ), minimum, self.text( 'misc.and' ), maximum + '.'].join( ' ' )
                   )
                 } ).show().then( function() {
                   // put the old value back
@@ -915,6 +913,10 @@ define( function() {
                 self.parentModel.reloadState( true );
               } );
             } );
+          },
+
+          text: function( address ) {
+            return CnTranslationHelper.translate( address, this.currentLanguage );
           }
         } );
       }
