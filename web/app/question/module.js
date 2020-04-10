@@ -10,7 +10,31 @@ define( function() {
     column: 'page.id'
   };
 
-  module.columnList.type = { title: 'Type' };
+  // The column list is different when looking at a qnaire's list of questions
+  angular.extend( module.columnList, {
+    module_name: {
+      column: 'module.name',
+      title: 'Module',
+      isIncluded: function( $state, model ) { return 'qnaire' == model.getSubjectFromState(); }
+    },
+    page_name: {
+      column: 'page.name',
+      title: 'Page',
+      isIncluded: function( $state, model ) { return 'qnaire' == model.getSubjectFromState(); }
+    },
+    question_name: {
+      column: 'question.name',
+      title: 'Question',
+      isIncluded: function( $state, model ) { return 'qnaire' == model.getSubjectFromState(); }
+    },
+    type: { title: 'Type' }
+  } );
+
+  module.columnList.rank.isIncluded = function( $state, model ) { return 'qnaire' != model.getSubjectFromState(); };
+  module.columnList.name.isIncluded = function( $state, model ) { return 'qnaire' != model.getSubjectFromState(); };
+  module.columnList.question_option_count.isIncluded = function( $state, model ) { return 'qnaire' != model.getSubjectFromState(); };
+  module.columnList.precondition.isIncluded = function( $state, model ) { return 'qnaire' != model.getSubjectFromState(); };
+
   module.addInput( '', 'type', { title: 'Type', type: 'enum' } );
   module.addInput( '', 'minimum', {
     title: 'Minimum',
@@ -58,6 +82,21 @@ define( function() {
           } );
         }
       };
+    }
+  ] );
+
+  // extend the model factory
+  cenozo.providers.decorator( 'CnQuestionListFactory', [
+    '$delegate',
+    function( $delegate ) {
+      var instance = $delegate.instance;
+      $delegate.instance = function( parentModel ) {
+        // if we are looking at the list of questions in a qnaire then we must change the default column order
+        var object = instance( parentModel );
+        if( 'qnaire' == parentModel.getSubjectFromState() ) object.order.column = 'module.rank';
+        return object;
+      };
+      return $delegate;
     }
   ] );
 } );
