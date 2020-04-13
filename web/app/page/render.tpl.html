@@ -4,7 +4,7 @@
     <h4>
       {{ isComplete ? data.title : 'Loading...' }}
       <div class="pull-right" style="margin-top: -7px;">
-        <select class="form-control"
+        <select class="form-control larger"
                 ng-model="model.renderModel.currentLanguage"
                 ng-change="model.renderModel.setLanguage()"
                 ng-options="lang.code as lang.name for lang in languageList">
@@ -27,7 +27,7 @@
                 ng-if="!data.submitted"
                 ng-disabled="!isComplete"
                 ng-click="model.renderModel.proceed()"
-                class="btn btn-success"
+                class="btn btn-success larger"
                 style="width: 12em;">
           {{ text( 'misc.begin' ) }}
         </button>
@@ -35,7 +35,7 @@
     </div>
     <div ng-if="data.page_id">
       <div class="progress no-rounding">
-        <div class="progress-bar"
+        <div class="progress-bar larger"
              role="progressbar"
              style="width: {{ progress }}%; -webkit-transition: none; transition: none;"
              aria-valuenow="{{ progress }}"
@@ -45,7 +45,7 @@
       <form name="form" novalidate>
         <div class="spacer">
           <div class="container-fluid vertical-spacer">
-            <span class="text-info vertical-spacer"
+            <span class="text-info vertical-spacer larger"
                   ng-bind-html="model.viewModel.record.module_prompts[model.renderModel.currentLanguage] | cnNewlines"
                   uib-tooltip-html="model.viewModel.record.module_popups[model.renderModel.currentLanguage] | cnNewlines"></span>
             <span class="text-info vertical-spacer larger"
@@ -166,7 +166,7 @@
                         class="form-control rounded-bottom-left rounded-bottom-right larger"></textarea>
                     </div>
                     <button type="button"
-                            class="btn btn-danger col-slim col-xs-1"
+                            class="btn btn-danger col-slim col-xs-1 larger"
                             ng-if="option.multiple_answers"
                             ng-click="model.renderModel.removeAnswerValue( question, option, $index )">
                       <i class="glyphicon glyphicon-remove"></i>
@@ -240,14 +240,14 @@
                     ng-if="'page' == model.getSubjectFromState()"
                     ng-disabled="null == model.viewModel.record.previous_id"
                     ng-click="model.renderModel.renderPreviousPage()"
-                    class="btn btn-info">
+                    class="btn btn-info larger">
               <i class="glyphicon glyphicon-chevron-left"></i>
             </button>
             <button type="button"
                     ng-if="'page' == model.getSubjectFromState()"
                     ng-disabled="null == model.viewModel.record.next_id"
                     ng-click="model.renderModel.renderNextPage()"
-                    class="btn btn-info">
+                    class="btn btn-info larger">
               <i class="glyphicon glyphicon-chevron-right"></i>
             </button>
             <button type="button"
@@ -255,7 +255,7 @@
                     ng-show="null != model.viewModel.record.previous_id"
                     ng-disabled="!isComplete"
                     ng-click="model.renderModel.backup()"
-                    class="btn btn-default"
+                    class="btn btn-default larger"
                     style="width: 12em;">
               <i class="glyphicon glyphicon-chevron-left"></i>
               {{ text( 'misc.previous' ) }}
@@ -265,14 +265,14 @@
             <button type="button"
                     ng-if="'page' == model.getSubjectFromState()"
                     ng-click="model.renderModel.viewPage()"
-                    class="btn btn-default">
+                    class="btn btn-default larger">
               View Page
             </button>
             <button type="button"
                     ng-if="'respondent' == model.getSubjectFromState()"
                     ng-disabled="!isComplete"
                     ng-click="model.renderModel.proceed()"
-                    class="btn"
+                    class="btn larger"
                     ng-class="null != model.viewModel.record.next_id ? 'btn-default' : 'btn-success'"
                     style="width: 12em;">
               {{ text( null != model.viewModel.record.next_id ? 'misc.next' : 'misc.submit' ) }}
