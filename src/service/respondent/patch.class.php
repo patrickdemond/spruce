@@ -31,9 +31,18 @@ class patch extends \cenozo\service\patch
         $db_language = $language_class_name::get_unique_record( 'code', $this->get_argument( 'code' ) );
         $db_response->set_language( $db_language );
       }
+      else if( 'force_submit' == $action )
+      {
+        $db_response->page_id = NULL;
+        $db_response->submitted = true;
+      }
 
-      // update the last datetime anytime the response is changed
-      $db_response->last_datetime = util::get_datetime_object();
+      if( 'force_submit' != $action )
+      {
+        // update the last datetime anytime the response is changed (but only if we're not force submitting)
+        $db_response->last_datetime = util::get_datetime_object();
+      }
+
       $db_response->save();
     }
   }
