@@ -60,6 +60,18 @@ define( [ 'page' ].reduce( function( list, name ) {
     }
   } );
 
+  module.addExtraOperation( 'view', {
+    title: 'Re-schedule Email',
+    operation: function( $state, model ) {
+      model.viewModel.resendMail().finally( function() {
+        if( angular.isDefined( model.viewModel.respondentMailModel ) )
+          model.viewModel.respondentMailModel.listModel.onList( true );
+      } );
+    },
+    help: 'This will re-schedule all mail for this respondent. ' + 
+      'This is useful if mail was never sent or if email settings have changed since email was last scheduled.'
+  } );
+
   /* ######################################################################################################## */
   cenozo.providers.directive( 'cnRespondentAdd', [
     'CnRespondentModelFactory',
@@ -145,9 +157,18 @@ define( [ 'page' ].reduce( function( list, name ) {
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnRespondentViewFactory', [
-    'CnBaseViewFactory',
-    function( CnBaseViewFactory ) {
-      var object = function( parentModel, root ) { CnBaseViewFactory.construct( this, parentModel, root ); }
+    'CnBaseViewFactory', 'CnHttpFactory',
+    function( CnBaseViewFactory, CnHttpFactory ) {
+      var object = function( parentModel, root ) {
+        var self = this;
+        CnBaseViewFactory.construct( this, parentModel, root );
+
+        this.resendMail = function() {
+          return CnHttpFactory.instance( {
+            path: this.parentModel.getServiceResourcePath() + '?action=resend_mail'
+          } ).patch();
+        };
+      }
       return { instance: function( parentModel, root ) { return new object( parentModel, root ); } };
     }
   ] );

@@ -30,61 +30,7 @@ class respondent extends \cenozo\database\record
     parent::save();
 
     // schedule invitation and reminder emails if the qnaire requires it
-    if( $new && $this->send_mail )
-    {
-      $db_qnaire = $this->get_qnaire();
-      $number_of_iterations = $db_qnaire->repeated ? $db_qnaire->max_responses : 1;
-      if( 0 == $number_of_iterations ) $number_of_iterations = 1; // infinitely repeated qnaires only get one invitation
-
-      if( $db_qnaire->email_invitation )
-      {
-        // create an invitation for all iterations of the questionnaire;
-        for( $rank = 1; $rank <= $number_of_iterations; $rank++ )
-        {
-          $datetime = util::get_datetime_object();
-
-          if( 1 < $rank )
-          { // add repeated span for iterations beyond the first
-            $datetime->add( new \DateInterval( sprintf(
-              'P%s%d%s',
-              'hour' == $db_qnaire->repeated ? 'T' : '',
-              $db_qnaire->repeat_offset * ( $rank - 1 ),
-              strtoupper( substr( $db_qnaire->repeated, 0, 1 ) )
-            ) ) );
-          }
-
-          $this->add_mail( 'invitation', $rank, $datetime );
-        }
-      }
-
-      if( $db_qnaire->email_reminder )
-      {
-        // create a reminder for all iterations of the questionnaire;
-        for( $rank = 1; $rank <= $number_of_iterations; $rank++ )
-        {
-          $datetime = util::get_datetime_object();
-
-          $datetime->add( new \DateInterval( sprintf(
-            'P%s%d%s',
-            'hour' == $db_qnaire->email_reminder ? 'T' : '',
-            $db_qnaire->email_reminder_offset,
-            strtoupper( substr( $db_qnaire->email_reminder, 0, 1 ) )
-          ) ) );
-
-          if( 1 < $rank )
-          { // add repeated span for iterations beyond the first
-            $datetime->add( new \DateInterval( sprintf(
-              'P%s%d%s',
-              'hour' == $db_qnaire->repeated ? 'T' : '',
-              $db_qnaire->repeat_offset * ( $rank - 1 ),
-              strtoupper( substr( $db_qnaire->repeated, 0, 1 ) )
-            ) ) );
-          }
-
-          $this->add_mail( 'reminder', $rank, $datetime );
-        }
-      }
-    }
+    if( $new && $this->send_mail ) $this->send_all_mail();
   }
 
   /**
@@ -178,7 +124,74 @@ class respondent extends \cenozo\database\record
   /**
    * TODO: document
    */
-  public function add_mail( $type, $rank, $datetime = NULL )
+  public function send_all_mail()
+  {
+    $db_qnaire = $this->get_qnaire();
+    $number_of_iterations = $db_qnaire->repeated ? $db_qnaire->max_responses : 1;
+    if( 0 == $number_of_iterations ) $number_of_iterations = 1; // infinitely repeated qnaires only get one invitation
+
+    if( $db_qnaire->email_invitation )
+    {
+      // create an invitation for all iterations of the questionnaire;
+      for( $rank = 1; $rank <= $number_of_iterations; $rank++ )
+      {
+        $datetime = util::get_datetime_object();
+
+        if( 1 < $rank )
+        { // add repeated span for iterations beyond the first
+          $datetime->add( new \DateInterval( sprintf(
+            'P%s%d%s',
+            'hour' == $db_qnaire->repeated ? 'T' : '',
+            $db_qnaire->repeat_offset * ( $rank - 1 ),
+            strtoupper( substr( $db_qnaire->repeated, 0, 1 ) )
+          ) ) );
+        }
+
+        $this->add_mail( 'invitation', $rank, $datetime );
+      }
+    }
+
+    if( $db_qnaire->email_reminder )
+    {
+      // create a reminder for all iterations of the questionnaire;
+      for( $rank = 1; $rank <= $number_of_iterations; $rank++ )
+      {
+        $datetime = util::get_datetime_object();
+
+        $datetime->add( new \DateInterval( sprintf(
+          'P%s%d%s',
+          'hour' == $db_qnaire->email_reminder ? 'T' : '',
+          $db_qnaire->email_reminder_offset,
+          strtoupper( substr( $db_qnaire->email_reminder, 0, 1 ) )
+        ) ) );
+
+        if( 1 < $rank )
+        { // add repeated span for iterations beyond the first
+          $datetime->add( new \DateInterval( sprintf(
+            'P%s%d%s',
+            'hour' == $db_qnaire->repeated ? 'T' : '',
+            $db_qnaire->repeat_offset * ( $rank - 1 ),
+            strtoupper( substr( $db_qnaire->repeated, 0, 1 ) )
+          ) ) );
+        }
+
+        $this->add_mail( 'reminder', $rank, $datetime );
+      }
+    }
+  }
+
+  /**
+   * TODO: document
+   */
+  public function get_url()
+  {
+    return sprintf( 'https://%s%s/respondent/run/%s', $_SERVER['HTTP_HOST'], str_replace( '/api', '', ROOT_URL ), $this->token );
+  }
+
+  /**
+   * TODO: document
+   */
+  private function add_mail( $type, $rank, $datetime = NULL )
   {
     $respondent_mail_class_name = lib::get_class_name( 'database\respondent_mail' );
 
@@ -228,14 +241,6 @@ class respondent extends \cenozo\database\record
         }
       }
     }
-  }
-
-  /**
-   * TODO: document
-   */
-  public function get_url()
-  {
-    return sprintf( 'https://%s%s/respondent/run/%s', $_SERVER['HTTP_HOST'], str_replace( '/api', '', ROOT_URL ), $this->token );
   }
 
   /**
