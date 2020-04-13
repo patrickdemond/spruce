@@ -30,7 +30,7 @@ class respondent extends \cenozo\database\record
     parent::save();
 
     // schedule invitation and reminder emails if the qnaire requires it
-    if( $new )
+    if( $new && $this->send_mail )
     {
       $db_qnaire = $this->get_qnaire();
       $number_of_iterations = $db_qnaire->repeated ? $db_qnaire->max_responses : 1;
@@ -264,4 +264,17 @@ class respondent extends \cenozo\database\record
     // if we get here then something is wrong
     if( !$created ) throw lib::create( 'exception\runtime', 'Unable to create unique respondent token.', __METHOD__ );
   }
+
+  /**
+   * TODO: document
+   */
+  public function do_not_send_mail()
+  {
+    $this->send_mail = false;
+  }
+
+  /**
+   * TODO: document
+   */
+  private $send_mail = true;
 }
