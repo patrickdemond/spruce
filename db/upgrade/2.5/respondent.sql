@@ -29,6 +29,7 @@ CREATE PROCEDURE patch_respondent()
         "INDEX fk_introduction_mail_id (invitation_mail_id ASC), ",
         "INDEX fk_reminder_mail_id (reminder_mail_id ASC), ",
         "UNIQUE INDEX uq_token (token ASC), ",
+        "UNIQUE INDEX uq_qnaire_id_participant_id (qnaire_id ASC, participant_id ASC), ",
         "CONSTRAINT fk_respondent_qnaire_id ",
           "FOREIGN KEY (qnaire_id) ",
           "REFERENCES qnaire (id) ",
