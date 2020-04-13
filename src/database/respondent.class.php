@@ -235,7 +235,7 @@ class respondent extends \cenozo\database\record
    */
   public function get_url()
   {
-    return sprintf( '%s/respondent/run/%s', ROOT_URL, $this->token );
+    return sprintf( 'https://%s%s/respondent/run/%s', $_SERVER['HTTP_HOST'], str_replace( '/api', '', ROOT_URL ), $this->token );
   }
 
   /**
