@@ -253,11 +253,11 @@ class qnaire extends \cenozo\database\record
   /**
    * TODO: document
    */
-  public function generate_export( $qnaire_name = NULL )
+  public function generate( $type = 'export' )
   {
-    $export = array(
+    $qnaire_data = array(
       'base_language' => $this->get_base_language()->code,
-      'name' => is_null( $qnaire_name ) ? $this->name : $qnaire_name,
+      'name' => $this->name,
       'debug' => $this->debug,
       'readonly' => $this->readonly,
       'repeated' => $this->repeated,
@@ -278,13 +278,13 @@ class qnaire extends \cenozo\database\record
 
     $language_sel = lib::create( 'database\select' );
     $language_sel->add_column( 'code' );
-    foreach( $this->get_language_list( $language_sel ) as $item ) $export['language_list'][] = $item['code'];
+    foreach( $this->get_language_list( $language_sel ) as $item ) $qnaire_data['language_list'][] = $item['code'];
 
     $attribute_sel = lib::create( 'database\select' );
     $attribute_sel->add_column( 'name' );
     $attribute_sel->add_column( 'code' );
     $attribute_sel->add_column( 'note' );
-    foreach( $this->get_attribute_list( $attribute_sel ) as $item ) $export['attribute_list'][] = $item;
+    foreach( $this->get_attribute_list( $attribute_sel ) as $item ) $qnaire_data['attribute_list'][] = $item;
 
     $qnaire_description_sel = lib::create( 'database\select' );
     $qnaire_description_sel->add_table_column( 'language', 'code', 'language' );
@@ -292,8 +292,10 @@ class qnaire extends \cenozo\database\record
     $qnaire_description_sel->add_column( 'value' );
     $qnaire_description_mod = lib::create( 'database\modifier' );
     $qnaire_description_mod->join( 'language', 'qnaire_description.language_id', 'language.id' );
+    $qnaire_description_mod->order( 'type' );
+    $qnaire_description_mod->order( 'language.code' );
     foreach( $this->get_qnaire_description_list( $qnaire_description_sel, $qnaire_description_mod ) as $item )
-      $export['qnaire_description_list'][] = $item;
+      $qnaire_data['qnaire_description_list'][] = $item;
 
     $module_mod = lib::create( 'database\modifier' );
     $module_mod->order( 'rank' );
@@ -314,6 +316,8 @@ class qnaire extends \cenozo\database\record
       $module_description_sel->add_column( 'value' );
       $module_description_mod = lib::create( 'database\modifier' );
       $module_description_mod->join( 'language', 'module_description.language_id', 'language.id' );
+      $module_description_mod->order( 'type' );
+      $module_description_mod->order( 'language.code' );
       foreach( $db_module->get_module_description_list( $module_description_sel, $module_description_mod ) as $item )
         $module['module_description_list'][] = $item;
 
@@ -337,6 +341,8 @@ class qnaire extends \cenozo\database\record
         $page_description_sel->add_column( 'value' );
         $page_description_mod = lib::create( 'database\modifier' );
         $page_description_mod->join( 'language', 'page_description.language_id', 'language.id' );
+        $page_description_mod->order( 'type' );
+        $page_description_mod->order( 'language.code' );
         foreach( $db_page->get_page_description_list( $page_description_sel, $page_description_mod ) as $item )
           $page['page_description_list'][] = $item;
 
@@ -365,6 +371,8 @@ class qnaire extends \cenozo\database\record
           $question_description_sel->add_column( 'value' );
           $question_description_mod = lib::create( 'database\modifier' );
           $question_description_mod->join( 'language', 'question_description.language_id', 'language.id' );
+          $question_description_mod->order( 'type' );
+          $question_description_mod->order( 'language.code' );
           foreach( $db_question->get_question_description_list( $question_description_sel, $question_description_mod ) as $item )
             $question['question_description_list'][] = $item;
 
@@ -391,6 +399,8 @@ class qnaire extends \cenozo\database\record
             $qod_sel->add_column( 'value' );
             $qod_mod = lib::create( 'database\modifier' );
             $qod_mod->join( 'language', 'question_option_description.language_id', 'language.id' );
+            $qod_mod->order( 'type' );
+            $qod_mod->order( 'language.code' );
             foreach( $db_question_option->get_question_option_description_list( $qod_sel, $qod_mod ) as $item )
               $question_option['question_option_description_list'][] = $item;
 
@@ -403,15 +413,152 @@ class qnaire extends \cenozo\database\record
         $module['page_list'][] = $page;
       }
 
-      $export['module_list'][] = $module;
+      $qnaire_data['module_list'][] = $module;
     }
 
-    $filename = sprintf( '%s/%s.json', QNAIRE_EXPORT_PATH, $this->id );
-    if( false === file_put_contents( $filename, util::json_encode( $export, JSON_PRETTY_PRINT ), LOCK_EX ) )
+    if( 'export' == $type )
+    {
+      $filename = sprintf( '%s/%s.json', QNAIRE_EXPORT_PATH, $this->id );
+      $contents = util::json_encode( $qnaire_data, JSON_PRETTY_PRINT );
+    }
+    else // print
+    {
+      $filename = sprintf( '%s/%s.txt', QNAIRE_PRINT_PATH, $this->id );
+      $contents = sprintf( "%s\n", $qnaire_data['name'] )
+                . sprintf( "====================================================================================\n\n" );
+      if( $qnaire_data['description'] )$contents .= sprintf( "%s\n\n", $qnaire_data['description'] );
+
+      $description = array( 'introduction' => array(), 'conclusion' => array() );
+      foreach( $qnaire_data['qnaire_description_list'] as $d )
+        if( in_array( $d['type'], ['introduction', 'conclusion'] ) ) $description[$d['type']][$d['language']] = $d['value'];
+
+      $contents .= sprintf( "INTRODUCTION\n" )
+                 . sprintf( "====================================================================================\n\n" );
+      foreach( $description['introduction'] as $language => $value ) $contents .= sprintf( "[%s] %s\n\n", $language, $value );
+
+      $contents .= sprintf( "CONCLUSION\n" )
+                 . sprintf( "====================================================================================\n\n" );
+      foreach( $description['conclusion'] as $language => $value ) $contents .= sprintf( "[%s] %s\n\n", $language, $value );
+
+      foreach( $qnaire_data['module_list'] as $module )
+      {
+        $contents .= sprintf(
+          "%d) MODULE %s%s\n",
+          $module['rank'],
+          $module['name'],
+          is_null( $module['precondition'] ) ? '' : sprintf( ' (precondition: %s)', $module['precondition'] )
+        ) . sprintf( "====================================================================================\n\n" );
+
+        $description = array( 'prompt' => array(), 'popup' => array() );
+        foreach( $module['module_description_list'] as $d ) $description[$d['type']][$d['language']] = $d['value'];
+
+        foreach( $description['prompt'] as $language => $value )
+        {
+          $contents .= sprintf(
+            "[%s] %s%s\n",
+            $language,
+            $value,
+            is_null( $description['popup'][$language] ) ? '' : sprintf( "\n\nPOPUP: %s", $description['popup'][$language] )
+          );
+        }
+        $contents .= "\n";
+
+        foreach( $module['page_list'] as $page )
+        {
+          $contents .= sprintf(
+            "%d.%d) PAGE %s%s\n",
+            $module['rank'],
+            $page['rank'],
+            $page['name'],
+            is_null( $page['precondition'] ) ? '' : sprintf( ' (precondition: %s)', $page['precondition'] )
+          ) . sprintf( "====================================================================================\n\n" );
+
+          $description = array( 'prompt' => array(), 'popup' => array() );
+          foreach( $page['page_description_list'] as $d ) $description[$d['type']][$d['language']] = $d['value'];
+
+          foreach( $description['prompt'] as $language => $value )
+          {
+            $contents .= sprintf(
+              "[%s] %s%s\n",
+              $language,
+              $value,
+              is_null( $description['popup'][$language] ) ? '' : sprintf( "\n\nPOPUP: %s", $description['popup'][$language] )
+            );
+          }
+          $contents .= "\n";
+
+          foreach( $page['question_list'] as $question )
+          {
+            if( !is_null( $question['precondition'] ) ) log::debug( sprintf(
+              "%d.%d.%d) QUESTION %s%s\n",
+              $module['rank'],
+              $page['rank'],
+              $question['rank'],
+              $question['name'],
+              is_null( $question['precondition'] ) ? '' : sprintf( ' (precondition: %s)', $question['precondition'] )
+            ) );
+
+            $contents .= sprintf(
+              "%d.%d.%d) QUESTION %s%s\n",
+              $module['rank'],
+              $page['rank'],
+              $question['rank'],
+              $question['name'],
+              is_null( $question['precondition'] ) ? '' : sprintf( ' (precondition: %s)', $question['precondition'] )
+            ) . sprintf( "====================================================================================\n\n" );
+
+            $description = array( 'prompt' => array(), 'popup' => array() );
+            foreach( $question['question_description_list'] as $d ) $description[$d['type']][$d['language']] = $d['value'];
+
+            foreach( $description['prompt'] as $language => $value )
+            {
+              $contents .= sprintf(
+                "[%s] %s%s\n",
+                $language,
+                $value,
+                is_null( $description['popup'][$language] ) ? '' : sprintf( "\n\nPOPUP: %s", $description['popup'][$language] )
+              );
+            }
+            $contents .= "\n";
+
+            if( 0 < count( $question['question_option_list'] ) )
+            {
+              foreach( $question['question_option_list'] as $question_option )
+              {
+                $contents .= sprintf(
+                  "OPTION #%d, %s%s:\n",
+                  $question_option['rank'],
+                  $question_option['name'],
+                  is_null( $question_option['precondition'] ? '' : sprintf( ' (precondition: %s)', $question_option['precondition'] ) )
+                );
+
+                $description = array( 'prompt' => array(), 'popup' => array() );
+                foreach( $question_option['question_option_description_list'] as $d )
+                  $description[$d['type']][$d['language']] = $d['value'];
+
+                foreach( $description['prompt'] as $language => $value )
+                {
+                  $contents .= sprintf(
+                    "[%s] %s%s\n",
+                    $language,
+                    $value,
+                    is_null( $description['popup'][$language] ) ? '' : sprintf( "\n\nPOPUP: %s", $description['popup'][$language] )
+                  );
+                }
+                $contents .= "\n";
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if( false === file_put_contents( $filename, $contents, LOCK_EX ) )
     {
       throw lib::create( 'exception\runtime',
         sprintf(
-          'Failed to generate qnaire export json file "%s" for qnaire %s',
+          'Failed to generate qnaire %s file "%s" for qnaire %s',
+          $type,
           $filename,
           $this->name
         ),

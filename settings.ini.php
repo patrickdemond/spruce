@@ -13,7 +13,7 @@ global $SETTINGS;
 $SETTINGS['general']['application_name'] = 'pine';
 $SETTINGS['general']['instance_name'] = $SETTINGS['general']['application_name'];
 $SETTINGS['general']['version'] = '2.5';
-$SETTINGS['general']['build'] = '789d437';
+$SETTINGS['general']['build'] = '6a1dd25';
 
 // the default maximum number of seconds that a page should take to complete
 $SETTINGS['general']['default_page_max_time'] = 60;
@@ -26,3 +26,6 @@ $SETTINGS['utility']['qnaire_username'] = 'pine';
 
 // the location of qnaire export files
 $SETTINGS['path']['QNAIRE_EXPORT'] = str_replace( 'settings.ini.php', 'doc/qnaire_export', __FILE__ );
+
+// the location of qnaire export files
+$SETTINGS['path']['QNAIRE_PRINT'] = str_replace( 'settings.ini.php', 'doc/qnaire_print', __FILE__ );

@@ -25,7 +25,8 @@ class get extends \cenozo\service\downloadable
    */
   protected function get_downloadable_public_name()
   {
-    return sprintf( '%s.json', $this->get_leaf_record()->name );
+    $output = $this->get_argument( 'output', NULL );
+    return sprintf( '%s.%s', $this->get_leaf_record()->name, 'export' == $output ? 'json' : 'txt' );
   }
 
   /**
@@ -33,7 +34,13 @@ class get extends \cenozo\service\downloadable
    */
   protected function get_downloadable_file_path()
   {
-    return sprintf( '%s/%s.json', QNAIRE_EXPORT_PATH, $this->get_leaf_record()->id );
+    $output = $this->get_argument( 'output', NULL );
+    return sprintf(
+      '%s/%s.%s',
+      'export' == $output ? QNAIRE_EXPORT_PATH : QNAIRE_PRINT_PATH,
+      $this->get_leaf_record()->id,
+      'export' == $output ? 'json' : 'txt'
+    );
   }
 
   /**
@@ -43,7 +50,7 @@ class get extends \cenozo\service\downloadable
   {
     parent::prepare();
 
-    $export = $this->get_argument( 'export', NULL );
-    if( !is_null( $export ) ) $this->get_leaf_record()->generate_export( $export );
+    $output = $this->get_argument( 'output', NULL );
+    if( !is_null( $output ) ) $this->get_leaf_record()->generate( $output );
   }
 }

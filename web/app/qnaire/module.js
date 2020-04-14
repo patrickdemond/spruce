@@ -164,7 +164,7 @@ define( function() {
   } );
 
   module.addExtraOperation( 'view', {
-    title: 'Clone',
+    title: 'Export',
     operation: function( $state, model ) {
       $state.go( 'qnaire.clone', { identifier: model.viewModel.record.getIdentifier() } );
     }
@@ -176,7 +176,6 @@ define( function() {
       $state.go( 'qnaire.mass_respondent', { identifier: model.viewModel.record.getIdentifier() } );
     }
   } );
-
 
   /* ######################################################################################################## */
   cenozo.providers.directive( 'cnQnaireAdd', [
@@ -279,7 +278,7 @@ define( function() {
               title: $scope.model.sourceName,
               go: function() { return $state.go( 'qnaire.view', { identifier: $scope.model.parentQnaireId } ); }
             }, {
-              title: 'copy/export'
+              title: 'export'
             } ] );
           } );
         }
@@ -400,7 +399,7 @@ define( function() {
               self.sourceName = response.data.name;
             } );
           },
-          isComplete: function() { return !this.working && !this.nameConflict && null != this.name; },
+          isComplete: function() { return !this.working && !this.nameConflict && ( null != this.name || 'clone' != this.operation ); },
           cancel: function() { $state.go( 'qnaire.view', { identifier: this.parentQnaireId } ); },
 
           save: function() {
@@ -416,8 +415,11 @@ define( function() {
             if( 'clone' == this.operation ) {
               httpObj.path = 'qnaire?clone=' + this.parentQnaireId;
               httpObj.data = { name: this.name };
-            } else {
-              httpObj.path = 'qnaire/' + this.parentQnaireId + '?export=' + this.name;
+            } else if( 'export' == this.operation ) {
+              httpObj.path = 'qnaire/' + this.parentQnaireId + '?output=export'
+              httpObj.format = 'txt';
+            } else if( 'print' == this.operation ) {
+              httpObj.path = 'qnaire/' + this.parentQnaireId + '?output=print'
               httpObj.format = 'txt';
             }
 
