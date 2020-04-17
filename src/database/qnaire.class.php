@@ -96,6 +96,7 @@ class qnaire extends \cenozo\database\record
     $modifier->join( 'page', 'module.id', 'page.module_id' );
     $modifier->join( 'question', 'page.id', 'question.page_id' );
     $modifier->where( 'question.name', '=', $name );
+    $modifier->where( 'qnaire.id', '=', $this->id );
 
     $question_id = static::db()->get_one( sprintf( '%s %s', $select->get_sql(), $modifier->get_sql() ) );
     return is_null( $question_id ) ? NULL : lib::create( 'database\question', $question_id );
