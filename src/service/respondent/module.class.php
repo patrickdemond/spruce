@@ -40,7 +40,8 @@ class module extends \cenozo\service\module
       }
     }
 
-    if( is_null( $this->get_resource() ) )
+    $db_respondent = $this->get_resource();
+    if( is_null( $db_respondent ) )
     {
       // add the total time spent
       $this->add_count_column( 'response_count', 'response', $select, $modifier );
@@ -53,6 +54,9 @@ class module extends \cenozo\service\module
         'formatted_participant_id',
         false
       );
+
+      if( $select->has_column( 'completed' ) )
+        $select->add_constant( $db_respondent->is_complete(), 'completed', 'boolean' );
 
       if( $select->has_column( 'introductions' ) )
       {
