@@ -42,7 +42,7 @@
              aria-valuemin="0"
              aria-valuemax="100">{{ progress }}%</div>
       </div>
-      <form name="form" novalidate>
+      <form name="form" novalidate><fieldset ng-disabled="model.renderModel.working">
         <div class="spacer">
           <div class="container-fluid vertical-spacer">
             <span class="text-info vertical-spacer larger"
@@ -280,7 +280,7 @@
             </button>
           </div>
         </div>
-      </form>
+      </fieldset></form>
     </div>
   </div>
 </div>

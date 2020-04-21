@@ -241,6 +241,7 @@ define( function() {
 
         angular.extend( this, {
           parentModel: parentModel,
+          working: false,
           activeAttributeList: [],
           questionList: [],
           optionListById: {},
@@ -668,6 +669,7 @@ define( function() {
 
               // No out of bounds detected, so proceed with setting the value
               function() {
+                self.working = true;
                 if( "" === value ) value = null;
                 var promise = 'respondent' == self.parentModel.getSubjectFromState() ?
                   // first communicate with the server (if we're working with a respondent)
@@ -710,7 +712,7 @@ define( function() {
                     }
                   }
                   */
-                } );
+                } ).finally( function() { self.working = false; } );
               }
             );
           },
