@@ -45,6 +45,7 @@ class post extends \cenozo\service\write
   protected function execute()
   {
     $participant_class_name = lib::get_class_name( 'database\participant' );
+    $db_qnaire = $this->get_parent_record();
     $file = $this->get_file_as_object();
 
     // This is a special service since participants cannot be added to the system through the web interface.
@@ -53,7 +54,10 @@ class post extends \cenozo\service\write
     $modifier->join( 'participant_last_hold', 'participant.id', 'participant_last_hold.participant_id' );
     $modifier->left_join( 'hold', 'participant_last_hold.hold_id', 'hold.id' );
     $modifier->left_join( 'hold_type', 'hold.hold_type_id', 'hold_type.id' );
-    $modifier->left_join( 'respondent', 'participant.id', 'respondent.participant_id' );
+    $join_mod = lib::create( 'database\modifier' );
+    $join_mod->where( 'participant.id', '=', 'respondent.participant_id', false );
+    $join_mod->where( 'respondent.qnaire_id', '=', $db_qnaire->id );
+    $modifier->join_modifier( 'respondent', $join_mod, 'left' );
     $modifier->where( 'respondent.id', '=', NULL );
     $modifier->where( 'IFNULL( hold_type.type, "" )', '!=', 'final' ); // no final holds
     $modifier->where( 'exclusion_id', '=', NULL ); // no exclusions
@@ -61,7 +65,7 @@ class post extends \cenozo\service\write
 
     if( 'release' == $file->mode )
     { // release the participants
-      if( 0 < count( $uid_list ) ) $this->get_parent_record()->mass_respondent( $uid_list );
+      if( 0 < count( $uid_list ) ) $db_qnaire->mass_respondent( $uid_list );
     }
     else // 'confirm' == $file->mode
     { // return a list of all valid uids
