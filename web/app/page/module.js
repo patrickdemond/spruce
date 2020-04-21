@@ -125,6 +125,8 @@ define( function() {
           $scope.isComplete = false;
           if( angular.isUndefined( $scope.model ) ) $scope.model = CnPageModelFactory.root;
 
+          /*
+          DISABLING THIS FOR NOW BECAUSE IT DOESN'T WORK WELL FOR END-USERS
           // bind keyup (first unbind to prevent duplicates)
           $document.unbind( 'keyup' );
           $document.bind( 'keyup', function( event ) {
@@ -134,13 +136,16 @@ define( function() {
               $scope.$apply();
             }
           } );
+          */
 
           // prevent numpad keys from entering into inputs and textareas
           $scope.validateKeydown = function( event ) {
+            /*
             if( isNumpadInput( event ) ) {
               event.returnValue = false;
               event.preventDefault();
             }
+            */
           };
 
           if( angular.isUndefined( $scope.progress ) ) $scope.progress = 0;
