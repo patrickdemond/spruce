@@ -26,13 +26,18 @@ class respondent extends \cenozo\business\report\base_report
     $select->add_column( 'cohort.name', 'Cohort', false );
     $select->add_column( 'language.name', 'Language', false );
     $select->add_column( 'participant.uid', 'UID', false );
-    $select->add_column( 'participant.honorific', 'Participant Honorific', false );
-    $select->add_column( 'participant.first_name', 'Participant First Name', false );
-    $select->add_column( 'participant.last_name', 'Participant Last Name', false );
-    $select->add_column( sprintf( 'CONCAT( "%s/respondent/run/", respondent.token )', ROOT_URL ), 'URL', false );
     $select->add_column( 'IF( response.submitted, "Yes", "No" )', 'Submitted', false );
-    $select->add_column( 'response.start_datetime', 'Start', false );
-    $select->add_column( 'response.last_datetime', 'Last', false );
+    $select->add_column( $this->get_datetime_column( 'response.start_datetime' ), 'Start', false );
+    $select->add_column( $this->get_datetime_column( 'response.last_datetime' ), 'Last', false );
+    $select->add_column(
+      sprintf(
+        'CONCAT( "https://%s%s/respondent/run/", respondent.token )',
+        $_SERVER['HTTP_HOST'],
+        str_replace( '/api', '', ROOT_URL )
+      ),
+      'URL',
+      false
+    );
 
     $modifier = lib::create( 'database\modifier' );
     $modifier->join( 'participant', 'respondent.participant_id', 'participant.id' );
