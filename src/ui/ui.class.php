@@ -136,7 +136,7 @@ class ui extends \cenozo\ui\ui
   }
 
   /**
-   * Extends the sparent method
+   * Extends the parent method
    */
   protected function build_listitem_list()
   {
@@ -144,5 +144,21 @@ class ui extends \cenozo\ui\ui
 
     $this->add_listitem( 'Questionnaires', 'qnaire' );
     $this->remove_listitem( 'Participants' );
+  }
+
+  /**
+   * Extends the parent method
+   */
+  protected function get_utility_items()
+  {
+    $list = parent::get_utility_items();
+    
+    // remove participant utilities
+    unset( $list['Participant Multiedit'] );
+    unset( $list['Participant Export'] );
+    unset( $list['Participant Search'] );
+    unset( $list['Tracing'] );
+
+    return $list;
   }
 }
