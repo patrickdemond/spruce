@@ -13,14 +13,14 @@ define( function() {
   module.addInput( '', 'average_time', { title: 'Average Time (seconds)', type: 'string', isConstant: true, isExcluded: 'add' } );
   module.addInput( '', 'max_time', { title: 'Max Time (seconds)', type: 'string', format: 'integer' } );
   module.addInput( '', 'note', { title: 'Note', type: 'text' } );
-  module.addInput( '', 'qnaire_id', { column: 'qnaire.id', isExcluded: true }, );
-  module.addInput( '', 'qnaire_name', { column: 'qnaire.name', isExcluded: true }, );
-  module.addInput( '', 'base_language', { column: 'base_language.code', isExcluded: true }, );
-  module.addInput( '', 'prompts', { isExcluded: true }, );
-  module.addInput( '', 'module_prompts', { isExcluded: true }, );
-  module.addInput( '', 'popups', { isExcluded: true }, );
-  module.addInput( '', 'module_popups', { isExcluded: true }, );
-  module.addInput( '', 'module_id', { isExcluded: true }, );
+  module.addInput( '', 'qnaire_id', { column: 'qnaire.id', isExcluded: true } );
+  module.addInput( '', 'qnaire_name', { column: 'qnaire.name', isExcluded: true } );
+  module.addInput( '', 'base_language', { column: 'base_language.code', isExcluded: true } );
+  module.addInput( '', 'prompts', { isExcluded: true } );
+  module.addInput( '', 'module_prompts', { isExcluded: true } );
+  module.addInput( '', 'popups', { isExcluded: true } );
+  module.addInput( '', 'module_popups', { isExcluded: true } );
+  module.addInput( '', 'module_id', { isExcluded: true } );
   module.addInput( '', 'parent_name', { column: 'module.name', isExcluded: true } );
   cenozo.insertPropertyAfter( module.columnList, 'question_count', 'average_time', {
     title: 'Average Time',
