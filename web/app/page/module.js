@@ -691,6 +691,13 @@ define( function() {
                                         : complete;
                   }
 
+                  /*
+                  NOTE: The "element.value = null" line below was causing answers in different questions on the same page to blank out.
+                  By removing the following code the problem goes away, but it isn't clear if removing this code will cause some other
+                  bug.  If the code needs to be re-added then make sure that when there are two questions on the same page, both which
+                  have the option to add a value to an option that clicking one of the options doesn't remove the answer to the already
+                  selected option's value in the other question.
+
                   if( 'respondent' == self.parentModel.getSubjectFromState() ) {
                     if( 'list' == question.type ) {
                       for( var element of document.getElementsByName( 'answerValue' ) ) {
@@ -702,6 +709,7 @@ define( function() {
                       }
                     }
                   }
+                  */
                 } );
               }
             );
