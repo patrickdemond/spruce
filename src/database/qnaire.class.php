@@ -490,15 +490,6 @@ class qnaire extends \cenozo\database\record
 
           foreach( $page['question_list'] as $question )
           {
-            if( !is_null( $question['precondition'] ) ) log::debug( sprintf(
-              "%d.%d.%d) QUESTION %s%s\n",
-              $module['rank'],
-              $page['rank'],
-              $question['rank'],
-              $question['name'],
-              is_null( $question['precondition'] ) ? '' : sprintf( ' (precondition: %s)', $question['precondition'] )
-            ) );
-
             $contents .= sprintf(
               "%d.%d.%d) QUESTION %s%s\n",
               $module['rank'],

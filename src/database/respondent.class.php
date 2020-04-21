@@ -58,7 +58,6 @@ class respondent extends \cenozo\database\record
     $db_qnaire = $this->get_qnaire();
     $max_responses = is_null( $db_qnaire->max_responses ) ? 1 : $db_qnaire->max_responses;
     $db_response = $this->get_current_response();
-    log::debug( $db_response->rank, $db_response->submitted, $max_responses );
     return is_null( $db_response ) || ( $max_responses == $db_response->rank && $db_response->submitted );
   }
 

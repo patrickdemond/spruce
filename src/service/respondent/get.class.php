@@ -26,7 +26,7 @@ class get extends \cenozo\service\get
       $db_response = $db_respondent->get_current_response();
 
       // make sure there is a response
-      if( is_null( $db_response ) )
+      if( is_null( $db_response ) || is_null( $db_response->start_datetime ) )
       {
         // always create the first response
         $create_new_response = true;
