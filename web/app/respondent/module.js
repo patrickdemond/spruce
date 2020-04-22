@@ -26,6 +26,14 @@ define( [ 'page' ].reduce( function( list, name ) {
       },
       response_count: {
         title: 'Responses'
+      },
+      start_datetime: {
+        title: 'Start Date',
+        type: 'date'
+      },
+      end_datetime: {
+        title: 'End Date',
+        type: 'date'
       }
     },
     defaultOrder: {
@@ -49,6 +57,18 @@ define( [ 'page' ].reduce( function( list, name ) {
     token: {
       title: 'Token',
       type: 'string',
+      isExcluded: 'add'
+    },
+    start_datetime: {
+      title: 'Start Date & Time',
+      type: 'datetime',
+      isConstant: true,
+      isExcluded: 'add'
+    },
+    end_datetime: {
+      title: 'End Date & Time',
+      type: 'datetime',
+      isConstant: true,
       isExcluded: 'add'
     }
   } );

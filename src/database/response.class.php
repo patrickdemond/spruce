@@ -31,6 +31,7 @@ class response extends \cenozo\database\has_rank
     $new = is_null( $this->id );
     $submitted = $this->has_column_changed( 'submitted' ) && $this->submitted;
     $db_respondent = NULL;
+    $db_qnaire = NULL;
 
     // setup new responses
     if( $new )
@@ -62,7 +63,7 @@ class response extends \cenozo\database\has_rank
       // let the respondent figure out what the language should be
       $this->language_id = $db_respondent->get_language()->id;
       $this->rank = is_null( $db_current_response ) ? 1 : $db_current_response->rank + 1;
-   }
+    }
 
     parent::save();
 
@@ -81,10 +82,19 @@ class response extends \cenozo\database\has_rank
       }
     }
 
-    // when submitting the response remove any pending email reminders
+    // when submitting the response check if the respondent is done and remove any pending email reminders
     if( $submitted )
     {
-      $db_reminder_mail = $this->get_respondent()->get_reminder_mail( $this->rank );
+      if( is_null( $db_respondent ) ) $db_respondent = $this->get_respondent();
+      if( is_null( $db_qnaire ) ) $db_qnaire = $db_respondent->get_qnaire();
+
+      if( is_null( $db_qnaire->max_responses ) || $this->rank == $db_qnaire->max_responses )
+      {
+        $db_respondent->end_datetime = util::get_datetime_object();
+        $db_respondent->save();
+      }
+
+      $db_reminder_mail = $db_respondent->get_reminder_mail( $this->rank );
       if( !is_null( $db_reminder_mail ) && is_null( $db_reminder_mail->sent_datetime ) ) $db_reminder_mail->delete();
     }
   }

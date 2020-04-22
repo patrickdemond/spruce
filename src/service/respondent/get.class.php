@@ -29,46 +29,32 @@ class get extends \cenozo\service\get
       if( is_null( $db_response ) )
       {
         // always create the first response
-        $create_new_response = true;
-      }
-      else if( !is_null( $db_qnaire->repeated ) )
-      {
-        if( is_null( $db_response->start_datetime ) )
-        {
-          $create_new_response = true;
-        }
-        else
-        {
-          // create a new response if the repeat span has passed since the last response
-          $diff = $db_response->start_datetime->diff( util::get_datetime_object() );
-          if( 'hour' == $db_qnaire->repeated )
-          {
-            // count hours
-            $hours = 24 * $diff->days + $diff->h;
-            $create_new_response = $hours >= $db_qnaire->repeat_offset;
-          }
-          else if( 'day' == $db_qnaire->repeated )
-          {
-            $create_new_response = $diff->days >= $db_qnaire->repeat_offset;
-          }
-          else if( 'week' == $db_qnaire->repeated )
-          {
-            $create_new_response = $diff->days >= ( 7 * $db_qnaire->repeat_offset );
-          }
-          else if( 'month' == $db_qnaire->repeated )
-          {
-            // count months
-            $months = 12 * $diff->y + $diff->m;
-            $create_new_response = $months >= $db_qnaire->repeat_offset;
-          }
-        }
-      }
-
-      if( $create_new_response )
-      {
         $db_response = lib::create( 'database\response' );
         $db_response->respondent_id = $db_respondent->id;
         $db_response->save();
+      }
+      else if( !is_null( $db_qnaire->repeated ) )
+      {
+        $response_class_name = lib::get_class_name( 'database\response' );
+
+        // create all missing responses based on the repeat type and when the respondent was created
+        $count = 0;
+        $diff = $db_respondent->start_datetime->diff( util::get_datetime_object() );
+        if( 'hour' == $db_qnaire->repeated ) $count = 24*$diff->days + $diff->h;
+        else if( 'day' == $db_qnaire->repeated ) $count = $diff->days;
+        else if( 'week' == $db_qnaire->repeated ) $count = floor( $diff->days / 7 );
+        else if( 'month' == $db_qnaire->repeated ) $count = 12 * $diff->y + $diff->m;
+
+        // limit the total number of new responses to create
+        $total_responses = floor( $count / $db_qnaire->repeat_offset ) + 1;
+        if( $total_responses > $db_qnaire->max_responses ) $total_responses = $db_qnaire->max_responses;
+
+        for( $i = $db_response->rank + 1; $i <= $total_responses; $i++ )
+        {
+          $db_response = lib::create( 'database\response' );
+          $db_response->respondent_id = $db_respondent->id;
+          $db_response->save();
+        }
       }
     }
   }

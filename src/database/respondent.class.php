@@ -23,8 +23,8 @@ class respondent extends \cenozo\database\record
     // setup new respondents
     if( $new )
     {
-      $db_participant = lib::create( 'database\participant', $this->participant_id );
       $this->token = static::generate_token();
+      $this->start_datetime = util::get_datetime_object();
     }
 
     parent::save();

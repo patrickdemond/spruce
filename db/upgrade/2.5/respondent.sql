@@ -23,6 +23,8 @@ CREATE PROCEDURE patch_respondent()
         "invitation_mail_id INT UNSIGNED NULL DEFAULT NULL, ",
         "reminder_mail_id INT UNSIGNED NULL DEFAULT NULL, ",
         "token CHAR(19) NOT NULL, ",
+        "start_datetime DATETIME NOT NULL, ",
+        "end_datetime DATETIME NULL DEFAULT NULL, ",
         "PRIMARY KEY (id), ",
         "INDEX fk_qnaire_id (qnaire_id ASC), ",
         "INDEX fk_participant_id (participant_id ASC), ",
