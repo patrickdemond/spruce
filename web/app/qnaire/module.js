@@ -17,6 +17,10 @@ define( function() {
         title: 'Base Language',
         column: 'base_language.name'
       },
+      closed: {
+        title: 'Closed',
+        type: 'boolean'
+      },
       debug: {
         title: 'Debug Mode',
         type: 'boolean'
@@ -75,6 +79,10 @@ define( function() {
     },
     readonly: {
       title: 'Read Only',
+      type: 'boolean'
+    },
+    closed: {
+      title: 'Closed',
       type: 'boolean'
     },
     repeated: {
