@@ -18,6 +18,9 @@ $SETTINGS['general']['build'] = 'e7a0bcf';
 // the default maximum number of seconds that a page should take to complete
 $SETTINGS['general']['default_page_max_time'] = 60;
 
+// hard-coded databaseaccess ID which identifies the respondent's access record
+$SETTINGS['general']['respondent_access_id'] = NULL;
+
 // the location of the application's internal path
 $SETTINGS['path']['APPLICATION'] = str_replace( '/settings.ini.php', '', __FILE__ );
 

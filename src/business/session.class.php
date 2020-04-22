@@ -85,5 +85,19 @@ class session extends \cenozo\business\session
   /**
    * TODO: document
    */
+  public function initialize( $no_activity = false )
+  {
+    // turn off activity when using the special access role
+    $setting_manager = lib::create( 'business\setting_manager' );
+    $respondent_access_id = $setting_manager->get_setting( 'general', 'respondent_access_id' );
+    if( array_key_exists( 'access.id', $_SESSION ) &&
+        !is_null( $respondent_access_id ) &&
+        $_SESSION['access.id'] == $respondent_access_id ) $no_activity = true;
+    parent::initialize( $no_activity );
+  }
+
+  /**
+   * TODO: document
+   */
   private $db_response = false;
 }
