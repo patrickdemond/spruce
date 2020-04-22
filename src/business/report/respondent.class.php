@@ -27,8 +27,9 @@ class respondent extends \cenozo\business\report\base_report
     $select->add_column( 'language.name', 'Language', false );
     $select->add_column( 'participant.uid', 'UID', false );
     $select->add_column( 'IF( response.submitted, "Yes", "No" )', 'Submitted', false );
-    $select->add_column( $this->get_datetime_column( 'response.start_datetime' ), 'Start', false );
+    $select->add_column( $this->get_datetime_column( 'respondent.start_datetime' ), 'Start', false );
     $select->add_column( $this->get_datetime_column( 'response.last_datetime' ), 'Last', false );
+    $select->add_column( $this->get_datetime_column( 'respondent.end_datetime' ), 'End', false );
     $select->add_column(
       sprintf(
         'CONCAT( "https://%s%s/respondent/run/", respondent.token )',
