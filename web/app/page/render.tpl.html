@@ -188,7 +188,7 @@
                   ng-model="question.answer.value"
                   ng-keydown="validateKeydown( $event )"
                   cn-change="model.renderModel.setAnswer( question, question.answer.value )"
-                  cn-autofocus
+                  cn-autofocus="$first"
                   autocomplete="off">
                 </input>
                 <input ng-switch-when="string"
@@ -198,7 +198,7 @@
                   ng-model="question.answer.value"
                   ng-keydown="validateKeydown( $event )"
                   cn-change="model.renderModel.setAnswer( question, question.answer.value )"
-                  cn-autofocus
+                  cn-autofocus="$first"
                   autocomplete="off">
                 </input>
                 <textarea ng-switch-when="text"
@@ -207,7 +207,7 @@
                   ng-model="question.answer.value"
                   ng-keydown="validateKeydown( $event )"
                   cn-change="model.renderModel.setAnswer( question, question.answer.value )"
-                  cn-autofocus
+                  cn-autofocus="$first"
                   cn-elastic>
                 </textarea>
                 <div class="btn-group full-width" ng-if="'comment' != question.type">
