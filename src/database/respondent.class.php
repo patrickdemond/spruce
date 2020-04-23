@@ -42,7 +42,7 @@ class respondent extends \cenozo\database\record
     $modifier = lib::create( 'database\modifier' );
     $modifier->join( 'mail', 'respondent_mail.mail_id', 'mail.id' );
     $modifier->where( 'mail.sent_datetime', '=', NULL );
-    $responent_mail_list = $this->get_respondent_mail_object_list( $modifier );
+    $respondent_mail_list = $this->get_respondent_mail_object_list( $modifier );
 
     parent::delete();
 
