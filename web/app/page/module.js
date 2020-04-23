@@ -150,21 +150,20 @@ define( function() {
 
           if( angular.isUndefined( $scope.progress ) ) $scope.progress = 0;
 
-          $scope.text = function( address, language ) { return $scope.model.renderModel.text( address ); };
+          $scope.text = function( address ) { return $scope.model.renderModel.text( address ); };
 
           function render() {
             var promiseList = [];
             if( 'respondent' != $scope.model.getSubjectFromState() || null != $scope.data.page_id ) {
               promiseList.push(
                 $scope.model.viewModel.onView( true ).then( function() {
-                  $scope.data = {
+                  angular.extend( $scope.data, {
                     page_id: $scope.model.viewModel.record.id,
                     qnaire_id: $scope.model.viewModel.record.qnaire_id,
                     qnaire_name: $scope.model.viewModel.record.qnaire_name,
                     base_language: $scope.model.viewModel.record.base_language,
-                    title: $scope.model.viewModel.record.module_name,
                     uid: null
-                  };
+                  } );
 
                   $scope.progress = Math.round(
                     100 * $scope.model.viewModel.record.qnaire_page / $scope.model.viewModel.record.qnaire_pages
@@ -206,13 +205,12 @@ define( function() {
             CnHttpFactory.instance( {
               path: 'respondent/token=' + $state.params.token + '?assert_response=1',
               data: { select: { column: [
-                'qnaire_id', 'introductions', 'conclusions',
+                'qnaire_id', 'introductions', 'conclusions', 'closes',
+                { table: 'qnaire', column: 'closed' },
                 { table: 'response', column: 'page_id' },
                 { table: 'response', column: 'submitted' },
                 { table: 'participant', column: 'uid' },
-                { table: 'language', column: 'code', alias: 'base_language' },
-                { table: 'qnaire', column: 'name', alias: 'qnaire_name' },
-                { table: 'module', column: 'name', alias: 'module_name' }
+                { table: 'language', column: 'code', alias: 'base_language' }
               ] } },
               onError: function( response ) {
                 $state.go( 'error.' + response.status, response );
@@ -221,11 +219,8 @@ define( function() {
               $scope.data = response.data;
               $scope.data.introductions = parseDescriptions( $scope.data.introductions );
               $scope.data.conclusions = parseDescriptions( $scope.data.conclusions );
-              $scope.data.title = null != $scope.data.module_name
-                                ? $scope.data.module_name
-                                : $scope.data.submitted
-                                ? 'Conclusion'
-                                : 'Introduction';
+              $scope.data.closes = parseDescriptions( $scope.data.closes );
+              $scope.data.title = null != $scope.data.page_id ? '' : $scope.data.submitted ? 'Conclusion' : 'Introduction';
               render();
             } );
           }

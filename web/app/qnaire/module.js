@@ -60,6 +60,11 @@ define( function() {
       type: 'string',
       isConstant: function( $state, model ) { return model.viewModel.record.readonly; }
     },
+    variable_suffix: {
+      title: 'Variable Suffix',
+      type: 'string',
+      isConstant: function( $state, model ) { return model.viewModel.record.readonly; }
+    },
     base_language_id: {
       title: 'Base Language',
       type: 'enum',

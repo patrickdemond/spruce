@@ -53,6 +53,7 @@ BEGIN
   INSERT IGNORE INTO qnaire_description( qnaire_id, language_id, type ) VALUES
   ( NEW.qnaire_id, NEW.language_id, 'introduction' ),
   ( NEW.qnaire_id, NEW.language_id, 'conclusion' ),
+  ( NEW.qnaire_id, NEW.language_id, 'closed' ),
   ( NEW.qnaire_id, NEW.language_id, 'invitation subject' ),
   ( NEW.qnaire_id, NEW.language_id, 'invitation body' ),
   ( NEW.qnaire_id, NEW.language_id, 'reminder subject' ),

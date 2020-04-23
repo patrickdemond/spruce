@@ -62,6 +62,21 @@ class module extends \cenozo\service\module
       );
     }
 
+    if( $select->has_column( 'closes' ) )
+    {
+      // join to the closes
+      $join_mod = lib::create( 'database\modifier' );
+      $join_mod->where( 'qnaire.id', '=', 'closed.qnaire_id', false );
+      $join_mod->where( 'closed.type', '=', 'closed' );
+      $modifier->join_modifier( 'qnaire_description', $join_mod, '', 'closed' );
+      $modifier->join( 'language', 'closed.language_id', 'closed_language.id', '', 'closed_language' );
+      $select->add_column(
+        'GROUP_CONCAT( DISTINCT CONCAT_WS( "`", closed_language.code, IFNULL( closed.value, "" ) ) SEPARATOR "`" )',
+        'closes',
+        false
+      );
+    }
+
     if( !is_null( $this->get_resource() ) )
     {
       // include the language first/last/uid as supplemental data

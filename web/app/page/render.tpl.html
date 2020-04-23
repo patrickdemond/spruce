@@ -2,7 +2,7 @@
 <div class="utility-view rounded">
   <div class="container-fluid bg-primary rounded-top">
     <h4>
-      {{ isComplete ? data.title : 'Loading...' }}
+      {{ !isComplete ? 'Loading...' : data.closed ? text( 'misc.qnaireClosed' ) : data.title }}
       <div class="pull-right" style="margin-top: -7px;">
         <select class="form-control larger"
                 ng-model="model.renderModel.currentLanguage"
@@ -14,17 +14,19 @@
   </div>
   <div ng-if="!isComplete" class="loading spacer" style="height: 8em;" uib-tooltip="Loading&hellip;"></div>
   <div ng-if="isComplete">
-    <div ng-if="!data.page_id">
+    <div ng-if="data.closed || !data.page_id">
       <div class="spacer" style="min-height: 8em;">
         <div class="container-fluid vertical-spacer">
-          <span class="larger" ng-bind-html="data.submitted ?
-            data.conclusions[model.renderModel.currentLanguage] : data.introductions[model.renderModel.currentLanguage]">
+          <span class="larger" ng-bind-html="
+            data.closed ? data.closes[model.renderModel.currentLanguage] :
+            data.submitted ? data.conclusions[model.renderModel.currentLanguage] :
+                             data.introductions[model.renderModel.currentLanguage]">
           </span>
         </div>
       </div>
       <div class="form-footer text-right rounded-bottom bg-info">
         <button type="button"
-                ng-if="!data.submitted"
+                ng-if="!data.closed && !data.submitted"
                 ng-disabled="!isComplete"
                 ng-click="model.renderModel.proceed()"
                 class="btn btn-success larger"
@@ -33,7 +35,7 @@
         </button>
       </div>
     </div>
-    <div ng-if="data.page_id">
+    <div ng-if="!data.closed && data.page_id">
       <div class="progress no-rounding">
         <div class="progress-bar larger"
              role="progressbar"

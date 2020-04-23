@@ -261,6 +261,7 @@ class qnaire extends \cenozo\database\record
     $qnaire_data = array(
       'base_language' => $this->get_base_language()->code,
       'name' => $this->name,
+      'variable_suffix' => $this->variable_suffix,
       'debug' => $this->debug,
       'readonly' => $this->readonly,
       'repeated' => $this->repeated,
@@ -301,8 +302,8 @@ class qnaire extends \cenozo\database\record
       $qnaire_data['qnaire_description_list'][] = $item;
 
     $module_mod = lib::create( 'database\modifier' );
-    $module_mod->order( 'rank' );
-    foreach( $this->get_module_object_list() as $db_module )
+    $module_mod->order( 'module.rank' );
+    foreach( $this->get_module_object_list( $module_mod ) as $db_module )
     {
       $module = array(
         'rank' => $db_module->rank,
@@ -325,8 +326,8 @@ class qnaire extends \cenozo\database\record
         $module['module_description_list'][] = $item;
 
       $page_mod = lib::create( 'database\modifier' );
-      $page_mod->order( 'rank' );
-      foreach( $db_module->get_page_object_list() as $db_page )
+      $page_mod->order( 'page.rank' );
+      foreach( $db_module->get_page_object_list( $page_mod ) as $db_page )
       {
         $page = array(
           'rank' => $db_page->rank,
@@ -350,8 +351,8 @@ class qnaire extends \cenozo\database\record
           $page['page_description_list'][] = $item;
 
         $question_mod = lib::create( 'database\modifier' );
-        $question_mod->order( 'rank' );
-        foreach( $db_page->get_question_object_list() as $db_question )
+        $question_mod->order( 'question.rank' );
+        foreach( $db_page->get_question_object_list( $question_mod ) as $db_question )
         {
           $question = array(
             'rank' => $db_question->rank,
@@ -380,8 +381,8 @@ class qnaire extends \cenozo\database\record
             $question['question_description_list'][] = $item;
 
           $question_option_mod = lib::create( 'database\modifier' );
-          $question_option_mod->order( 'rank' );
-          foreach( $db_question->get_question_option_object_list() as $db_question_option )
+          $question_option_mod->order( 'question_option.rank' );
+          foreach( $db_question->get_question_option_object_list( $question_option_mod ) as $db_question_option )
           {
             $question_option = array(
               'rank' => $db_question_option->rank,
@@ -431,9 +432,9 @@ class qnaire extends \cenozo\database\record
                 . sprintf( "====================================================================================\n\n" );
       if( $qnaire_data['description'] )$contents .= sprintf( "%s\n\n", $qnaire_data['description'] );
 
-      $description = array( 'introduction' => array(), 'conclusion' => array() );
+      $description = array( 'introduction' => array(), 'conclusion' => array(), 'closed' => array() );
       foreach( $qnaire_data['qnaire_description_list'] as $d )
-        if( in_array( $d['type'], ['introduction', 'conclusion'] ) ) $description[$d['type']][$d['language']] = $d['value'];
+        if( in_array( $d['type'], ['introduction', 'conclusion', 'closed'] ) ) $description[$d['type']][$d['language']] = $d['value'];
 
       $contents .= sprintf( "INTRODUCTION\n" )
                  . sprintf( "====================================================================================\n\n" );
@@ -442,6 +443,10 @@ class qnaire extends \cenozo\database\record
       $contents .= sprintf( "CONCLUSION\n" )
                  . sprintf( "====================================================================================\n\n" );
       foreach( $description['conclusion'] as $language => $value ) $contents .= sprintf( "[%s] %s\n\n", $language, $value );
+
+      $contents .= sprintf( "CLOSED\n" )
+                 . sprintf( "====================================================================================\n\n" );
+      foreach( $description['closed'] as $language => $value ) $contents .= sprintf( "[%s] %s\n\n", $language, $value );
 
       foreach( $qnaire_data['module_list'] as $module )
       {
@@ -571,6 +576,7 @@ class qnaire extends \cenozo\database\record
     $db_qnaire = lib::create( 'database\qnaire' );
     $db_qnaire->base_language_id = $language_class_name::get_unique_record( 'code', $qnaire_object->base_language )->id;
     $db_qnaire->name = $qnaire_object->name;
+    $db_qnaire->variable_suffix = $qnaire_object->variable_suffix;
     $db_qnaire->debug = $qnaire_object->debug;
     $db_qnaire->repeated = $qnaire_object->repeated;
     $db_qnaire->repeat_offset = $qnaire_object->repeat_offset;

@@ -289,7 +289,8 @@ cenozoApp.initDescriptionModule = function( module, type ) {
     },
     type: {
       title: 'Type',
-      type: 'enum'
+      type: 'enum',
+      isConstant: true
     },
     value: {
       title: 'Value',
@@ -675,6 +676,7 @@ cenozo.service( 'CnTranslationHelper', [
           equalOrLess: { en: 'equal to or less than', fr: 'égale ou inférieure à' },
           between: { en: 'between', fr: 'comprise entre' },
           and: { en: 'and', fr: 'et' },
+          qnaireClosed: { en: 'Questionnaire Closed', fr: 'Période de réponse terminée' }
         }
       }
     };
