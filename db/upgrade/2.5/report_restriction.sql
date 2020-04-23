@@ -57,6 +57,28 @@ DROP PROCEDURE IF EXISTS patch_report_restriction;
     EXECUTE statement;
     DEALLOCATE PREPARE statement;
 
+    SET @sql = CONCAT(
+      "REPLACE INTO ", @cenozo, ".report_restriction ( ",
+        "report_type_id, rank, name, title, mandatory, null_allowed, restriction_type, custom, subject, description ) ",
+      "SELECT report_type.id, 1, 'qnaire', 'Questionnaire', 1, 0, 'table', 0, 'qnaire', 'Select a questionnaire.' ",
+      "FROM ", @cenozo, ".report_type ",
+      "WHERE report_type.name = 'response'"
+    );
+    PREPARE statement FROM @sql;
+    EXECUTE statement;
+    DEALLOCATE PREPARE statement;
+
+    SET @sql = CONCAT(
+      "REPLACE INTO ", @cenozo, ".report_restriction ( ",
+        "report_type_id, rank, name, title, mandatory, null_allowed, restriction_type, custom, subject, description ) ",
+      "SELECT report_type.id, 2, 'submitted', 'Submitted', 0, 0, 'boolean', 0, 'response.submitted', 'Submitted' ",
+      "FROM ", @cenozo, ".report_type ",
+      "WHERE report_type.name = 'response'"
+    );
+    PREPARE statement FROM @sql;
+    EXECUTE statement;
+    DEALLOCATE PREPARE statement;
+
   END //
 DELIMITER ;
 

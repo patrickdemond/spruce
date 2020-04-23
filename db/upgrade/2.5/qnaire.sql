@@ -20,6 +20,7 @@ CREATE PROCEDURE patch_qnaire()
         "create_timestamp TIMESTAMP NOT NULL, ",
         "base_language_id INT UNSIGNED NOT NULL, ",
         "name VARCHAR(255) NOT NULL, ",
+        "variable_suffix VARCHAR(45) NULL DEFAULT NULL, ",
         "closed TINYINT(1) NOT NULL DEFAULT 0, ",
         "debug TINYINT(1) NOT NULL DEFAULT 0, ",
         "readonly TINYINT(1) NOT NULL DEFAULT 0, ",

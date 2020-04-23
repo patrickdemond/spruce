@@ -22,6 +22,15 @@ DROP PROCEDURE IF EXISTS patch_report_type;
     EXECUTE statement;
     DEALLOCATE PREPARE statement;
 
+    SET @sql = CONCAT(
+      "INSERT IGNORE INTO ", @cenozo, ".report_type ( name, title, subject, description ) VALUES ",
+      "( 'response', 'Response Data', 'response', ",
+        "'This report outputs response data for a particular questionnaire.' )"
+    );
+    PREPARE statement FROM @sql;
+    EXECUTE statement;
+    DEALLOCATE PREPARE statement;
+
   END //
 DELIMITER ;
 
