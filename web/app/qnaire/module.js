@@ -84,11 +84,13 @@ define( function() {
     },
     readonly: {
       title: 'Read Only',
-      type: 'boolean'
+      type: 'boolean',
+      isExcluded: 'add'
     },
     closed: {
       title: 'Closed',
-      type: 'boolean'
+      type: 'boolean',
+      isExcluded: 'add'
     },
     repeated: {
       title: 'Repeated',
