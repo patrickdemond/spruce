@@ -41,9 +41,8 @@ class query extends \cenozo\service\query
     $question_class_name = lib::get_class_name( 'database\question' );
     $modifier = clone $this->modifier;
     $modifier->where( 'qnaire.id', '=', $this->get_parent_record()->id );
-    if( $modifier->has_order( 'rank' ) )
+    if( $modifier->has_order( 'module.rank' ) )
     {
-      $modifier->replace_order( 'rank', 'module.rank' );
       $modifier->order( 'page.rank' );
       $modifier->order( 'question.rank' );
     }
