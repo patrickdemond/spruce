@@ -239,6 +239,8 @@ class qnaire extends \cenozo\database\record
    */
   public function mass_respondent( $uid_list )
   {
+    set_time_limit( 900 ); // 15 minutes max
+
     $participant_class_name = lib::get_class_name( 'database\participant' );
 
     foreach( $uid_list as $uid )
