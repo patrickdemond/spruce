@@ -71,20 +71,14 @@ class response extends \cenozo\database\has_rank
     if( $new ) $this->create_attributes();
 
     // see if the qnaire exists as a script and apply the started/finished events if it does
-    if( $new || $submitted )
+    if( $new )
     {
       if( is_null( $db_respondent ) ) $db_respondent = $this->get_respondent();
       $db_script = $script_class_name::get_unique_record( 'pine_qnaire_id', $db_respondent->qnaire_id );
-      if( !is_null( $db_script ) )
-      {
-        if( $new ) $db_script->add_started_event( $this->get_participant(), $this->last_datetime );
-        else if( $submitted ) $db_script->add_finished_event( $this->get_participant(), $this->last_datetime );
-      }
+      if( !is_null( $db_script ) ) $db_script->add_started_event( $this->get_participant(), $this->last_datetime );
     }
-
-    // when submitting the response check if the respondent is done and remove any pending email reminders
-    if( $submitted )
-    {
+    else if( $submitted )
+    { // when submitting the response check if the respondent is done and remove any pending email reminders
       if( is_null( $db_respondent ) ) $db_respondent = $this->get_respondent();
       if( is_null( $db_qnaire ) ) $db_qnaire = $db_respondent->get_qnaire();
 
@@ -92,6 +86,10 @@ class response extends \cenozo\database\has_rank
       {
         $db_respondent->end_datetime = util::get_datetime_object();
         $db_respondent->save();
+
+        // now add the finished event, if there is one
+        $db_script = $script_class_name::get_unique_record( 'pine_qnaire_id', $db_respondent->qnaire_id );
+        if( !is_null( $db_script ) ) $db_script->add_finished_event( $this->get_participant(), $this->last_datetime );
       }
 
       $db_reminder_mail = $db_respondent->get_reminder_mail( $this->rank );
