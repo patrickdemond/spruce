@@ -23,14 +23,13 @@ class response extends \cenozo\business\report\base_report
 
     $column_list = array();
 
-    // determine the list of columns to include in the report from the qnaire's questions
+    // parse the restriction details
+    $db_qnaire = NULL;
+    $submitted = NULL;
     foreach( $this->get_restriction_list( false ) as $restriction )
     {
-      if( 'qnaire' == $restriction['subject'] )
-      {
-        $db_qnaire = lib::create( 'database\qnaire', $restriction['value'] );
-        break;
-      }
+      if( 'qnaire' == $restriction['name'] ) $db_qnaire = lib::create( 'database\qnaire', $restriction['value'] );
+      else if( 'submitted' == $restriction['name'] ) $submitted = $restriction['value'];
     }
 
     $module_mod = lib::create( 'database\modifier' );
@@ -110,6 +109,7 @@ class response extends \cenozo\business\report\base_report
     $response_mod = lib::create( 'database\modifier' );
     $response_mod->join( 'respondent', 'response.respondent_id', 'respondent.id' );
     $response_mod->where( 'respondent.qnaire_id', '=', $db_qnaire->id );
+    if( !is_null( $submitted ) ) $response_mod->where( 'response.submitted', '=', $submitted );
     $response_mod->order( 'respondent.end_datetime' );
     foreach( $response_class_name::select_objects( $response_mod ) as $db_response )
     {
@@ -153,7 +153,8 @@ class response extends \cenozo\business\report\base_report
               {
                 if( ( is_object( $a ) && $column['option_id'] == $a->id ) || ( !is_object( $a ) && $column['option_id'] == $a ) )
                 {
-                  $row_value = is_null( $column['extra'] ) ? 'YES' : $a->value; // use the value if the option asks for extra data
+                  // use the value if the option asks for extra data
+                  $row_value = is_null( $column['extra'] ) ? 'YES' : ( property_exists( $a, 'value' ) ? $a->value : NULL );
                   break;
                 }
               }
