@@ -29,7 +29,7 @@ class module extends \pine\service\base_qnaire_part_module
       $join_sel = lib::create( 'database\select' );
       $join_sel->from( 'module' );
       $join_sel->add_column( 'id', 'module_id' );
-      $join_sel->add_column( 'ROUND( AVG( time ) )', 'time', false );
+      $join_sel->add_column( 'ROUND( SUM( time ) / COUNT( DISTINCT page_time.response_id ) )', 'time', false );
 
       $join_mod = lib::create( 'database\modifier' );
       $join_mod->left_join( 'page', 'module.id', 'page.module_id' );
