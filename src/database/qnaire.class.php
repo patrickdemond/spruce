@@ -144,6 +144,7 @@ class qnaire extends \cenozo\database\record
     $modifier->join( 'response', 'respondent.id', 'response.respondent_id' );
     $modifier->join( 'page_time', 'response.id', 'page_time.response_id' );
     $modifier->join( 'page', 'page_time.page_id', 'page.id' );
+    $modifier->where( 'qnaire.id', '=', $this->id );
     $modifier->where( 'IFNULL( page_time.time, 0 )', '<=', 'page.max_time', false );
     if( $submitted ) $modifier->where( 'response.submitted', '=', true );
 
