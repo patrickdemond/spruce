@@ -111,6 +111,19 @@ class response extends \cenozo\business\report\base_report
     $response_mod->where( 'respondent.qnaire_id', '=', $db_qnaire->id );
     if( !is_null( $submitted ) ) $response_mod->where( 'response.submitted', '=', $submitted );
     $response_mod->order( 'respondent.end_datetime' );
+
+    // manually restrict to collections
+    foreach( $this->get_restriction_list( true ) as $restriction )
+    {
+      if( 'collection' == $restriction['name'] )
+      {
+        $join_mod = lib::create( 'database\modifier' );
+        $join_mod->where( 'respondent.participant_id', '=', 'collection_has_participant.participant_id', false );
+        $join_mod->where( 'collection_has_participant.collection_id', '=', $restriction['value'] );
+        $response_mod->join_modifier( 'collection_has_participant', $join_mod );
+      }
+    }
+
     foreach( $response_class_name::select_objects( $response_mod ) as $db_response )
     {
       $answer_list = array();

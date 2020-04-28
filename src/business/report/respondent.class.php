@@ -47,6 +47,18 @@ class respondent extends \cenozo\business\report\base_report
     $modifier->join( 'respondent_current_response', 'respondent.id', 'respondent_current_response.respondent_id' );
     $modifier->join( 'response', 'respondent_current_response.response_id', 'response.id' );
 
+    // manually restrict to collections
+    foreach( $this->get_restriction_list( true ) as $restriction )
+    {
+      if( 'collection' == $restriction['name'] )
+      {
+        $join_mod = lib::create( 'database\modifier' );
+        $join_mod->where( 'participant.id', '=', 'collection_has_participant.participant_id', false );
+        $join_mod->where( 'collection_has_participant.collection_id', '=', $restriction['value'] );
+        $modifier->join_modifier( 'collection_has_participant', $join_mod );
+      }
+    }
+
     // set up requirements
     $this->apply_restrictions( $modifier );
 
