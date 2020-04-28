@@ -944,52 +944,26 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
 
         save: function() {
           this.working = true;
+          var data = { rank: this.data.rank };
+          data[this.parentType + '_id'] = this.data[this.parentIdName];
 
           if( 'move' == this.operation ) {
-            // a private function that moves the record (used below)
-            function move() {
-              var data = { rank: self.data.rank };
-              data[self.parentType + '_id'] = self.data[self.parentIdName];
-
-              return CnHttpFactory.instance( {
-                path: self.type + '/' + self.sourceId,
-                data: data
-              } ).patch().then( function() {
-                $state.go( self.type + '.view', { identifier: self.sourceId } );
-              } ).finally( function() {
-                self.working = false;
-              } );
-            }
-
-            // see if we'll be leaving the parent without any children
-            CnHttpFactory.instance( {
-              path: this.type,
-              data: { modifier: { where: { column: this.parentType + '_id', operator: '=', value: this.sourceParentId } } }
-            } ).count().then( function( response ) {
-              if( 1 == parseInt( response.headers( 'Total' ) ) ) {
-                CnModalConfirmFactory.instance( {
-                  message:
-                    'This is the only ' + self.typeName.toLowerCase() + ' belonging to its parent ' +
-                    self.parentTypeName.toLowerCase() + '.  Do you wish to delete the ' + self.parentTypeName.toLowerCase() +
-                    ' after the ' + self.typeName.toLowerCase() + ' is moved?'
-                } ).show().then( function( response ) {
-                  // first move the record
-                  move();
-
-                  // now remove the parent if requested to
-                  if( response ) CnHttpFactory.instance( { path: self.parentType + '/' + self.sourceParentId } ).delete();
-                } );
-              } else move();
+            return CnHttpFactory.instance( {
+              path: this.type + '/' + this.sourceId,
+              data: data
+            } ).patch().then( function() {
+              $state.go( self.type + '.view', { identifier: self.sourceId } );
+            } ).finally( function() {
+              self.working = false;
             } );
           } else { // clone
             // make sure the name is valid
-            var re = new RegExp( 'question_option' == self.type ? '^[a-zA-Z0-9_]*$' : '^[a-zA-Z_][a-zA-Z0-9_]*$' );
+            var re = new RegExp( 'question_option' == this.type ? '^[a-zA-Z0-9_]*$' : '^[a-zA-Z_][a-zA-Z0-9_]*$' );
             if( null == re.test( this.data.name ) ) {
               this.formatError = true;
             } else {
-              var data = { rank: this.data.rank, name: this.data.name };
-              data[this.parentType + '_id'] = this.data[this.parentIdName];
-
+              // add the new name to the http data
+              data.name = this.data.name;
               return CnHttpFactory.instance( {
                 path: this.type + '?clone=' + this.sourceId,
                 data: data,

@@ -17,10 +17,17 @@ abstract class base_qnaire_part_patch extends \cenozo\service\patch
   {
     parent::validate();
 
+    $db_qnaire = $this->get_leaf_record()->get_qnaire();
+
+    if( $db_qnaire->readonly ) throw lib::create(
+      'exception\notice',
+      'The operation cannot be completed because the questionnaire is in read-only mode.',
+      __METHOD__
+    );
+
     $data = $this->get_file_as_array();
     if( array_key_exists( 'precondition', $data ) )
     {
-      $db_qnaire = $this->get_leaf_record()->get_qnaire();
 
       // validate the precondition
       $expression_manager = lib::create( 'business\expression_manager' );
