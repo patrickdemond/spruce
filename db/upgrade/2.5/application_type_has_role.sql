@@ -18,7 +18,7 @@ CREATE PROCEDURE patch_application_type_has_role()
       "SELECT application_type.id, role.id ",
       "FROM ", @cenozo, ".application_type, ", @cenozo, ".role ",
       "WHERE application_type.name = 'pine' ",
-      "AND role.name IN( 'administrator', 'respondent' )"
+      "AND role.name IN( 'administrator', 'readonly', 'respondent' )"
     );
     PREPARE statement FROM @sql;
     EXECUTE statement;

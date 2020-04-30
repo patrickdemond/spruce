@@ -161,9 +161,8 @@ define( function() {
 
   module.addExtraOperation( 'list', {
     title: 'Import',
-    operation: function( $state, model ) {
-      $state.go( 'qnaire.import' );
-    }
+    operation: function( $state, model ) { $state.go( 'qnaire.import' ); },
+    isIncluded: function( $state, model ) { return model.getEditEnabled(); }
   } );
 
   module.addExtraOperation( 'view', {
@@ -182,14 +181,16 @@ define( function() {
     title: 'Export',
     operation: function( $state, model ) {
       $state.go( 'qnaire.clone', { identifier: model.viewModel.record.getIdentifier() } );
-    }
+    },
+    isIncluded: function( $state, model ) { return model.getEditEnabled(); }
   } );
 
   module.addExtraOperation( 'view', {
     title: 'Mass Respondent',
     operation: function( $state, model ) {
       $state.go( 'qnaire.mass_respondent', { identifier: model.viewModel.record.getIdentifier() } );
-    }
+    },
+    isIncluded: function( $state, model ) { return model.getEditEnabled(); }
   } );
 
   /* ######################################################################################################## */

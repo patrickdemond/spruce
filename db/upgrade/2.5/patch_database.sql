@@ -36,6 +36,7 @@ SOURCE answer.sql
 SOURCE page_time.sql
 SOURCE overview.sql
 SOURCE application_type_has_overview.sql
+SOURCE role_has_overview.sql
 
 SOURCE report_type.sql
 SOURCE application_type_has_report_type.sql

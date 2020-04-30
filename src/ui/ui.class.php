@@ -142,7 +142,11 @@ class ui extends \cenozo\ui\ui
   {
     parent::build_listitem_list();
 
+    $db_role = lib::create( 'business\session' )->get_role();
+
     $this->add_listitem( 'Questionnaires', 'qnaire' );
+    if( 'readonly' == $db_role->name ) $this->add_listitem( 'Overviews', 'overview' );
+    $this->remove_listitem( 'Collections' );
     $this->remove_listitem( 'Participants' );
   }
 
