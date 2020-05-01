@@ -16,7 +16,7 @@ class qnaire_description extends base_description
   /**
    * TODO: document
    */
-  public function get_compiled_value( $db_respondent )
+  public function get_compiled_value( $db_respondent, $iteration )
   {
     $data_manager = lib::create( 'business\data_manager' );
     $db_participant = $db_respondent->get_participant();
@@ -35,6 +35,10 @@ class qnaire_description extends base_description
       else if( 'qnaire.name' == $value )
       {
         $replace = $db_qnaire->name;
+      }
+      else if( 'iteration' == $value )
+      {
+        $replace = $iteration;
       }
       else
       {

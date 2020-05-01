@@ -234,8 +234,8 @@ class respondent extends \cenozo\database\record
           $db_mail->to_name = $db_participant->get_full_name();
           $db_mail->to_address = $db_participant->email;
           $db_mail->schedule_datetime = $datetime;
-          $db_mail->subject = $db_subject_description->get_compiled_value( $this );
-          $db_mail->body = $db_body_description->get_compiled_value( $this );
+          $db_mail->subject = $db_subject_description->get_compiled_value( $this, $rank );
+          $db_mail->body = $db_body_description->get_compiled_value( $this, $rank );
           $db_mail->note = sprintf( 'Automatically added from a Pine questionnaire %s iteration #%d.', $type, $rank );
           $db_mail->save();
         }
