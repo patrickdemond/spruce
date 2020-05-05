@@ -71,7 +71,7 @@ class response extends \cenozo\database\has_rank
     if( $new ) $this->create_attributes();
 
     // see if the qnaire exists as a script and apply the started/finished events if it does
-    if( $new )
+    if( $new && 1 == $this->rank )
     {
       if( is_null( $db_respondent ) ) $db_respondent = $this->get_respondent();
       $db_script = $script_class_name::get_unique_record( 'pine_qnaire_id', $db_respondent->qnaire_id );
