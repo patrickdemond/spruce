@@ -36,10 +36,19 @@ class get extends \cenozo\service\get
       else if( !is_null( $db_qnaire->repeated ) )
       {
         $response_class_name = lib::get_class_name( 'database\response' );
+        $respondent_mail_class_name = lib::get_class_name( 'database\respondent_mail' );
 
-        // create all missing responses based on the repeat type and when the respondent was created
+        // create all missing responses based on the repeat type and when the invitation went out
+        $db_respondent_mail = $respondent_mail_class_name::get_unique_record(
+          array( 'respondent_id', 'type', 'rank' ),
+          array( $db_respondent->id, 'invitation', 1 )
+        );
+
+        $diff = is_null( $db_respondent_mail )
+              ? $db_respondent->start_datetime->diff( util::get_datetime_object() )
+              : $db_respondent_mail->get_mail()->sent_datetime->diff( util::get_datetime_object() );
+
         $count = 0;
-        $diff = $db_respondent->start_datetime->diff( util::get_datetime_object() );
         if( 'hour' == $db_qnaire->repeated ) $count = 24*$diff->days + $diff->h;
         else if( 'day' == $db_qnaire->repeated ) $count = $diff->days;
         else if( 'week' == $db_qnaire->repeated ) $count = floor( $diff->days / 7 );
