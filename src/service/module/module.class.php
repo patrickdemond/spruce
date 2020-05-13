@@ -58,5 +58,57 @@ class module extends \pine\service\base_qnaire_part_module
         $select->add_constant( $first_page_id, 'first_page_id', 'integer' );
       }
     }
+
+    if( $select->has_column( 'prompts' ) )
+    {
+      $modifier->where( 'IFNULL( prompt_description.type, "prompt" )', '=', 'prompt' );
+      $modifier->left_join(
+        'module_description',
+        'module.id',
+        'prompt_description.module_id',
+        'prompt_description'
+      );
+      $modifier->left_join(
+        'language',
+        'prompt_description.language_id',
+        'prompt_language.id',
+        'prompt_language'
+      );
+      $select->add_column(
+        'GROUP_CONCAT( DISTINCT CONCAT_WS( '.
+          '"`", '.
+          'prompt_language.code, '.
+          'IFNULL( prompt_description.value, "" ) '.
+        ') SEPARATOR "`" )',
+        'prompts',
+        false
+      );
+    }
+
+    if( $select->has_column( 'popups' ) )
+    {
+      $modifier->where( 'IFNULL( popup_description.type, "popup" )', '=', 'popup' );
+      $modifier->left_join(
+        'module_description',
+        'module.id',
+        'popup_description.module_id',
+        'popup_description'
+      );
+      $modifier->left_join(
+        'language',
+        'popup_description.language_id',
+        'popup_language.id',
+        'popup_language'
+      );
+      $select->add_column(
+        'GROUP_CONCAT( DISTINCT CONCAT_WS( '.
+          '"`", '.
+          'popup_language.code, '.
+          'IFNULL( popup_description.value, "" ) '.
+        ') SEPARATOR "`" )',
+        'popups',
+        false
+      );
+    }
   }
 }

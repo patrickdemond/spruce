@@ -678,6 +678,20 @@ cenozo.service( 'CnTranslationHelper', [
           and: { en: 'and', fr: 'et' },
           qnaireClosed: { en: 'Questionnaire Closed', fr: 'Période de réponse terminée' }
         }
+      },
+      // used by services below to convert a list of descriptions into an object
+      parseDescriptions: function( descriptionList ) {
+        var code = null;
+        if( !angular.isString( descriptionList ) ) descriptionList = '';
+        return descriptionList.split( '`' ).reduce( function( list, part ) {
+          if( null == code ) {
+            code = part;
+          } else {
+            list[code] = part;
+            code = null;
+          }
+          return list;
+        }, {} );
       }
     };
   }

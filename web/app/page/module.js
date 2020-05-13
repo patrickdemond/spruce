@@ -38,21 +38,6 @@ define( function() {
     }
   } );
 
-  // used by services below to convert a list of descriptions into an object
-  function parseDescriptions( descriptionList ) {
-    var code = null;
-    if( !angular.isString( descriptionList ) ) descriptionList = '';
-    return descriptionList.split( '`' ).reduce( function( list, part ) {
-      if( null == code ) {
-        code = part;
-      } else {
-        list[code] = part;
-        code = null;
-      }
-      return list;
-    }, {} );
-  }
-
   // used by services below to returns the index of the option matching the second argument
   function searchOptionList( optionList, id ) {
     var optionIndex = null;
@@ -99,8 +84,8 @@ define( function() {
 
   /* ######################################################################################################## */
   cenozo.providers.directive( 'cnPageRender', [
-    'CnPageModelFactory', 'CnSession', 'CnHttpFactory', '$q', '$state', '$document',
-    function( CnPageModelFactory, CnSession, CnHttpFactory, $q, $state, $document ) {
+    'CnPageModelFactory', 'CnTranslationHelper', 'CnSession', 'CnHttpFactory', '$q', '$state', '$document',
+    function( CnPageModelFactory, CnTranslationHelper, CnSession, CnHttpFactory, $q, $state, $document ) {
       return {
         templateUrl: module.getFileUrl( 'render.tpl.html' ),
         restrict: 'E',
@@ -162,7 +147,7 @@ define( function() {
                     qnaire_id: $scope.model.viewModel.record.qnaire_id,
                     qnaire_name: $scope.model.viewModel.record.qnaire_name,
                     base_language: $scope.model.viewModel.record.base_language,
-                    uid: null
+                    uid: $scope.model.viewModel.record.uid
                   } );
 
                   $scope.progress = Math.round(
@@ -188,8 +173,6 @@ define( function() {
                 go: function() { return $state.go( 'qnaire.view', { identifier: $scope.data.qnaire_id } ); }
               }, {
                 title: $scope.data.uid ? $scope.data.uid : 'Preview'
-              }, {
-                title: $scope.data.title
               } ] );
 
               if( null == $scope.model.renderModel.currentLanguage )
@@ -217,9 +200,9 @@ define( function() {
               }
             } ).get().then( function( response ) {
               $scope.data = response.data;
-              $scope.data.introductions = parseDescriptions( $scope.data.introductions );
-              $scope.data.conclusions = parseDescriptions( $scope.data.conclusions );
-              $scope.data.closes = parseDescriptions( $scope.data.closes );
+              $scope.data.introductions = CnTranslationHelper.parseDescriptions( $scope.data.introductions );
+              $scope.data.conclusions = CnTranslationHelper.parseDescriptions( $scope.data.conclusions );
+              $scope.data.closes = CnTranslationHelper.parseDescriptions( $scope.data.closes );
               $scope.data.title = null != $scope.data.page_id ? '' : $scope.data.submitted ? 'Conclusion' : 'Introduction';
               render();
             } );
@@ -530,8 +513,8 @@ define( function() {
               var activeAttributeList = [];
               self.questionList.forEach( function( question, questionIndex ) {
                 question.incomplete = false;
-                question.prompts = parseDescriptions( question.prompts );
-                question.popups = parseDescriptions( question.popups );
+                question.prompts = CnTranslationHelper.parseDescriptions( question.prompts );
+                question.popups = CnTranslationHelper.parseDescriptions( question.popups );
                 question.value = angular.fromJson( question.value );
                 question.backupValue = angular.copy( question.value );
                 activeAttributeList = activeAttributeList.concat( getAttributeNames( question.precondition ) );
@@ -557,8 +540,8 @@ define( function() {
                     question.optionList = response.data;
                     question.optionList.forEach( function( option ) {
                       activeAttributeList = activeAttributeList.concat( getAttributeNames( option.precondition ) );
-                      option.prompts = parseDescriptions( option.prompts );
-                      option.popups = parseDescriptions( option.popups );
+                      option.prompts = CnTranslationHelper.parseDescriptions( option.prompts );
+                      option.popups = CnTranslationHelper.parseDescriptions( option.popups );
                       self.optionListById[option.id] = option;
                     } );
                   } ) );
@@ -937,8 +920,8 @@ define( function() {
 
   // extend the view factory created by caling initQnairePartModule()
   cenozo.providers.decorator( 'CnPageViewFactory', [
-    '$delegate',
-    function( $delegate ) {
+    '$delegate', 'CnTranslationHelper',
+    function( $delegate, CnTranslationHelper ) {
       var instance = $delegate.instance;
       $delegate.instance = function( parentModel, root ) {
         var object = instance( parentModel, root );
@@ -948,10 +931,10 @@ define( function() {
           onView: function( force ) {
             var self = this;
             return this.$$onView( force ).then( function() {
-              self.record.prompts = parseDescriptions( self.record.prompts );
-              self.record.popups = parseDescriptions( self.record.popups );
-              self.record.module_prompts = parseDescriptions( self.record.module_prompts );
-              self.record.module_popups = parseDescriptions( self.record.module_popups );
+              self.record.prompts = CnTranslationHelper.parseDescriptions( self.record.prompts );
+              self.record.popups = CnTranslationHelper.parseDescriptions( self.record.popups );
+              self.record.module_prompts = CnTranslationHelper.parseDescriptions( self.record.module_prompts );
+              self.record.module_popups = CnTranslationHelper.parseDescriptions( self.record.module_popups );
             } );
           }
         } );

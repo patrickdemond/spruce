@@ -93,13 +93,14 @@ class ui extends \cenozo\ui\ui
     {
       $module->add_child( 'response' );
       $module->add_child( 'respondent_mail' );
-      $module->add_action( 'run', '/{token}', true );
+      $module->add_action( 'run', '/{token}' );
     }
 
     $module = $this->get_module( 'response' );
     if( !is_null( $module ) )
     {
       $module->add_child( 'response_attribute' );
+      $module->add_action( 'display', '/{identifier}' );
     }
 
     $module = $this->get_module( 'module' );
