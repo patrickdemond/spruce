@@ -190,6 +190,7 @@ define( function() {
               data: { select: { column: [
                 'qnaire_id', 'introductions', 'conclusions', 'closes',
                 { table: 'qnaire', column: 'closed' },
+                { table: 'qnaire', column: 'name', alias: 'qnaire_name' },
                 { table: 'response', column: 'page_id' },
                 { table: 'response', column: 'submitted' },
                 { table: 'participant', column: 'uid' },
