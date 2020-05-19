@@ -918,6 +918,32 @@ define( function() {
     }
   ] );
 
+  // extend the add factory created by caling initQnairePartModule()
+  cenozo.providers.decorator( 'CnPageAddFactory', [
+    '$delegate', 'CnSession',
+    function( $delegate, CnSession ) {
+      var instance = $delegate.instance;
+      $delegate.instance = function( parentModel ) {
+        var object = instance( parentModel );
+
+        // see if the form has a record in the data-entry module
+        var onNew = object.onNew;
+        angular.extend( object, {
+          onNew: function( record ) {
+            return onNew( record ).then( function() {
+              // set the default page max time
+              if( angular.isUndefined( record.max_time ) ) record.max_time = CnSession.setting.defaultPageMaxTime;
+            } );
+          }
+        } );
+
+        return object;
+      };
+
+      return $delegate;
+    }
+  ] );
+
   // extend the view factory created by caling initQnairePartModule()
   cenozo.providers.decorator( 'CnPageViewFactory', [
     '$delegate', 'CnTranslationHelper',

@@ -153,6 +153,7 @@ cenozoApp.initQnairePartModule = function( module, type ) {
     'CnBaseAddFactory', 'CnHttpFactory',
     function( CnBaseAddFactory, CnHttpFactory ) {
       var object = function( parentModel ) {
+        var self = this;
         CnBaseAddFactory.construct( this, parentModel );
 
         // transition to viewing the new record instead of the default functionality
@@ -161,8 +162,7 @@ cenozoApp.initQnairePartModule = function( module, type ) {
         // get the parent's name for the breadcrumb trail
         angular.extend( this, {
           onNew: function( record ) {
-            var self = this;
-            return this.$$onNew( record ).then( function() {
+            return self.$$onNew( record ).then( function() {
               // get the parent page's name
               self.parentName = null;
               var parentIdentifier = parentModel.getParentIdentifier();
