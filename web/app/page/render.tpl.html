@@ -212,7 +212,7 @@
                   cn-autofocus="$first"
                   cn-elastic>
                 </textarea>
-                <div class="btn-group full-width" ng-if="'comment' != question.type">
+                <div class="btn-group full-width" ng-if="'comment' != question.type && question.dkna_refuse">
                   <label class="btn btn-default col-xs-6 larger"
                          ng-class="{ 'color-red': true === question.incomplete }"
                          style="text-align: left; font-style: italic; font-weight: normal;"

@@ -36,6 +36,7 @@ define( function() {
   module.columnList.precondition.isIncluded = function( $state, model ) { return 'qnaire' != model.getSubjectFromState(); };
 
   module.addInput( '', 'type', { title: 'Type', type: 'enum' } );
+  module.addInput( '', 'dkna_refuse', { title: 'Allow DKNA/Refuse', type: 'boolean' } );
   module.addInput( '', 'minimum', {
     title: 'Minimum',
     type: 'string',
