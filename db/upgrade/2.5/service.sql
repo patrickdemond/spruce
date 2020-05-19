@@ -30,6 +30,8 @@ INSERT INTO service ( subject, method, resource, restricted ) VALUES
 ( 'cohort', 'GET', 0, 0 ),
 ( 'collection', 'GET', 0, 1 ),
 ( 'collection', 'GET', 1, 1 ),
+( 'consent_type', 'GET', 0, 1 ),
+( 'consent_type', 'GET', 1, 1 ),
 ( 'failed_login', 'GET', 0, 1 ),
 ( 'language', 'GET', 0, 0 ),
 ( 'language', 'GET', 1, 0 ),
@@ -139,4 +141,9 @@ INSERT INTO service ( subject, method, resource, restricted ) VALUES
 ( 'qnaire', 'POST', 0, 1 ),
 ( 'qnaire_description', 'GET', 0, 0 ),
 ( 'qnaire_description', 'GET', 1, 0 ),
-( 'qnaire_description', 'PATCH', 1, 1 );
+( 'qnaire_description', 'PATCH', 1, 1 ),
+( 'qnaire_consent_type', 'DELETE', 1, 1 ),
+( 'qnaire_consent_type', 'GET', 0, 1 ),
+( 'qnaire_consent_type', 'GET', 1, 1 ),
+( 'qnaire_consent_type', 'PATCH', 1, 1 ),
+( 'qnaire_consent_type', 'POST', 0, 1 );

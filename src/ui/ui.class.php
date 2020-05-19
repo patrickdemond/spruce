@@ -82,6 +82,7 @@ class ui extends \cenozo\ui\ui
       $module->add_child( 'module' );
       $module->add_child( 'question' );
       $module->add_child( 'attribute' );
+      $module->add_child( 'qnaire_consent_type' );
       $module->add_choose( 'language' );
       $module->add_action( 'clone', '/{identifier}' );
       $module->add_action( 'mass_respondent', '/{identifier}' );

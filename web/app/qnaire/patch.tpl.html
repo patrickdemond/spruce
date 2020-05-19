@@ -1,0 +1,23 @@
+<div class="container-fluid bg-primary rounded-top"><h4>Patch Questionnaire</h4></div>
+<form name="form" class="form-horizontal" novalidate>
+  <div class="form-body">
+    <div class="form-group">
+      <label for="name" class="control-label col-sm-2">Patch File</label>
+      <div class="col-sm-10">
+        <input
+          id="name"
+          class="col-sm-10 form-control"
+          type="file"
+          ng-model="model.viewModel.file"
+          cn-upload="model.viewModel.file"
+          ng-required="true"></select>
+      </div>
+    </div>
+  </div>
+  <div class="form-footer text-right rounded-bottom bg-info">
+    <button type="button" class="btn btn-default" ng-click="model.viewModel.cancel()">Cancel</button>
+    <button type="button" class="btn btn-primary" ng-disabled="model.viewModel.working" ng-click="model.viewModel.applyPatch()">
+      <i class="glyphicon glyphicon-cloud-upload"></i> Patch
+    </button>
+  </div>
+</form>
