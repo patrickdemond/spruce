@@ -32,32 +32,39 @@
 </head>
 <body class="background">
   <script>
-    // define the framework and application build numbers
-    window.cenozo.build = "<?php print CENOZO_BUILD; ?>";
-    window.cenozoApp.build = "<?php print APP_BUILD; ?>";
-    window.cenozoApp.baseUrl = "<?php print ROOT_URL; ?>";
+    // display an error to IE users
+    if( window.document.documentMode ) {
+      alert(
+        'Supported web browsers include Firefox, Chrome, Safari and Edge.  Please do not use Internet Explorer as certain parts of the questionnaire may not display correctly.\n\nLes navigateurs Web pris en charge incluent Firefox, Chrome, Safari et Edge. Veuillez éviter d’utiliser Internet Explorer, car certaines parties du questionnaire pourraient ne pas s’afficher correctement.'
+      );
+    } else {
+      // define the framework and application build numbers
+      window.cenozo.build = "<?php print CENOZO_BUILD; ?>";
+      window.cenozoApp.build = "<?php print APP_BUILD; ?>";
+      window.cenozoApp.baseUrl = "<?php print ROOT_URL; ?>";
 
-    // determine whether we are in development mode
-    window.cenozo.development = <?php print DEVELOPMENT ? 'true' : 'false'; ?>;
-    if( window.cenozo.development ) console.info( 'Development mode' );
+      // determine whether we are in development mode
+      window.cenozo.development = <?php print DEVELOPMENT ? 'true' : 'false'; ?>;
+      if( window.cenozo.development ) console.info( 'Development mode' );
 
-    // define framework modules, set the applications module list then route them all
-    window.cenozo.defineFrameworkModules( <?php print $framework_module_string; ?> );
-    window.cenozoApp.setModuleList( <?php print $module_string; ?> );
-    window.cenozoApp.config( [
-      '$stateProvider',
-      function( $stateProvider ) {
-        for( var module in window.cenozoApp.moduleList )
-          window.cenozo.routeModule( $stateProvider, module, window.cenozoApp.moduleList[module] );
-      }
-    ] );
+      // define framework modules, set the applications module list then route them all
+      window.cenozo.defineFrameworkModules( <?php print $framework_module_string; ?> );
+      window.cenozoApp.setModuleList( <?php print $module_string; ?> );
+      window.cenozoApp.config( [
+        '$stateProvider',
+        function( $stateProvider ) {
+          for( var module in window.cenozoApp.moduleList )
+            window.cenozo.routeModule( $stateProvider, module, window.cenozoApp.moduleList[module] );
+        }
+      ] );
 
-    window.cenozoApp.controller( 'HeadCtrl', [
-      '$scope', 'CnSession',
-      function( $scope, CnSession ) {
-        $scope.getPageTitle = function() { return CnSession.pageTitle; };
-      }
-    ] );
+      window.cenozoApp.controller( 'HeadCtrl', [
+        '$scope', 'CnSession',
+        function( $scope, CnSession ) {
+          $scope.getPageTitle = function() { return CnSession.pageTitle; };
+        }
+      ] );
+    }
   </script>
 
   <div class="container-fluid headerless-outer-view-frame fade-transition noselect" ng-if="isLoading">
