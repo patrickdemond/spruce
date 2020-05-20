@@ -700,8 +700,8 @@ cenozo.service( 'CnTranslationHelper', [
 
 /* ######################################################################################################## */
 cenozo.factory( 'CnQnairePartCloneFactory', [
-  'CnHttpFactory', 'CnModalMessageFactory', 'CnModalConfirmFactory', '$q', '$filter', '$state',
-  function( CnHttpFactory, CnModalMessageFactory, CnModalConfirmFactory, $q, $filter, $state ) {
+  'CnHttpFactory', 'CnModalMessageFactory', '$q', '$filter', '$state',
+  function( CnHttpFactory, CnModalMessageFactory, $q, $filter, $state ) {
     var object = function( type ) {
       var self = this;
       var parentType = 'module' == type ? 'qnaire' : 'page' == type ? 'module' : 'question' == type ? 'page' : 'question';
