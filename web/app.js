@@ -265,7 +265,7 @@ cenozoApp.initDescriptionModule = function( module, type ) {
     columnList: {
       language: {
         column: 'language.code',
-        title: 'Langauge'
+        title: 'Language'
       },
       type: {
         title: 'Type'
