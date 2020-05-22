@@ -46,7 +46,7 @@ class get extends \cenozo\service\get
 
         $diff = is_null( $db_respondent_mail )
               ? $db_respondent->start_datetime->diff( util::get_datetime_object() )
-              : $db_respondent_mail->get_mail()->sent_datetime->diff( util::get_datetime_object() );
+              : $db_respondent_mail->get_mail()->schedule_datetime->diff( util::get_datetime_object() );
 
         $count = 0;
         if( 'hour' == $db_qnaire->repeated ) $count = 24*$diff->days + $diff->h;
