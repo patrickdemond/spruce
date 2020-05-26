@@ -3,7 +3,12 @@ define( function() {
 
   try { var module = cenozoApp.module( 'attribute', true ); } catch( err ) { console.warn( err ); return; }
   angular.extend( module, {
-    identifier: {},
+    identifier: {
+      parent: {
+        subject: 'qnaire',
+        column: 'qnaire.id'
+      }
+    },
     name: {
       singular: 'attribute',
       plural: 'attributes',
