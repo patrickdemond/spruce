@@ -160,6 +160,10 @@ class qnaire extends \cenozo\database\record
     foreach( $this->get_column_names() as $column_name )
       if( !in_array( $column_name, $ignore_columns ) )
         $this->$column_name = $db_source_qnaire->$column_name;
+
+    // override readonly, otherwise we can't create it
+    $this->readonly = false;
+
     $this->save();
 
     // copy all languages
