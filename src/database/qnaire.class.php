@@ -135,25 +135,6 @@ class qnaire extends \cenozo\database\record
   /**
    * TODO: document
    */
-  public function get_average_time( $submitted = false )
-  {
-    $select = lib::create( 'database\select' );
-    $select->add_column( 'SUM( time ) / COUNT( DISTINCT response.id )', 'average_time', false );
-    $modifier = lib::create( 'database\modifier' );
-    $modifier->join( 'respondent', 'qnaire.id', 'respondent.qnaire_id' );
-    $modifier->join( 'response', 'respondent.id', 'response.respondent_id' );
-    $modifier->join( 'page_time', 'response.id', 'page_time.response_id' );
-    $modifier->join( 'page', 'page_time.page_id', 'page.id' );
-    $modifier->where( 'qnaire.id', '=', $this->id );
-    $modifier->where( 'IFNULL( page_time.time, 0 )', '<=', 'page.max_time', false );
-    if( $submitted ) $modifier->where( 'response.submitted', '=', true );
-
-    return current( $this->select( $select, $modifier ) )['average_time'];
-  }
-
-  /**
-   * TODO: document
-   */
   public function clone_from( $db_source_qnaire )
   {
     $ignore_columns = array( 'id', 'update_timestamp', 'create_timestamp', 'name' );
@@ -711,5 +692,30 @@ class qnaire extends \cenozo\database\record
     }
 
     return $db_qnaire->id;
+  }
+
+  /**
+   * TODO: document
+   */
+  public static function recalculate_average_time()
+  {
+    $select = lib::create( 'database\select' );
+    $select->from( 'qnaire' );
+    $select->add_column( 'id' );
+    $select->add_column( 'SUM( time ) / COUNT( DISTINCT response.id )', 'average_time', false );
+    $modifier = lib::create( 'database\modifier' );
+    $modifier->join( 'respondent', 'qnaire.id', 'respondent.qnaire_id' );
+    $modifier->join( 'response', 'respondent.id', 'response.respondent_id' );
+    $modifier->join( 'page_time', 'response.id', 'page_time.response_id' );
+    $modifier->join( 'page', 'page_time.page_id', 'page.id' );
+    $modifier->where( 'IFNULL( page_time.time, 0 )', '<=', 'page.max_time', false );
+    $modifier->where( 'response.submitted', '=', true );
+    $modifier->group( 'qnaire.id' );
+
+    static::db()->execute( sprintf(
+      "REPLACE INTO qnaire_average_time( qnaire_id, time )\n%s %s",
+      $select->get_sql(),
+      $modifier->get_sql()
+    ) );
   }
 }

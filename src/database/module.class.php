@@ -167,4 +167,26 @@ class module extends base_qnaire_part
       $db_page->clone_from( $db_source_page );
     }
   }
+
+  /**
+   * TODO: document
+   */
+  public static function recalculate_average_time()
+  {
+    $select = lib::create( 'database\select' );
+    $select->from( 'module' );
+    $select->add_column( 'id' );
+    $select->add_column( 'SUM( time ) / COUNT( DISTINCT page_time.response_id )', 'average_time', false );
+    $modifier = lib::create( 'database\modifier' );
+    $modifier->left_join( 'page', 'module.id', 'page.module_id' );
+    $modifier->left_join( 'page_time', 'page.id', 'page_time.page_id' );
+    $modifier->where( 'IFNULL( page_time.time, 0 )', '<=', 'IFNULL( page.max_time, 0 )', false );
+    $modifier->group( 'module.id' );
+
+    static::db()->execute( sprintf(
+      "REPLACE INTO module_average_time( module_id, time )\n%s %s",
+      $select->get_sql(),
+      $modifier->get_sql()
+    ) );
+  }
 }

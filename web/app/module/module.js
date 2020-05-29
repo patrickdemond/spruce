@@ -62,4 +62,30 @@ define( function() {
       };
     }
   ] );
+
+  // extend the view factory created by caling initQnairePartModule()
+  cenozo.providers.decorator( 'CnModuleViewFactory', [
+    '$delegate', '$filter',
+    function( $delegate, $filter ) {
+      var instance = $delegate.instance;
+      $delegate.instance = function( parentModel, root ) {
+        var object = instance( parentModel, root );
+
+        // see if the form has a record in the data-entry module
+        angular.extend( object, {
+          onView: function( force ) {
+            var self = this;
+            return this.$$onView( force ).then( function() {
+              self.record.average_time = $filter( 'cnSeconds' )( Math.round( self.record.average_time ) );
+            } );
+          }
+        } );
+
+        return object;
+      };
+
+      return $delegate;
+    }
+  ] );
+
 } );

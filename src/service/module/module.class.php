@@ -26,22 +26,7 @@ class module extends \pine\service\base_qnaire_part_module
     // add the average time it takes to complete the module
     if( $select->has_column( 'average_time' ) )
     {
-      $join_sel = lib::create( 'database\select' );
-      $join_sel->from( 'module' );
-      $join_sel->add_column( 'id', 'module_id' );
-      $join_sel->add_column( 'ROUND( SUM( time ) / COUNT( DISTINCT page_time.response_id ) )', 'time', false );
-
-      $join_mod = lib::create( 'database\modifier' );
-      $join_mod->left_join( 'page', 'module.id', 'page.module_id' );
-      $join_mod->left_join( 'page_time', 'page.id', 'page_time.page_id' );
-      $join_mod->where( 'IFNULL( page_time.time, 0 )', '<=', 'IFNULL( page.max_time, 0 )', false );
-      $join_mod->group( 'module.id' );
-
-      $modifier->join(
-        sprintf( '( %s %s ) AS module_average_time', $join_sel->get_sql(), $join_mod->get_sql() ),
-        'module.id',
-        'module_average_time.module_id'
-      );
+      $modifier->join( 'module_average_time', 'module.id', 'module_average_time.module_id' );
       $select->add_table_column( 'module_average_time', 'time', 'average_time' );
     }
 

@@ -16,13 +16,16 @@ SOURCE setting.sql
 SOURCE writelog.sql
 
 SOURCE qnaire.sql
+SOURCE qnaire_average_time.sql
 SOURCE qnaire_description.sql
 SOURCE qnaire_has_language.sql
 SOURCE qnaire_consent_type.sql
 SOURCE attribute.sql
 SOURCE module.sql
+SOURCE module_average_time.sql
 SOURCE module_description.sql
 SOURCE page.sql
+SOURCE page_average_time.sql
 SOURCE page_description.sql
 SOURCE question.sql
 SOURCE question_description.sql

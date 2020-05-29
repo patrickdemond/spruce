@@ -26,6 +26,8 @@ DELIMITER $$
 DROP TRIGGER IF EXISTS module_AFTER_INSERT $$
 CREATE DEFINER = CURRENT_USER TRIGGER module_AFTER_INSERT AFTER INSERT ON module FOR EACH ROW
 BEGIN
+  INSERT INTO module_average_time SET module_id = NEW.id;
+
   INSERT INTO module_description( module_id, language_id, type )
   SELECT NEW.id, language_id, type.name
   FROM ( SELECT "prompt" AS name UNION SELECT "popup" AS name ) AS type, qnaire_has_language

@@ -288,4 +288,27 @@ class page extends base_qnaire_part
       $db_question->clone_from( $db_source_question );
     }
   }
+
+  /**
+   * TODO: document
+   */
+  public static function recalculate_average_time()
+  {
+    $select = lib::create( 'database\select' );
+    $select->from( 'page' );
+    $select->add_column( 'id' );
+    $select->add_column( 'AVG( time )', 'average_time', false );
+    $modifier = lib::create( 'database\modifier' );
+    $join_mod = lib::create( 'database\modifier' );
+    $join_mod->where( 'page.id', '=', 'page_time.page_id', false );
+    $join_mod->where( 'IFNULL( page_time.time, 0 )', '<=', 'IFNULL( page.max_time, 0 )', false );
+    $modifier->join_modifier( 'page_time', $join_mod, 'left' );
+    $modifier->group( 'page.id' );
+
+    static::db()->execute( sprintf(
+      "REPLACE INTO page_average_time( page_id, time )\n%s %s",
+      $select->get_sql(),
+      $modifier->get_sql()
+    ) );
+  }
 }

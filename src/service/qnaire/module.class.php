@@ -41,6 +41,12 @@ class module extends \cenozo\service\module
       );
     }
 
+    if( $select->has_column( 'average_time' ) )
+    {
+      $modifier->join( 'qnaire_average_time', 'qnaire.id', 'qnaire_average_time.qnaire_id' );
+      $select->add_table_column( 'qnaire_average_time', 'time', 'average_time' );
+    }
+
     $db_qnaire = $this->get_resource();
     if( !is_null( $db_qnaire ) )
     {
@@ -54,32 +60,6 @@ class module extends \cenozo\service\module
           if( !is_null( $db_first_page) ) $first_page_id = $db_first_page->id;
         }
         $select->add_constant( $first_page_id, 'first_page_id', 'integer' );
-      }
-
-      if( $select->has_column( 'average_time' ) )
-      {
-        $time = $db_qnaire->get_average_time( true );
-        if( is_null( $time ) )
-        {
-          $average_time = 'N/A';
-        }
-        else
-        {
-          $parts = array();
-
-          $days = floor( $time / (24*60*60) );
-          if( 0 < $days ) $parts[] = sprintf( '%d day%s', $days, 1 < $days ? 's' : '' );
-
-          $hours = floor( $time % (24*60*60) / (60*60) );
-          if( 0 < $hours ) $parts[] = sprintf( '%d hour%s', $hours, 1 < $hours ? 's' : '' );
-
-          $minutes = floor( $time % (60*60) / (60) );
-          if( 0 < $minutes ) $parts[] = sprintf( '%d minute%s', $minutes, 1 < $minutes ? 's' : '' );
-
-          $average_time = 0 < count( $parts ) ? implode( ', ', $parts ) : '0 minutes';
-        }
-
-        $select->add_constant( $average_time, 'average_time' );
       }
     }
   }

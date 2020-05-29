@@ -73,7 +73,6 @@ define( function() {
     average_time: {
       title: 'Average Time',
       type: 'string',
-      format: 'seconds',
       isConstant: true,
       isExcluded: 'add'
     },
@@ -586,8 +585,8 @@ define( function() {
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnQnaireViewFactory', [
-    'CnBaseViewFactory',
-    function( CnBaseViewFactory ) {
+    'CnBaseViewFactory', '$filter',
+    function( CnBaseViewFactory, $filter ) {
       var object = function( parentModel, root ) {
         var self = this;
         CnBaseViewFactory.construct( this, parentModel, root );
@@ -611,6 +610,12 @@ define( function() {
             }
           }
         } );
+
+        this.onView = function( force ) {
+          return this.$$onView( force ).then( function() {
+            self.record.average_time = $filter( 'cnSeconds' )( Math.round( self.record.average_time ) );
+          } );
+        };
 
         this.onPatch = function( data ) {
           return this.$$onPatch( data ).then( function() {

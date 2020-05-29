@@ -947,8 +947,8 @@ define( function() {
 
   // extend the view factory created by caling initQnairePartModule()
   cenozo.providers.decorator( 'CnPageViewFactory', [
-    '$delegate', 'CnTranslationHelper',
-    function( $delegate, CnTranslationHelper ) {
+    '$delegate', '$filter', 'CnTranslationHelper',
+    function( $delegate, $filter, CnTranslationHelper ) {
       var instance = $delegate.instance;
       $delegate.instance = function( parentModel, root ) {
         var object = instance( parentModel, root );
@@ -958,6 +958,7 @@ define( function() {
           onView: function( force ) {
             var self = this;
             return this.$$onView( force ).then( function() {
+              self.record.average_time = $filter( 'cnSeconds' )( Math.round( self.record.average_time ) );
               self.record.prompts = CnTranslationHelper.parseDescriptions( self.record.prompts );
               self.record.popups = CnTranslationHelper.parseDescriptions( self.record.popups );
               self.record.module_prompts = CnTranslationHelper.parseDescriptions( self.record.module_prompts );
