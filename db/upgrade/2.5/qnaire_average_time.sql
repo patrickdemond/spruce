@@ -18,11 +18,11 @@ SELECT "Calculating average time for all qnaires" AS "";
 
 INSERT IGNORE INTO qnaire_average_time( qnaire_id, time )
 SELECT qnaire.id, SUM( time ) / COUNT( DISTINCT response.id )
-FROM patrick_pine.qnaire
-JOIN patrick_pine.respondent ON qnaire.id = respondent.qnaire_id
-JOIN patrick_pine.response ON respondent.id = response.respondent_id
-JOIN patrick_pine.page_time ON response.id = page_time.response_id
-JOIN patrick_pine.page ON page_time.page_id = page.id
+FROM qnaire
+JOIN respondent ON qnaire.id = respondent.qnaire_id
+JOIN response ON respondent.id = response.respondent_id
+JOIN page_time ON response.id = page_time.response_id
+JOIN page ON page_time.page_id = page.id
 WHERE IFNULL( page_time.time, 0 ) <= page.max_time
 AND response.submitted = true
 GROUP BY qnaire.id;

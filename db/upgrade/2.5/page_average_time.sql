@@ -18,7 +18,6 @@ SELECT "Calculating average time for all pages" AS "";
 
 INSERT IGNORE INTO page_average_time( page_id, time )
 SELECT page.id, ROUND( AVG( time ) )
-FROM patrick_pine.page
-LEFT JOIN patrick_pine.page_time ON page.id = page_time.page_id
-      AND IFNULL( page_time.time, 0 ) <= IFNULL( page.max_time, 0 )
+FROM page
+LEFT JOIN page_time ON page.id = page_time.page_id AND IFNULL( page_time.time, 0 ) <= IFNULL( page.max_time, 0 )
 GROUP BY page.id;

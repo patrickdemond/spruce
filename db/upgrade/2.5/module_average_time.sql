@@ -18,8 +18,8 @@ SELECT "Calculating average time for all modules" AS "";
 
 INSERT IGNORE INTO module_average_time( module_id, time )
 SELECT module.id, ROUND( SUM( time ) / COUNT( DISTINCT page_time.response_id ) )
-FROM patrick_pine.module
-LEFT JOIN patrick_pine.page ON module.id = page.module_id
-LEFT JOIN patrick_pine.page_time ON page.id = page_time.page_id
+FROM module
+LEFT JOIN page ON module.id = page.module_id
+LEFT JOIN page_time ON page.id = page_time.page_id
 WHERE IFNULL( page_time.time, 0 ) <= IFNULL( page.max_time, 0 )
 GROUP BY module.id;
