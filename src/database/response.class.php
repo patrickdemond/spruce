@@ -141,7 +141,7 @@ class response extends \cenozo\database\has_rank
           {
             if( !$db_qnaire->debug )
             {
-              log::debug( sprintf(
+              log::info( sprintf(
                 'Creating new %s "%s" event due to question "%s" having the value "%s" (questionnaire "%s")',
                 $db_qnaire_consent_type->accept ? 'accept' : 'deny',
                 $db_qnaire_consent_type->get_consent_type()->name,
