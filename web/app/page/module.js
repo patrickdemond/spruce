@@ -670,6 +670,36 @@ define( function() {
                   question.value = value;
                   question.backupValue = angular.copy( question.value );
                   self.convertValueToModel( question );
+
+                  // now blank out answers to questions which are no longer visible (this is done automatically on the server side)
+                  var visibleQuestionList = self.getVisibleQuestionList();
+                  self.questionList.forEach( function( q ) {
+                    if( null == visibleQuestionList.findByProperty( 'id', q.id ) ) {
+                      // q isn't visible so set its value to null if it isn't already
+                      if( null != q.value ) {
+                        q.value = null;
+                        self.convertValueToModel( q );
+                      }
+                    } else {
+                      // q is visible, now check its options
+                      if( 'list' == q.type ) {
+                        var visibleOptionList = self.getVisibleOptionList( q );
+                        q.optionList.forEach( function( o ) {
+                          if( null == visibleOptionList.findByProperty( 'id', o.id ) ) {
+                            // o isn't visible so make sure it isn't selected
+                            var v = angular.isArray( q.value ) ? q.value : [];
+                            var i = searchOptionList( v, o.id );
+                            if( null != i ) v.splice( i, 1 );
+                            if( 0 == v.length ) v = null;
+
+                            q.value = v;
+                            self.convertValueToModel( q );
+                          }
+                        } );
+                      }
+                    }
+                  } );
+
                   if( !noCompleteCheck ) {
                     var complete = self.questionIsComplete( question );
                     question.incomplete = false === complete ? true

@@ -26,11 +26,70 @@ class answer extends \cenozo\database\record
    */
   public function save()
   {
+    $question_option_class_name = lib::get_class_name( 'database\question_option' );
+    $expression_manager = lib::create( 'business\expression_manager' );
+    $new = is_null( $this->id );
+
     // always set the language to whatever the response's current language is
     $db_response = lib::create( 'database\response', $this->response_id );
     $this->language_id = $db_response->language_id;
 
     parent::save();
+
+    // When changing an answer we may have to update other answers on the same page which are affected by the answer that
+    // was just provided since their preconditions may depend on it.
+    if( !$new )
+    {
+      $db_question = $this->get_question();
+
+      // There are two different types of data which needs to be removed if their precondition is no longer met
+      // after setting this answer's value
+
+      // 1) the answer refers to a question which should no longer be asked due to this answer's value or selected option
+      $question_sel = lib::create( 'database\select' );
+      $question_sel->add_column( 'id' );
+      $question_sel->add_column( 'precondition' );
+      $question_mod = lib::create( 'database\modifier' );
+      $question_mod->where( 'question.precondition', 'RLIKE', sprintf( '\\$%s(:[^$]+)?\\$', $db_question->name ) );
+      foreach( $db_question->get_page()->get_question_list( $question_sel, $question_mod ) as $question )
+      {
+        if( !$expression_manager->evaluate( $db_response, $question['precondition'] ) )
+        {
+          $db_answer = static::get_unique_record(
+            array( 'response_id', 'question_id' ),
+            array( $db_response->id, $question['id'] )
+          );
+          if( !is_null( $db_answer ) && 'null' != $db_answer->value )
+          {
+            $db_answer->value = 'null';
+            $db_answer->save();
+          }
+        }
+      }
+
+      // 2) the answer includes a question-option which should no longer be allowed due to this answer's value or selected option
+      $question_option_sel = lib::create( 'database\select' );
+      $question_option_sel->add_column( 'id' );
+      $question_option_sel->add_column( 'precondition' );
+      $question_option_sel->add_table_column( 'question', 'id', 'question_id' );
+      $question_option_mod = lib::create( 'database\modifier' );
+      $question_option_mod->join( 'question', 'question_option.question_id', 'question.id' );
+      $question_option_mod->where( 'question.type', '=', 'list' );
+      $question_option_mod->where( 'question.page_id', '=', $db_question->page_id );
+      $question_option_mod->where( 'question_option.precondition', 'RLIKE', sprintf( '\\$%s(:[^$]+)?\\$', $db_question->name ) );
+      foreach( $question_option_class_name::select( $question_option_sel, $question_option_mod ) as $question_option )
+      {
+        if( !$expression_manager->evaluate( $db_response, $question_option['precondition'] ) )
+        {
+          $db_answer = static::get_unique_record(
+            array( 'response_id', 'question_id' ),
+            array( $db_response->id, $question_option['question_id'] )
+          );
+
+          if( !is_null( $db_answer ) ) $db_answer->remove_answer_value_by_option_id( $question_option['id'] );
+        }
+      }
+    }
   }
 
   /**
@@ -148,6 +207,12 @@ class answer extends \cenozo\database\record
       static::db()->execute( sprintf(
         'UPDATE answer SET value = JSON_REMOVE( value, %s ) WHERE id = %d',
         str_replace( '.id', '', $json_path ),
+        $this->id
+      ) );
+
+      // replace empty arrays with null
+      static::db()->execute( sprintf(
+        'UPDATE answer SET value = "null" WHERE id = %d AND value = "[]"',
         $this->id
       ) );
     }
