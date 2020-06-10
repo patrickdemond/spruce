@@ -100,4 +100,24 @@ define( function() {
       return $delegate;
     }
   ] );
+
+  // extend the base model factory created by caling initQnairePartModule()
+  cenozo.providers.decorator( 'CnQuestionModelFactory', [
+    '$delegate',
+    function( $delegate ) {
+      function extendModelObject( object ) {
+        object.getAddEnabled = function() {
+          // don't allow the add button while viewing the qnaire
+          return 'qnaire' != object.getSubjectFromState() && object.$$getAddEnabled();
+        };
+        return object;
+      }
+
+      var instance = $delegate.instance;
+      $delegate.root = extendModelObject( $delegate.root );
+      $delegate.instance = function( parentModel, root ) { return extendModelObject( instance( root ) ); };
+
+      return $delegate;
+    }
+  ] );
 } );
