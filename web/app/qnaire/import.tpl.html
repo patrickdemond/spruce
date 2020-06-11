@@ -16,7 +16,7 @@
   </div>
   <div class="form-footer text-right rounded-bottom bg-info">
     <button type="button" class="btn btn-default" ng-click="model.cancel()">Cancel</button>
-    <button type="button" class="btn btn-primary" ng-disabled="model.working" ng-click="model.import()">
+    <button type="button" class="btn btn-primary" ng-disabled="null == model.file || model.working" ng-click="model.import()">
       <i class="glyphicon glyphicon-cloud-upload"></i> Import
     </button>
   </div>
