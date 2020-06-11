@@ -653,6 +653,20 @@ define( function() {
 
               // No out of bounds detected, so proceed with setting the value
               function() {
+                // Note that we need to treat entering text values a bit differently than other question types.
+                // Some participants may wish to fill in a value after they have already selected dkna or refuse.
+                // When entering their text they may then immediatly click the selected dkna/refuse button to
+                // cancel its selection.  To prevent this button press from immediately clearing their text anwer
+                // we must briefly ignore the answer for this question being set to null.
+                if( 'text' == question.type ) {
+                  if( angular.isString( value ) ) {
+                    question.ignoreDknaRefuse = true;
+                    $timeout( function() { delete question.ignoreDknaRefuse; }, 250 );
+                  } else if( question.ignoreDknaRefuse && null === value ) {
+                    return $q.all().finally( function() { self.working = false; } );
+                  }
+                }
+
                 self.working = true;
                 if( "" === value ) value = null;
                 var promise = 'respondent' == self.parentModel.getSubjectFromState() ?
