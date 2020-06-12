@@ -242,6 +242,393 @@ class qnaire extends \cenozo\database\record
   /**
    * TODO: document
    */
+  public function process_patch( $patch_object, $apply = false )
+  {
+    set_time_limit( 900 ); // 15 minutes max
+
+    $language_class_name = lib::create( 'database\language' );
+    $attribute_class_name = lib::create( 'database\attribute' );
+    $qnaire_description_class_name = lib::create( 'database\qnaire_description' );
+    $module_class_name = lib::create( 'database\module' );
+
+    // NOTE: since we want to avoid duplicate unique keys caused by re-naming or re-ordering modules we use the following
+    // offset and suffix values when setting rank and name, then after all changes have been made remove the offset/suffix
+    $name_suffix = bin2hex( openssl_random_pseudo_bytes( 5 ) );
+
+    $difference_list = array();
+
+    foreach( $patch_object as $property => $value )
+    {
+      if( 'base_language' == $property )
+      {
+        $db_language = $language_class_name::get_unique_record( 'code', $patch_object->base_language );
+        if( $db_language->id != $this->base_language_id )
+        {
+          if( $apply ) $this->base_language_id = $db_language->id;
+          else $difference_list['base_language'] = $patch_object->base_language;
+        }
+      }
+      else if( 'language_list' == $property )
+      {
+        // check every item in the patch object for additions
+        $add_list = array();
+        foreach( $patch_object->language_list as $lang )
+        {
+          $language_mod = lib::create( 'database\modifier' );
+          $language_mod->where( 'language.code', '=', $lang );
+          if( 0 == $this->get_language_count( $language_mod ) )
+          {
+            if( $apply )
+            {
+              $db_language = $language_class_name::get_unique_record( 'code', $lang );
+              $this->add_language( $db_language->id );
+            }
+            else $add_list[] = $lang;
+          }
+        }
+
+        // check every item in this object for removals
+        $remove_list = array();
+        $language_sel = lib::create( 'database\select' );
+        $language_sel->add_column( 'id' );
+        $language_sel->add_column( 'code' );
+        foreach( $this->get_language_list( $language_sel ) as $language )
+        {
+          $found = false;
+          foreach( $patch_object->language_list as $lang ) if( $language['code'] == $lang )
+          {
+            $found = true;
+            break;
+          }
+          if( !$found )
+          {
+            if( $apply ) $this->remove_language( $language['id'] );
+            else $remove_list[] = $language['code'];
+          }
+        }
+
+        $diff_list = array();
+        if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
+        if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
+        if( 0 < count( $diff_list ) ) $difference_list['language_list'] = $diff_list;
+      }
+      else if( 'attribute_list' == $property )
+      {
+        // check every item in the patch object for additions and changes
+        $add_list = array();
+        $change_list = array();
+        foreach( $patch_object->attribute_list as $attribute )
+        {
+          $db_attribute = $attribute_class_name::get_unique_record(
+            array( 'qnaire_id', 'name' ),
+            array( $this->id, $attribute->name )
+          );
+
+          if( is_null( $db_attribute ) )
+          {
+            if( $apply )
+            {
+              $db_attribute = lib::create( 'database\attribute' );
+              $db_attribute->qnaire_id = $this->id;
+              $db_attribute->name = $attribute->name;
+              $db_attribute->code = $attribute->code;
+              $db_attribute->note = $attribute->note;
+              $db_attribute->save();
+            }
+            else $add_list[] = $attribute;
+          }
+          else
+          {
+            // find and add all differences
+            $diff = array();
+            foreach( $attribute as $property => $value )
+              if( $db_attribute->$property != $attribute->$property )
+                $diff[$property] = $attribute->$property;
+
+            if( 0 < count( $diff ) )
+            {
+              if( $apply )
+              {
+                $db_attribute->name = $attribute->name;
+                $db_attribute->code = $attribute->code;
+                $db_attribute->note = $attribute->note;
+                $db_attribute->save();
+              }
+              else $change_list[$db_attribute->name] = $diff;
+            }
+          }
+        }
+
+        // check every item in this object for removals
+        $remove_list = array();
+        foreach( $this->get_attribute_object_list() as $db_attribute )
+        {
+          $found = false;
+          foreach( $patch_object->attribute_list as $attribute )
+          {
+            if( $db_attribute->name == $attribute->name )
+            {
+              $found = true;
+              break;
+            }
+          }
+
+          if( !$found )
+          {
+            if( $apply ) $db_attribute->delete();
+            else $remove_list[] = $db_attribute->name;
+          }
+        }
+
+        $diff_list = array();
+        if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
+        if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
+        if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
+        if( 0 < count( $diff_list ) ) $difference_list['attribute_list'] = $diff_list;
+      }
+      else if( 'qnaire_description_list' == $property )
+      {
+        // check every item in the patch object for additions and changes
+        $add_list = array();
+        $change_list = array();
+        foreach( $patch_object->qnaire_description_list as $qnaire_description )
+        {
+          $db_language = $language_class_name::get_unique_record( 'code', $qnaire_description->language );
+          $db_qnaire_description = $qnaire_description_class_name::get_unique_record(
+            array( 'qnaire_id', 'language_id', 'type' ),
+            array( $this->id, $db_language->id, $qnaire_description->type )
+          );
+
+          if( is_null( $db_qnaire_description ) )
+          {
+            if( $apply )
+            {
+              $db_qnaire_description = lib::create( 'database\qnaire_description' );
+              $db_qnaire_description->qnaire_id = $this->id;
+              $db_qnaire_description->language_id = $db_language->id;
+              $db_qnaire_description->type = $qnaire_description->type;
+              $db_qnaire_description->value = $qnaire_description->value;
+              $db_qnaire_description->save();
+            }
+            else $add_list[] = $qnaire_description;
+          }
+          else
+          {
+            // find and add all differences
+            $diff = array();
+            foreach( $qnaire_description as $property => $value )
+              if( 'language' != $property && $db_qnaire_description->$property != $qnaire_description->$property )
+                $diff[$property] = $qnaire_description->$property;
+
+            if( 0 < count( $diff ) )
+            {
+              if( $apply )
+              {
+                $db_qnaire_description->value = $qnaire_description->value;
+                $db_qnaire_description->save();
+              }
+              else
+              {
+                $index = sprintf( '%s [%s]', $qnaire_description->type, $db_language->code );
+                $change_list[$index] = $diff;
+              }
+            }
+          }
+        }
+
+        // check every item in this object for removals
+        $remove_list = array();
+        foreach( $this->get_qnaire_description_object_list() as $db_qnaire_description )
+        {
+          $found = false;
+          foreach( $patch_object->qnaire_description_list as $qnaire_description )
+          {
+            if( $db_qnaire_description->get_language()->code == $qnaire_description->language &&
+                $db_qnaire_description->type == $qnaire_description->type )
+            {
+              $found = true;
+              break;
+            }
+          }
+
+          if( !$found )
+          {
+            if( $apply ) $db_qnaire_description->delete();
+            else
+            {
+              $index = sprintf( '%s [%s]', $db_qnaire_description->type, $db_qnaire_description->get_language()->code );
+              $remove_list[] = $index;
+            }
+          }
+        }
+
+        $diff_list = array();
+        if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
+        if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
+        if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
+        if( 0 < count( $diff_list ) ) $difference_list['qnaire_description_list'] = $diff_list;
+      }
+      else if( 'module_list' == $property )
+      {
+        // check every item in the patch object for additions and changes
+        $add_list = array();
+        $change_list = array();
+        foreach( $patch_object->module_list as $module )
+        {
+          // match module by name or rank
+          $db_module = $module_class_name::get_unique_record( array( 'qnaire_id', 'name' ), array( $this->id, $module->name ) );
+          if( is_null( $db_module ) )
+          {
+            // we may have renamed the module, so see if it exists exactly the same under the same rank
+            $db_module = $module_class_name::get_unique_record( array( 'qnaire_id', 'rank' ), array( $this->id, $module->rank ) );
+            if( !is_null( $db_module ) )
+            {
+              // confirm that the name is the only thing that has changed
+              $properties = array_keys( get_object_vars( $db_child->process_patch( $child, $name_suffix, false ) ) );
+              if( 1 != count( $properties ) || 'name' != current( $properties ) ) $db_module = NULL;
+            }
+          }
+
+          if( is_null( $db_module ) )
+          {
+            if( $apply )
+            {
+              $db_module = lib::create( 'database\module' );
+              $db_module->qnaire_id = $this->id;
+              $db_module->rank = $module->rank;
+              $db_module->name = sprintf( '%s_%s', $module->name, $name_suffix );
+              $db_module->precondition = $module->precondition;
+              $db_module->note = $module->note;
+              $db_module->save();
+
+              $db_module->process_patch( $module, $name_suffix, $apply );
+            }
+            else $add_list[] = $module;
+          }
+          else
+          {
+            // find and add all differences
+            $diff = $db_module->process_patch( $module, $name_suffix, $apply );
+            if( !is_null( $diff ) )
+            {
+              // the process_patch() function above applies any changes so we don't have to do it here
+              if( !$apply ) $change_list[$db_module->name] = $diff;
+            }
+          }
+        }
+
+        // check every item in this object for removals
+        $remove_list = array();
+        $module_mod = lib::create( 'database\modifier' );
+        $module_mod->order( 'rank' );
+        foreach( $this->get_module_object_list( $module_mod ) as $db_module )
+        {
+          $found = false;
+          foreach( $patch_object->module_list as $module )
+          {
+            // see if the module exists in the patch or if we're already changing the module
+            $db_module_name = $apply ? preg_replace( sprintf( '/_%s$/', $name_suffix ), '', $db_module->name ) : $db_module->name;
+            if( $db_module_name == $module->name || in_array( $db_module_name, array_keys( $change_list ) ) )
+            {
+              $found = true;
+              break;
+            }
+          }
+
+          if( !$found )
+          {
+            if( $apply ) $db_module->delete();
+            else $remove_list[] = $db_module->name;
+          }
+        }
+
+        $diff_list = array();
+        if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
+        if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
+        if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
+        if( 0 < count( $diff_list ) ) $difference_list['module_list'] = $diff_list;
+      }
+      else
+      {
+        if( $patch_object->$property != $this->$property )
+        {
+          if( $apply ) $this->$property = $patch_object->$property;
+          else $difference_list[$property] = $patch_object->$property;
+        }
+      }
+    }
+
+    if( $apply )
+    {
+      // if we want to make the qnaire readonly we have to save that last
+      $readonly = $this->readonly;
+      $this->readonly = false;
+      $this->save();
+
+      // remove the name suffix from all qnaire parts
+      $join_mod = lib::create( 'database\modifier' );
+      $join_mod->join( 'qnaire', 'module.qnaire_id', 'qnaire.id' );
+      $where_mod = lib::create( 'database\modifier' );
+      $where_mod->where( 'qnaire.id', '=', $this->id );
+      $where_mod->where( 'module.name', 'LIKE', '%_'.$name_suffix );
+      static::db()->execute( sprintf(
+        'UPDATE module %s '.
+        'SET module.name = REPLACE( module.name, "_%s", "" ) %s',
+        $join_mod->get_sql(),
+        $name_suffix,
+        $where_mod->get_sql()
+      ) );
+
+      $join_mod->join( 'module', 'page.module_id', 'module.id', '', NULL, true );
+      $where_mod = lib::create( 'database\modifier' );
+      $where_mod->where( 'qnaire.id', '=', $this->id );
+      $where_mod->where( 'page.name', 'LIKE', '%_'.$name_suffix );
+      static::db()->execute( sprintf(
+        'UPDATE page %s '.
+        'SET page.name = REPLACE( page.name, "_%s", "" ) %s',
+        $join_mod->get_sql(),
+        $name_suffix,
+        $where_mod->get_sql()
+      ) );
+
+      $join_mod->join( 'page', 'question.page_id', 'page.id', '', NULL, true );
+      $where_mod = lib::create( 'database\modifier' );
+      $where_mod->where( 'qnaire.id', '=', $this->id );
+      $where_mod->where( 'question.name', 'LIKE', '%_'.$name_suffix );
+      static::db()->execute( sprintf(
+        'UPDATE question %s '.
+        'SET question.name = REPLACE( question.name, "_%s", "" ) %s',
+        $join_mod->get_sql(),
+        $name_suffix,
+        $where_mod->get_sql()
+      ) );
+
+      $join_mod->join( 'question', 'question_option.question_id', 'question.id', '', NULL, true );
+      $where_mod = lib::create( 'database\modifier' );
+      $where_mod->where( 'qnaire.id', '=', $this->id );
+      $where_mod->where( 'question_option.name', 'LIKE', '%_'.$name_suffix );
+      static::db()->execute( sprintf(
+        'UPDATE question_option %s '.
+        'SET question_option.name = REPLACE( question_option.name, "_%s", "" ) %s',
+        $join_mod->get_sql(),
+        $name_suffix,
+        $where_mod->get_sql()
+      ) );
+
+      if( $readonly )
+      {
+        $this->readonly = true;
+        $this->save();
+      }
+
+      return null;
+    }
+    else return (object)$difference_list;
+  }
+
+  /**
+   * TODO: document
+   */
   public function generate( $type = 'export' )
   {
     $qnaire_data = array(
@@ -379,8 +766,7 @@ class qnaire extends \cenozo\database\record
               'minimum' => $db_question_option->minimum,
               'maximum' => $db_question_option->maximum,
               'precondition' => $db_question_option->precondition,
-              'question_option_description_list' => array(),
-              'question_option_option_list' => array()
+              'question_option_description_list' => array()
             );
 
             $qod_sel = lib::create( 'database\select' );
@@ -397,6 +783,7 @@ class qnaire extends \cenozo\database\record
             $question['question_option_list'][] = $question_option;
           }
 
+          if( 0 == count( $question['question_option_list'] ) ) unset( $question['question_option_list'] );
           $page['question_list'][] = $question;
         }
 
@@ -658,27 +1045,30 @@ class qnaire extends \cenozo\database\record
             $db_question_description->save();
           }
 
-          foreach( $question_object->question_option_list as $question_option_object )
+          if( property_exists( $question_object, 'question_option_list' ) )
           {
-            $db_question_option = lib::create( 'database\question_option' );
-            $db_question_option->question_id = $db_question->id;
-            $db_question_option->rank = $question_option_object->rank;
-            $db_question_option->name = $question_option_object->name;
-            $db_question_option->exclusive = $question_option_object->exclusive;
-            $db_question_option->extra = $question_option_object->extra;
-            $db_question_option->multiple_answers = $question_option_object->multiple_answers;
-            $db_question_option->minimum = $question_option_object->minimum;
-            $db_question_option->maximum = $question_option_object->maximum;
-            $db_question_option->precondition = $question_option_object->precondition;
-            $db_question_option->save();
-
-            foreach( $question_option_object->question_option_description_list as $question_option_description )
+            foreach( $question_object->question_option_list as $question_option_object )
             {
-              $db_language = $language_class_name::get_unique_record( 'code', $question_option_description->language );
-              $db_question_option_description =
-                $db_question_option->get_description( $question_option_description->type, $db_language );
-              $db_question_option_description->value = $question_option_description->value;
-              $db_question_option_description->save();
+              $db_question_option = lib::create( 'database\question_option' );
+              $db_question_option->question_id = $db_question->id;
+              $db_question_option->rank = $question_option_object->rank;
+              $db_question_option->name = $question_option_object->name;
+              $db_question_option->exclusive = $question_option_object->exclusive;
+              $db_question_option->extra = $question_option_object->extra;
+              $db_question_option->multiple_answers = $question_option_object->multiple_answers;
+              $db_question_option->minimum = $question_option_object->minimum;
+              $db_question_option->maximum = $question_option_object->maximum;
+              $db_question_option->precondition = $question_option_object->precondition;
+              $db_question_option->save();
+
+              foreach( $question_option_object->question_option_description_list as $question_option_description )
+              {
+                $db_language = $language_class_name::get_unique_record( 'code', $question_option_description->language );
+                $db_question_option_description =
+                  $db_question_option->get_description( $question_option_description->type, $db_language );
+                $db_question_option_description->value = $question_option_description->value;
+                $db_question_option_description->save();
+              }
             }
           }
         }

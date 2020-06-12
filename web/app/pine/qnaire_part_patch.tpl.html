@@ -1,0 +1,45 @@
+<div ng-repeat="item in ( (model|cnIsArray) ? model : model.add )">
+  <div class="panel panel-default" style="margin-bottom: 0">
+    <div ng-if="!(model|cnIsArray)" class="panel-heading"><em>ADD:</em></div>
+    <div class="panel-body">
+      <div ng-repeat="(property, child) in item" class="row">
+        <div ng-if="childSubject+'_list' != property">
+          <label class="col-sm-2 control-label">{{
+            property | cnStrReplace:subject:'' | cnStrReplace:'_':' ' | cnStrReplace:' list':'s' | cnUCWords
+          }}:</label>
+          <div class="col-sm-10 col-slim form-text">
+            <div ng-if="subject+'_description_list' != property">{{ child }}</div>
+            <div ng-if="subject+'_description_list' == property"><cn-description-patch model="child"></cn-description-patch></div>
+          </div>
+        </div>
+        <div ng-if="childSubject+'_list' == property">
+          <label class="container-fluid">{{ property | cnStrReplace:'_':' ' | cnUCWords }}</label>
+          <div class="container-fluid"><cn-qnaire-part-patch subject="{{ childSubject }}" model="child"></cn-qnaire-part-patch></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div ng-repeat="(name, item) in model.change">
+  <div class="panel panel-default" style="margin-bottom: 0">
+    <div class="panel-heading"><em>CHANGE:</em> "{{ name }}"</div>
+    <div class="panel-body">
+      <div ng-repeat="(property, child) in item" class="row">
+        <div ng-if="childSubject+'_list' != property">
+          <label class="col-sm-2 control-label">{{
+            property | cnStrReplace:subject:'' | cnStrReplace:'_':' ' | cnStrReplace: ' list':'s' | cnUCWords
+          }}:</label>
+          <div class="col-sm-10 col-slim form-text">
+            <div ng-if="subject+'_description_list' != property">{{ child }}</div>
+            <div ng-if="subject+'_description_list' == property"><cn-description-patch model="child"></cn-description-patch></div>
+          </div>
+        </div>
+        <div ng-if="childSubject+'_list' == property">
+          <label class="container-fluid">{{ property | cnStrReplace:'_':' ' | cnUCWords }}</label>
+          <div class="container-fluid"><cn-qnaire-part-patch subject="{{ childSubject }}" model="child"></cn-qnaire-part-patch></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div ng-repeat="item in model.remove"><em>REMOVE:</em> {{ item }}</div>

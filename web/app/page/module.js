@@ -1,4 +1,6 @@
-define( function() {
+define( [ 'question' ].reduce( function( list, name ) {
+  return list.concat( cenozoApp.module( name ).getRequiredFiles() );
+}, [] ), function() {
   'use strict';
 
   try { var module = cenozoApp.module( 'page', true ); } catch( err ) { console.warn( err ); return; }

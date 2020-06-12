@@ -1,0 +1,9 @@
+<div ng-repeat="item in ( (model|cnIsArray) ? model : model.add)" ng-class="{ 'vertical-spacer': !$first }">
+  <em ng-if="!(model|cnIsArray)">ADD:</em> {{ item.type }} [{{ item.language }}] => {{ item.value }}
+</div>
+<div ng-repeat="(name, item) in model.change" ng-class="{ 'vertical-spacer': !$first }">
+  <em>CHANGE:</em> {{ name }} => "{{ item.value }}"
+</div>
+<div ng-repeat="item in model.remove" ng-class="{ 'vertical-spacer': !$first }">
+  <em>REMOVE:</em> {{ item.type }} [{{ item.language }}]
+</div>

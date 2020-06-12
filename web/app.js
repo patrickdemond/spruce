@@ -11,6 +11,37 @@ cenozo.controller( 'HeaderCtrl', [
 ] );
 
 /* ######################################################################################################## */
+cenozo.directive( 'cnDescriptionPatch', [
+  function() {
+    return {
+      templateUrl: cenozoApp.getFileUrl( 'pine', 'description_patch.tpl.html' ),
+      restrict: 'E',
+      scope: { model: '=' }
+    };
+  }
+] );
+
+/* ######################################################################################################## */
+cenozo.directive( 'cnQnairePartPatch', [
+  function() {
+    return {
+      templateUrl: cenozoApp.getFileUrl( 'pine', 'qnaire_part_patch.tpl.html' ),
+      restrict: 'E',
+      scope: {
+        model: '=',
+        subject: '@'
+      },
+      controller: function( $scope ) {
+        if( 'module' == $scope.subject ) $scope.childSubject = 'page';
+        else if( 'page' == $scope.subject ) $scope.childSubject = 'question';
+        else if( 'question' == $scope.subject ) $scope.childSubject = 'question_option';
+        else $scope.childSubject = null;
+      }
+    };
+  }
+] );
+
+/* ######################################################################################################## */
 cenozoApp.initQnairePartModule = function( module, type ) {
   var columnList = {
     rank: { title: 'Rank', type: 'rank' },

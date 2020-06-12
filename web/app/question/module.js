@@ -1,4 +1,6 @@
-define( function() {
+define( [ 'question_option' ].reduce( function( list, name ) {
+  return list.concat( cenozoApp.module( name ).getRequiredFiles() );
+}, [] ), function() {
   'use strict';
 
   try { var module = cenozoApp.module( 'question', true ); } catch( err ) { console.warn( err ); return; }
@@ -106,10 +108,16 @@ define( function() {
     '$delegate',
     function( $delegate ) {
       function extendModelObject( object ) {
-        object.getAddEnabled = function() {
-          // don't allow the add button while viewing the qnaire
-          return 'qnaire' != object.getSubjectFromState() && object.$$getAddEnabled();
-        };
+        angular.extend( object, {
+          getAddEnabled: function() {
+            // don't allow the add button while viewing the qnaire
+            return 'qnaire' != object.getSubjectFromState() && object.$$getAddEnabled();
+          },
+          getDeleteEnabled: function() {
+            // don't allow the add button while viewing the qnaire
+            return !object.viewModel.record.readonly && 'qnaire' != object.getSubjectFromState() && object.$$getDeleteEnabled();
+          }
+        } );
         return object;
       }
 

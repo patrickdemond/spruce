@@ -17,7 +17,7 @@ class patch extends \cenozo\service\patch
   {
     parent::validate();
 
-    if( 300 > $this->get_status()->get_code() )
+    if( 300 > $this->get_status()->get_code() && !$this->get_argument( 'patch', false ) )
     {
       // do not allow a qnaire to be set to not repeated if it already has repeated qnaires
       $patch_array = $this->get_file_as_array();
@@ -73,6 +73,33 @@ class patch extends \cenozo\service\patch
           }
         }
       }
+    }
+  }
+
+  /**
+   * Extends parent method
+   */
+  protected function setup()
+  {
+    if( !$this->get_argument( 'patch', false ) ) parent::setup();
+  }
+
+  /**
+   * Extends parent method
+   */
+  protected function execute()
+  {
+    $patch = $this->get_argument( 'patch', false );
+    if( $this->get_argument( 'patch', false ) )
+    {
+      $db_qnaire = $this->get_leaf_record();
+      $patch_object = util::json_decode( $this->get_file_as_raw() );
+      if( is_null( $patch_object ) ) throw lib::create( 'exception\notice', 'The patch file provided is not valid.', __METHOD__ );
+      else $this->set_data( $db_qnaire->process_patch( $patch_object, 'apply' == $patch ) );
+    }
+    else
+    {
+      parent::execute();
     }
   }
 }

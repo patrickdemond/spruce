@@ -1,4 +1,6 @@
-define( function() {
+define( [ 'module' ].reduce( function( list, name ) {
+  return list.concat( cenozoApp.module( name ).getRequiredFiles() );
+}, [] ), function() {
   'use strict';
 
   try { var module = cenozoApp.module( 'qnaire', true ); } catch( err ) { console.warn( err ); return; }
@@ -185,6 +187,14 @@ define( function() {
   } );
 
   module.addExtraOperation( 'view', {
+    title: 'Patch',
+    operation: function( $state, model ) {
+      $state.go( 'qnaire.patch', { identifier: model.viewModel.record.getIdentifier() } );
+    },
+    isIncluded: function( $state, model ) { return model.getEditEnabled(); }
+  } );
+
+  module.addExtraOperation( 'view', {
     title: 'Mass Respondent',
     operation: function( $state, model ) {
       $state.go( 'qnaire.mass_respondent', { identifier: model.viewModel.record.getIdentifier() } );
@@ -293,7 +303,7 @@ define( function() {
               title: $scope.model.sourceName,
               go: function() { return $state.go( 'qnaire.view', { identifier: $scope.model.parentQnaireId } ); }
             }, {
-              title: 'export'
+              title: 'Export'
             } ] );
           } );
         }
@@ -343,6 +353,33 @@ define( function() {
               go: function() { return $state.go( 'qnaire.view', { identifier: $scope.model.qnaireId } ); }
             }, {
               title: 'Mass Respondent'
+            } ] );
+          } );
+        }
+      };
+    }
+  ] );
+
+  /* ######################################################################################################## */
+  cenozo.providers.directive( 'cnQnairePatch', [
+    'CnQnaireModelFactory', 'CnSession', '$state',
+    function( CnQnaireModelFactory, CnSession, $state ) {
+      return {
+        templateUrl: module.getFileUrl( 'patch.tpl.html' ),
+        restrict: 'E',
+        scope: { model: '=?' },
+        controller: function( $scope ) {
+          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnaireModelFactory.root;
+
+          $scope.model.viewModel.onView().then( function() {
+            CnSession.setBreadcrumbTrail( [ {
+              title: 'Questionnaires',
+              go: function() { return $state.go( 'qnaire.list' ); }
+            }, {
+              title: $scope.model.viewModel.record.name,
+              go: function() { return $state.go( 'qnaire.view', { identifier: $scope.model.viewModel.record.getIdentifier() } ); }
+            }, {
+              title: 'Patch'
             } ] );
           } );
         }
@@ -585,8 +622,8 @@ define( function() {
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnQnaireViewFactory', [
-    'CnBaseViewFactory', '$filter',
-    function( CnBaseViewFactory, $filter ) {
+    'CnBaseViewFactory', 'CnHttpFactory', '$filter', '$state', '$rootScope',
+    function( CnBaseViewFactory, CnHttpFactory, $filter, $state, $rootScope ) {
       var object = function( parentModel, root ) {
         var self = this;
         CnBaseViewFactory.construct( this, parentModel, root );
@@ -611,17 +648,61 @@ define( function() {
           }
         } );
 
-        this.onView = function( force ) {
-          return this.$$onView( force ).then( function() {
-            self.record.average_time = $filter( 'cnSeconds' )( Math.round( self.record.average_time ) );
-          } );
-        };
+        angular.extend( this, {
+          working: false,
+          file: null,
+          difference: null,
+          differenceIsEmpty: false,
 
-        this.onPatch = function( data ) {
-          return this.$$onPatch( data ).then( function() {
-            if( angular.isDefined( data.repeated ) && data.repeated ) self.onView();
-          } );
-        };
+          onView: function( force ) {
+            return this.$$onView( force ).then( function() {
+              self.record.average_time = $filter( 'cnSeconds' )( Math.round( self.record.average_time ) );
+              self.working = false;
+              self.file = null;
+              self.difference = null;
+              self.differenceIsEmpty = false;
+            } );
+          },
+
+          onPatch: function( data ) {
+            return this.$$onPatch( data ).then( function() {
+              if( angular.isDefined( data.repeated ) && data.repeated ) self.onView();
+            } );
+          },
+
+          cancel: function() { $state.go( 'qnaire.view', { identifier: this.record.getIdentifier() } ); },
+
+          checkPatch: function() {
+            // need to wait for cnUplod to do its thing
+            $rootScope.$on( 'cnUpload read', function() {
+              self.working = true;
+
+              var data = new FormData();
+              data.append( 'file', self.file );
+
+              // check the patch file
+              return CnHttpFactory.instance( {
+                path: self.parentModel.getServiceResourcePath() + '?patch=check',
+                data: self.file
+              } ).patch().then( function( response ) {
+                self.difference = response.data;
+                self.differenceIsEmpty = 0 == Object.keys( self.difference ).length;
+              } ).finally( function() { self.working = false; } );
+            } );
+          },
+
+          applyPatch: function() {
+            self.working = true;
+
+            // apply the patch file
+            return CnHttpFactory.instance( {
+              path: self.parentModel.getServiceResourcePath() + '?patch=apply',
+              data: self.file
+            } ).patch().then( function() {
+              $state.go( 'qnaire.view', { identifier: self.record.getIdentifier() } );
+            } ).finally( function() { self.working = false; } );
+          }
+        } );
       }
       return { instance: function( parentModel, root ) { return new object( parentModel, root ); } };
     }

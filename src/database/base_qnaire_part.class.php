@@ -133,4 +133,215 @@ abstract class base_qnaire_part extends \cenozo\database\has_rank
     );
     static::db()->execute( $sql );
   }
+
+  /**
+   * TODO: document
+   */
+  public function process_patch( $patch_object, $name_suffix, $apply = false )
+  {
+    $subject = $this->get_table_name();
+    if( 'module' == $subject ) $child_subject = 'page';
+    else if( 'page' == $subject ) $child_subject = 'question';
+    else if( 'question' == $subject ) $child_subject = 'question_option';
+    else $child_subject = NULL;
+
+    $language_class_name = lib::get_class_name( 'database\language' );
+    $description_name = sprintf( 'database\%s_description', $subject );
+    $description_class_name = lib::get_class_name( $description_name );
+    $child_name = sprintf( 'database\%s', $child_subject );
+    $child_class_name = is_null( $child_subject ) ? NULL : lib::get_class_name( $child_name );
+    $description_list_name = sprintf( '%s_description_list', $subject );
+    $foreign_key_name = sprintf( '%s_id', $subject );
+    $child_list_name = is_null( $child_subject ) ? NULL : sprintf( '%s_list', $child_subject );
+
+    $difference_list = array();
+
+    foreach( $patch_object as $property => $value )
+    {
+      if( $description_list_name == $property )
+      {
+        // check every item in the patch object for additions and changes
+        $add_list = array();
+        $change_list = array();
+        foreach( $patch_object->$description_list_name as $description )
+        {
+          $db_language = $language_class_name::get_unique_record( 'code', $description->language );
+          $db_description = $description_class_name::get_unique_record(
+            array( $foreign_key_name, 'language_id', 'type' ),
+            array( $this->id, $db_language->id, $description->type )
+          );
+
+          if( is_null( $db_description ) )
+          {
+            if( $apply )
+            {
+              $db_description = lib::create( $description_name );
+              $db_description->$foreign_key_name = $this->id;
+              $db_description->language_id = $db_language->id;
+              $db_description->type = $description->type;
+              $db_description->value = $description->value;
+              $db_description->save();
+            }
+            else $add_list[] = $description;
+          }
+          else
+          {
+            // find and add all differences
+            $diff = array();
+            foreach( $description as $property => $value )
+              if( 'language' != $property && $db_description->$property != $description->$property )
+                $diff[$property] = $description->$property;
+
+            if( 0 < count( $diff ) )
+            {
+              if( $apply )
+              {
+                $db_description->value = $description->value;
+                $db_description->save();
+              }
+              else
+              {
+                $index = sprintf( '%s [%s]', $description->type, $db_language->code );
+                $change_list[$index] = $diff;
+              }
+            }
+          }
+        }
+
+        // check every item in this object for removals
+        $remove_list = array();
+        $function_name = sprintf( 'get_%s_description_object_list', $subject );
+        foreach( $this->$function_name() as $db_description )
+        {
+          $found = false;
+          foreach( $patch_object->$description_list_name as $description )
+          {
+            if( $db_description->get_language()->code == $description->language &&
+                $db_description->type == $description->type )
+            {
+              $found = true;
+              break;
+            }
+          }
+
+          if( !$found )
+          {
+            if( $apply ) $db_description->delete();
+            else
+            {
+              $index = sprintf( '%s [%s]', $db_description->type, $db_description->get_language()->code );
+              $remove_list[] = $index;
+            }
+          }
+        }
+
+        $diff_list = array();
+        if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
+        if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
+        if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
+        if( 0 < count( $diff_list ) ) $difference_list[$description_list_name] = $diff_list;
+      }
+      else if( $child_list_name == $property )
+      {
+        // check every item in the patch object for additions and changes
+        $add_list = array();
+        $change_list = array();
+        foreach( $patch_object->$child_list_name as $child )
+        {
+          // match child by name or rank
+          $db_child = $child_class_name::get_unique_record( array( $foreign_key_name, 'name' ), array( $this->id, $child->name ) );
+          if( is_null( $db_child ) )
+          {
+            // we may have renamed the child, so see if it exists exactly the same under the same rank
+            $db_child = $child_class_name::get_unique_record( array( $foreign_key_name, 'rank' ), array( $this->id, $child->rank ) );
+            if( !is_null( $db_child ) )
+            {
+              // confirm that the name is the only thing that has changed
+              $properties = array_keys( get_object_vars( $db_child->process_patch( $child, $name_suffix, false ) ) );
+              if( 1 != count( $properties ) || 'name' != current( $properties ) ) $db_child = NULL;
+            }
+          }
+
+          if( is_null( $db_child ) )
+          {
+            if( $apply )
+            {
+              $db_child = lib::create( $child_name );
+              $db_child->$foreign_key_name = $this->id;
+              $db_child->rank = $child->rank; // + $rank_offset;
+              $db_child->name = sprintf( '%s_%s', $child->name, $name_suffix );
+              if( 'page' == $child_subject ) $db_child->max_time = $child->max_time;
+              else if( 'question' == $child_subject ) $db_child->type = $child->type;
+              $db_child->save();
+
+              $db_child->process_patch( $child, $name_suffix, $apply );
+            }
+            else $add_list[] = $child;
+          }
+          else
+          {
+            // find and add all differences
+            $diff = $db_child->process_patch( $child, $name_suffix, $apply );
+            if( !is_null( $diff ) )
+            {
+              // the process_patch() function above applies any changes so we don't have to do it here
+              if( !$apply ) $change_list[$db_child->name] = $diff;
+            }
+          }
+        }
+
+        // check every item in this object for removals
+        $remove_list = array();
+        $child_mod = lib::create( 'database\modifier' );
+        $child_mod->order( sprintf( '%s.rank', $child_subject ) );
+        $function_name = sprintf( 'get_%s_object_list', $child_subject );
+        foreach( $this->$function_name( $child_mod ) as $db_child )
+        {
+          $found = false;
+          foreach( $patch_object->$child_list_name as $child )
+          {
+            // see if the child exists in the patch or if we're already changing the child
+            $db_child_name = $apply ? preg_replace( sprintf( '/_%s$/', $name_suffix ), '', $db_child->name ) : $db_child->name;
+            if( $db_child_name == $child->name || in_array( $db_child_name, array_keys( $change_list ) ) )
+            {
+              $found = true;
+              break;
+            }
+          }
+
+          if( !$found )
+          {
+            if( $apply ) $db_child->delete();
+            else $remove_list[] = $db_child->name;
+          }
+        }
+
+        $diff_list = array();
+        if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
+        if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
+        if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
+        if( 0 < count( $diff_list ) ) $difference_list[$child_list_name] = $diff_list;
+      }
+      else
+      {
+        if( $patch_object->$property != $this->$property )
+        {
+          if( $apply )
+          {
+            $this->$property = 'name' == $property
+                             ? sprintf( '%s_%s', $patch_object->$property, $name_suffix )
+                             : $patch_object->$property;
+          }
+          else $difference_list[$property] = $patch_object->$property;
+        }
+      }
+    }
+
+    if( $apply )
+    {
+      $this->save();
+      return null;
+    }
+    else return 0 == count( $difference_list ) ? NULL : (object)$difference_list;
+  }
 }

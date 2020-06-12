@@ -10,13 +10,49 @@
           type="file"
           ng-model="model.viewModel.file"
           cn-upload="model.viewModel.file"
+          onchange="angular.element(this).scope().model.viewModel.checkPatch()"
+          ng-disabled="model.viewModel.working"
           ng-required="true"></select>
+      </div>
+    </div>
+  </div>
+  <div ng-if="model.viewModel.difference" class="container-fluid">
+    <div class="panel panel-info">
+      <div class="panel-heading"><h4>Patch Summary</h4></div>
+      <div class="panel-body">
+        <div ng-if="model.viewModel.differenceIsEmpty">No differences found.</div>
+        <div ng-repeat="(property, child) in model.viewModel.difference" class="row">
+          <div ng-if="'module_list' != property">
+            <label class="col-sm-2 control-label">{{
+              property | cnStrReplace:'qnaire':'' | cnStrReplace:'_':' ' | cnStrReplace:' list':'s' | cnUCWords
+            }}:</label>
+            <div ng-switch="property" class="col-sm-10 col-slim form-text">
+              <div ng-switch-default>{{ child }}</div>
+              <div ng-switch-when="language_list">
+                <div ng-if="child.add"><em>ADD:</em> {{ child.add.join( ", " ) }}</div>
+                <div ng-if="child.remove"><em>REMOVE:</em> {{ child.remove.join( ", " ) }}</div>
+              </div>
+              <div ng-switch-when="attribute_list">
+                <div ng-repeat="item in child.add"><em>ADD:</em> {{ item }}</div>
+                <div ng-repeat="(name, item) in child.change"><em>CHANGE:</em> "{{ name }}" => {{ item }}</div>
+                <div ng-repeat="item in child.remove"><em>REMOVE:</em> {{ item }}</div>
+              </div>
+              <div ng-switch-when="qnaire_description_list"><cn-description-patch model="child"></cn-description-patch></div>
+            </div>
+          </div>
+          <div ng-if="'module_list' == property">
+            <label class="container-fluid">{{ property | cnStrReplace:'_':' ' | cnUCWords }}</label>
+            <div class="container-fluid"><cn-qnaire-part-patch subject="module" model="child"></cn-qnaire-part-patch></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
   <div class="form-footer text-right rounded-bottom bg-info">
     <button type="button" class="btn btn-default" ng-click="model.viewModel.cancel()">Cancel</button>
-    <button type="button" class="btn btn-primary" ng-disabled="model.viewModel.working" ng-click="model.viewModel.applyPatch()">
+    <button type="button" class="btn btn-primary"
+            ng-disabled="!model.viewModel.file || model.viewModel.working || model.viewModel.differenceIsEmpty"
+            ng-click="model.viewModel.applyPatch()">
       <i class="glyphicon glyphicon-cloud-upload"></i> Patch
     </button>
   </div>
