@@ -127,18 +127,17 @@ define( function() {
               title: 'Respondent', 
               go: function() { return $state.go( 'respondent.list' ); }
             }, {
-              title: $scope.model.viewModel.record.respondent_id,
-              go: function() { return $state.go( 'respondent.view', { identifier: $scope.model.viewModel.record.respondent_id } ); }
+              title: $scope.model.displayModel.respondent_id,
+              go: function() { return $state.go( 'respondent.view', { identifier: $scope.model.displayModel.respondent_id } ); }
             }, {
               title: 'Responses'
             }, {
-              title: $scope.model.viewModel.record.rank,
-              go: function() { return $state.go( 'response.view', { identifier: $scope.model.viewModel.record.id } ); }
+              title: $scope.model.displayModel.rank,
+              go: function() { return $state.go( 'response.view', { identifier: $scope.model.displayModel.response_id } ); }
             }, {
               title: 'display'
             } ] );
           } );
-
         }
       };
     }
@@ -199,10 +198,14 @@ define( function() {
             return CnHttpFactory.instance( {
               path: 'response/' + self.parentModel.getQueryParameter( 'identifier' ),
               data: { select: { column: [
+                'respondent_id', 'rank',
                 { table: 'respondent', column: 'qnaire_id' },
                 { table: 'language', column: 'code', alias: 'lang' }
               ] } }
             } ).get().then( function( response ) {
+              self.response_id = response.data.id;
+              self.respondent_id = response.data.respondent_id;
+              self.rank = response.data.rank;
               self.qnaire_id = response.data.qnaire_id;
               self.lang = response.data.lang;
 
