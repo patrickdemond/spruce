@@ -196,13 +196,22 @@ define( function() {
           questionList: [],
           onLoad: function() {
             // get a list of all modules
-            return this.parentModel.viewModel.onView().then( function() {
+            return CnHttpFactory.instance( {
+              path: 'response/' + self.parentModel.getQueryParameter( 'identifier' ),
+              data: { select: { column: [
+                { table: 'respondent', column: 'qnaire_id' },
+                { table: 'language', column: 'code', alias: 'lang' }
+              ] } }
+            } ).get().then( function( response ) {
+              self.qnaire_id = response.data.qnaire_id;
+              self.lang = response.data.lang;
+
               return CnHttpFactory.instance( {
                 path: 'module',
                 data: {
                   select: { column: [ 'id', 'prompts' ] },
                   modifier: {
-                    where: { column: 'qnaire.id', operator: '=', value: self.parentModel.viewModel.record.qnaire_id },
+                    where: { column: 'qnaire.id', operator: '=', value: self.qnaire_id },
                     order: 'module.rank'
                   },
                   limit: 1000000 // get all records
@@ -220,7 +229,7 @@ define( function() {
                   data: {
                     select: { column: [ 'id', 'module_id', 'prompts' ] },
                     modifier: {
-                      where: { column: 'qnaire.id', operator: '=', value: self.parentModel.viewModel.record.qnaire_id },
+                      where: { column: 'qnaire.id', operator: '=', value: self.qnaire_id },
                       order: [ 'module.rank', 'page.rank' ],
                       limit: 1000000 // get all records
                     }
@@ -234,8 +243,8 @@ define( function() {
                   } );
 
                   // now get a list of all questions and their answers for this response
-                  CnHttpFactory.instance( {
-                    path: ['response', self.parentModel.viewModel.record.id, 'question'].join( '/' ),
+                  return CnHttpFactory.instance( {
+                    path: ['response', self.parentModel.getQueryParameter( 'identifier' ), 'question'].join( '/' ),
                     data: {
                       select: { column: [
                         'id', 'page_id', 'prompts', 'type', 'dkna_refuse',
@@ -256,9 +265,9 @@ define( function() {
                         if( 'list' != question.type ) {
                           if( angular.isObject( question.value ) ) {
                             if( question.value.dkna ) {
-                              question.value = CnTranslationHelper.translate( 'misc.dkna', self.parentModel.viewModel.record.lang )
+                              question.value = CnTranslationHelper.translate( 'misc.dkna', self.lang )
                             } else if( question.value.refuse ) {
-                              question.value = CnTranslationHelper.translate( 'misc.refuse', self.parentModel.viewModel.record.lang )
+                              question.value = CnTranslationHelper.translate( 'misc.refuse', self.lang )
                             }
                           } else if( 'boolean' == question.type ) {
                             if( true === question.value ) question.value = 'Yes';
@@ -275,7 +284,7 @@ define( function() {
                     } );
 
                     // now get a list of all options
-                    CnHttpFactory.instance( {
+                    return CnHttpFactory.instance( {
                       path: 'question_option',
                       data: {
                         select: { column: [
@@ -284,7 +293,7 @@ define( function() {
                           { table: 'page', column: 'id', alias: 'page_id' }
                         ] },
                         modifier: {
-                          where: { column: 'qnaire.id', operator: '=', value: self.parentModel.viewModel.record.qnaire_id },
+                          where: { column: 'qnaire.id', operator: '=', value: self.qnaire_id },
                           order: [ 'module.rank', 'page.rank', 'question.rank', { 'question_option.rank': true } ],
                           limit: 1000000 // get all records
                         }
