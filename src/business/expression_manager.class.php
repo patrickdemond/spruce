@@ -238,7 +238,12 @@ class expression_manager extends \cenozo\singleton
       );
     }
 
-    return strtolower( $compiled );
+    // make comparisons to boolean values exact (convert == to === and != to !==)
+    $compiled = strtolower( $compiled );
+    $compiled = preg_replace( '/ (==|!=) (true|false)/', ' $1= $2', $compiled );
+    $compiled = preg_replace( '/(true|false) (==|!=) /', '$1 $2= ', $compiled );
+
+    return $compiled;
   }
 
   /**
