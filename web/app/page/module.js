@@ -224,6 +224,9 @@ define( [ 'question' ].reduce( function( list, name ) {
 
         function getDate( date ) { return date && !angular.isObject( date ) ? moment( new Date( date ) ) : null; }
         function formatDate( date ) { var m = getDate( date ); return m ? m.format( 'dddd, MMMM Do YYYY' ) : null; }
+        function isDkna( value ) { return angular.isObject( value ) && true === value.dkna; }
+        function isRefuse( value ) { return angular.isObject( value ) && true === value.refuse; }
+        function isDknaOrRefuse( value ) { return angular.isObject( value ) && ( true === value.dkna || true === value.refuse ); }
 
         angular.extend( this, {
           parentModel: parentModel,
@@ -293,8 +296,8 @@ define( [ 'question' ].reduce( function( list, name ) {
               };
             }
 
-            question.answer.dkna = angular.isObject( question.value ) && true === question.value.dkna;
-            question.answer.refuse = angular.isObject( question.value ) && true === question.value.refuse;
+            question.answer.dkna = isDkna( question.value );
+            question.answer.refuse = isRefuse( question.value );
           },
 
           // Returns true if complete, false if not and the option ID if an option's extra data is missing
@@ -309,9 +312,7 @@ define( [ 'question' ].reduce( function( list, name ) {
             if( null == question.value ) return false;
 
             // dkna/refuse questions are always complete
-            if( angular.isObject( question.value ) ) {
-              if( true === question.value.dkna || true === question.value.refuse ) return true;
-            }
+            if( isDknaOrRefuse( question.value ) ) return true;
 
             if( 'list' == question.type ) {
               // get the list of all preconditions for all options belonging to this question
@@ -416,9 +417,9 @@ define( [ 'question' ].reduce( function( list, name ) {
                 if( 'empty()' == fnName ) {
                   compiled = null == matchedQuestion.value ? 'true' : 'false';
                 } else if( 'dkna()' == fnName ) {
-                  compiled = angular.isObject( matchedQuestion.value ) && matchedQuestion.value.dkna ? 'true' : 'false';
+                  compiled = isDkna( matchedQuestion.value ) ? 'true' : 'false';
                 } else if( 'refuse()' == fnName ) {
-                  compiled = angular.isObject( matchedQuestion.value ) && matchedQuestion.value.refuse ? 'true' : 'false';
+                  compiled = isRefuse( matchedQuestion.value ) ? 'true' : 'false';
                 }else if( 'boolean' == matchedQuestion.type ) {
                   if( true === matchedQuestion.value ) compiled = 'true';
                   else if( false === matchedQuestion.value ) compiled = 'false';
@@ -662,9 +663,17 @@ define( [ 'question' ].reduce( function( list, name ) {
                 // we must briefly ignore the answer for this question being set to null.
                 if( 'text' == question.type ) {
                   if( angular.isString( value ) ) {
-                    question.ignoreDknaRefuse = true;
-                    $timeout( function() { delete question.ignoreDknaRefuse; }, 250 );
-                  } else if( question.ignoreDknaRefuse && null === value ) {
+                    var ignore = null;
+                    if( isDkna( question.value ) ) ignore = 'ignoreDkna';
+                    else if( isRefuse( question.value ) ) ignore = 'ignoreRefuse';
+                    if( null != ignore ) { question[ignore] = true; }
+                    $timeout( function() { if( null != ignore ) delete question[ignore]; }, 500 );
+                  } else if(
+                    question.ignoreDkna && ( null === value || isDkna( value ) ) || 
+                    question.ignoreRefuse && ( null === value || isRefuse( value ) )
+                  ) {
+                    // we may have tried setting dkna or refuse when it should be ignored, so change it in the model
+                    self.convertValueToModel( question );
                     return $q.all().finally( function() { self.working = false; } );
                   }
                 }
