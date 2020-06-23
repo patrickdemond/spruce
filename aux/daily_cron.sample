@@ -70,6 +70,40 @@ else
 curl_close( $curl );
 
 /**
+ * Re-calculate the max time for all pages
+ */
+write_log( 'Re-calculating max page times' );
+
+$curl = curl_init();
+curl_setopt( $curl, CURLOPT_URL, URL.'qnaire?recalculate_max_times=1' );
+curl_setopt( $curl, CURLOPT_SSL_VERIFYHOST, false );
+curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+curl_setopt( $curl, CURLOPT_HTTPHEADER, array( AUTH ) );
+
+$result = curl_exec( $curl );
+if( curl_errno( $curl ) )
+{
+  write_log( sprintf(
+    "Returned error code %s when trying to re-calculate maximimum page times\nMessage: %s",
+    curl_errno( $curl ),
+    curl_error( $curl )
+  ) );
+}
+else
+{
+  $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
+  if( 200 != $code )
+  {
+    write_log( sprintf( 'Failed to re-calculate maximum page times (response code: %s)', $code ) );
+  }
+  else
+  {
+    write_log( 'All maximum page times have been re-calculated.' );
+  }
+}
+curl_close( $curl );
+
+/**
  * Re-calculate all avergage qnaire, module and page times
  */
 write_log( 'Re-calculating average times' );

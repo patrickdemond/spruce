@@ -13,7 +13,14 @@ define( [ 'question' ].reduce( function( list, name ) {
   };
 
   module.addInput( '', 'average_time', { title: 'Average Time (seconds)', type: 'string', isConstant: true, isExcluded: 'add' } );
-  module.addInput( '', 'max_time', { title: 'Max Time (seconds)', type: 'string', format: 'integer' } );
+  module.addInput( '', 'max_time', {
+    title: 'Max Time (seconds)',
+    type: 'string',
+    format: 'integer',
+    isConstant: true,
+    help: 'Maximum page time is automatically calculated to exclude major outliers by setting its value to that of the outer fence ' +
+      '(3 times the interquartile width above the upper quartile).'
+  } );
   module.addInput( '', 'note', { title: 'Note', type: 'text' } );
   module.addInput( '', 'qnaire_id', { column: 'qnaire.id', isExcluded: true } );
   module.addInput( '', 'qnaire_name', { column: 'qnaire.name', isExcluded: true } );

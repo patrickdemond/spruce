@@ -311,4 +311,99 @@ class page extends base_qnaire_part
       $modifier->get_sql()
     ) );
   }
+
+  public static function recalculate_max_time()
+  {
+    $qnaire_class_name = lib::get_class_name( 'database\qnaire' );
+    $page_time_class_name = lib::get_class_name( 'database\page_time' );
+
+    $select = lib::create( 'database\select' );
+    $select->from( 'page' );
+    $select->add_column( 'id' );
+    $select->add_column( 'COUNT(*)', 'total', false );
+    $modifier = lib::create( 'database\modifier' );
+    $join_mod = lib::create( 'database\modifier' );
+    $join_mod->where( 'page.id', '=', 'page_time.page_id', false );
+    $join_mod->where( 'IFNULL( page_time.time, 0 )', '>', 0 );
+    $modifier->join_modifier( 'page_time', $join_mod, 'left' );
+    $modifier->group( 'page.id' );
+
+    $page_list = array();
+    foreach( static::select( $select, $modifier ) as $row )
+    {
+      $row['q2_index'] = ( $row['total']+1 )/2;
+      $row['q1_index'] = ( $row['total']-floor( $row['q2_index'] )+1 )/2;
+      $row['q3_index'] = ( $row['total']-floor( $row['q2_index'] )+1 )/2 + $row['q2_index'];
+
+      // get Q1, Q2 and Q3 for all pages (lower quartile, median, upper quartile)
+      $q1_sel = lib::create( 'database\select' );
+      $q1_sel->add_column( 'time' );
+      $q1_mod = lib::create( 'database\modifier' );
+      $q1_mod->where( 'page_id', '=', $row['id'] );
+      $q1_mod->where( 'time', '>', '0', false );
+      $q1_mod->order( 'time' );
+      $q1_mod->offset( floor( $row['q1_index'] )-1 );
+      $q1_mod->limit( floor( $row['q1_index'] ) == $row['q1_index'] ? 1 : 2 );
+      $q1_sum = 0;
+      $points = $page_time_class_name::select( $q1_sel, $q1_mod );
+      foreach( $points as $r ) $q1_sum += $r['time'];
+      $row['q1'] = $q1_sum / count( $points );
+
+      $q2_sel = lib::create( 'database\select' );
+      $q2_sel->add_column( 'time' );
+      $q2_mod = lib::create( 'database\modifier' );
+      $q2_mod->where( 'page_id', '=', $row['id'] );
+      $q2_mod->where( 'time', '>', '0', false );
+      $q2_mod->order( 'time' );
+      $q2_mod->offset( floor( $row['q2_index'] )-1 );
+      $q2_mod->limit( floor( $row['q2_index'] ) == $row['q2_index'] ? 1 : 2 );
+      $q2_sum = 0;
+      $points = $page_time_class_name::select( $q2_sel, $q2_mod );
+      foreach( $points as $r ) $q2_sum += $r['time'];
+      $row['q2'] = $q2_sum / count( $points );
+
+      $q3_sel = lib::create( 'database\select' );
+      $q3_sel->add_column( 'time' );
+      $q3_mod = lib::create( 'database\modifier' );
+      $q3_mod->where( 'page_id', '=', $row['id'] );
+      $q3_mod->where( 'page_time.time', '>', '0', false );
+      $q3_mod->order( 'time' );
+      $q3_mod->offset( floor( $row['q3_index'] )-1 );
+      $q3_mod->limit( floor( $row['q3_index'] ) == $row['q3_index'] ? 1 : 2 );
+      $q3_sum = 0;
+      $points = $page_time_class_name::select( $q3_sel, $q3_mod );
+      foreach( $points as $r ) $q3_sum += $r['time'];
+      $row['q3'] = $q3_sum / count( $points );
+
+      $row['range'] = $row['q3'] - $row['q1'];
+      $row['fence'] = $row['q3'] + 3.0*$row['range'];
+
+      $page_list[] = $row;
+    }
+
+    // turn read-only off for all questionnaires
+    $qnaire_mod = lib::create( 'database\modifier' );
+    $qnaire_mod->where( 'readonly', '=', true );
+    $qnaire_list = $qnaire_class_name::select_objects( $qnaire_mod );
+    foreach( $qnaire_list as $db_qnaire )
+    {
+      $db_qnaire->readonly = false;
+      $db_qnaire->save();
+    }
+
+    // now update all page max times
+    foreach( $page_list as $page )
+    {
+      $db_page = lib::create( 'database\page', $page['id'] );
+      $db_page->max_time = $page['fence'];
+      $db_page->save();
+    }
+
+    // now put back the original read-only status
+    foreach( $qnaire_list as $db_qnaire )
+    {
+      $db_qnaire->readonly = true;
+      $db_qnaire->save();
+    }
+  }
 }
