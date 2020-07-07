@@ -29,9 +29,19 @@ class patch extends \cenozo\service\patch
       }
       else if( 'force_submit' == $action )
       {
+        // submit the current response
         $db_response->page_id = NULL;
         $db_response->submitted = true;
         $db_response->save();
+
+        // also mark the end date of the respondent as this may not happen if the last response hasn't been started
+        $db_respondent->end_datetime = util::get_datetime_object();
+        $db_respondent->save();
+
+        // now add the finished event, if there is one
+        $script_class_name = lib::get_class_name( 'database\script' );
+        $db_script = $script_class_name::get_unique_record( 'pine_qnaire_id', $db_respondent->qnaire_id );
+        if( !is_null( $db_script ) ) $db_script->add_finished_event( $db_respondent->get_participant(), $db_respondent->end_datetime );
       }
       else
       {
