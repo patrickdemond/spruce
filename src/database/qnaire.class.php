@@ -705,7 +705,6 @@ class qnaire extends \cenozo\database\record
         $page = array(
           'rank' => $db_page->rank,
           'name' => $db_page->name,
-          'max_time' => $db_page->max_time,
           'precondition' => $db_page->precondition,
           'note' => $db_page->note,
           'page_description_list' => array(),
@@ -945,6 +944,7 @@ class qnaire extends \cenozo\database\record
   public static function import( $qnaire_object )
   {
     $language_class_name = lib::get_class_name( 'database\language' );
+    $default_page_max_time = lib::create( 'business\setting_manager' )->get_setting( 'general', 'default_page_max_time' );
 
     $db_qnaire = lib::create( 'database\qnaire' );
     $db_qnaire->base_language_id = $language_class_name::get_unique_record( 'code', $qnaire_object->base_language )->id;
@@ -1008,7 +1008,8 @@ class qnaire extends \cenozo\database\record
         $db_page->module_id = $db_module->id;
         $db_page->rank = $page_object->rank;
         $db_page->name = $page_object->name;
-        $db_page->max_time = $page_object->max_time;
+        $db_page->max_time = $default_page_max_time;
+
         $db_page->precondition = $page_object->precondition;
         $db_page->note = $page_object->note;
         $db_page->save();
