@@ -21,6 +21,10 @@ class get extends \cenozo\service\get
     {
       $create_new_response = false;
 
+      // we need a semaphore to guard against duplicate responses
+      $semaphore = lib::create( 'business\semaphore' );
+      $semaphore->acquire();
+
       $db_respondent = $this->get_leaf_record();
       $db_qnaire = $db_respondent->get_qnaire();
       $db_response = $db_respondent->get_current_response();
@@ -65,6 +69,8 @@ class get extends \cenozo\service\get
           $db_response->save();
         }
       }
+
+      $semaphore->release();
     }
   }
 }
