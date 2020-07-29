@@ -27,6 +27,18 @@ class expression_manager extends \cenozo\singleton
   /**
    * TODO: document
    */
+  public function process_hidden_text( &$array, $show_hidden )
+  {
+    $search = $show_hidden ? array( '/{{/', '/}}/' ) : '/{{.*?}}/s';
+    $replace = $show_hidden ? array( '<span class="text-warning">', '</span>' ) : '';
+    foreach( $array as $key => $value )
+      if( false !== strpos( $key, 'prompts' ) || false !== strpos( $key, 'popups' ) )
+        $array[$key] = preg_replace( $search, $replace, $value );
+  }
+
+  /**
+   * TODO: document
+   */
   public function validate( $db_qnaire, $precondition )
   {
     try { $this->evaluate( $db_qnaire, $precondition ); }

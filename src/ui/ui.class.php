@@ -95,7 +95,7 @@ class ui extends \cenozo\ui\ui
     {
       $module->add_child( 'response' );
       $module->add_child( 'respondent_mail' );
-      $module->add_action( 'run', '/{token}' );
+      $module->add_action( 'run', '/{token}?{show_hidden}' );
     }
 
     $module = $this->get_module( 'response' );

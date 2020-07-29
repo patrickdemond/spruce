@@ -146,7 +146,7 @@ define( [ 'question' ].reduce( function( list, name ) {
 
           $scope.text = function( address ) { return $scope.model.renderModel.text( address ); };
 
-          function render() {
+          function render( showHidden ) {
             var promiseList = [];
             if( 'respondent' != $scope.model.getSubjectFromState() || null != $scope.data.page_id ) {
               promiseList.push(
@@ -162,7 +162,7 @@ define( [ 'question' ].reduce( function( list, name ) {
                   $scope.progress = Math.round(
                     100 * $scope.model.viewModel.record.qnaire_page / $scope.model.viewModel.record.qnaire_pages
                   );
-                  return $scope.model.renderModel.onLoad();
+                  return $scope.model.renderModel.onLoad( showHidden );
                 } )
               );
             } else if( null == $scope.data.page_id ) {
@@ -191,7 +191,7 @@ define( [ 'question' ].reduce( function( list, name ) {
             } );
           }
 
-          if( 'respondent' != $scope.model.getSubjectFromState() ) render();
+          if( 'respondent' != $scope.model.getSubjectFromState() ) render( true ); // always show hidden text
           else {
             // check for the respondent using the token
             CnHttpFactory.instance( {
@@ -214,7 +214,7 @@ define( [ 'question' ].reduce( function( list, name ) {
               $scope.data.conclusions = CnTranslationHelper.parseDescriptions( $scope.data.conclusions );
               $scope.data.closes = CnTranslationHelper.parseDescriptions( $scope.data.closes );
               $scope.data.title = null != $scope.data.page_id ? '' : $scope.data.submitted ? 'Conclusion' : 'Introduction';
-              render();
+              render( $state.params.show_hidden );
             } );
           }
         }
@@ -492,7 +492,7 @@ define( [ 'question' ].reduce( function( list, name ) {
             } );
           },
 
-          onLoad: function() {
+          onLoad: function( showHidden ) {
             function getAttributeNames( precondition ) {
               // scan the precondition for active attributes
               var list = [];
@@ -505,7 +505,7 @@ define( [ 'question' ].reduce( function( list, name ) {
 
             this.reset();
             return CnHttpFactory.instance( {
-              path: this.parentModel.getServiceResourcePath() + '/question',
+              path: this.parentModel.getServiceResourceBasePath() + '/question?show_hidden=' + ( showHidden ? '1' : '0' ),
               data: {
                 select: { column: [
                   'rank', 'name', 'type', 'mandatory', 'dkna_refuse', 'minimum', 'maximum', 'precondition', 'prompts', 'popups'
@@ -537,8 +537,10 @@ define( [ 'question' ].reduce( function( list, name ) {
                 if( 'list' == question.type ) {
                   promiseList.push( CnHttpFactory.instance( {
                     path: ['question', question.id, 'question_option'].join( '/' ) + (
+                      '?show_hidden=' + ( showHidden ? '1' : '0' )
+                    ) + (
                       'respondent' == self.parentModel.getSubjectFromState() ?
-                      '?token=' + $state.params.token :
+                      '&token=' + $state.params.token :
                       ''
                     ),
                     data: {
@@ -575,7 +577,7 @@ define( [ 'question' ].reduce( function( list, name ) {
             if( 'respondent' == this.parentModel.getSubjectFromState() && null != this.currentLanguage ) {
               return this.runQuery( function() {
                 return CnHttpFactory.instance( {
-                  path: self.parentModel.getServiceResourcePath().replace( 'page/', 'respondent/' ) +
+                  path: self.parentModel.getServiceResourceBasePath().replace( 'page/', 'respondent/' ) +
                     '?action=set_language&code=' + self.currentLanguage
                 } ).patch();
               } );
@@ -1044,10 +1046,16 @@ define( [ 'question' ].reduce( function( list, name ) {
         angular.extend( object, {
           renderModel: CnPageRenderFactory.instance( object ),
 
-          getServiceResourcePath: function( resource ) {
+          getServiceResourceBasePath: function( resource ) {
             // when we're looking at a respondent use its token to figure out which page to load
             return 'respondent' == this.getSubjectFromState() ?
               'page/token=' + $state.params.token : this.$$getServiceResourcePath( resource );
+          },
+
+          getServiceResourcePath: function( resource ) {
+            return this.getServiceResourceBasePath( resource ) + (
+              'respondent' != this.getSubjectFromState() || $state.params.show_hidden ? '?show_hidden=1' : ''
+            );
           },
 
           getServiceCollectionPath: function( ignoreParent ) {

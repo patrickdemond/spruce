@@ -16,17 +16,23 @@ class get extends \cenozo\service\get
   public function execute()
   {
     $respondent_class_name = lib::get_class_name( 'database\respondent' );
+    $expression_manager = lib::create( 'business\expression_manager' );
 
     parent::execute();
+
+    $data = $this->data;
+
+    // handle hidden text in prompts and popups
+    $expression_manager->process_hidden_text( $data, $this->get_argument( 'show_hidden', false ) );
 
     if( 1 == preg_match( '/^token=([^;\/]+)/', $this->get_resource_value( 0 ), $parts ) )
     {
       $db_respondent = $respondent_class_name::get_unique_record( 'token', $parts[1] );
       $this->db_response = is_null( $db_respondent ) ? NULL : $db_respondent->get_current_response();
-      $data = $this->data;
       $data['uid'] = $this->db_response->get_participant()->uid;
-      $this->set_data( $data );
     }
+
+    $this->set_data( $data );
   }
 
   /**

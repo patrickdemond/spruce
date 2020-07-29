@@ -99,6 +99,16 @@ abstract class base_qnaire_part_module extends \cenozo\service\module
   /**
    * Extends parent method
    */
+  public function post_read( &$row )
+  {
+    // handle hidden text in all prompts and popups
+    $expression_manager = lib::create( 'business\expression_manager' );
+    $expression_manager->process_hidden_text( $row, $this->get_argument( 'show_hidden', false ) );
+  }
+
+  /**
+   * Extends parent method
+   */
   public function post_write( $record )
   {
     parent::post_write( $record );
