@@ -27,6 +27,10 @@ class patch extends \cenozo\service\patch
       {
         $db_respondent->send_all_mail();
       }
+      else if( 'remove_mail' == $action )
+      {
+        $db_respondent->remove_unsent_mail();
+      }
       else if( 'force_submit' == $action )
       {
         // submit the current response

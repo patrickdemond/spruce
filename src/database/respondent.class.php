@@ -38,16 +38,8 @@ class respondent extends \cenozo\database\record
    */
   public function delete()
   {
-    // get a list of all mail that wasn't sent
-    $modifier = lib::create( 'database\modifier' );
-    $modifier->join( 'mail', 'respondent_mail.mail_id', 'mail.id' );
-    $modifier->where( 'mail.sent_datetime', '=', NULL );
-    $respondent_mail_list = $this->get_respondent_mail_object_list( $modifier );
-
+    $this->remove_unsent_mail();
     parent::delete();
-
-    // now delete the mail which isn't no longer needed
-    foreach( $respondent_mail_list as $db_respondent_mail ) $db_respondent_mail->get_mail()->delete();
   }
 
   /**
@@ -189,6 +181,21 @@ class respondent extends \cenozo\database\record
         $this->add_mail( 'reminder', $rank, $datetime );
       }
     }
+  }
+
+  /**
+   * TODO: document
+   */
+  public function remove_unsent_mail()
+  {
+    // get a list of all mail that wasn't sent
+    $modifier = lib::create( 'database\modifier' );
+    $modifier->join( 'mail', 'respondent_mail.mail_id', 'mail.id' );
+    $modifier->where( 'mail.sent_datetime', '=', NULL );
+    $respondent_mail_list = $this->get_respondent_mail_object_list( $modifier );
+
+    // now delete the mail which is no longer needed
+    foreach( $respondent_mail_list as $db_respondent_mail ) $db_respondent_mail->get_mail()->delete();
   }
 
   /**
