@@ -132,13 +132,19 @@ class respondent extends \cenozo\database\record
     $db_qnaire = $this->get_qnaire();
     $number_of_iterations = $db_qnaire->repeated ? $db_qnaire->max_responses : 1;
     if( 0 == $number_of_iterations ) $number_of_iterations = 1; // infinitely repeated qnaires only get one invitation
+    $db_current_response = $this->get_current_response();
+    $lowest_rank = is_null( $db_current_response ) ? 1 : $db_current_response->rank;
+    $now = util::get_datetime_object();
+    $base_datetime = clone ( is_null( $db_current_response ) ? $now : $db_current_response->start_datetime );
 
     if( $db_qnaire->email_invitation )
     {
       // create an invitation for all iterations of the questionnaire;
-      for( $rank = 1; $rank <= $number_of_iterations; $rank++ )
+      $mail_list = array();
+      $past_due_count = 0;
+      for( $rank = $lowest_rank; $rank <= $number_of_iterations; $rank++ )
       {
-        $datetime = util::get_datetime_object();
+        $datetime = clone $base_datetime;
 
         if( 1 < $rank )
         { // add repeated span for iterations beyond the first
@@ -150,16 +156,22 @@ class respondent extends \cenozo\database\record
           ) ) );
         }
 
-        $this->add_mail( 'invitation', $rank, $datetime );
+        $mail_list[] = array( 'rank' => $rank, 'datetime' => $datetime );
+        if( $datetime < $now ) $past_due_count++;
       }
+
+      // make sure there is a maximum of one mail in the past (avoid double-emailing passed emails)
+      for( $i = 0; $i < ( $past_due_count-1 ); $i++ ) array_shift( $mail_list );
+
+      foreach( $mail_list as $mail ) $this->add_mail( 'invitation', $mail['rank'], $mail['datetime'] );
     }
 
     if( $db_qnaire->email_reminder )
     {
       // create a reminder for all iterations of the questionnaire;
-      for( $rank = 1; $rank <= $number_of_iterations; $rank++ )
+      for( $rank = $lowest_rank; $rank <= $number_of_iterations; $rank++ )
       {
-        $datetime = util::get_datetime_object();
+        $datetime = clone $base_datetime;
 
         $datetime->add( new \DateInterval( sprintf(
           'P%s%d%s',
@@ -178,7 +190,7 @@ class respondent extends \cenozo\database\record
           ) ) );
         }
 
-        $this->add_mail( 'reminder', $rank, $datetime );
+        if( $datetime >= $now ) $this->add_mail( 'reminder', $rank, $datetime );
       }
     }
   }
