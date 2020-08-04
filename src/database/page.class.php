@@ -335,50 +335,53 @@ class page extends base_qnaire_part
       $row['q1_index'] = ( $row['total']-floor( $row['q2_index'] )+1 )/2;
       $row['q3_index'] = ( $row['total']-floor( $row['q2_index'] )+1 )/2 + $row['q2_index'];
 
-      // get Q1, Q2 and Q3 for all pages (lower quartile, median, upper quartile)
-      $q1_sel = lib::create( 'database\select' );
-      $q1_sel->add_column( 'time' );
-      $q1_mod = lib::create( 'database\modifier' );
-      $q1_mod->where( 'page_id', '=', $row['id'] );
-      $q1_mod->where( 'time', '>', '0', false );
-      $q1_mod->order( 'time' );
-      $q1_mod->offset( floor( $row['q1_index'] )-1 );
-      $q1_mod->limit( floor( $row['q1_index'] ) == $row['q1_index'] ? 1 : 2 );
-      $q1_sum = 0;
-      $points = $page_time_class_name::select( $q1_sel, $q1_mod );
-      foreach( $points as $r ) $q1_sum += $r['time'];
-      $row['q1'] = $q1_sum / count( $points );
+      if( 0 < floor( $row['q1_index'] ) )
+      {
+        // get Q1, Q2 and Q3 for all pages (lower quartile, median, upper quartile)
+        $q1_sel = lib::create( 'database\select' );
+        $q1_sel->add_column( 'time' );
+        $q1_mod = lib::create( 'database\modifier' );
+        $q1_mod->where( 'page_id', '=', $row['id'] );
+        $q1_mod->where( 'time', '>', '0', false );
+        $q1_mod->order( 'time' );
+        $q1_mod->offset( floor( $row['q1_index'] )-1 );
+        $q1_mod->limit( floor( $row['q1_index'] ) == $row['q1_index'] ? 1 : 2 );
+        $q1_sum = 0;
+        $points = $page_time_class_name::select( $q1_sel, $q1_mod );
+        foreach( $points as $r ) $q1_sum += $r['time'];
+        $row['q1'] = $q1_sum / count( $points );
 
-      $q2_sel = lib::create( 'database\select' );
-      $q2_sel->add_column( 'time' );
-      $q2_mod = lib::create( 'database\modifier' );
-      $q2_mod->where( 'page_id', '=', $row['id'] );
-      $q2_mod->where( 'time', '>', '0', false );
-      $q2_mod->order( 'time' );
-      $q2_mod->offset( floor( $row['q2_index'] )-1 );
-      $q2_mod->limit( floor( $row['q2_index'] ) == $row['q2_index'] ? 1 : 2 );
-      $q2_sum = 0;
-      $points = $page_time_class_name::select( $q2_sel, $q2_mod );
-      foreach( $points as $r ) $q2_sum += $r['time'];
-      $row['q2'] = $q2_sum / count( $points );
+        $q2_sel = lib::create( 'database\select' );
+        $q2_sel->add_column( 'time' );
+        $q2_mod = lib::create( 'database\modifier' );
+        $q2_mod->where( 'page_id', '=', $row['id'] );
+        $q2_mod->where( 'time', '>', '0', false );
+        $q2_mod->order( 'time' );
+        $q2_mod->offset( floor( $row['q2_index'] )-1 );
+        $q2_mod->limit( floor( $row['q2_index'] ) == $row['q2_index'] ? 1 : 2 );
+        $q2_sum = 0;
+        $points = $page_time_class_name::select( $q2_sel, $q2_mod );
+        foreach( $points as $r ) $q2_sum += $r['time'];
+        $row['q2'] = $q2_sum / count( $points );
 
-      $q3_sel = lib::create( 'database\select' );
-      $q3_sel->add_column( 'time' );
-      $q3_mod = lib::create( 'database\modifier' );
-      $q3_mod->where( 'page_id', '=', $row['id'] );
-      $q3_mod->where( 'page_time.time', '>', '0', false );
-      $q3_mod->order( 'time' );
-      $q3_mod->offset( floor( $row['q3_index'] )-1 );
-      $q3_mod->limit( floor( $row['q3_index'] ) == $row['q3_index'] ? 1 : 2 );
-      $q3_sum = 0;
-      $points = $page_time_class_name::select( $q3_sel, $q3_mod );
-      foreach( $points as $r ) $q3_sum += $r['time'];
-      $row['q3'] = $q3_sum / count( $points );
+        $q3_sel = lib::create( 'database\select' );
+        $q3_sel->add_column( 'time' );
+        $q3_mod = lib::create( 'database\modifier' );
+        $q3_mod->where( 'page_id', '=', $row['id'] );
+        $q3_mod->where( 'page_time.time', '>', '0', false );
+        $q3_mod->order( 'time' );
+        $q3_mod->offset( floor( $row['q3_index'] )-1 );
+        $q3_mod->limit( floor( $row['q3_index'] ) == $row['q3_index'] ? 1 : 2 );
+        $q3_sum = 0;
+        $points = $page_time_class_name::select( $q3_sel, $q3_mod );
+        foreach( $points as $r ) $q3_sum += $r['time'];
+        $row['q3'] = $q3_sum / count( $points );
 
-      $row['range'] = $row['q3'] - $row['q1'];
-      $row['fence'] = $row['q3'] + 3.0*$row['range'];
+        $row['range'] = $row['q3'] - $row['q1'];
+        $row['fence'] = $row['q3'] + 3.0*$row['range'];
 
-      $page_list[] = $row;
+        $page_list[] = $row;
+      }
     }
 
     // turn read-only off for all questionnaires
