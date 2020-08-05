@@ -135,7 +135,11 @@ class respondent extends \cenozo\database\record
     $db_current_response = $this->get_current_response();
     $lowest_rank = is_null( $db_current_response ) ? 1 : $db_current_response->rank;
     $now = util::get_datetime_object();
-    $base_datetime = clone ( is_null( $db_current_response ) ? $now : $db_current_response->start_datetime );
+    $base_datetime = clone (
+      is_null( $db_current_response ) || is_null( $db_current_response->start_datetime ) ?
+      $now :
+      $db_current_response->start_datetime
+    );
 
     if( $db_qnaire->email_invitation )
     {
