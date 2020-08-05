@@ -26,7 +26,8 @@ class post extends \cenozo\service\post
       $post_array = $this->get_file_as_array();
       $db_participant = lib::create( 'database\participant', $post_array['participant_id'] );
       $db_last_hold = $db_participant->get_last_hold();
-      $final_hold = !is_null( $db_last_hold ) && 'final' == $db_last_hold->get_hold_type()->type;
+      $db_last_hold_type = is_null( $db_last_hold ) ? NULL : $db_last_hold->get_hold_type();
+      $final_hold = !is_null( $db_last_hold_type ) && 'final' == $db_last_hold_type->type;
       if( !is_null( $db_participant->exclusion_id ) || $final_hold )
       {
         $this->status->set_code( 306 );
