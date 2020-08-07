@@ -223,6 +223,33 @@ class qnaire extends \cenozo\database\record
   /**
    * TODO: document
    */
+  public function mass_remove_unsent_mail( $uid_list )
+  {
+    $select = lib::create( 'database\select' );
+    $select->from( 'mail' );
+    $select->add_column( 'id' );
+    $modifier = lib::create( 'database\modifier' );
+    $modifier->join( 'respondent_mail', 'mail.id', 'respondent_mail.mail_id' );
+    $modifier->join( 'respondent', 'respondent_mail.respondent_id', 'respondent.id' );
+    $modifier->join( 'participant', 'respondent.participant_id', 'participant.id' );
+    $modifier->where( 'mail.sent_datetime', '=', NULL );
+    $modifier->where( 'respondent.qnaire_id', '=', $this->id );
+    $modifier->where( 'participant.uid', 'IN', $uid_list );
+
+    static::db()->execute( sprintf(
+      "CREATE TEMPORARY TABLE delete_mail\n".
+      "%s\n".
+      "%s\n",
+      $select->get_sql(),
+      $modifier->get_sql()
+    ) );
+
+    static::db()->execute( 'DELETE FROM mail WHERE id IN ( SELECT id FROM delete_mail )' );
+  }
+
+  /**
+   * TODO: document
+   */
   public function mass_respondent( $uid_list )
   {
     set_time_limit( 900 ); // 15 minutes max

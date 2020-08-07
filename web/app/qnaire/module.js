@@ -594,14 +594,17 @@ define( [ 'module' ].reduce( function( list, name ) {
             if( !this.confirmInProgress && 0 < this.confirmedCount ) {
               CnHttpFactory.instance( {
                 path: ['qnaire', this.qnaireId, 'participant'].join( '/' ),
-                data: { mode: 'release', uid_list: this.uidList }
+                data: { mode: 'create', uid_list: this.uidList },
+                onError: function( response ) {
+                  CnModalMessageFactory.httpError( response ).then( function() { self.onLoad(); } );
+                }
               } ).post().then( function( response ) {
                 CnModalMessageFactory.instance( {
                   title: 'Recipients Created',
                   message: 'You have successfully created ' + self.confirmedCount + ' new recipients for the "' +
                            self.qnaireName + '" questionnaire.'
-                } ).show().then( function() { self.onLoad(); } ).finally( function() { self.working = false; } );
-              } );
+                } ).show().then( function() { self.onLoad(); } );
+              } ).finally( function() { self.working = false; } );
             }
           }
 
