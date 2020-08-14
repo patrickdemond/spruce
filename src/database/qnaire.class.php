@@ -36,15 +36,15 @@ class qnaire extends \cenozo\database\record
 
     if( $this->has_column_changed( 'repeated' ) )
     {
-      if( !is_null( $this->repeated ) )
-      {
-        if( is_null( $this->repeat_offset ) ) $this->repeat_offset = 0;
-        if( is_null( $this->max_responses ) ) $this->max_responses = 0;
-      }
-      else
+      if( !$this->repeated )
       {
         $this->repeat_offset = NULL;
         $this->max_responses = NULL;
+      }
+      else
+      {
+        if( is_null( $this->repeat_offset ) ) $this->repeat_offset = 0;
+        if( is_null( $this->max_responses ) ) $this->max_responses = 0;
       }
     }
 
