@@ -46,24 +46,6 @@ class query extends \cenozo\service\query
 
     $list = parent::get_record_list();
 
-    // handle all hidden text by either highlighting it or removing it
-    /*
-    $search = $this->get_argument( 'show_hidden', false )
-            ? array( '/{{/', '/}}/' )
-            : '/{{.*?}}/s';
-    $replace = $this->get_argument( 'show_hidden', false )
-             ? array( '<span class="text-warning">', '</span>' )
-             : '';
-
-    foreach( $list as $index => $record )
-    {
-      if( array_key_exists( 'prompts', $list[$index] ) )
-        $list[$index]['prompts'] = preg_replace( $search, $replace, $record['prompts'] );
-      if( array_key_exists( 'popups', $list[$index] ) )
-        $list[$index]['popups'] = preg_replace( $search, $replace, $record['popups'] );
-    }
-    */
-
     // if we got the question from a respondent then compile any attribute or response variables in the description
     if( 1 == preg_match( '/^token=([^;\/]+)/', $this->get_resource_value( 0 ), $parts ) )
     {
