@@ -958,11 +958,12 @@ define( [ 'question' ].reduce( function( list, name ) {
 
             if( mayProceed ) {
               // proceed to the respondent's next valid page
+              this.working = true;
               return this.runQuery( function() {
                 return CnHttpFactory.instance( {
                   path: 'respondent/token=' + $state.params.token + '?action=proceed'
                 } ).patch().then( function() {
-                  self.parentModel.reloadState( true );
+                  self.parentModel.reloadState( true ).then( function() { self.working = false; } );
                 } );
               } );
             }
@@ -970,11 +971,12 @@ define( [ 'question' ].reduce( function( list, name ) {
 
           backup: function() {
             // back up to the respondent's previous page
+            this.working = true;
             return this.runQuery( function() {
               return CnHttpFactory.instance( {
                 path: 'respondent/token=' + $state.params.token + '?action=backup'
               } ).patch().then( function() {
-                self.parentModel.reloadState( true );
+                self.parentModel.reloadState( true ).then( function() { self.working = false; } );
               } );
             } );
           },
