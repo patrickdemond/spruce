@@ -407,8 +407,11 @@ define( [ 'question' ].reduce( function( list, name ) {
 
               var subparts = parts[0].toLowerCase().split( ':' );
               var questionName = subparts[0];
-              var optionName = 1 < subparts.length ? subparts[1] : null;
-
+              var optionName = null;
+              if( 1 < subparts.length ) {
+                if( 'count()' == subparts[1] ) fnName = 'count()';
+                else optionName = subparts[1];
+              }
 
               // find the referenced question
               var matchedQuestion = null;
@@ -427,7 +430,9 @@ define( [ 'question' ].reduce( function( list, name ) {
                   compiled = isDkna( matchedQuestion.value ) ? 'true' : 'false';
                 } else if( 'refuse()' == fnName ) {
                   compiled = isRefuse( matchedQuestion.value ) ? 'true' : 'false';
-                }else if( 'boolean' == matchedQuestion.type ) {
+                } else if( 'count()' == fnName ) {
+                  compiled = angular.isArray( matchedQuestion.value ) ? matchedQuestion.value.length : 0;
+                } else if( 'boolean' == matchedQuestion.type ) {
                   if( true === matchedQuestion.value ) compiled = 'true';
                   else if( false === matchedQuestion.value ) compiled = 'false';
                 } else if( 'number' == matchedQuestion.type ) {

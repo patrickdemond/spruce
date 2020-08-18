@@ -372,13 +372,7 @@ class expression_manager extends \cenozo\singleton
       }
     }
     else if( in_array( $this->term, ['&&', '||'] ) )
-    { // logical operator
-      if( 'boolean' != $this->last_term )
-      {
-        throw lib::create( 'exception\runtime', sprintf(
-          'Expecting a boolean before "%s"', $this->term
-        ), __METHOD__ );
-      }
+    { // logical operator but allow in any circumstance because we don't track compounded expressions
     }
     else throw lib::create( 'exception\runtime', sprintf( 'Invalid operator "%s"', $this->term ), __METHOD__ );
 
@@ -472,22 +466,30 @@ class expression_manager extends \cenozo\singleton
 
       if( '.' == $matches[2] )
       {
-        if( !in_array( $matches[3], ['empty()', 'dkna()', 'refuse()'] ) )
+        if( !in_array( $matches[3], ['count()', 'empty()', 'dkna()', 'refuse()'] ) )
           throw lib::create( 'exception\runtime', sprintf( 'Invalid function "%s"', $matches[3] ), __METHOD__ );
         $special_function = substr( $matches[3], 0, -2 );
       }
       else if( ':' == $matches[2] )
       {
-        $db_question_option = $question_option_class_name::get_unique_record(
-          array( 'question_id', 'name' ),
-          array( $db_question->id, $matches[3] )
-        );
-        if( is_null( $db_question_option ) )
+        if( 'count()' == $matches[3] )
         {
-          throw lib::create( 'exception\runtime',
-            sprintf( 'Invalid question option "%s" for question "%s"', $matches[3], $matches[1] ),
-            __METHOD__
+          // return how many options are selected
+          $special_function = 'count';
+        }
+        else
+        {
+          $db_question_option = $question_option_class_name::get_unique_record(
+            array( 'question_id', 'name' ),
+            array( $db_question->id, $matches[3] )
           );
+          if( is_null( $db_question_option ) )
+          {
+            throw lib::create( 'exception\runtime',
+              sprintf( 'Invalid question option "%s" for question "%s"', $matches[3], $matches[1] ),
+              __METHOD__
+            );
+          }
         }
       }
     }
@@ -538,6 +540,7 @@ class expression_manager extends \cenozo\singleton
       if( 'empty' == $special_function ) $compiled = is_null( $value ) ? 'true' : 'false';
       else if( 'dkna' == $special_function ) $compiled = $dkna ? 'true' : 'false';
       else if( 'refuse' == $special_function ) $compiled = $refuse ? 'true' : 'false';
+      else if( 'count' == $special_function ) { $compiled = is_array( $value ) ? count( $value ) : 0; }
       else if( is_null( $value ) || $dkna || $refuse ) $compiled = 'NULL';
       else if( !is_null( $db_question_option ) )
       {
@@ -564,7 +567,9 @@ class expression_manager extends \cenozo\singleton
       }
     }
 
-    $this->last_term = !is_null( $db_question_option ) || !is_null( $special_function ) ? 'boolean' : $db_question->type;
+    $this->last_term = is_null( $special_function )
+                     ? ( !is_null( $db_question_option ) ? 'boolean' : $db_question->type )
+                     : ( 'count' == $special_function ? 'number' : 'boolean' );
     $this->active_term = NULL;
 
     return $compiled;
