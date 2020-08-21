@@ -382,7 +382,8 @@ class response extends \cenozo\database\has_rank
   }
 
   /**
-   * TODO: document
+   * Removes all answers in this response belonging to a module
+   * @param database\module $db_module
    */
    public function delete_answers_in_module( $db_module )
    {
@@ -402,7 +403,8 @@ class response extends \cenozo\database\has_rank
    }
 
   /**
-   * TODO: document
+   * Removes all answers in this response belonging to a page
+   * @param database\page $db_page
    */
   public function delete_answers_in_page( $db_page )
   {
@@ -421,7 +423,7 @@ class response extends \cenozo\database\has_rank
   }
 
   /**
-   * TODO: document
+   * Creates all attributes for the response
    */
   public function create_attributes()
   {
@@ -438,7 +440,8 @@ class response extends \cenozo\database\has_rank
   }
 
   /**
-   * TODO: document
+   * Compiles a question's or option's description
+   * @param string $description
    */
   public function compile_description( $description )
   {

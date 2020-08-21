@@ -64,7 +64,8 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
-   * TODO: document
+   * Returns the qnaire's first module
+   * @return database\module
    */
   public function get_first_module()
   {
@@ -83,7 +84,9 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
-   * TODO: document
+   * Returns a question belonging to the qnaire by name
+   * @param string $name The question's name
+   * @return database\question
    */
   public function get_question( $name )
   {
@@ -103,7 +106,8 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
-   * TODO: document
+   * Returns the total number of pages in the qnaire
+   * @return integer
    */
   public function get_number_of_pages()
   {
@@ -133,7 +137,8 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
-   * TODO: document
+   * Clones another qnaire
+   * @param database\qnaire $db_source_qnaire
    */
   public function clone_from( $db_source_qnaire )
   {
@@ -193,7 +198,10 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
-   * TODO: document
+   * Returns one of the qnaire's descriptions by language
+   * @param string $type The description type to get
+   * @param database\language $db_language The language to return the description in.
+   * @return string
    */
   public function get_description( $type, $db_language )
   {
@@ -205,7 +213,8 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
-   * TODO: document
+   * Determines whether the qnaire has duplicate respondents (for repeated qnaires)
+   * @return boolean
    */
   public function has_duplicates()
   {
@@ -221,7 +230,8 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
-   * TODO: document
+   * Removes all unsent qnaire mail for the given UID list
+   * @param array $uid_list A list of participant UIDs to affect
    */
   public function mass_remove_unsent_mail( $uid_list )
   {
@@ -248,7 +258,8 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
-   * TODO: document
+   * Creates a batch of respondents as a single operation
+   * @param array $uid_list A list of participant UIDs to affect
    */
   public function mass_respondent( $uid_list )
   {
@@ -267,7 +278,9 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
-   * TODO: document
+   * Returns an array of all responses to this qnaire
+   * @param database\modifier $modifier
+   * @return array( 'header', 'data' )
    */
   public function get_response_data( $modifier = NULL )
   {
@@ -451,7 +464,10 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
-   * TODO: document
+   * Applies a patch file to the qnaire and returns an object containing all elements which are affected by the patch
+   * @param stdObject $patch_object An object containing all (nested) parameters to change
+   * @param boolean $apply Whether to apply or evaluate the patch
+   * @return stdObject
    */
   public function process_patch( $patch_object, $apply = false )
   {
@@ -838,7 +854,8 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
-   * TODO: document
+   * Exports or prints the qnaire
+   * @param string $type One of "export" or "print"
    */
   public function generate( $type = 'export' )
   {
@@ -1150,7 +1167,9 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
-   * TODO: document
+   * Imports a qnaire from an export object and returns the new qnaire's primary ID
+   * @param stdClass $qnaire_object
+   * @return integer
    */
   public static function import( $qnaire_object )
   {
@@ -1297,7 +1316,8 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
-   * TODO: document
+   * Recalculates the average time taken to complete the qnaire
+   * @static
    */
   public static function recalculate_average_time()
   {

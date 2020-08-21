@@ -15,7 +15,7 @@ use cenozo\lib, cenozo\log, pine\util;
 class session extends \cenozo\business\session
 {
   /**
-   * TODO: document
+   * Extends the parent method
    */
   public function login( $username = NULL, $db_site = NULL, $db_role = NULL )
   {
@@ -57,7 +57,7 @@ class session extends \cenozo\business\session
   }
 
   /**
-   * TODO: document
+   * Extends the parent method
    */
   public function get_response()
   {
@@ -83,7 +83,7 @@ class session extends \cenozo\business\session
   }
 
   /**
-   * TODO: document
+   * Extends the parent method
    */
   public function initialize( $no_activity = false )
   {
@@ -97,7 +97,8 @@ class session extends \cenozo\business\session
   }
 
   /**
-   * TODO: document
+   * Stores the response associated with the current session (if there is one)
+   * @var database\response $db_response
    */
   private $db_response = false;
 }

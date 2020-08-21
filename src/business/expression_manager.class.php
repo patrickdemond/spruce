@@ -25,7 +25,13 @@ class expression_manager extends \cenozo\singleton
   }
 
   /**
-   * TODO: document
+   * Converts hidden text codes into hidden/shown text
+   * 
+   * Text can be marked as "hidden" by putting enclosing it inside of double curly braces {{}}
+   * This text will only appear when the "show_hidden" argument is included in the survey's URL
+   * 
+   * @param array $array An array referrence containing 'prompts' and 'popups' elements containing qnaire text
+   * @param boolean $show_hidden Whether to show or hide hidden text
    */
   public function process_hidden_text( &$array, $show_hidden )
   {
@@ -37,7 +43,14 @@ class expression_manager extends \cenozo\singleton
   }
 
   /**
-   * TODO: document
+   * Validates a precondition making sure the syntax is correct
+   * 
+   * This method is used when changing a qnaire element's precondition to make sure that it is valid.
+   * 
+   * @param database\qnaire|database\response $db_qnaire The questionnaire or response the precondition is referring to
+   * @param string $precondition The precondition string to evaluate
+   * @return string
+   * @throws exception\runtime
    */
   public function validate( $db_qnaire, $precondition )
   {
@@ -50,7 +63,12 @@ class expression_manager extends \cenozo\singleton
   }
 
   /**
-   * TODO: document
+   * Evaluates a precondition
+   * 
+   * @param database\qnaire|database\response $record The questionnaire or response the precondition is referring to
+   * @param string $precondition The precondition string to evaluate
+   * @return string
+   * @throws exception\runtime
    */
   public function evaluate( $record, $precondition )
   {
@@ -88,7 +106,7 @@ class expression_manager extends \cenozo\singleton
   }
 
   /**
-   * TODO: document
+   * Converts a string into an expression that can be natively evaluated by PHP
    * 
    * values:
    *   @NAME@ (response attribute)
@@ -123,6 +141,11 @@ class expression_manager extends \cenozo\singleton
    *   : function(x,y) where x,y can be any non comparison
    *   ( must have same number opening as closing
    *   ) must have same number opening as closing
+   * 
+   * @param database\qnaire|database\response $record The questionnaire or response the precondition is referring to
+   * @param string $precondition The precondition to compile
+   * @param database\question|database\question_option $override_question_object A question or option to leave uncompiled
+   * @return string
    */
   public function compile( $record, $precondition, $override_question_object = NULL )
   {
@@ -271,7 +294,8 @@ class expression_manager extends \cenozo\singleton
   }
 
   /**
-   * TODO: document
+   * Processes the current term as a string
+   * @return string
    */
   private function process_string()
   {
@@ -288,7 +312,8 @@ class expression_manager extends \cenozo\singleton
   }
 
   /**
-   * TODO: document
+   * Processes the current term as a number
+   * @return string
    */
   private function process_number()
   {
@@ -308,7 +333,8 @@ class expression_manager extends \cenozo\singleton
   }
 
   /**
-   * TODO: document
+   * Processes the current term as a constant
+   * @return string
    */
   private function process_constant()
   {
@@ -331,7 +357,8 @@ class expression_manager extends \cenozo\singleton
   }
 
   /**
-   * TODO: document
+   * Processes the current term as an operator
+   * @return string
    */
   private function process_operator()
   {
@@ -383,7 +410,10 @@ class expression_manager extends \cenozo\singleton
   }
 
   /**
-   * TODO: document
+   * Processes the current term as an attribute
+   * @param database\qnaire $db_qnaire The associated qnaire record
+   * @param database\response $db_response The associated response record (optional)
+   * @return string
    */
   private function process_attribute( $db_qnaire, $db_response = NULL )
   {
@@ -426,7 +456,11 @@ class expression_manager extends \cenozo\singleton
   }
 
   /**
-   * TODO: document
+   * Processes the current term as a question
+   * @param database\qnaire $db_qnaire The associated qnaire record
+   * @param database\response $db_response The associated response record (optional)
+   * @param database\question|database\question_option $override_question_object A question or option to leave uncompiled
+   * @return string
    */
   private function process_question( $db_qnaire, $db_response = NULL, $override_question_object = NULL )
   {
@@ -576,7 +610,9 @@ class expression_manager extends \cenozo\singleton
   }
 
   /**
-   * TODO: document
+   * Used by the compile() method one character at a time
+   * @param string $char
+   * @return string
    */
   private function process_character( $char )
   {
@@ -606,32 +642,32 @@ class expression_manager extends \cenozo\singleton
   }
 
   /**
-   * TODO: document
-   */
-  private $db_qnaire;
-  
-  /**
    * What type of quote was used to open the string
+   * @var string $quote
    */
   private $quote;
   
   /**
    * Stores whether some element is being declared (string, number, attribute, question, constant or operator)
+   * @var string $active_term
    */
   private $active_term;
   
   /**
    * Stores the active term as it is read
+   * @var string $term
    */
   private $term;
 
   /**
-   * TODO: document
+   * Stores the previous active term
+   * @var string $last_term
    */
   private $last_term;
 
   /**
-   * TODO: document
+   * Counts how many levels of brackets the expression is currently in
+   * @var integer $open_bracket
    */
   private $open_bracket;
 }
