@@ -43,7 +43,10 @@ class respondent extends \cenozo\database\record
   }
 
   /**
-   * TODO: document
+   * Determines whether the respondent has completed all required responses
+   * 
+   * Whether the respondent is complete depends on the number of responses the parent qnaire requires.
+   * @return boolean
    */
   public function is_complete()
   {
@@ -54,7 +57,9 @@ class respondent extends \cenozo\database\record
   }
 
   /**
-   * TODO: document
+   * Returns the invitation mail for this respondent and given rank
+   * @param integer $rank
+   * @return database\respondent_mail
    */
   public function get_invitation_mail( $rank )
   {
@@ -67,7 +72,9 @@ class respondent extends \cenozo\database\record
   }
 
   /**
-   * TODO: document
+   * Returns the reminder mail for this respondent and given rank
+   * @param integer $rank
+   * @return database\respondent_mail
    */
   public function get_reminder_mail( $rank )
   {
@@ -115,7 +122,8 @@ class respondent extends \cenozo\database\record
   }
 
   /**
-   * TODO: document
+   * Gets the respondent's language
+   * @return database\language
    */
   public function get_language()
   {
@@ -125,7 +133,7 @@ class respondent extends \cenozo\database\record
   }
 
   /**
-   * TODO: document
+   * Sends all unsent invitations and reminders for this respondent
    */
   public function send_all_mail()
   {
@@ -200,7 +208,7 @@ class respondent extends \cenozo\database\record
   }
 
   /**
-   * TODO: document
+   * Removes all unsent invitations and reminders for this respondent
    */
   public function remove_unsent_mail()
   {
@@ -215,7 +223,8 @@ class respondent extends \cenozo\database\record
   }
 
   /**
-   * TODO: document
+   * Returns this respondent's URL
+   * @return string
    */
   public function get_url()
   {
@@ -223,7 +232,10 @@ class respondent extends \cenozo\database\record
   }
 
   /**
-   * TODO: document
+   * Schedules mail for this respondent (if it hasn't already been sent)
+   * @param string $type Either "invitation" or "reminder"
+   * @param integer $rank Which response rank to send
+   * @param datetime $datetime When to schedule the mail, or now if no value is provided
    */
   private function add_mail( $type, $rank, $datetime = NULL )
   {
@@ -305,7 +317,7 @@ class respondent extends \cenozo\database\record
   }
 
   /**
-   * TODO: document
+   * Sent called then this instance will not automatically send mail when first written to the database
    */
   public function do_not_send_mail()
   {
@@ -313,7 +325,8 @@ class respondent extends \cenozo\database\record
   }
 
   /**
-   * TODO: document
+   * Tracks whether to sent mail when creating the respondent
+   * @var boolean $send_mail
    */
   private $send_mail = true;
 }

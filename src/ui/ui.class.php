@@ -15,7 +15,7 @@ use cenozo\lib, cenozo\log, pine\util;
 class ui extends \cenozo\ui\ui
 {
   /**
-   * TODO: document
+   * Extends the parent method
    */
   public function get_interface( $maintenance = false, $error = NULL )
   {

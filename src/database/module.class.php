@@ -41,7 +41,12 @@ class module extends base_qnaire_part
   }
 
   /**
-   * TODO: document
+   * Returns the previous module for a response
+   * 
+   * This function will return the previous module whose precondition matches the given response, not necessarily the
+   * previous module in the qnaire
+   * @param database\response $db_response
+   * @return database\module
    */
   public function get_previous_for_response( $db_response )
   {
@@ -72,7 +77,12 @@ class module extends base_qnaire_part
   }
 
   /**
-   * TODO: document
+   * Returns the next module for a response
+   * 
+   * This function will return the next module whose precondition matches the given response, not necessarily the
+   * next module in the qnaire
+   * @param database\response $db_response
+   * @return database\module
    */
   public function get_next_for_response( $db_response = NULL )
   {
@@ -123,7 +133,8 @@ class module extends base_qnaire_part
   }
 
   /**
-   * TODO: document
+   * Returns the first page in this module
+   * @return database\page
    */
   public function get_first_page()
   {
@@ -135,7 +146,8 @@ class module extends base_qnaire_part
   }
 
   /**
-   * TODO: document
+   * Returns the last page in this module
+   * @return database\page
    */
   public function get_last_page()
   {
@@ -147,7 +159,8 @@ class module extends base_qnaire_part
   }
 
   /**
-   * TODO: document
+   * Clones another module
+   * @param database\module $db_source_module
    */
   public function clone_from( $db_source_module )
   {
@@ -169,7 +182,7 @@ class module extends base_qnaire_part
   }
 
   /**
-   * TODO: document
+   * Recaluclates the average time taken to complete the module
    */
   public static function recalculate_average_time()
   {

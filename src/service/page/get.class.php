@@ -92,7 +92,8 @@ class get extends \cenozo\service\get
   }
 
   /**
-   * TODO: document
+   * Caches the service's response object
+   * @var database\response $db_response
    */
   private $db_response = NULL;
 }

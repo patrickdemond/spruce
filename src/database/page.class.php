@@ -61,7 +61,8 @@ class page extends base_qnaire_part
   }
 
   /**
-   * TODO: document
+   * Returns the previous page (even if it is in a previous module)
+   * @return database\page
    */
   public function get_previous()
   {
@@ -77,7 +78,8 @@ class page extends base_qnaire_part
   }
 
   /**
-   * TODO: document
+   * Returns the next page (even if it is in a next module)
+   * @return database\page
    */
   public function get_next()
   {
@@ -93,7 +95,12 @@ class page extends base_qnaire_part
   }
 
   /**
-   * TODO: document
+   * Returns the previous page for a page
+   * 
+   * This function will return the previous page whose precondition matches the given response, not necessarily the
+   * previous page in the qnaire
+   * @param database\response $db_response
+   * @return database\page
    */
   public function get_previous_for_response( $db_response )
   {
@@ -133,7 +140,12 @@ class page extends base_qnaire_part
   }
 
   /**
-   * TODO: document
+   * Returns the next page for a page
+   * 
+   * This function will return the next page whose precondition matches the given response, not necessarily the
+   * next page in the qnaire
+   * @param database\response $db_response
+   * @return database\page
    */
   public function get_next_for_response( $db_response )
   {
@@ -224,7 +236,8 @@ class page extends base_qnaire_part
   }
 
   /**
-   * TODO: document
+   * Returns the overall page number with respect to the entire qnaire
+   * @return integer
    */
   public function get_overall_rank()
   {
@@ -241,7 +254,8 @@ class page extends base_qnaire_part
   }
 
   /**
-   * TODO: document
+   * Returns the first question belonging to this page
+   * @return database\question
    */
   public function get_first_question()
   {
@@ -253,7 +267,8 @@ class page extends base_qnaire_part
   }
 
   /**
-   * TODO: document
+   * Returns the last question belonging to this page
+   * @return database\question
    */
   public function get_last_question()
   {
@@ -265,7 +280,8 @@ class page extends base_qnaire_part
   }
 
   /**
-   * TODO: document
+   * Clones another page
+   * @param database\page $db_source_page
    */
   public function clone_from( $db_source_page )
   {
@@ -290,7 +306,7 @@ class page extends base_qnaire_part
   }
 
   /**
-   * TODO: document
+   * Recalculates the average time taken to complete the page
    */
   public static function recalculate_average_time()
   {
@@ -312,6 +328,11 @@ class page extends base_qnaire_part
     ) );
   }
 
+  /**
+   * Recalculates the maximum time before the time taken to complete the page is considered an outlier
+   * 
+   * The outlier boundary is calculated by finding the outer fence (3 times the difference between the upper and lower quartiles)
+   */
   public static function recalculate_max_time()
   {
     $qnaire_class_name = lib::get_class_name( 'database\qnaire' );

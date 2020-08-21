@@ -30,7 +30,8 @@ class question extends base_qnaire_part
   }
 
   /**
-   * TODO: document
+   * Returns the previous question (even if it is on the previous page)
+   * @return database\question
    */
   public function get_previous()
   {
@@ -46,7 +47,7 @@ class question extends base_qnaire_part
   }
 
   /**
-   * TODO: document
+   * Returns the next question (event if it is on the next page)
    */
   public function get_next()
   {
@@ -62,7 +63,8 @@ class question extends base_qnaire_part
   }
 
   /**
-   * TODO: document
+   * Clones another question
+   * @param database\question $db_source_question
    */
   public function clone_from( $db_source_question )
   {

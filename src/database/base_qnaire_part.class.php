@@ -71,7 +71,10 @@ abstract class base_qnaire_part extends \cenozo\database\has_rank
   }
 
   /**
-   * TODO: document
+   * Returns the qnaire-part's description by type and language
+   * @param string $type Either "prompt" for visible text, or "popup" for text that pops up when hovering over the prompt
+   * @param database\language $db_language
+   * @return string
    */
   public function get_description( $type, $db_language )
   {
@@ -84,7 +87,8 @@ abstract class base_qnaire_part extends \cenozo\database\has_rank
   }
 
   /**
-   * TODO: document
+   * Returns the previous qnaire-part
+   * @return database\qnaire_part
    */
   public function get_previous()
   {
@@ -96,7 +100,8 @@ abstract class base_qnaire_part extends \cenozo\database\has_rank
   }
 
   /**
-   * TODO: document
+   * Returns the next qnaire-part
+   * @return database\qnaire_part
    */
   public function get_next()
   {
@@ -108,7 +113,8 @@ abstract class base_qnaire_part extends \cenozo\database\has_rank
   }
 
   /**
-   * TODO: document
+   * Clones another qnaire-part
+   * @param database\qnaire_part $db_source
    */
   public function clone_from( $db_source )
   {
@@ -135,7 +141,10 @@ abstract class base_qnaire_part extends \cenozo\database\has_rank
   }
 
   /**
-   * TODO: document
+   * Applies a patch file to the qnaire-part and returns an object containing all elements which are affected by the patch
+   * @param stdObject $patch_object An object containing all (nested) parameters to change
+   * @param string $name_suffix A temporary string used to prevent name collisions
+   * @param boolean $apply Whether to apply or evaluate the patch
    */
   public function process_patch( $patch_object, $name_suffix, $apply = false )
   {

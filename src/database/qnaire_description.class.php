@@ -14,7 +14,13 @@ use cenozo\lib, cenozo\log, pine\util;
 class qnaire_description extends base_description
 {
   /**
-   * TODO: document
+   * Returns the compiled description based on the respondent and iteration
+   * 
+   * Descriptions can have $url$, $qnaire.name$, $iteration$, or any of the $participant.*$ values provided
+   * by the business\data_manager class.
+   * @param database\respondent $db_respondent
+   * @param integer $iteration
+   * @return string
    */
   public function get_compiled_value( $db_respondent, $iteration )
   {

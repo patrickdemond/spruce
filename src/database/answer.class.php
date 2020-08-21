@@ -117,7 +117,8 @@ class answer extends \cenozo\database\record
   }
 
   /**
-   * TODO: document
+   * Returns whether the answer is complete
+   * @return boolean
    */
   public function is_complete()
   {
@@ -191,7 +192,8 @@ class answer extends \cenozo\database\record
   }
 
   /**
-   * TODO: document
+   * Removes any answer associated with the given option ID
+   * @param integer $option_id
    */
   public function remove_answer_value_by_option_id( $option_id )
   {
@@ -219,7 +221,7 @@ class answer extends \cenozo\database\record
   }
 
   /**
-   * TODO: document
+   * Removes any empty answer values stored in the record
    */
   public function remove_empty_answer_values()
   {
