@@ -27,7 +27,7 @@
       <div class="form-footer text-right rounded-bottom bg-info">
         <button type="button"
                 ng-if="!data.closed && !data.submitted"
-                ng-disabled="!isComplete"
+                ng-disabled="model.renderModel.working || !isComplete"
                 ng-click="model.renderModel.proceed()"
                 class="btn btn-success larger"
                 style="width: 12em;">

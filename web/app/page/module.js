@@ -943,6 +943,8 @@ define( [ 'question' ].reduce( function( list, name ) {
           },
 
           proceed: function() {
+            this.working = true;
+
             // check to make sure that all questions are complete, and highlight any which aren't
             var mayProceed = true;
             this.questionList.some( function( question ) {
@@ -958,7 +960,6 @@ define( [ 'question' ].reduce( function( list, name ) {
 
             if( mayProceed ) {
               // proceed to the respondent's next valid page
-              this.working = true;
               return this.runQuery( function() {
                 return CnHttpFactory.instance( {
                   path: 'respondent/token=' + $state.params.token + '?action=proceed'
@@ -966,6 +967,8 @@ define( [ 'question' ].reduce( function( list, name ) {
                   self.parentModel.reloadState( true ).then( function() { self.working = false; } );
                 } );
               } );
+            } else {
+              self.working = false;
             }
           },
 
