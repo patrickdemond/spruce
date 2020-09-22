@@ -695,7 +695,7 @@ cenozo.service( 'CnTranslationHelper', [
         misc: {
           yes: { en: 'Yes', fr: 'Oui' },
           no: { en: 'No', fr: 'Non' },
-          dkna: { en: 'Don\'t Know / No Answer', fr: 'Ne sait pas / pas de réponse' },
+          dkna: { en: 'Don\'t Know / No Answer', fr: 'Ne sais pas / pas de réponse' },
           refuse: { en: 'Prefer not to answer', fr: 'Préfère ne pas répondre' },
           begin: { en: 'Begin', fr: 'Commencer' },
           next: { en: 'Next', fr: 'Suivant' },
