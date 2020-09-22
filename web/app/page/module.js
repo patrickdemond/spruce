@@ -229,7 +229,10 @@ define( [ 'question' ].reduce( function( list, name ) {
       var object = function( parentModel ) {
         var self = this;
 
-        function getDate( date ) { return date && !angular.isObject( date ) ? moment( new Date( date ) ) : null; }
+        function getDate( date ) {
+          if( 'now' == date ) date = moment().format( 'YYYY-MM-DD' );
+          return date && !angular.isObject( date ) ? moment( new Date( date ) ) : null;
+        }
         function formatDate( date ) { var m = getDate( date ); return m ? m.format( 'dddd, MMMM Do YYYY' ) : null; }
         function isDkna( value ) { return angular.isObject( value ) && true === value.dkna; }
         function isRefuse( value ) { return angular.isObject( value ) && true === value.refuse; }
