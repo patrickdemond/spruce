@@ -440,6 +440,8 @@ define( [ 'question' ].reduce( function( list, name ) {
                   else if( false === matchedQuestion.value ) compiled = 'false';
                 } else if( 'number' == matchedQuestion.type ) {
                   if( angular.isNumber( matchedQuestion.value ) ) compiled = matchedQuestion.value;
+                } else if( 'date' == matchedQuestion.type ) {
+                  if( angular.isString( matchedQuestion.value ) ) compiled = matchedQuestion.value;
                 } else if( 'string' == matchedQuestion.type ) {
                   if( angular.isString( matchedQuestion.value ) ) compiled = "'" + matchedQuestion.value.replace( /'/g, "\\'" ) + "'";
                 } else if( 'list' == matchedQuestion.type ) {
