@@ -725,8 +725,8 @@ define( [ 'question' ].reduce( function( list, name ) {
                         self.convertValueToModel( q );
                       }
                     } else {
-                      // q is visible, now check its options
-                      if( 'list' == q.type ) {
+                      // q is visible, now check its options (assuming we haven't selected dkna/refused)
+                      if( 'list' == q.type && !isDknaOrRefuse( q.value ) ) {
                         var visibleOptionList = self.getVisibleOptionList( q );
                         q.optionList.forEach( function( o ) {
                           if( null == visibleOptionList.findByProperty( 'id', o.id ) ) {
