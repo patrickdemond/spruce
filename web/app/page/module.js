@@ -838,6 +838,7 @@ define( [ 'question' ].reduce( function( list, name ) {
 
           selectDateForOption: function( question, option, valueIndex, answerValue ) {
             CnModalDatetimeFactory.instance( {
+              locale: self.currentLanguage,
               date: answerValue,
               pickerType: 'date',
               minDate: getDate( this.evaluateLimit( option.minimum ) ),
@@ -855,6 +856,7 @@ define( [ 'question' ].reduce( function( list, name ) {
 
           selectDate: function( question, value ) {
             CnModalDatetimeFactory.instance( {
+              locale: self.currentLanguage,
               date: value,
               pickerType: 'date',
               minDate: getDate( this.evaluateLimit( question.minimum ) ),
