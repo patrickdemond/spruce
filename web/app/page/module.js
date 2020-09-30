@@ -529,6 +529,7 @@ define( [ 'question' ].reduce( function( list, name ) {
               // set the current language to the first question's language
               if( 0 < self.questionList.length && angular.isDefined( self.questionList[0].language ) ) {
                 self.currentLanguage = self.questionList[0].language;
+                cenozoApp.setLang( self.currentLanguage );
               }
 
               var activeAttributeList = [];
@@ -584,6 +585,7 @@ define( [ 'question' ].reduce( function( list, name ) {
           },
 
           setLanguage: function() {
+            cenozoApp.setLang( self.currentLanguage );
             if( 'respondent' == this.parentModel.getSubjectFromState() && null != this.currentLanguage ) {
               return this.runQuery( function() {
                 return CnHttpFactory.instance( {
