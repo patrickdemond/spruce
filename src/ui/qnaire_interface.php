@@ -1,5 +1,5 @@
 <?php $min=DEVELOPMENT?'':'.min'; ?><!doctype html>
-<html lang="en" ng-app="cenozoApp">
+<html ng-app="cenozoApp" ng-controller="LangCtrl" lang="{{ lang }}">
 <head ng-controller="HeadCtrl">
   <meta charset="utf-8">
   <title><?php echo APP_TITLE; ?>{{ getPageTitle() }}</title>
@@ -55,6 +55,14 @@
         function( $stateProvider ) {
           for( var module in window.cenozoApp.moduleList )
             window.cenozo.routeModule( $stateProvider, module, window.cenozoApp.moduleList[module] );
+        }
+      ] );
+
+      window.cenozoApp.controller( 'LangCtrl', [
+        '$scope',
+        function( $scope ) {
+          $scope.lang = 'en';
+          window.cenozoApp.setLang = function( lang ) { $scope.lang = lang; }
         }
       ] );
 
