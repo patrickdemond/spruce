@@ -25,7 +25,7 @@ class query extends \cenozo\service\query
     {
       $db_respondent = $respondent_class_name::get_unique_record( 'token', $token );
       $db_response = is_null( $db_respondent ) ? NULL : $db_respondent->get_current_response();
-      $expression_manager = lib::create( 'business\expression_manager' );
+      $expression_manager = lib::create( 'business\expression_manager', $db_response );
 
       foreach( $list as $index => $record )
       {
@@ -33,7 +33,6 @@ class query extends \cenozo\service\query
         if( array_key_exists( 'precondition', $record ) )
         {
           $list[$index]['precondition'] = $expression_manager->compile(
-            $db_response,
             $record['precondition'],
             lib::create( 'database\question_option', $record['id'] )
           );
@@ -45,7 +44,6 @@ class query extends \cenozo\service\query
             !preg_match( '/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/', $record['minimum'] ) )
         {
           $list[$index]['minimum'] = $expression_manager->compile(
-            $db_response,
             $record['minimum'],
             lib::create( 'database\question_option', $record['id'] )
           );
@@ -57,7 +55,6 @@ class query extends \cenozo\service\query
             !preg_match( '/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/', $record['maximum'] ) )
         {
           $list[$index]['maximum'] = $expression_manager->compile(
-            $db_response,
             $record['maximum'],
             lib::create( 'database\question_option', $record['id'] )
           );

@@ -27,11 +27,12 @@ class answer extends \cenozo\database\record
   public function save()
   {
     $question_option_class_name = lib::get_class_name( 'database\question_option' );
-    $expression_manager = lib::create( 'business\expression_manager' );
+
+    $db_response = lib::create( 'database\response', $this->response_id );
+    $expression_manager = lib::create( 'business\expression_manager', $db_response );
     $new = is_null( $this->id );
 
     // always set the language to whatever the response's current language is
-    $db_response = lib::create( 'database\response', $this->response_id );
     $this->language_id = $db_response->language_id;
 
     parent::save();
@@ -53,7 +54,7 @@ class answer extends \cenozo\database\record
       $question_mod->where( 'question.precondition', 'RLIKE', sprintf( '\\$%s(:[^$]+)?\\$', $db_question->name ) );
       foreach( $db_question->get_page()->get_question_list( $question_sel, $question_mod ) as $question )
       {
-        if( !$expression_manager->evaluate( $db_response, $question['precondition'] ) )
+        if( !$expression_manager->evaluate( $question['precondition'] ) )
         {
           $db_answer = static::get_unique_record(
             array( 'response_id', 'question_id' ),
@@ -79,7 +80,7 @@ class answer extends \cenozo\database\record
       $question_option_mod->where( 'question_option.precondition', 'RLIKE', sprintf( '\\$%s(:[^$]+)?\\$', $db_question->name ) );
       foreach( $question_option_class_name::select( $question_option_sel, $question_option_mod ) as $question_option )
       {
-        if( !$expression_manager->evaluate( $db_response, $question_option['precondition'] ) )
+        if( !$expression_manager->evaluate( $question_option['precondition'] ) )
         {
           $db_answer = static::get_unique_record(
             array( 'response_id', 'question_id' ),
@@ -122,16 +123,15 @@ class answer extends \cenozo\database\record
    */
   public function is_complete()
   {
-    $expression_manager = lib::create( 'business\expression_manager' );
-    $value = util::json_decode( $this->value );
-    $db_response = $this->get_response();
     $db_question = $this->get_question();
+    $expression_manager = lib::create( 'business\expression_manager', $this->get_response() );
+    $value = util::json_decode( $this->value );
     
     // comment questions are always complete
     if( 'comment' == $db_question->type ) return true;
 
     // hidden questions are always complete
-    if( !$expression_manager->evaluate( $db_response, $db_question->precondition ) ) return true;
+    if( !$expression_manager->evaluate( $db_question->precondition ) ) return true;
 
     // null values are never complete
     if( is_null( $value ) ) return false;
@@ -159,7 +159,7 @@ class answer extends \cenozo\database\record
       {
         $selected_option_id = is_object( $selected_option ) ? $selected_option->id : $selected_option;
         if( is_object( $selected_option ) ) {
-          if( $expression_manager->evaluate( $db_response, $precondition_list[$selected_option_id] ) && (
+          if( $expression_manager->evaluate( $precondition_list[$selected_option_id] ) && (
               ( is_array( $selected_option->value ) && 0 == count( $selected_option->value ) ) ||
               is_null( $selected_option->value )
           ) ) return false;
@@ -170,7 +170,7 @@ class answer extends \cenozo\database\record
       foreach( $value as $selected_option )
       {
         $selected_option_id = is_object( $selected_option ) ? $selected_option->id : $selected_option;
-        if( $expression_manager->evaluate( $db_response, $precondition_list[$selected_option_id] ) )
+        if( $expression_manager->evaluate( $precondition_list[$selected_option_id] ) )
         {
           if( is_object( $selected_option ) )
           {

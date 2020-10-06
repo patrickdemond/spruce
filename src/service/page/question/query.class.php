@@ -51,15 +51,16 @@ class query extends \cenozo\service\query
     {
       $db_respondent = $respondent_class_name::get_unique_record( 'token', $parts[1] );
       $db_response = is_null( $db_respondent ) ? NULL : $db_respondent->get_current_response();
-      $expression_manager = lib::create( 'business\expression_manager' );
+      $expression_manager = lib::create( 'business\expression_manager', $db_response );
 
       foreach( $list as $index => $record )
       {
+        $expression_manager->process_hidden_text( $record );
+
         // compile preconditions
         if( array_key_exists( 'precondition', $record ) )
         {
           $list[$index]['precondition'] = $expression_manager->compile(
-            $db_response,
             $record['precondition'],
             lib::create( 'database\question', $record['id'] )
           );
@@ -68,7 +69,6 @@ class query extends \cenozo\service\query
         if( array_key_exists( 'minimum', $record ) && 'date' != $record['type'] && !is_null( $record['minimum'] ) )
         {
           $list[$index]['minimum'] = $expression_manager->compile(
-            $db_response,
             $record['minimum'],
             lib::create( 'database\question', $record['id'] )
           );
@@ -77,16 +77,15 @@ class query extends \cenozo\service\query
         if( array_key_exists( 'maximum', $record ) && 'date' != $record['type'] && !is_null( $record['maximum'] ) )
         {
           $list[$index]['maximum'] = $expression_manager->compile(
-            $db_response,
             $record['maximum'],
             lib::create( 'database\question', $record['id'] )
           );
         }
 
         if( array_key_exists( 'prompts', $record ) ) $list[$index]['prompts'] =
-          $db_response->compile_description( $record['prompts'], $this->get_argument( 'show_hidden', false ) );
+          $db_response->compile_description( $record['prompts'] );
         if( array_key_exists( 'popups', $record ) ) $list[$index]['popups'] =
-          $db_response->compile_description( $record['popups'], $this->get_argument( 'show_hidden', false ) );
+          $db_response->compile_description( $record['popups'] );
       }
     }
 

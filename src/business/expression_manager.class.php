@@ -16,12 +16,46 @@ class expression_manager extends \cenozo\singleton
   /**
    * Constructor.
    * 
+   * @param database\qnaire|database\response $record The questionnaire or response context to evaluate expressions
    * @throws exception\argument
    * @access protected
    */
-  protected function __construct()
+  protected function __construct( $arguments )
   {
-    // nothing required
+    $record = current( $arguments );
+
+    if( is_a( $record, lib::get_class_name( 'database\qnaire' ) ) )
+    {
+      $this->db_qnaire = $record;
+      $this->db_response = NULL;
+    }
+    else if( is_a( $record, lib::get_class_name( 'database\response' ) ) )
+    {
+      $this->db_response = $record;
+      $this->show_hidden = $this->db_response->show_hidden;
+      $this->db_qnaire = $this->db_response->get_qnaire();
+    }
+    else throw lib::create( 'exception\argument', 'record', $record, __METHOD__ );
+  }
+
+  /**
+   * Returns whether to show hidden text and preconditions
+   * @return boolean
+   * @access public
+   */
+  public function get_show_hidden()
+  {
+    return $this->show_hidden;
+  }
+
+  /**
+   * Sets whether to show hidden text and preconditions
+   * @param boolean $show
+   * @access public
+   */
+  public function set_show_hidden( $show )
+  {
+    $this->show_hidden = $show;
   }
 
   /**
@@ -31,12 +65,11 @@ class expression_manager extends \cenozo\singleton
    * This text will only appear when the "show_hidden" argument is included in the survey's URL
    * 
    * @param array $array An array referrence containing 'prompts' and 'popups' elements containing qnaire text
-   * @param boolean $show_hidden Whether to show or hide hidden text
    */
-  public function process_hidden_text( &$array, $show_hidden )
+  public function process_hidden_text( &$array )
   {
-    $search = $show_hidden ? array( '/{{/', '/}}/' ) : '/{{.*?}}/s';
-    $replace = $show_hidden ? array( '<span class="text-warning">', '</span>' ) : '';
+    $search = $this->show_hidden ? array( '/{{/', '/}}/' ) : '/{{.*?}}/s';
+    $replace = $this->show_hidden ? array( '<span class="text-warning">', '</span>' ) : '';
     foreach( $array as $key => $value )
       if( false !== strpos( $key, 'prompts' ) || false !== strpos( $key, 'popups' ) )
         $array[$key] = preg_replace( $search, $replace, $value );
@@ -47,14 +80,13 @@ class expression_manager extends \cenozo\singleton
    * 
    * This method is used when changing a qnaire element's precondition to make sure that it is valid.
    * 
-   * @param database\qnaire|database\response $db_qnaire The questionnaire or response the precondition is referring to
    * @param string $precondition The precondition string to evaluate
    * @return string
    * @throws exception\runtime
    */
-  public function validate( $db_qnaire, $precondition )
+  public function validate( $precondition )
   {
-    try { $this->evaluate( $db_qnaire, $precondition ); }
+    try { $this->evaluate( $precondition ); }
     catch( \cenozo\exception\runtime $e )
     {
       return sprintf( "%s\n\n%s", $e->get_raw_message(), $e->get_previous()->get_raw_message() );
@@ -65,29 +97,16 @@ class expression_manager extends \cenozo\singleton
   /**
    * Evaluates a precondition
    * 
-   * @param database\qnaire|database\response $record The questionnaire or response the precondition is referring to
    * @param string $precondition The precondition string to evaluate
    * @return string
    * @throws exception\runtime
    */
-  public function evaluate( $record, $precondition )
+  public function evaluate( $precondition )
   {
-    if( is_a( $record, lib::get_class_name( 'database\qnaire' ) ) )
-    {
-      $db_response = NULL;
-      $db_qnaire = $record;
-    }
-    else if( is_a( $record, lib::get_class_name( 'database\response' ) ) )
-    {
-      $db_response = $record;
-      $db_qnaire = $db_response->get_qnaire();
-    }
-    else throw lib::create( 'exception\argument', 'record', $record, __METHOD__ );
-
-    $compiled = $this->compile( $record, $precondition );
+    $compiled = $this->compile( $precondition );
     try
     {
-      $response = is_null( $db_response ) ? true : eval( sprintf( 'return (%s);', $compiled ) );
+      $response = is_null( $this->db_response ) ? true : eval( sprintf( 'return (%s);', $compiled ) );
     }
     catch( \ParseError $e )
     {
@@ -114,6 +133,7 @@ class expression_manager extends \cenozo\singleton
    *   $NAME:empty()$ (true if question hasn't been answered, false if it has)
    *   $NAME:dkna()$ (true if a question's answer is don't know or no answer)
    *   $NAME:refuse()$ (true if a question is refused)
+   *   showhidden true if showing hidden elements (launched by phone) false if not (launched by web)
    *   null (when a question has no answer - it's skipped)
    *   true|false (boolean)
    *   123 (number)
@@ -142,30 +162,17 @@ class expression_manager extends \cenozo\singleton
    *   ( must have same number opening as closing
    *   ) must have same number opening as closing
    * 
-   * @param database\qnaire|database\response $record The questionnaire or response the precondition is referring to
    * @param string $precondition The precondition to compile
    * @param database\question|database\question_option $override_question_object A question or option to leave uncompiled
    * @return string
    */
-  public function compile( $record, $precondition, $override_question_object = NULL )
+  public function compile( $precondition, $override_question_object = NULL )
   {
     // if an override object is proided then make sure it's either a question or question_option
     if( !is_null( $override_question_object ) &&
         !is_a( $override_question_object, lib::get_class_name( 'database\question' ) ) &&
         !is_a( $override_question_object, lib::get_class_name( 'database\question_option' ) ) )
       throw lib::create( 'exception\argument', 'override_question_object', $override_question_object, __METHOD__ );
-
-    if( is_a( $record, lib::get_class_name( 'database\qnaire' ) ) )
-    {
-      $db_response = NULL;
-      $db_qnaire = $record;
-    }
-    else if( is_a( $record, lib::get_class_name( 'database\response' ) ) )
-    {
-      $db_response = $record;
-      $db_qnaire = $db_response->get_qnaire();
-    }
-    else throw lib::create( 'exception\argument', 'record', $record, __METHOD__ );
 
     $this->reset();
 
@@ -228,13 +235,13 @@ class expression_manager extends \cenozo\singleton
         else if( 'attribute' == $this->active_term )
         {
           if( '@' != $char ) $this->term .= $char;
-          else $compiled .= $this->process_attribute( $db_qnaire, $db_response );
+          else $compiled .= $this->process_attribute();
           $process_char = false;
         }
         else if( 'question' == $this->active_term )
         {
           if( '$' != $char ) $this->term .= $char;
-          else $compiled .= $this->process_question( $db_qnaire, $db_response, $override_question_object );
+          else $compiled .= $this->process_question( $override_question_object );
           $process_char = false;
         }
 
@@ -340,7 +347,7 @@ class expression_manager extends \cenozo\singleton
   {
     $type = NULL;
     if( 'null' == $this->term ) $type = 'null';
-    else if( in_array( $this->term, ['true', 'false'] ) ) $type = 'boolean';
+    else if( in_array( $this->term, ['true', 'false', 'showhidden'] ) ) $type = 'boolean';
 
     if( is_null( $type ) )
       throw lib::create( 'exception\runtime', sprintf( 'Invalid constant "%s"', $this->term ), __METHOD__ );
@@ -353,7 +360,7 @@ class expression_manager extends \cenozo\singleton
     $this->last_term = 'operator' == $this->last_term ? 'boolean' : $type;
     $this->active_term = NULL;
 
-    return $this->term;
+    return 'showhidden' == $this->term ? ( $this->show_hidden ? 'true' : 'false' ) : $this->term;
   }
 
   /**
@@ -411,11 +418,9 @@ class expression_manager extends \cenozo\singleton
 
   /**
    * Processes the current term as an attribute
-   * @param database\qnaire $db_qnaire The associated qnaire record
-   * @param database\response $db_response The associated response record (optional)
    * @return string
    */
-  private function process_attribute( $db_qnaire, $db_response = NULL )
+  private function process_attribute()
   {
     $attribute_class_name = lib::get_class_name( 'database\attribute' );
     $response_attribute_class_name = lib::get_class_name( 'database\response_attribute' );
@@ -423,7 +428,7 @@ class expression_manager extends \cenozo\singleton
     // make sure the attribute exists in the qnaire
     $db_attribute = $attribute_class_name::get_unique_record(
       array( 'qnaire_id', 'name' ),
-      array( $db_qnaire->id, $this->term )
+      array( $this->db_qnaire->id, $this->term )
     );
 
     if( is_null( $db_attribute ) )
@@ -435,13 +440,13 @@ class expression_manager extends \cenozo\singleton
 
     // if a response was provided replace the term with the attribute's value
     $compiled = sprintf( '%%%s%%', $this->term );
-    if( !is_null( $db_response ) )
+    if( !is_null( $this->db_response ) )
     {
-      $db_response_attribute = $response_attribute_class_name::get_unique_record(
+      $this->db_response_attribute = $response_attribute_class_name::get_unique_record(
         array( 'response_id', 'attribute_id' ),
-        array( $db_response->id, $db_attribute->id )
+        array( $this->db_response->id, $db_attribute->id )
       );
-      $compiled = sprintf( '%s', addslashes( $db_response_attribute->value ) );
+      $compiled = sprintf( '%s', addslashes( $this->db_response_attribute->value ) );
 
       // add quotes if required
       if( 'null' != $compiled && !util::string_matches_int( $compiled ) && !util::string_matches_float( $compiled ) )
@@ -457,12 +462,10 @@ class expression_manager extends \cenozo\singleton
 
   /**
    * Processes the current term as a question
-   * @param database\qnaire $db_qnaire The associated qnaire record
-   * @param database\response $db_response The associated response record (optional)
    * @param database\question|database\question_option $override_question_object A question or option to leave uncompiled
    * @return string
    */
-  private function process_question( $db_qnaire, $db_response = NULL, $override_question_object = NULL )
+  private function process_question( $override_question_object = NULL )
   {
     $db_override_question = NULL;
     $db_override_question_option = NULL;
@@ -494,7 +497,7 @@ class expression_manager extends \cenozo\singleton
       if( 4 != count( $matches ) )
         throw lib::create( 'exception\runtime', sprintf( 'Invalid question "%s"', $this->term ), __METHOD__ );
 
-      $db_question = $db_qnaire->get_question( $matches[1] );
+      $db_question = $this->db_qnaire->get_question( $matches[1] );
       if( is_null( $db_question ) )
         throw lib::create( 'exception\runtime', sprintf( 'Invalid question "%s"', $matches[1] ), __METHOD__ );
 
@@ -529,7 +532,7 @@ class expression_manager extends \cenozo\singleton
     }
     else // questions are defined by name
     {
-      $db_question = $db_qnaire->get_question( $this->term );
+      $db_question = $this->db_qnaire->get_question( $this->term );
       if( is_null( $db_question ) )
         throw lib::create( 'exception\runtime', sprintf( 'Invalid question "%s"', $this->term ), __METHOD__ );
 
@@ -551,7 +554,7 @@ class expression_manager extends \cenozo\singleton
 
     // if a response was provided and there is no override then replace the term with the attribute's value
     $compiled = sprintf( '$%s$', $this->term );
-    if( !is_null( $db_response ) && (
+    if( !is_null( $this->db_response ) && (
       // make sure the question isn't overridden
       is_null( $db_override_question ) ||
       $db_question->page_id != $db_override_question->page_id ||
@@ -565,7 +568,7 @@ class expression_manager extends \cenozo\singleton
     ) ) {
       $db_answer = $answer_class_name::get_unique_record(
         array( 'response_id', 'question_id' ),
-        array( $db_response->id, $db_question->id )
+        array( $this->db_response->id, $db_question->id )
       );
       $value = is_null( $db_answer ) ? NULL : util::json_decode( $db_answer->value );
       $dkna = is_object( $value ) && property_exists( $value, 'dkna' ) && $value->dkna;
@@ -642,6 +645,18 @@ class expression_manager extends \cenozo\singleton
   }
 
   /**
+   * Used by the manager to evaluate experssions within the context of a specific qnaire
+   * @var database\qnaire db_qnaire
+   */
+  private $db_qnaire = NULL;
+
+  /**
+   * Used by the manager to evaluate experssions within the context of a specific response
+   * @var database\response db_response
+   */
+  private $db_response = NULL;
+
+  /**
    * What type of quote was used to open the string
    * @var string $quote
    */
@@ -670,4 +685,10 @@ class expression_manager extends \cenozo\singleton
    * @var integer $open_bracket
    */
   private $open_bracket;
+
+  /**
+   * Determines whether to show hidden elements (used by phone versions of the qnaire vs web versions)
+   * @var boolean $show_hidden
+   */
+  private $show_hidden = false;
 }

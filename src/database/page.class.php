@@ -55,7 +55,8 @@ class page extends base_qnaire_part
       // return the current page for the provided respondent's current response
       $db_respondent = $respondent_class_name::get_unique_record( 'token', $parts[1] );
       $db_response = is_null( $db_respondent ) ? NULL : $db_respondent->get_current_response();
-      return is_null( $db_response ) || is_null( $db_response->page_id ) ? NULL : lib::create( 'database\page', $db_response->page_id );
+      return is_null( $db_response ) || is_null( $db_response->page_id ) ?
+        NULL : lib::create( 'database\page', $db_response->page_id );
     }
     else return parent::get_record_from_identifier( $identifier );
   }
@@ -104,7 +105,7 @@ class page extends base_qnaire_part
    */
   public function get_previous_for_response( $db_response )
   {
-    $expression_manager = lib::create( 'business\expression_manager' );
+    $expression_manager = lib::create( 'business\expression_manager', $db_response );
 
     // start by getting the page one rank lower than the current
     $db_previous_page = $this->get_previous();
@@ -115,15 +116,15 @@ class page extends base_qnaire_part
       {
         // make sure the page's module is valid
         $db_module = $db_previous_page->get_module();
-        if( !$expression_manager->evaluate( $db_response, $db_module->precondition ) )
+        if( !$expression_manager->evaluate( $db_module->precondition ) )
         {
           do { $db_module = $db_module->get_previous(); }
-          while( !is_null( $db_module ) && !$expression_manager->evaluate( $db_response, $db_module->precondition ) );
+          while( !is_null( $db_module ) && !$expression_manager->evaluate( $db_module->precondition ) );
           $db_previous_page = is_null( $db_module ) ? NULL : $db_module->get_last_page();
         }
 
         // if there is a previous page then make sure to test its precondition if a response is included in the request
-        if( !is_null( $db_previous_page ) && !$expression_manager->evaluate( $db_response, $db_previous_page->precondition ) )
+        if( !is_null( $db_previous_page ) && !$expression_manager->evaluate( $db_previous_page->precondition ) )
           $db_previous_page = $db_previous_page->get_previous_for_response( $db_response );
       }
       catch( \cenozo\exception\runtime $e )
@@ -151,7 +152,7 @@ class page extends base_qnaire_part
   {
     $answer_class_name = lib::get_class_name( 'database\answer' );
     $question_option_class_name = lib::get_class_name( 'database\question_option' );
-    $expression_manager = lib::create( 'business\expression_manager' );
+    $expression_manager = lib::create( 'business\expression_manager', $db_response );
 
     // delete any answer associated with a skipped question on the current page
     $question_sel = lib::create( 'database\select' );
@@ -161,7 +162,7 @@ class page extends base_qnaire_part
     $question_mod->where( 'question.precondition', '!=', NULL );
     foreach( $this->get_question_list( $question_sel, $question_mod ) as $question )
     {
-      if( !$expression_manager->evaluate( $db_response, $question['precondition'] ) )
+      if( !$expression_manager->evaluate( $question['precondition'] ) )
       {
         $db_answer = $answer_class_name::get_unique_record(
           array( 'response_id', 'question_id' ),
@@ -183,7 +184,7 @@ class page extends base_qnaire_part
     $question_option_mod->where( 'question_option.precondition', '!=', NULL );
     foreach( $question_option_class_name::select( $question_option_sel, $question_option_mod ) as $question_option )
     {
-      if( !$expression_manager->evaluate( $db_response, $question_option['precondition'] ) )
+      if( !$expression_manager->evaluate( $question_option['precondition'] ) )
       {
         $db_answer = $answer_class_name::get_unique_record(
           array( 'response_id', 'question_id' ),
@@ -203,7 +204,7 @@ class page extends base_qnaire_part
       {
         // make sure the page's module is valid
         $db_module = $db_next_page->get_module();
-        if( !$expression_manager->evaluate( $db_response, $db_module->precondition ) )
+        if( !$expression_manager->evaluate( $db_module->precondition ) )
         {
           do
           {
@@ -211,12 +212,12 @@ class page extends base_qnaire_part
             $db_response->delete_answers_in_module( $db_module );
             $db_module = $db_module->get_next();
           }
-          while( !is_null( $db_module ) && !$expression_manager->evaluate( $db_response, $db_module->precondition ) );
+          while( !is_null( $db_module ) && !$expression_manager->evaluate( $db_module->precondition ) );
           $db_next_page = is_null( $db_module ) ? NULL : $db_module->get_first_page();
         }
 
         // if there is a next page then make sure to test its precondition if a response is included in the request
-        if( !is_null( $db_next_page ) && !$expression_manager->evaluate( $db_response, $db_next_page->precondition ) )
+        if( !is_null( $db_next_page ) && !$expression_manager->evaluate( $db_next_page->precondition ) )
         {
           $db_response->delete_answers_in_page( $db_next_page );
           $db_next_page = $db_next_page->get_next_for_response( $db_response );

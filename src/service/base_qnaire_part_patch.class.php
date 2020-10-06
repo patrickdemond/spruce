@@ -30,8 +30,8 @@ abstract class base_qnaire_part_patch extends \cenozo\service\patch
     {
 
       // validate the precondition
-      $expression_manager = lib::create( 'business\expression_manager' );
-      $error = $expression_manager->validate( $db_qnaire, $data['precondition'] );
+      $expression_manager = lib::create( 'business\expression_manager', $db_qnaire );
+      $error = $expression_manager->validate( $data['precondition'] );
       if( !is_null( $error ) )
       {
         $this->set_data( $error );

@@ -146,7 +146,7 @@ define( [ 'question' ].reduce( function( list, name ) {
 
           $scope.text = function( address ) { return $scope.model.renderModel.text( address ); };
 
-          function render( showHidden ) {
+          function render() {
             var promiseList = [];
             if( 'respondent' != $scope.model.getSubjectFromState() || null != $scope.data.page_id ) {
               promiseList.push(
@@ -162,7 +162,7 @@ define( [ 'question' ].reduce( function( list, name ) {
                   $scope.progress = Math.round(
                     100 * $scope.model.viewModel.record.qnaire_page / $scope.model.viewModel.record.qnaire_pages
                   );
-                  return $scope.model.renderModel.onLoad( showHidden );
+                  return $scope.model.renderModel.onLoad();
                 } )
               );
             } else if( null == $scope.data.page_id ) {
@@ -191,11 +191,13 @@ define( [ 'question' ].reduce( function( list, name ) {
             } );
           }
 
-          if( 'respondent' != $scope.model.getSubjectFromState() ) render( true ); // always show hidden text
+          if( 'respondent' != $scope.model.getSubjectFromState() ) render();
           else {
             // check for the respondent using the token
+            var params = '?assert_response=1';
+            if( $state.params.show_hidden ) params += '&&show_hidden=1';
             CnHttpFactory.instance( {
-              path: 'respondent/token=' + $state.params.token + '?assert_response=1',
+              path: 'respondent/token=' + $state.params.token + params,
               data: { select: { column: [
                 'qnaire_id', 'introductions', 'conclusions', 'closes',
                 { table: 'qnaire', column: 'closed' },
@@ -214,7 +216,7 @@ define( [ 'question' ].reduce( function( list, name ) {
               $scope.data.conclusions = CnTranslationHelper.parseDescriptions( $scope.data.conclusions );
               $scope.data.closes = CnTranslationHelper.parseDescriptions( $scope.data.closes );
               $scope.data.title = null != $scope.data.page_id ? '' : $scope.data.submitted ? 'Conclusion' : 'Introduction';
-              render( $state.params.show_hidden );
+              render();
             } );
           }
         }
@@ -502,7 +504,7 @@ define( [ 'question' ].reduce( function( list, name ) {
             } );
           },
 
-          onLoad: function( showHidden ) {
+          onLoad: function() {
             function getAttributeNames( precondition ) {
               // scan the precondition for active attributes
               var list = [];
@@ -515,7 +517,7 @@ define( [ 'question' ].reduce( function( list, name ) {
 
             this.reset();
             return CnHttpFactory.instance( {
-              path: this.parentModel.getServiceResourceBasePath() + '/question?show_hidden=' + ( showHidden ? '1' : '0' ),
+              path: this.parentModel.getServiceResourceBasePath() + '/question',
               data: {
                 select: { column: [
                   'rank', 'name', 'type', 'mandatory', 'dkna_refuse', 'minimum', 'maximum', 'precondition', 'prompts', 'popups'
@@ -548,11 +550,7 @@ define( [ 'question' ].reduce( function( list, name ) {
                 if( 'list' == question.type ) {
                   promiseList.push( CnHttpFactory.instance( {
                     path: ['question', question.id, 'question_option'].join( '/' ) + (
-                      '?show_hidden=' + ( showHidden ? '1' : '0' )
-                    ) + (
-                      'respondent' == self.parentModel.getSubjectFromState() ?
-                      '&token=' + $state.params.token :
-                      ''
+                      'respondent' == self.parentModel.getSubjectFromState() ? '?token=' + $state.params.token : ''
                     ),
                     data: {
                       select: { column: [
@@ -1072,9 +1070,12 @@ define( [ 'question' ].reduce( function( list, name ) {
           },
 
           getServiceResourcePath: function( resource ) {
+            return this.getServiceResourceBasePath( resource );
+            /*
             return this.getServiceResourceBasePath( resource ) + (
               'respondent' != this.getSubjectFromState() || $state.params.show_hidden ? '?show_hidden=1' : ''
             );
+            */
           },
 
           getServiceCollectionPath: function( ignoreParent ) {

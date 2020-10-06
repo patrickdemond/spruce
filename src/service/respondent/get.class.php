@@ -70,6 +70,10 @@ class get extends \cenozo\service\get
         }
       }
 
+      // finally, save whether we're showing hidden elements or not
+      $db_response->show_hidden = $this->get_argument( 'show_hidden', false );
+      $db_response->save();
+
       $semaphore->release();
     }
   }

@@ -2,6 +2,8 @@
 
 SET AUTOCOMMIT=0;
 
+SOURCE response.sql
+
 SOURCE update_version_number.sql
 
 COMMIT;

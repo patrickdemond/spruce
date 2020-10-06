@@ -16,21 +16,24 @@ class get extends \cenozo\service\get
   public function execute()
   {
     $respondent_class_name = lib::get_class_name( 'database\respondent' );
-    $expression_manager = lib::create( 'business\expression_manager' );
 
     parent::execute();
 
     $data = $this->data;
 
-    // handle hidden text in prompts and popups
-    $expression_manager->process_hidden_text( $data, $this->get_argument( 'show_hidden', false ) );
-
     if( 1 == preg_match( '/^token=([^;\/]+)/', $this->get_resource_value( 0 ), $parts ) )
     {
       $db_respondent = $respondent_class_name::get_unique_record( 'token', $parts[1] );
       $this->db_response = is_null( $db_respondent ) ? NULL : $db_respondent->get_current_response();
-      $data['uid'] = $this->db_response->get_participant()->uid;
     }
+
+    // handle hidden text in prompts and popups
+    $expression_manager = lib::create(
+      'business\expression_manager',
+      is_null( $this->db_response ) ? $this->get_leaf_record()->get_qnaire() : $this->db_response
+    );
+    $expression_manager->process_hidden_text( $data );
+    if( !is_null( $this->db_response ) ) $data['uid'] = $this->db_response->get_participant()->uid;
 
     $this->set_data( $data );
   }
@@ -49,7 +52,10 @@ class get extends \cenozo\service\get
     // if we're asking for the page based on a response then make sure that all answers have been created
     if( !is_null( $this->db_response ) )
     {
-      $expression_manager = lib::create( 'business\expression_manager' );
+      $expression_manager = lib::create(
+        'business\expression_manager',
+        is_null( $this->db_response ) ? $this->get_leaf_record()->get_qnaire() : $this->db_response
+      );
       $qnaire_username = $setting_manager->get_setting( 'utility', 'qnaire_username' );
       $db_user = lib::create( 'business\session' )->get_user();
       $db_page = $this->db_response->get_page();
@@ -72,7 +78,7 @@ class get extends \cenozo\service\get
           $db_answer->question_id = $question['id'];
           $db_answer->user_id = $qnaire_username == $db_user->name ? NULL : $db_user->id;
           if( !is_null( $question['default_answer'] ) )
-            $db_answer->value = $expression_manager->evaluate( $this->db_response, $question['default_answer'] );
+            $db_answer->value = $expression_manager->evaluate( $question['default_answer'] );
           $db_answer->save();
         }
       }

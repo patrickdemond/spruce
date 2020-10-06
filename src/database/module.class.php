@@ -50,7 +50,7 @@ class module extends base_qnaire_part
    */
   public function get_previous_for_response( $db_response )
   {
-    $expression_manager = lib::create( 'business\expression_manager' );
+    $expression_manager = lib::create( 'business\expression_manager', $db_response );
 
     // start by getting the module one rank lower than the current
     $db_previous_module = $this->get_previous();
@@ -60,7 +60,7 @@ class module extends base_qnaire_part
     {
       if( !is_null( $db_previous_module ) &&
           !is_null( $db_previous_module->precondition ) &&
-          !$expression_manager->evaluate( $db_response, $db_previous_module->precondition ) )
+          !$expression_manager->evaluate( $db_previous_module->precondition ) )
         $db_previous_module = $db_previous_module->get_previous_for_response( $db_response );
     }
     catch( \cenozo\exception\runtime $e )
@@ -87,7 +87,7 @@ class module extends base_qnaire_part
   public function get_next_for_response( $db_response = NULL )
   {
     $answer_class_name = lib::get_class_name( 'database\answer' );
-    $expression_manager = lib::create( 'business\expression_manager' );
+    $expression_manager = lib::create( 'business\expression_manager', $db_response );
 
     // start by getting the module one rank higher than the current
     $db_next_module = $this->get_next();
@@ -97,7 +97,7 @@ class module extends base_qnaire_part
     {
       try
       {
-        if( !$expression_manager->evaluate( $db_response, $db_next_module->precondition ) )
+        if( !$expression_manager->evaluate( $db_next_module->precondition ) )
         {
           // before proceeding, delete any answer associated with the skipped module
           foreach( $db_next_module->get_page_object_list() as $db_page )
