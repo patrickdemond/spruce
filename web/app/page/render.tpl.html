@@ -304,11 +304,21 @@
           <label for="{{ activeAttribute.name }}" class="control-label col-sm-3">{{ activeAttribute.name }}</label>
           <div class="col-sm-9">
             <input name="{{ activeAttribute.name }}"
+                   ng-if="'showhidden' != activeAttribute.name"
                    ng-model="activeAttribute.value"
                    class="form-control"
                    type="text"
                    autocomplete="off">
             </input>
+            <select name="{{ activeAttribute.name }}"
+                   ng-if="'showhidden' == activeAttribute.name"
+                   ng-model="activeAttribute.value"
+                   class="form-control"
+                   type="text"
+                   autocomplete="off">
+              <option value="true">Yes</option>
+              <option value="">No</option>
+            </select>
           </div>
         </div>
       </div>

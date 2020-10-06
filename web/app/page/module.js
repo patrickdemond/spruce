@@ -69,10 +69,10 @@ define( [ 'question' ].reduce( function( list, name ) {
         scope: { model: '=?' },
         controller: function( $scope ) {
           if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnairePartCloneFactory.instance( 'page' );
-          
+
           $scope.model.onLoad().then( function() {
             CnSession.setBreadcrumbTrail( [ {
-              title: 'Module', 
+              title: 'Module',
               go: function() { return $state.go( 'module.list' ); }
             }, {
               title: $scope.model.parentSourceName,
@@ -381,7 +381,8 @@ define( [ 'question' ].reduce( function( list, name ) {
             // replace any attributes
             if( 'respondent' != self.parentModel.getSubjectFromState() ) {
               self.activeAttributeList.forEach( function( attribute ) {
-                var re = new RegExp( '@' + attribute.name + '@' );
+                var qualifier = 'showhidden' == attribute.name ? '\\b' : '@';
+                var re = new RegExp( qualifier + attribute.name + qualifier );
                 var value = attribute.value;
                 if( null == value ) {
                   // do nothing
@@ -506,10 +507,10 @@ define( [ 'question' ].reduce( function( list, name ) {
 
           onLoad: function() {
             function getAttributeNames( precondition ) {
-              // scan the precondition for active attributes
+              // scan the precondition for active attributes (also include the showhidden constant)
               var list = [];
               if( angular.isString( precondition ) ) {
-                var matches = precondition.match( /@[^@]+@/g );
+                var matches = precondition.match( /@[^@]+@|\bshowhidden\b/g );
                 if( null != matches && 0 < matches.length ) list = matches.map( m => m.replace( /@/g, '' ) );
               }
               return list;
@@ -688,7 +689,7 @@ define( [ 'question' ].reduce( function( list, name ) {
                     if( null != ignore ) { question[ignore] = true; }
                     $timeout( function() { if( null != ignore ) delete question[ignore]; }, 500 );
                   } else if(
-                    question.ignoreDkna && ( null === value || isDkna( value ) ) || 
+                    question.ignoreDkna && ( null === value || isDkna( value ) ) ||
                     question.ignoreRefuse && ( null === value || isRefuse( value ) )
                   ) {
                     // we may have tried setting dkna or refuse when it should be ignored, so change it in the model
@@ -915,7 +916,7 @@ define( [ 'question' ].reduce( function( list, name ) {
                   }
                 } else {
                   value[optionIndex].value = '' !== answerValue ? answerValue : null;
-                  
+
                   if( 'date' == option.extra )
                     question.answer.optionList[option.id].formattedValueList[valueIndex] = formatDate( value[optionIndex].value );
                 }
