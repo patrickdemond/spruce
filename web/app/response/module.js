@@ -16,6 +16,7 @@ define( function() {
     },
     columnList: {
       rank: {
+        column: 'response.rank',
         title: 'Rank',
         type: 'rank'
       },
