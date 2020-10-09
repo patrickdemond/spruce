@@ -22,5 +22,15 @@ class module extends \cenozo\service\module
 
     $modifier->join( 'respondent', 'respondent_mail.respondent_id', 'respondent.id' );
     $modifier->join( 'mail', 'respondent_mail.mail_id', 'mail.id' );
+    $modifier->left_join( 'reminder', 'respondent_mail.reminder_id', 'reminder.id' );
+
+    if( $select->has_column( 'type' ) )
+    {
+      $select->add_column(
+        'IF( reminder.id IS NULL, "invitation", CONCAT_WS( " ", reminder.offset, reminder.unit ) )',
+        'type',
+        false
+      );
+    }
   }
 }
