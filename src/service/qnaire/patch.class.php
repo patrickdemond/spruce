@@ -58,21 +58,6 @@ class patch extends \cenozo\service\patch
           $this->set_data( 'The maximum number of responses must be greater than or equal to 0.' );
         }
       }
-
-      // if the qnaire is email_reminder the offset must be >= 1
-      if( array_key_exists( 'email_reminder_offset', $patch_array ) )
-      {
-        $db_qnaire = $this->get_leaf_record();
-        if( ( array_key_exists( 'email_reminder', $patch_array ) && !is_null( $patch_array['email_reminder'] ) ) ||
-            !is_null( $db_qnaire->email_reminder ) )
-        {
-          if( 1 > $patch_array['email_reminder_offset'] )
-          {
-            $this->status->set_code( 306 );
-            $this->set_data( 'The reminder email offset must be greater than or equal to 1.' );
-          }
-        }
-      }
     }
   }
 

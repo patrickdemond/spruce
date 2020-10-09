@@ -48,18 +48,6 @@ class qnaire extends \cenozo\database\record
       }
     }
 
-    if( $this->has_column_changed( 'email_reminder' ) )
-    {
-      if( !is_null( $this->email_reminder ) )
-      {
-        if( is_null( $this->email_reminder_offset ) ) $this->email_reminder_offset = 0;
-      }
-      else
-      {
-        $this->email_reminder_offset = NULL;
-      }
-    }
-
     parent::save();
   }
 
@@ -473,10 +461,11 @@ class qnaire extends \cenozo\database\record
   {
     set_time_limit( 900 ); // 15 minutes max
 
-    $language_class_name = lib::create( 'database\language' );
-    $attribute_class_name = lib::create( 'database\attribute' );
-    $qnaire_description_class_name = lib::create( 'database\qnaire_description' );
-    $module_class_name = lib::create( 'database\module' );
+    $language_class_name = lib::get_class_name( 'database\language' );
+    $attribute_class_name = lib::get_class_name( 'database\attribute' );
+    $reminder_description_class_name = lib::get_class_name( 'database\reminder_description' );
+    $qnaire_description_class_name = lib::get_class_name( 'database\qnaire_description' );
+    $module_class_name = lib::get_class_name( 'database\module' );
 
     // NOTE: since we want to avoid duplicate unique keys caused by re-naming or re-ordering modules we use the following
     // offset and suffix values when setting rank and name, then after all changes have been made remove the offset/suffix
@@ -538,6 +527,181 @@ class qnaire extends \cenozo\database\record
         if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
         if( 0 < count( $diff_list ) ) $difference_list['language_list'] = $diff_list;
+      }
+      else if( 'reminder_list' == $property )
+      {
+        // check every item in the patch object for additions and changes
+        $add_list = array();
+        $change_list = array();
+        foreach( $patch_object->reminder_list as $reminder )
+        {
+          $reminder_mod = lib::create( 'database\modifier' );
+          $reminder_mod->where( 'offset', '=', $reminder->offset );
+          $reminder_mod->where( 'unit', '=', $reminder->unit );
+          $reminder_list = $this->get_reminder_object_list( $reminder_mod );
+          $db_reminder = 0 == count( $reminder_list ) ? NULL : current( $reminder_list );
+          if( is_null( $db_reminder ) )
+          {
+            if( $apply )
+            {
+              $db_reminder = lib::create( 'database\reminder' );
+              $db_reminder->qnaire_id = $this->id;
+              $db_reminder->offset = $reminder->offset;
+              $db_reminder->unit = $reminder->unit;
+              $db_reminder->save();
+
+              foreach( $reminder->reminder_description_list as $reminder_description )
+              {
+                $db_language = $language_class_name::get_unique_record( 'code', $reminder_description->language );
+                $db_reminder_description = $reminder_description_class_name::get_unique_record(
+                  array( 'reminder_id', 'language_id', 'type' ),
+                  array( $db_reminder->id, $db_language->id, $reminder_description->type )
+                );
+                $db_reminder_description->value = $reminder_description->value;
+                $db_reminder_description->save();
+              }
+            }
+            else $add_list[] = $reminder;
+          }
+          else
+          {
+            $diff = array();
+            foreach( $reminder as $property => $value )
+            {
+              if( 'reminder_description_list' == $property )
+              {
+                $reminder_description_list = $value;
+
+                // check every item in the patch object for additions and changes
+                $desc_add_list = array();
+                $desc_change_list = array();
+                foreach( $reminder_description_list as $description )
+                {
+                  $db_language = $language_class_name::get_unique_record( 'code', $description->language );
+                  $db_reminder_description = $reminder_description_class_name::get_unique_record(
+                    array( 'reminder_id', 'language_id', 'type' ),
+                    array( $db_reminder->id, $db_language->id, $description->type )
+                  );
+
+                  if( is_null( $db_reminder_description ) )
+                  {
+                    if( $apply )
+                    {
+                      $db_reminder_description = lib::create( $description_name );
+                      $db_reminder_description->reminder_id = $db_reminder->id;
+                      $db_reminder_description->language_id = $db_language->id;
+                      $db_reminder_description->type = $description->type;
+                      $db_reminder_description->value = $description->value;
+                      $db_reminder_description->save();
+                    }
+                    else $desc_add_list[] = $description;
+                  }
+                  else
+                  {
+                    // find and add all differences
+                    $diff = array();
+                    foreach( $description as $property => $value )
+                      if( 'language' != $property && $db_reminder_description->$property != $description->$property )
+                        $diff[$property] = $description->$property;
+
+                    if( 0 < count( $diff ) )
+                    {
+                      if( $apply )
+                      {
+                        $db_reminder_description->value = $description->value;
+                        $db_reminder_description->save();
+                      }
+                      else
+                      {
+                        $index = sprintf( '%s [%s]', $description->type, $db_language->code );
+                        $desc_change_list[$index] = $diff;
+                      }
+                    }
+                  }
+                }
+
+                // check every item in this object for removals
+                $desc_remove_list = array();
+                foreach( $db_reminder->get_reminder_description_object_list() as $db_reminder_description )
+                {
+                  $found = false;
+                  foreach( $patch_object->reminder_description_list as $description )
+                  {
+                    if( $db_reminder_description->get_language()->code == $description->language &&
+                        $db_reminder_description->type == $description->type )
+                    {
+                      $found = true;
+                      break;
+                    }
+                  }
+
+                  if( !$found )
+                  {
+                    if( $apply ) $db_reminder_description->delete();
+                    else
+                    {
+                      $index = sprintf( '%s [%s]', $db_reminder_description->type, $db_reminder_description->get_language()->code );
+                      $desc_remove_list[] = $index;
+                    }
+                  }
+                }
+
+                $desc_diff_list = array();
+                if( 0 < count( $desc_add_list ) ) $desc_diff_list['add'] = $desc_add_list;
+                if( 0 < count( $desc_change_list ) ) $desc_diff_list['change'] = $desc_change_list;
+                if( 0 < count( $desc_remove_list ) ) $desc_diff_list['remove'] = $desc_remove_list;
+                if( 0 < count( $desc_diff_list ) ) $diff_list['reminder_description_list'] = $desc_diff_list;
+              }
+              else
+              {
+                if( $db_reminder->$property != $reminder->$property )
+                  $diff[$property] = $reminder->$property;
+              }
+            }
+
+            if( 0 < count( $diff ) )
+            {
+              if( $apply )
+              {
+                $db_reminder->unit = $reminder->unit;
+                $db_reminder->offset = $reminder->offset;
+                $db_reminder->save();
+              }
+              else
+              {
+                $index = sprintf( '%s %s', $reminder->offset, $reminder->unit );
+                $change_list[$index] = $diff;
+              }
+            }
+          }
+        }
+
+        // check every item in this object for removals
+        $remove_list = array();
+        foreach( $this->get_reminder_object_list() as $db_reminder )
+        {
+          $found = false;
+          foreach( $patch_object->reminder_list as $reminder )
+          {
+            if( $db_reminder->offset == $reminder->offset && $db_reminder->unit == $reminder->unit )
+            {
+              $found = true;
+              break;
+            }
+          }
+
+          if( !$found )
+          {
+            if( $apply ) $db_reminder->delete();
+            else $remove_list[] = sprintf( '%s %s', $db_reminder->offset, $db_reminder->unit );
+          }
+        }
+
+        $diff_list = array();
+        if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
+        if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
+        if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
+        if( 0 < count( $diff_list ) ) $difference_list['reminder_list'] = $diff_list;
       }
       else if( 'attribute_list' == $property )
       {
@@ -871,12 +1035,11 @@ class qnaire extends \cenozo\database\record
       'email_from_name' => $this->email_from_name,
       'email_from_address' => $this->email_from_address,
       'email_invitation' => $this->email_invitation,
-      'email_reminder' => $this->email_reminder,
-      'email_reminder_offset' => $this->email_reminder_offset,
       'description' => $this->description,
       'note' => $this->note,
       'language_list' => array(),
       'attribute_list' => array(),
+      'reminder_list' => array(),
       'qnaire_description_list' => array(),
       'module_list' => array()
     );
@@ -890,6 +1053,28 @@ class qnaire extends \cenozo\database\record
     $attribute_sel->add_column( 'code' );
     $attribute_sel->add_column( 'note' );
     foreach( $this->get_attribute_list( $attribute_sel ) as $item ) $qnaire_data['attribute_list'][] = $item;
+
+    foreach( $this->get_reminder_object_list() as $db_reminder )
+    {
+      $item = array(
+        'offset' => $db_reminder->offset,
+        'unit' => $db_reminder->unit,
+        'reminder_description_list' => array()
+      );
+
+      $reminder_description_sel = lib::create( 'database\select' );
+      $reminder_description_sel->add_table_column( 'language', 'code', 'language' );
+      $reminder_description_sel->add_column( 'type' );
+      $reminder_description_sel->add_column( 'value' );
+      $reminder_description_mod = lib::create( 'database\modifier' );
+      $reminder_description_mod->join( 'language', 'reminder_description.language_id', 'language.id' );
+      $reminder_description_mod->order( 'type' );
+      $reminder_description_mod->order( 'language.code' );
+      foreach( $db_reminder->get_reminder_description_list( $reminder_description_sel, $reminder_description_mod ) as $item )
+        $item['reminder_description_list'][] = $item;
+
+      $qnaire_data['reminder_list'][] = $item;
+    }
 
     $qnaire_description_sel = lib::create( 'database\select' );
     $qnaire_description_sel->add_table_column( 'language', 'code', 'language' );
@@ -1187,14 +1372,29 @@ class qnaire extends \cenozo\database\record
     $db_qnaire->email_from_name = $qnaire_object->email_from_name;
     $db_qnaire->email_from_address = $qnaire_object->email_from_address;
     $db_qnaire->email_invitation = $qnaire_object->email_invitation;
-    $db_qnaire->email_reminder = $qnaire_object->email_reminder;
-    $db_qnaire->email_reminder_offset = $qnaire_object->email_reminder_offset;
     $db_qnaire->description = $qnaire_object->description;
     $db_qnaire->note = $qnaire_object->note;
     $db_qnaire->save();
 
     foreach( $qnaire_object->language_list as $language )
       $db_qnaire->add_language( $language_class_name::get_unique_record( 'code', $language )->id );
+
+    foreach( $qnaire_object->reminder_list as $reminder )
+    {
+      $db_reminder = lib::create( 'database\reminder' );
+      $db_reminder->qnaire_id = $db_qnaire->id;
+      $db_reminder->offset = $reminder->offset;
+      $db_reminder->unit = $reminder->unit;
+      $db_reminder->save();
+
+      foreach( $reminder->reminder_description_list as $reminder_description )
+      {
+        $db_language = $language_class_name::get_unique_record( 'code', $reminder_description->language );
+        $db_reminder_description = $db_reminder->get_description( $reminder_description->type, $db_language );
+        $db_reminder_description->value = $reminder_description->value;
+        $db_reminder_description->save();
+      }
+    }
 
     foreach( $qnaire_object->attribute_list as $attribute )
     {

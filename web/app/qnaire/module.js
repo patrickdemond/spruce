@@ -118,34 +118,16 @@ define( [ 'module' ].reduce( function( list, name ) {
       type: 'boolean',
       isConstant: function( $state, model ) { return model.viewModel.record.readonly; }
     },
-    email_reminder: {
-      title: 'Send Reminder Email',
-      type: 'enum',
-      isConstant: function( $state, model ) { return model.viewModel.record.readonly; }
-    },
-    email_reminder_offset: {
-      title: 'Reminder Email Offset',
-      type: 'string',
-      format: 'integer',
-      isConstant: function( $state, model ) { return model.viewModel.record.readonly; },
-      isExcluded: function( $state, model ) { return !model.viewModel.record.email_reminder; }
-    },
     email_from_name: {
       title: 'Email From Name',
       type: 'string',
-      isConstant: function( $state, model ) { return model.viewModel.record.readonly; },
-      isExcluded: function( $state, model ) {
-        return !model.viewModel.record.email_invitation && !model.viewModel.record.email_reminder;
-      }
+      isConstant: function( $state, model ) { return model.viewModel.record.readonly; }
     },
     email_from_address: {
       title: 'Email From Address',
       type: 'string',
       format: 'email',
-      isConstant: function( $state, model ) { return model.viewModel.record.readonly; },
-      isExcluded: function( $state, model ) {
-        return !model.viewModel.record.email_invitation && !model.viewModel.record.email_reminder;
-      }
+      isConstant: function( $state, model ) { return model.viewModel.record.readonly; }
     },
     description: {
       title: 'Description',
@@ -234,35 +216,6 @@ define( [ 'module' ].reduce( function( list, name ) {
             };
           }
 
-          // a special function to define whether to show certain inputs based on the email_reminder property
-          function defineEmailReminderExcludes() {
-            var mainInputGroup = $scope.model.module.inputGroupList.findByProperty( 'title', '' );
-
-            mainInputGroup.inputList.email_reminder_offset.isExcluded = function( $state, model ) {
-              return !(
-                'add' == model.getActionFromState() ?
-                cnRecordAddScope.record.email_reminder :
-                model.viewModel.record.email_reminder
-              );
-            };
-
-            mainInputGroup.inputList.email_from_name.isExcluded = function( $state, model ) {
-              return !(
-                'add' == model.getActionFromState() ?
-                cnRecordAddScope.record.email_invitation || cnRecordAddScope.record.email_reminder :
-                model.viewModel.record.email_invitation || model.viewModel.record.email_reminder
-              );
-            };
-
-            mainInputGroup.inputList.email_from_address.isExcluded = function( $state, model ) {
-              return !(
-                'add' == model.getActionFromState() ?
-                cnRecordAddScope.record.email_invitation || cnRecordAddScope.record.email_reminder :
-                model.viewModel.record.email_invitation || model.viewModel.record.email_reminder
-              );
-            };
-          }
-
           var cnRecordAddScope = null;
           $scope.$on( 'cnRecordAdd ready', function( event, data ) {
             cnRecordAddScope = data;
@@ -273,7 +226,6 @@ define( [ 'module' ].reduce( function( list, name ) {
               // run the original check function first
               checkFunction( property );
               if( 'repeated' == property ) defineRepeatedExcludes();
-              else if( 'email_reminder' == property ) defineEmailReminderExcludes();
             };
 
             defineRepeatedExcludes();

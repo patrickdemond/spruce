@@ -86,7 +86,6 @@ class response extends \cenozo\database\has_rank
       if( is_null( $db_respondent ) ) $db_respondent = $this->get_respondent();
       if( is_null( $db_qnaire ) ) $db_qnaire = $db_respondent->get_qnaire();
 
-      // when submitting the response check if the respondent is done and remove any pending email reminders
       if( is_null( $db_qnaire->max_responses ) || $this->rank == $db_qnaire->max_responses )
       {
         $db_respondent->end_datetime = util::get_datetime_object();
@@ -97,8 +96,8 @@ class response extends \cenozo\database\has_rank
         if( !is_null( $db_script ) ) $db_script->add_finished_event( $db_participant, $this->last_datetime );
       }
 
-      $db_reminder_mail = $db_respondent->get_reminder_mail( $this->rank );
-      if( !is_null( $db_reminder_mail ) && is_null( $db_reminder_mail->sent_datetime ) ) $db_reminder_mail->delete();
+      // when submitting the response check if the respondent is done and remove any unsent mail
+      $db_respondent->remove_unsent_mail();
 
       // create any triggered consent records
       $modifier = lib::create( 'database\modifier' );
