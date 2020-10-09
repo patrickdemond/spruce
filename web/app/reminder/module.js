@@ -19,9 +19,7 @@ define( function() {
         title: 'Offset',
         column: 'reminder.offset'
       },
-      unit: {
-        title: 'Unit'
-      }
+      unit: { title: 'Unit' }
     },
     defaultOrder: {
       column: 'reminder.id',
@@ -31,12 +29,13 @@ define( function() {
 
   module.addInputGroup( '', {
     offset: {
-      title: 'Name',
-      type: 'string'
+      title: 'Offset',
+      type: 'string',
+      format: 'integer'
     },
     unit: {
       title: 'Unit',
-      type: 'string'
+      type: 'enum'
     }
   } );
 

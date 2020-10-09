@@ -1070,8 +1070,8 @@ class qnaire extends \cenozo\database\record
       $reminder_description_mod->join( 'language', 'reminder_description.language_id', 'language.id' );
       $reminder_description_mod->order( 'type' );
       $reminder_description_mod->order( 'language.code' );
-      foreach( $db_reminder->get_reminder_description_list( $reminder_description_sel, $reminder_description_mod ) as $item )
-        $item['reminder_description_list'][] = $item;
+      foreach( $db_reminder->get_reminder_description_list( $reminder_description_sel, $reminder_description_mod ) as $description )
+        $item['reminder_description_list'][] = $description;
 
       $qnaire_data['reminder_list'][] = $item;
     }

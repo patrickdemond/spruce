@@ -604,6 +604,7 @@ define( [ 'module' ].reduce( function( list, name ) {
         } );
 
         angular.extend( this, {
+          uploadReadReady: false,
           working: false,
           file: null,
           difference: null,
@@ -628,22 +629,25 @@ define( [ 'module' ].reduce( function( list, name ) {
           cancel: function() { $state.go( 'qnaire.view', { identifier: this.record.getIdentifier() } ); },
 
           checkPatch: function() {
-            // need to wait for cnUplod to do its thing
-            $rootScope.$on( 'cnUpload read', function() {
-              self.working = true;
+            if( !self.uploadReadReady ) {
+              // need to wait for cnUplod to do its thing
+              $rootScope.$on( 'cnUpload read', function() {
+                self.working = true;
+                self.uploadReadReady = true;
 
-              var data = new FormData();
-              data.append( 'file', self.file );
+                var data = new FormData();
+                data.append( 'file', self.file );
 
-              // check the patch file
-              return CnHttpFactory.instance( {
-                path: self.parentModel.getServiceResourcePath() + '?patch=check',
-                data: self.file
-              } ).patch().then( function( response ) {
-                self.difference = response.data;
-                self.differenceIsEmpty = 0 == Object.keys( self.difference ).length;
-              } ).finally( function() { self.working = false; } );
-            } );
+                // check the patch file
+                return CnHttpFactory.instance( {
+                  path: self.parentModel.getServiceResourcePath() + '?patch=check',
+                  data: self.file
+                } ).patch().then( function( response ) {
+                  self.difference = response.data;
+                  self.differenceIsEmpty = 0 == Object.keys( self.difference ).length;
+                } ).finally( function() { self.working = false; } );
+              } );
+            }
           },
 
           applyPatch: function() {

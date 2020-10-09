@@ -32,6 +32,10 @@
                 <div ng-if="child.add"><em>ADD:</em> {{ child.add.join( ", " ) }}</div>
                 <div ng-if="child.remove"><em>REMOVE:</em> {{ child.remove.join( ", " ) }}</div>
               </div>
+              <div ng-switch-when="reminder_list">
+                <label class="container-fluid">{{ property | cnStrReplace:'_':' ' | cnUCWords }}</label>
+                <div class="container-fluid"><cn-qnaire-part-patch subject="reminder" model="child"></cn-qnaire-part-patch></div>
+              </div>
               <div ng-switch-when="attribute_list">
                 <div ng-repeat="item in child.add"><em>ADD:</em> {{ item }}</div>
                 <div ng-repeat="(name, item) in child.change"><em>CHANGE:</em> "{{ name }}" => {{ item }}</div>
