@@ -78,6 +78,7 @@ class ui extends \cenozo\ui\ui
     if( !is_null( $module ) )
     {
       $module->add_child( 'respondent' );
+      $module->add_child( 'reminder' );
       $module->add_child( 'qnaire_description' );
       $module->add_child( 'module' );
       $module->add_child( 'question' );
@@ -89,6 +90,9 @@ class ui extends \cenozo\ui\ui
       $module->add_action( 'import' );
       $module->add_action( 'patch', '/{identifier}' );
     }
+
+    $module = $this->get_module( 'reminder' );
+    if( !is_null( $module ) ) $module->add_child( 'reminder_description' );
 
     $module = $this->get_module( 'respondent' );
     if( !is_null( $module ) )

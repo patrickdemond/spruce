@@ -19,7 +19,7 @@ CREATE PROCEDURE patch_role_has_service()
       "WHERE role.name = 'administrator' ",
       "AND service.subject IN( ",
         "'address', 'consent', 'consent_type', 'consent_type', 'consent_type', ",
-        "'event', 'hold', 'phone', 'proxy', 'trace', 'search_result' ",
+        "'event', 'hold', 'phone', 'proxy', 'reminder', 'reminder_description', 'search_result', 'trace' ",
       ") ",
       "AND service.restricted = 1"
     );

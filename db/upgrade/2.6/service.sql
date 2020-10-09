@@ -12,5 +12,13 @@ INSERT IGNORE INTO service ( subject, method, resource, restricted ) VALUES
 ( 'hold', 'GET', 1, 1 ),
 ( 'phone', 'GET', 1, 1 ),
 ( 'proxy', 'GET', 1, 1 ),
-( 'trace', 'GET', 1, 1 ),
-( 'search_result', 'GET', 1, 1 );
+( 'reminder', 'DELETE', 1, 1 ),
+( 'reminder', 'GET', 0, 1 ),
+( 'reminder', 'GET', 1, 1 ),
+( 'reminder', 'PATCH', 1, 1 ),
+( 'reminder', 'POST', 0, 1 ),
+( 'reminder_description', 'GET', 0, 1 ),
+( 'reminder_description', 'GET', 1, 1 ),
+( 'reminder_description', 'PATCH', 1, 1 ),
+( 'search_result', 'GET', 1, 1 ),
+( 'trace', 'GET', 1, 1 );

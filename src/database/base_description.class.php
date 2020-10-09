@@ -33,6 +33,7 @@ abstract class base_description extends \cenozo\database\record
   {
     $table_name = static::get_table_name();
     if( 'qnaire_description' == $table_name ) return parent::get_qnaire();
+    else if( 'reminder_description' == $table_name ) return $this->get_reminder()->get_qnaire();
     else if( 'module_description' == $table_name ) return $this->get_module()->get_qnaire();
     else if( 'page_description' == $table_name ) return $this->get_page()->get_qnaire();
     else if( 'question_description' == $table_name ) return $this->get_question()->get_qnaire();
