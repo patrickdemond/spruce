@@ -66,8 +66,8 @@ class respondent extends \cenozo\database\record
   {
     $respondent_mail_class_name = lib::get_class_name( 'database\respondent_mail' );
     $db_respondent_mail = $respondent_mail_class_name::get_unique_record(
-      array( 'respondent_id', 'type', 'rank' ),
-      array( $this->id, 'invitation', $rank )
+      array( 'respondent_id', 'reminder_id', 'rank' ),
+      array( $this->id, NULL, $rank )
     );
     return is_null( $db_respondent_mail ) ? NULL : $db_respondent_mail->get_mail();
   }

@@ -44,8 +44,8 @@ class get extends \cenozo\service\get
 
         // create all missing responses based on the repeat type and when the invitation went out
         $db_respondent_mail = $respondent_mail_class_name::get_unique_record(
-          array( 'respondent_id', 'type', 'rank' ),
-          array( $db_respondent->id, 'invitation', 1 )
+          array( 'respondent_id', 'reminder_id', 'rank' ),
+          array( $db_respondent->id, NULL, 1 )
         );
 
         $diff = is_null( $db_respondent_mail )
