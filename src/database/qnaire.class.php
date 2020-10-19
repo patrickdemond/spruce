@@ -587,7 +587,7 @@ class qnaire extends \cenozo\database\record
                   {
                     if( $apply )
                     {
-                      $db_reminder_description = lib::create( $description_name );
+                      $db_reminder_description = lib::create( 'database\reminder_description' );
                       $db_reminder_description->reminder_id = $db_reminder->id;
                       $db_reminder_description->language_id = $db_language->id;
                       $db_reminder_description->type = $description->type;
@@ -625,7 +625,7 @@ class qnaire extends \cenozo\database\record
                 foreach( $db_reminder->get_reminder_description_object_list() as $db_reminder_description )
                 {
                   $found = false;
-                  foreach( $patch_object->reminder_description_list as $description )
+                  foreach( $reminder_description_list as $description )
                   {
                     if( $db_reminder_description->get_language()->code == $description->language &&
                         $db_reminder_description->type == $description->type )
