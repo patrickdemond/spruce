@@ -9,40 +9,14 @@
         confirm that list to ensure each of the identifiers can be linked to a participant.
       </div>
       <hr />
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          <strong>Participant selection</strong>
-          <span class="pull-right">
-            <span ng-if="model.confirmInProgress">working, please wait...</span>
-            <span ng-if="!model.confirmInProgress">
-              {{ model.confirmedCount ?
-                 model.confirmedCount + ' participants confirmed' :
-                 'no confirmed participants' }}
-              <i class="glyphicon" ng-class="model.confirmedCount ? 'glyphicon-ok' : 'glyphicon-remove'"></i>
-            </span>
-          </span>
-        </div>
-        <textarea id="uidListString"
-                  name="uidListString"
-                  cn-elastic
-                  ng-change="model.uidListStringChanged()"
-                  ng-model="model.uidListString"
-                  ng-disabled="model.confirmInProgress"
-                  class="form-control no-rounding"></textarea>
-        <div class="form-footer text-right rounded-bottom bg-info">
-          <button type="button"
-                  class="btn btn-primary"
-                  ng-disabled=" null != model.confirmedCount || model.confirmInProgress"
-                  ng-click="model.confirm()">Confirm List</button>
-        </div>
-      </div>
-      <div ng-if="model.confirmedCount">
+      <cn-participant-selection model="model.participantSelection"></cn-participant-selection>
+      <div ng-if="model.participantSelection.confirmedCount">
         <div class="panel panel-default">
           <div class="panel-heading">
             <strong>Confirm selection</strong>
           </div>
           <div class="container-fluid panel-body">
-            You have selected a total of {{ model.confirmedCount }} new participants to make respondents for this questionnaire.
+            You have selected a total of {{ model.participantSelection.confirmedCount }} new participants to make respondents for this questionnaire.
             If you wish to proceed you may click the "Create Respondents" button below, or you may make changes to the participant
             selection list above.
           </div>
@@ -50,7 +24,7 @@
             <button type="button"
                     class="btn btn-primary"
                     ng-disabled="model.working"
-                    cn-really-message="Are you sure you wish to create {{ model.confirmedCount }} respondent records?"
+                    cn-really-message="Are you sure you wish to create {{ model.participantSelection.confirmedCount }} respondent records?"
                     ng-click="model.proceed()">{{ model.working ? 'Working...' : 'Create Respondents' }}</button>
           </div>
         </div>

@@ -218,10 +218,36 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
-   * Removes all unsent qnaire mail for the given UID list
-   * @param array $uid_list A list of participant UIDs to affect
+   * Sends all qnaire mail for the given identifier list
+   * @param array $identifier_list A list of participant identifiers to affect
    */
-  public function mass_remove_unsent_mail( $uid_list )
+  public function mass_send_all_mail( $db_identifier, $identifier_list )
+  {
+    $respondent_class_name = lib::get_class_name( 'database\respondent' );
+    $participant_class_name = lib::get_class_name( 'database\participant' );
+    $participant_identifier_class_name = lib::get_class_name( 'database\participant_identifier' );
+
+    foreach( $identifier_list as $identifier )
+    {
+      $db_participant = is_null( $db_identifier )
+                      ? $participant_class_name::get_unique_record( 'uid', $identifier )
+                      : $participant_identifier_class_name::get_unique_record(
+                          array( 'identifier_id', 'value' ),
+                          array( $db_identifier->id, $identifier )
+                        )->get_participant();
+      $db_respondent = $respondent_class_name::get_unique_record(
+        array( 'qnaire_id', 'participant_id' ),
+        array( $this->id, $db_participant->id )
+      );
+      $db_respondent->send_all_mail();
+    }
+  }
+
+  /**
+   * Removes all unsent qnaire mail for the given identifier list
+   * @param array $identifier_list A list of participant identifiers to affect
+   */
+  public function mass_remove_unsent_mail( $db_identifier, $identifier_list )
   {
     $select = lib::create( 'database\select' );
     $select->from( 'mail' );
@@ -232,7 +258,17 @@ class qnaire extends \cenozo\database\record
     $modifier->join( 'participant', 'respondent.participant_id', 'participant.id' );
     $modifier->where( 'mail.sent_datetime', '=', NULL );
     $modifier->where( 'respondent.qnaire_id', '=', $this->id );
-    $modifier->where( 'participant.uid', 'IN', $uid_list );
+
+    if( is_null( $db_identifier ) )
+    {
+      $modifier->where( 'participant.uid', 'IN', $identifier_list );
+    }
+    else
+    {
+      $modifier->join( 'participant_identifier', 'participant.id', 'participant_identifier.participant_id' );
+      $modifier->where( 'participant_identifier.identifier_id', '=', $db_identifier->id );
+      $modifier->where( 'participant_identifier.value', 'IN', $identifier_list );
+    }
 
     static::db()->execute( sprintf(
       "CREATE TEMPORARY TABLE delete_mail\n".
@@ -247,17 +283,23 @@ class qnaire extends \cenozo\database\record
 
   /**
    * Creates a batch of respondents as a single operation
-   * @param array $uid_list A list of participant UIDs to affect
+   * @param array $identifier_list A list of participant identifiers to affect
    */
-  public function mass_respondent( $uid_list )
+  public function mass_respondent( $db_identifier, $identifier_list )
   {
     set_time_limit( 900 ); // 15 minutes max
 
     $participant_class_name = lib::get_class_name( 'database\participant' );
+    $participant_identifier_class_name = lib::get_class_name( 'database\participant_identifier' );
 
-    foreach( $uid_list as $uid )
+    foreach( $identifier_list as $identifier )
     {
-      $db_participant = $participant_class_name::get_unique_record( 'uid', $uid );
+      $db_participant = is_null( $db_identifier )
+                      ? $participant_class_name::get_unique_record( 'uid', $identifier )
+                      : $participant_identifier_class_name::get_unique_record(
+                          array( 'identifier_id', 'value' ),
+                          array( $db_identifier->id, $identifier )
+                        )->get_participant();
       $db_respondent = lib::create( 'database\respondent' );
       $db_respondent->qnaire_id = $this->id;
       $db_respondent->participant_id = $db_participant->id;

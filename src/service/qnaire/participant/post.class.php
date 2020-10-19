@@ -33,7 +33,7 @@ class post extends \cenozo\service\write
       $file = $this->get_file_as_object();
       if( !property_exists( $file, 'mode' ) ||
           !in_array( $file->mode, ['confirm', 'add_mail', 'remove_mail', 'create'] ) ||
-          !property_exists( $file, 'uid_list' ) ) {
+          !property_exists( $file, 'identifier_list' ) ) {
         $this->status->set_code( 400 );
       }
     }
@@ -45,6 +45,7 @@ class post extends \cenozo\service\write
   protected function execute()
   {
     $participant_class_name = lib::get_class_name( 'database\participant' );
+    $participant_identifier_class_name = lib::get_class_name( 'database\participant_identifier' );
     $respondent_class_name = lib::get_class_name( 'database\respondent' );
     $db_qnaire = $this->get_parent_record();
     $file = $this->get_file_as_object();
@@ -73,34 +74,19 @@ class post extends \cenozo\service\write
       $modifier->where( 'respondent.id', '=', NULL );
     }
 
-    $uid_list = $participant_class_name::get_valid_uid_list( $file->uid_list, $modifier );
+    $identifier_id = property_exists( $file, 'identifier_id' ) ? $file->identifier_id : NULL;
+    $db_identifier = is_null( $identifier_id ) ? NULL : lib::create( 'database\identifier', $identifier_id );
+    $identifier_list = $participant_class_name::get_valid_identifier_list( $db_identifier, $file->identifier_list, $modifier );
 
-    if( 'add_mail' == $file->mode )
-    { // add all respondent mail which isn't already scheduled
-      if( 0 < count( $uid_list ) )
-      {
-        foreach( $uid_list as $uid )
-        {
-          $db_participant = $participant_class_name::get_unique_record( 'uid', $uid );
-          $db_respondent = $respondent_class_name::get_unique_record(
-            array( 'qnaire_id', 'participant_id' ),
-            array( $db_qnaire->id, $db_participant->id )
-          );
-          $db_respondent->send_all_mail();
-        }
-      }
+    if( 'confirm' == $file->mode )
+    { // return a list of all valid identifiers
+      $this->set_data( $identifier_list );
     }
-    else if( 'remove_mail' == $file->mode )
-    { // remove all respondent mail
-      if( 0 < count( $uid_list ) ) $db_qnaire->mass_remove_unsent_mail( $uid_list );
-    }
-    else if( 'create' == $file->mode )
-    { // create the new respondent records
-      if( 0 < count( $uid_list ) ) $db_qnaire->mass_respondent( $uid_list );
-    }
-    else // 'confirm' == $file->mode
-    { // return a list of all valid uids
-      $this->set_data( $uid_list );
+    else if( 0 < count( $identifier_list ) )
+    {
+      if( 'add_mail' == $file->mode ) $db_qnaire->mass_send_all_mail( $db_identifier, $identifier_list );
+      else if( 'remove_mail' == $file->mode ) $db_qnaire->mass_remove_unsent_mail( $db_identifier, $identifier_list );
+      else if( 'create' == $file->mode ) $db_qnaire->mass_respondent( $db_identifier, $identifier_list );
     }
   }
 

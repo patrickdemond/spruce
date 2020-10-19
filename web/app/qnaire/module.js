@@ -475,18 +475,18 @@ define( [ 'module' ].reduce( function( list, name ) {
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnQnaireMassRespondentFactory', [
-    'CnSession', 'CnHttpFactory', 'CnModalMessageFactory', '$state',
-    function( CnSession, CnHttpFactory, CnModalMessageFactory, $state ) {
+    'CnSession', 'CnHttpFactory', 'CnModalMessageFactory', 'CnParticipantSelectionFactory', '$state',
+    function( CnSession, CnHttpFactory, CnModalMessageFactory, CnParticipantSelectionFactory, $state ) {
       var object = function() {
         var self = this;
         angular.extend( this, {
           working: false,
+          participantSelection: CnParticipantSelectionFactory.instance( {
+            path: ['qnaire', $state.params.identifier, 'participant'].join( '/' ),
+            data: { mode: 'confirm' }
+          } ),
           qnaireId: $state.params.identifier,
           qnaireName: null,
-          confirmInProgress: false,
-          confirmedCount: null,
-          uidListString: '',
-          uidList: [],
 
           onLoad: function() {
             // reset data
@@ -495,65 +495,27 @@ define( [ 'module' ].reduce( function( list, name ) {
               data: { select: { column: 'name' } }
             } ).get().then( function( response ) {
               self.qnaireName = response.data.name;
-              self.confirmInProgress = false;
-              self.confirmedCount = null;
-              self.uidListString = '';
-              self.uidList = [];
+              self.participantSelection.reset();
             } );
-          },
-
-          uidListStringChanged: function() {
-            this.confirmedCount = null;
-          },
-
-          confirm: function() {
-            this.confirmInProgress = true;
-            this.confirmedCount = null;
-            var uidRegex = new RegExp( CnSession.application.uidRegex );
-
-            // clean up the uid list
-            this.uidList =
-              this.uidListString.toUpperCase() // convert to uppercase
-                          .replace( /[\s,;|\/]/g, ' ' ) // replace whitespace and separation chars with a space
-                          .replace( /[^a-zA-Z0-9 ]/g, '' ) // remove anything that isn't a letter, number of space
-                          .split( ' ' ) // delimite string by spaces and create array from result
-                          .filter( function( uid ) { // match UIDs (eg: A123456)
-                            return null != uid.match( uidRegex );
-                          } )
-                          .filter( function( uid, index, array ) { // make array unique
-                            return index <= array.indexOf( uid );
-                          } )
-                          .sort(); // sort the array
-
-            // now confirm UID list with server
-            if( 0 == this.uidList.length ) {
-              this.uidListString = '';
-              this.confirmInProgress = false;
-            } else {
-              CnHttpFactory.instance( {
-                path: ['qnaire', this.qnaireId, 'participant'].join( '/' ),
-                data: { mode: 'confirm', uid_list: this.uidList }
-              } ).post().then( function( response ) {
-                self.confirmedCount = response.data.length;
-                self.uidListString = response.data.join( ' ' );
-                self.confirmInProgress = false;
-              } );
-            }
           },
 
           proceed: function() {
             this.working = true;
-            if( !this.confirmInProgress && 0 < this.confirmedCount ) {
+            if( !this.participantSelection.confirmInProgress && 0 < this.participantSelection.confirmedCount ) {
               CnHttpFactory.instance( {
                 path: ['qnaire', this.qnaireId, 'participant'].join( '/' ),
-                data: { mode: 'create', uid_list: this.uidList },
+                data: {
+                  mode: 'create',
+                  identifier_id: this.participantSelection.identifierId,
+                  identifier_list: this.participantSelection.getIdentifierList()
+                },
                 onError: function( response ) {
                   CnModalMessageFactory.httpError( response ).then( function() { self.onLoad(); } );
                 }
               } ).post().then( function( response ) {
                 CnModalMessageFactory.instance( {
                   title: 'Recipients Created',
-                  message: 'You have successfully created ' + self.confirmedCount + ' new recipients for the "' +
+                  message: 'You have successfully created ' + self.participantSelection.confirmedCount + ' new recipients for the "' +
                            self.qnaireName + '" questionnaire.'
                 } ).show().then( function() { self.onLoad(); } );
               } ).finally( function() { self.working = false; } );
