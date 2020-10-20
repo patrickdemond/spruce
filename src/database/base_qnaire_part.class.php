@@ -279,8 +279,12 @@ abstract class base_qnaire_part extends \cenozo\database\has_rank
               $db_child->$foreign_key_name = $this->id;
               $db_child->rank = $child->rank; // + $rank_offset;
               $db_child->name = sprintf( '%s_%s', $child->name, $name_suffix );
-              if( 'page' == $child_subject ) $db_child->max_time = $child->max_time;
-              else if( 'question' == $child_subject ) $db_child->type = $child->type;
+              if( 'question' == $child_subject )
+              {
+                $db_child->type = $child->type;
+                // NOTE: if this isn't set now then new questions which have dkna_refuse = false won't be patched correctly
+                $db_child->dkna_refuse = true;
+              }
               $db_child->save();
 
               $db_child->process_patch( $child, $name_suffix, $apply );
