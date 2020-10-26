@@ -3,7 +3,12 @@ define( function() {
 
   try { var module = cenozoApp.module( 'qnaire_consent_type', true ); } catch( err ) { console.warn( err ); return; }
   angular.extend( module, {
-    identifier: {},
+    identifier: {
+      parent: {
+        subject: 'qnaire',
+        column: 'qnaire.name'
+      }
+    },
     name: {
       singular: 'consent trigger',
       plural: 'consent triggers',
@@ -41,7 +46,7 @@ define( function() {
       title: 'Question',
       type: 'lookup-typeahead',
       typeahead: {
-        table: 'question',
+        table: 'qnaire/47/question',
         select: 'CONCAT( question.name, " (", question.type, ")" )',
         where: 'question.name'
       }
@@ -53,7 +58,8 @@ define( function() {
     accept: {
       title: 'Consent Accept',
       type: 'boolean'
-    }
+    },
+    qnaire_id: { column: 'qnaire.id', type: 'hidden' }
   } );
 
   /* ######################################################################################################## */
@@ -105,7 +111,19 @@ define( function() {
   cenozo.providers.factory( 'CnQnaireConsentTypeAddFactory', [
     'CnBaseAddFactory',
     function( CnBaseAddFactory ) {
-      var object = function( parentModel ) { CnBaseAddFactory.construct( this, parentModel ); };
+      var object = function( parentModel ) {
+        var self = this;
+        CnBaseAddFactory.construct( this, parentModel );
+
+        this.onNew = function( record ) {
+          return self.$$onNew( record ).then( function() {
+            // update the question_id's typeahead table value (restrict to questions belonging to current qnaire only)
+            var inputList = self.parentModel.module.inputGroupList.findByProperty( 'title', '' ).inputList;
+            inputList.question_id.typeahead.table =
+              [ 'qnaire', self.parentModel.getParentIdentifier().identifier, 'question' ].join( '/' );
+          } );
+        };
+      };
       return { instance: function( parentModel ) { return new object( parentModel ); } };
     }
   ] );
@@ -123,7 +141,18 @@ define( function() {
   cenozo.providers.factory( 'CnQnaireConsentTypeViewFactory', [
     'CnBaseViewFactory',
     function( CnBaseViewFactory ) {
-      var object = function( parentModel, root ) { CnBaseViewFactory.construct( this, parentModel, root ); }
+      var object = function( parentModel, root ) {
+        var self = this;
+        CnBaseViewFactory.construct( this, parentModel, root );
+
+        this.onView = function( force ) {
+          return self.$$onView( force ).then( function() {
+            // update the question_id's typeahead table value (restrict to questions belonging to current qnaire only)
+            var inputList = self.parentModel.module.inputGroupList.findByProperty( 'title', '' ).inputList;
+            inputList.question_id.typeahead.table = [ 'qnaire', self.record.qnaire_id, 'question' ].join( '/' );
+          } );
+        };
+      }
       return { instance: function( parentModel, root ) { return new object( parentModel, root ); } };
     }
   ] );
