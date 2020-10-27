@@ -131,6 +131,7 @@ class ui extends \cenozo\ui\ui
     {
       $module->add_child( 'question_description' );
       $module->add_child( 'question_option' );
+      $module->add_child( 'qnaire_consent_type' );
       $module->add_action( 'clone', '/{identifier}' );
     }
 

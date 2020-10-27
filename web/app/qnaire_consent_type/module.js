@@ -49,6 +49,9 @@ define( function() {
         table: 'qnaire/47/question',
         select: 'CONCAT( question.name, " (", question.type, ")" )',
         where: 'question.name'
+      },
+      isExcluded: function( $state, model ) {
+        return model.getActionFromState().match( '^add' );
       }
     },
     answer_value: {
