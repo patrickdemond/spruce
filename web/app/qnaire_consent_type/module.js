@@ -51,7 +51,8 @@ define( function() {
         where: 'question.name'
       },
       isExcluded: function( $state, model ) {
-        return model.getActionFromState().match( '^add' );
+        // don't include the question_id when we're adding from a question already
+        return 'question' == model.getSubjectFromState();
       }
     },
     answer_value: {

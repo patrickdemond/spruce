@@ -22,7 +22,7 @@
       <div class="panel-body">
         <div ng-if="model.viewModel.differenceIsEmpty">No differences found.</div>
         <div ng-repeat="(property, child) in model.viewModel.difference" class="row">
-          <div ng-if="'module_list' != property">
+          <div ng-if="!['module_list','attribute_list','reminder_list','qnaire_consent_type_list'].includes( property )">
             <label class="col-sm-2 control-label">{{
               property | cnStrReplace:'qnaire':'' | cnStrReplace:'_':' ' | cnStrReplace:' list':'s' | cnUCWords
             }}:</label>
@@ -32,21 +32,26 @@
                 <div ng-if="child.add"><em>ADD:</em> {{ child.add.join( ", " ) }}</div>
                 <div ng-if="child.remove"><em>REMOVE:</em> {{ child.remove.join( ", " ) }}</div>
               </div>
-              <div ng-switch-when="reminder_list">
-                <label class="container-fluid">{{ property | cnStrReplace:'_':' ' | cnUCWords }}</label>
-                <div class="container-fluid"><cn-qnaire-part-patch subject="reminder" model="child"></cn-qnaire-part-patch></div>
-              </div>
-              <div ng-switch-when="attribute_list">
-                <div ng-repeat="item in child.add"><em>ADD:</em> {{ item }}</div>
-                <div ng-repeat="(name, item) in child.change"><em>CHANGE:</em> "{{ name }}" => {{ item }}</div>
-                <div ng-repeat="item in child.remove"><em>REMOVE:</em> {{ item }}</div>
-              </div>
               <div ng-switch-when="qnaire_description_list"><cn-description-patch model="child"></cn-description-patch></div>
             </div>
           </div>
+          <div ng-if="'reminder_list' == property">
+            <label class="container-fluid">Reminder List</label>
+            <div class="container-fluid"><cn-qnaire-part-patch subject="reminder" model="child"></cn-qnaire-part-patch></div>
+          </div>
+          <div ng-if="'attribute_list' == property">
+            <label class="container-fluid">Attribute List</label>
+            <div class="container-fluid"><cn-qnaire-part-patch subject="attribute" model="child"></cn-qnaire-part-patch></div>
+          </div>
           <div ng-if="'module_list' == property">
-            <label class="container-fluid">{{ property | cnStrReplace:'_':' ' | cnUCWords }}</label>
+            <label class="container-fluid">Module List</label>
             <div class="container-fluid"><cn-qnaire-part-patch subject="module" model="child"></cn-qnaire-part-patch></div>
+          </div>
+          <div ng-if="'qnaire_consent_type_list' == property">
+            <label class="container-fluid">Consent Trigger List</label>
+            <div class="container-fluid">
+              <cn-qnaire-part-patch subject="qnaire_consent_type" model="child"></cn-qnaire-part-patch>
+            </div>
           </div>
         </div>
       </div>
