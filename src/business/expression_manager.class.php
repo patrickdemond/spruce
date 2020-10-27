@@ -181,7 +181,8 @@ class expression_manager extends \cenozo\singleton
 
     $compiled = '';
 
-    try{
+    try
+    {
       // loop through the precondition one character at a time
       foreach( str_split( strtolower( $precondition ) ) as $index => $char )
       {
@@ -565,7 +566,8 @@ class expression_manager extends \cenozo\singleton
       is_null( $db_override_question_option ) ||
       $db_question_option->question_id != $db_override_question_option->question_id ||
       $db_question_option->rank >= $db_override_question_option->rank
-    ) ) {
+    ) )
+    {
       $db_answer = $answer_class_name::get_unique_record(
         array( 'response_id', 'question_id' ),
         array( $this->db_response->id, $db_question->id )

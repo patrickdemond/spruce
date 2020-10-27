@@ -158,7 +158,8 @@ class answer extends \cenozo\database\record
       foreach( $value as $selected_option )
       {
         $selected_option_id = is_object( $selected_option ) ? $selected_option->id : $selected_option;
-        if( is_object( $selected_option ) ) {
+        if( is_object( $selected_option ) )
+        {
           if( $expression_manager->evaluate( $precondition_list[$selected_option_id] ) && (
               ( is_array( $selected_option->value ) && 0 == count( $selected_option->value ) ) ||
               is_null( $selected_option->value )

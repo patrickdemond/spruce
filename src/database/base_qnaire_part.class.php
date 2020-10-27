@@ -314,8 +314,8 @@ abstract class base_qnaire_part extends \cenozo\database\has_rank
           foreach( $patch_object->$child_list_name as $child )
           {
             // see if the child exists in the patch or if we're already changing the child
-            $db_child_name = $apply ? preg_replace( sprintf( '/_%s$/', $name_suffix ), '', $db_child->name ) : $db_child->name;
-            if( $db_child_name == $child->name || in_array( $db_child_name, array_keys( $change_list ) ) )
+            $name = $apply ? preg_replace( sprintf( '/_%s$/', $name_suffix ), '', $db_child->name ) : $db_child->name;
+            if( $name == $child->name || in_array( $name, array_keys( $change_list ) ) )
             {
               $found = true;
               break;
