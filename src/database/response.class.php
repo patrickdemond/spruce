@@ -138,7 +138,7 @@ class response extends \cenozo\database\has_rank
 
           if( $create )
           {
-            if( !$db_qnaire->debug )
+            if( $db_qnaire->debug )
             {
               log::info( sprintf(
                 'Creating new %s "%s" event due to question "%s" having the value "%s" (questionnaire "%s")',
@@ -462,7 +462,7 @@ class response extends \cenozo\database\has_rank
 
       if( is_null( $db_attribute ) )
       {
-        if( !$db_qnaire->debug )
+        if( $db_qnaire->debug )
         {
           log::warning( sprintf( 'Invalid attribute "%s" found while compiling description', $attribute_name ) );
           $description = str_replace( $match, '', $description );
@@ -486,7 +486,7 @@ class response extends \cenozo\database\has_rank
       $db_question = $db_qnaire->get_question( $question_name );
       if( is_null( $db_question ) || 'comment' == $db_question->type || 'list' == $db_question->type )
       {
-        if( !$db_qnaire->debug )
+        if( $db_qnaire->debug )
         {
           log::warning( sprintf( 'Invalid question "%s" found while compiling description', $question_name ) );
           $description = str_replace( $match, '', $description );
