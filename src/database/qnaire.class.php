@@ -1753,8 +1753,19 @@ class qnaire extends \cenozo\database\record
 
     foreach( $qnaire_object->qnaire_consent_type_list as $qnaire_consent_type )
     {
-      $db_consent_type = $consent_type_class_name::get_unique_table( 'name', $qnaire_consent_type->consent_type_name );
-      $db_question = $this->get_question( $qnaire_consent_type->question_name );
+      $db_consent_type = $consent_type_class_name::get_unique_record( 'name', $qnaire_consent_type->consent_type_name );
+      if( is_null( $db_consent_type ) )
+      {
+        throw lib::create( 'exception\notice',
+          sprintf(
+            'Unable to import questionnaire since it has a consent trigger for consent type "%s" which does not exist.',
+            $qnaire_consent_type->consent_type_name
+          ),
+          __METHOD__
+        );
+      }
+
+      $db_question = $db_qnaire->get_question( $qnaire_consent_type->question_name );
       $db_qnaire_consent_type = lib::create( 'database\qnaire_consent_type' );
       $db_qnaire_consent_type->qnaire_id = $db_qnaire->id;
       $db_qnaire_consent_type->consent_type_id = $db_consent_type->id;
