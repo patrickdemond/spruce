@@ -61,18 +61,22 @@ class expression_manager extends \cenozo\singleton
   /**
    * Converts hidden text codes into hidden/shown text
    * 
-   * Text can be marked as "hidden" by putting enclosing it inside of double curly braces {{}}
+   * Text can be marked as "hidden" by enclosing it inside of double curly braces {{}}
    * This text will only appear when the "show_hidden" argument is included in the survey's URL
+   * Also, text can be "reverse-hidden" by putting enclosing it inside of double curly braces with an exclamation {{!!}}
+   * This text will only appear when the "show_hidden" argument is not included in the survey's URL
    * 
    * @param array $array An array referrence containing 'prompts' and 'popups' elements containing qnaire text
    */
   public function process_hidden_text( &$array )
   {
-    $search = $this->show_hidden ? array( '/{{/', '/}}/' ) : '/{{.*?}}/s';
-    $replace = $this->show_hidden ? array( '<span class="text-warning">', '</span>' ) : '';
+    $search1 = $this->show_hidden ? array( '/{{/', '/}}/' ) : '/{{.*?}}/s';
+    $replace1 = $this->show_hidden ? array( '<span class="text-warning">', '</span>' ) : '';
+    $search2 = !$this->show_hidden ? array( '/{{!/', '/!}}/' ) : '/{{!.*?!}}/s';
+    $replace2 = !$this->show_hidden ? array( '<span class="text-warning">', '</span>' ) : '';
     foreach( $array as $key => $value )
       if( false !== strpos( $key, 'prompts' ) || false !== strpos( $key, 'popups' ) )
-        $array[$key] = preg_replace( $search, $replace, $value );
+        $array[$key] = preg_replace( $search1, $replace1, preg_replace( $search2, $replace2, $value ) );
   }
 
   /**
