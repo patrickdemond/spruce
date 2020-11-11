@@ -44,10 +44,6 @@ define( [ 'module' ].reduce( function( list, name ) {
       },
       respondent_count: {
         title: 'Participants'
-      },
-      description: {
-        title: 'Description',
-        align: 'left'
       }
     },
     defaultOrder: {
