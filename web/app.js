@@ -712,10 +712,17 @@ cenozo.service( 'CnTranslationHelper', [
         }
       },
       // used by services below to convert a list of descriptions into an object
-      parseDescriptions: function( descriptionList ) {
+      parseDescriptions: function( descriptionList, showHidden ) {
         var code = null;
         if( !angular.isString( descriptionList ) ) descriptionList = '';
         return descriptionList.split( '`' ).reduce( function( list, part ) {
+          if( angular.isDefined( showHidden ) ) {
+            // replace hidden and reverse-hidden codes
+            part = showHidden
+                 ? part.replace( /{{!.*!}}/g, '' ).replace( /{{/g, '' ).replace( /}}/g, '' )
+                 : part.replace( /{{!/g, '' ).replace( /!}}/g, '' ).replace( /{{.*}}/g, '' );
+          }
+
           if( null == code ) {
             code = part;
           } else {

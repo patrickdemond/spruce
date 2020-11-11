@@ -211,10 +211,11 @@ define( [ 'question' ].reduce( function( list, name ) {
                 $state.go( 'error.' + response.status, response );
               }
             } ).get().then( function( response ) {
+              var showHidden = angular.isDefined( $state.params.show_hidden ) ? $state.params.show_hidden : false;
               $scope.data = response.data;
-              $scope.data.introductions = CnTranslationHelper.parseDescriptions( $scope.data.introductions );
-              $scope.data.conclusions = CnTranslationHelper.parseDescriptions( $scope.data.conclusions );
-              $scope.data.closes = CnTranslationHelper.parseDescriptions( $scope.data.closes );
+              $scope.data.introductions = CnTranslationHelper.parseDescriptions( $scope.data.introductions, showHidden );
+              $scope.data.conclusions = CnTranslationHelper.parseDescriptions( $scope.data.conclusions, showHidden );
+              $scope.data.closes = CnTranslationHelper.parseDescriptions( $scope.data.closes, showHidden );
               $scope.data.title = null != $scope.data.page_id ? '' : $scope.data.submitted ? 'Conclusion' : 'Introduction';
               render();
             } );
@@ -1070,14 +1071,7 @@ define( [ 'question' ].reduce( function( list, name ) {
               'page/token=' + $state.params.token : this.$$getServiceResourcePath( resource );
           },
 
-          getServiceResourcePath: function( resource ) {
-            return this.getServiceResourceBasePath( resource );
-            /*
-            return this.getServiceResourceBasePath( resource ) + (
-              'respondent' != this.getSubjectFromState() || $state.params.show_hidden ? '?show_hidden=1' : ''
-            );
-            */
-          },
+          getServiceResourcePath: function( resource ) { return this.getServiceResourceBasePath( resource ); },
 
           getServiceCollectionPath: function( ignoreParent ) {
             var path = this.$$getServiceCollectionPath( ignoreParent );
