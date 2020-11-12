@@ -314,6 +314,7 @@ cenozoApp.initDescriptionModule = function( module, type ) {
 
   module.addInputGroup( '', {
     language: {
+      title: 'Language',
       column: 'language.code',
       type: 'string',
       isConstant: true
