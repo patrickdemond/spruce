@@ -456,11 +456,7 @@ cenozo.directive( 'cnQnaireNavigator', [
             }
 
             return $q.all( promiseList ).then( function() {
-              return $state.go(
-                null != languageId ? 'qnaire_description.view' : 'qnaire.view',
-                { identifier: null != languageId ? 'qnaire_id=' + id + ';language_id=' + languageId : id },
-                { reload: true }
-              );
+              return $state.go( 'qnaire.view', { identifier: id }, { reload: true } );
             } );
           },
 
