@@ -227,6 +227,7 @@ class respondent extends \cenozo\database\record
   {
     $respondent_mail_class_name = lib::get_class_name( 'database\respondent_mail' );
 
+    $db_participant = $this->get_participant();
     $db_qnaire = $this->get_qnaire();
     $db_subject_description = is_null( $db_reminder )
                             ? $db_qnaire->get_description( 'invitation subject', $this->get_language() )
@@ -234,9 +235,16 @@ class respondent extends \cenozo\database\record
     $db_body_description = is_null( $db_reminder )
                          ? $db_qnaire->get_description( 'invitation body', $this->get_language() )
                          : $db_reminder->get_description( 'body', $this->get_language() );
-    if( $db_subject_description->value && $db_body_description->value )
+    if( is_null( $db_subject_description ) || is_null( $db_body_description ) )
     {
-      $db_participant = $this->get_participant();
+      log::critical( sprintf(
+        'Unable to send %s to %s since description is missing.',
+        is_null( $db_reminder ) ? 'invitation' : sprintf( '%s %s reminder', $db_reminder->offset, $db_reminder->unit ),
+        $db_participant->uid
+      ) );
+    }
+    else if( $db_subject_description->value && $db_body_description->value )
+    {
       if( is_null( $datetime ) ) $datetime = util::get_datetime_object();
 
       if( $db_participant->email && $db_qnaire->email_from_name && $db_qnaire->email_from_address )
