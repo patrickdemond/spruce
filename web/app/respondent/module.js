@@ -181,7 +181,7 @@ define( [ 'page' ].reduce( function( list, name ) {
     function( CnBaseViewFactory, CnHttpFactory ) {
       var object = function( parentModel, root ) {
         var self = this;
-        CnBaseViewFactory.construct( this, parentModel, root );
+        CnBaseViewFactory.construct( this, parentModel, root, 'response' );
 
         this.resendMail = function() {
           return CnHttpFactory.instance( {

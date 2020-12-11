@@ -539,7 +539,7 @@ define( [ 'module' ].reduce( function( list, name ) {
     function( CnBaseViewFactory, CnHttpFactory, $filter, $state, $rootScope ) {
       var object = function( parentModel, root ) {
         var self = this;
-        CnBaseViewFactory.construct( this, parentModel, root );
+        CnBaseViewFactory.construct( this, parentModel, root, 'respondent' );
 
         this.deferred.promise.then( function() {
           if( angular.isDefined( self.moduleModel ) ) {

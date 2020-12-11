@@ -48,9 +48,17 @@ cenozoApp.initQnairePartModule = function( module, type ) {
     name: { title: 'Name' }
   };
 
-  if( 'module' == type ) columnList.page_count = { title: 'Pages' };
-  else if( 'page' == type ) columnList.question_count = { title: 'Questions' };
-  else if( 'question' == type ) columnList.question_option_count = { title: 'Question Options' };
+  var childType = null;
+  if( 'module' == type ) {
+    childType = 'page';
+    columnList.page_count = { title: 'Pages' };
+  } else if( 'page' == type ) {
+    childType = 'question';
+    columnList.question_count = { title: 'Questions' };
+  } else if( 'question' == type ) {
+    childType = 'question_option';
+    columnList.question_option_count = { title: 'Question Options' };
+  }
   columnList.precondition = { title: 'Precondition' };
 
   angular.extend( module, {
@@ -228,7 +236,7 @@ cenozoApp.initQnairePartModule = function( module, type ) {
     function( CnBaseViewFactory, CnBaseQnairePartViewFactory ) {
       var object = function( parentModel, root ) {
         var self = this;
-        CnBaseViewFactory.construct( this, parentModel, root );
+        CnBaseViewFactory.construct( this, parentModel, root, childType );
         CnBaseQnairePartViewFactory.construct( this, type );
       }
       return { instance: function( parentModel, root ) { return new object( parentModel, root ); } };
