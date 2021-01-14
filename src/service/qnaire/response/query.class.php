@@ -40,6 +40,13 @@ class query extends \cenozo\service\query
     if( $this->get_argument( 'export', false ) )
     {
       $modifier = lib::create( 'database\modifier');
+      // make sure the response has at least one answer
+      $modifier->join( 'respondent', 'response.respondent_id', 'respondent.id' );
+      $modifier->join( 'participant', 'respondent.participant_id', 'participant.id' );
+      $modifier->join( 'answer', 'response.id', 'answer.response_id' );
+      $modifier->group( 'response.id' );
+      $modifier->order( 'participant.uid' );
+      $modifier->order( 'response.rank' );
       $modifier->limit( $this->modifier->get_limit() );
       $modifier->offset( $this->modifier->get_offset() );
 
