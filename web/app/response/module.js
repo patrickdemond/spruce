@@ -397,7 +397,8 @@ define( function() {
                 select: { column: [ 'id', 'name' ] }, 
                 modifier: {
                   where: { column: 'active', operator: '=', value: true },
-                  order: 'name'
+                  order: 'name',
+                  limit: 1000
                 }
               }
             } ).query().then( function success( response ) {
