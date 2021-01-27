@@ -467,7 +467,7 @@ class qnaire extends \cenozo\database\record
           $answer = util::json_decode( $answer_list[$column['question_id']] );
           if( is_object( $answer ) && property_exists( $answer, 'dkna' ) && $answer->dkna )
           {
-            $row_value = 'DKNA';
+            $row_value = 'DK_NA';
           }
           else if( is_object( $answer ) && property_exists( $answer, 'refuse' ) && $answer->refuse )
           {
