@@ -376,6 +376,12 @@ define( [ 'question' ].reduce( function( list, name ) {
             // handle empty expressions
             if( null == expression ) return isLimit ? null : true;
 
+            if( isLimit ) {
+              expression = expression.replace( /\bcurrent_year\b/, moment().format( 'YYYY' ) );
+              expression = expression.replace( /\bcurrent_month\b/, moment().format( 'MM' ) );
+              expression = expression.replace( /\bcurrent_day\b/, moment().format( 'DD' ) );
+            }
+
             // non-limit boolean expressions are already evaluated
             if( !isLimit && true == expression || false == expression ) return expression;
 
