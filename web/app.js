@@ -437,6 +437,43 @@ cenozo.directive( 'cnQnaireNavigator', [
       templateUrl: cenozoApp.getFileUrl( 'pine', 'qnaire_navigator.tpl.html' ),
       restrict: 'E',
       controller: function( $scope ) {
+        // used to navigate to another qnaire part (either root or description)
+        function viewQnairePart( subject, id ) {
+          var keys = null;
+          var promiseList = [];
+          if( subject + '_description.view' == $state.current.name ) {
+            var languageMatch = $state.params.identifier.match( /language_id=([0-9]+)/ );
+            var typeMatch = $state.params.identifier.match( /type=([a-z]+)/ );
+            if( null == languageMatch || null == typeMatch ) {
+              promiseList.push(
+                CnHttpFactory.instance( {
+                  path: subject + '_description/' + $state.params.identifier,
+                  data: { select: { column: [ 'language_id', 'type' ] } }
+                } ).get().then( function( response ) {
+                  keys = response.data;
+                } )
+              );
+            } else {
+              keys = {
+                language_id: languageMatch[1],
+                type: typeMatch[1]
+              };
+            }
+          }
+
+          return $q.all( promiseList ).then( function() {
+            // if we are returned description keys then use them to navigate to the sister description
+            var identifier = null != keys
+                           ? [ subject + '_id='+id, 'language_id='+keys.language_id, 'type='+keys.type ].join( ';' )
+                           : id;
+            return $state.go(
+              ( null != keys ? subject + '_description' : subject ) + '.view',
+              { identifier: identifier },
+              { reload: true }
+            );
+          } );
+        }
+        
         angular.extend( $scope, {
           loading: true,
           subject: $state.current.name.split( '.' )[0],
@@ -449,93 +486,10 @@ cenozo.directive( 'cnQnaireNavigator', [
           pageList: [],
           questionList: [],
 
-          viewQnaire: function( id ) {
-            var languageId = null;
-            var promiseList = [];
-            if( 'qnaire_description.view' == $state.current.name ) {
-              promiseList.push(
-                CnHttpFactory.instance( {
-                  path: 'qnaire_description/' + $state.params.identifier,
-                  data: { select: { column: 'language_id' }, modifier: { limit: 1000 } }
-                } ).get().then( function( response ) {
-                  languageId = response.data.language_id;
-                } )
-              );
-            }
-
-            return $q.all( promiseList ).then( function() {
-              return $state.go( 'qnaire.view', { identifier: id }, { reload: true } );
-            } );
-          },
-
-          viewModule: function( id ) {
-            var languageId = null;
-            var promiseList = [];
-            if( 'module_description.view' == $state.current.name ) {
-              promiseList.push(
-                CnHttpFactory.instance( {
-                  path: 'module_description/' + $state.params.identifier,
-                  data: { select: { column: 'language_id' }, modifier: { limit: 1000 } }
-                } ).get().then( function( response ) {
-                  languageId = response.data.language_id;
-                } )
-              );
-            }
-
-            return $q.all( promiseList ).then( function() {
-              return $state.go(
-                null != languageId ? 'module_description.view' : 'module.view',
-                { identifier: null != languageId ? 'module_id=' + id + ';language_id=' + languageId : id },
-                { reload: true }
-              );
-            } );
-          },
-
-          viewPage: function( id ) {
-            var languageId = null;
-            var promiseList = [];
-            if( 'page_description.view' == $state.current.name ) {
-              promiseList.push(
-                CnHttpFactory.instance( {
-                  path: 'page_description/' + $state.params.identifier,
-                  data: { select: { column: 'language_id' }, modifier: { limit: 1000 } }
-                } ).get().then( function( response ) {
-                  languageId = response.data.language_id;
-                } )
-              );
-            }
-
-            return $q.all( promiseList ).then( function() {
-              return $state.go(
-                null != languageId ? 'page_description.view' : 'page.' + ( 'page.render' == $state.current.name ? 'render' : 'view' ),
-                { identifier: null != languageId ? 'page_id=' + id + ';language_id=' + languageId : id },
-                { reload: true }
-              );
-            } );
-          },
-
-          viewQuestion: function( id ) {
-            var languageId = null;
-            var promiseList = [];
-            if( 'question_description.view' == $state.current.name ) {
-              promiseList.push(
-                CnHttpFactory.instance( {
-                  path: 'question_description/' + $state.params.identifier,
-                  data: { select: { column: 'language_id' }, modifier: { limit: 1000 } }
-                } ).get().then( function( response ) {
-                  languageId = response.data.language_id;
-                } )
-              );
-            }
-
-            return $q.all( promiseList ).then( function() {
-              return $state.go(
-                null != languageId ? 'question_description.view' : 'question.view',
-                { identifier: null != languageId ? 'question_id=' + id + ';language_id=' + languageId : id },
-                { reload: true }
-              );
-            } );
-          }
+          viewQnaire: function( id ) { return $state.go( 'qnaire.view', { identifier: id }, { reload: true } ); },
+          viewModule: function( id ) { return viewQnairePart( 'module', id ); },
+          viewPage: function( id ) { return viewQnairePart( 'page', id ); },
+          viewQuestion: function( id ) { return viewQnairePart( 'question', id ); }
         } );
 
         // fill in the qnaire, module, page and question data
@@ -589,7 +543,7 @@ cenozo.directive( 'cnQnaireNavigator', [
 
         CnHttpFactory.instance( {
           path: $scope.subject + '/' + $state.params.identifier,
-          data: { select: { column: columnList }, modifier: { limit: 1000 } }
+          data: { select: { column: columnList } }
         } ).get().then( function( response ) {
           $scope.currentQnaire = {
             id: response.data.qnaire_id ? response.data.qnaire_id : response.data.id,
