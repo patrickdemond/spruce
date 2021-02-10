@@ -1,0 +1,81 @@
+<div class="utility-view rounded vertical-spacer">
+  <div class="container-fluid bg-primary"
+       ng-class="{ 'rounded': !collapsed, 'rounded-top': collapsed }"
+       data-toggle="collapse"
+       data-target="#descriptionHelp"
+       ng-click="collapsed = !collapsed"
+       style="cursor:pointer;">
+    <h4>
+      <div class="pull-right">
+        <i class="glyphicon glyph-hover btn-primary btn-header"
+           ng-class="collapsed ? 'glyphicon-collapse-down' : 'glyphicon-collapse-up'"
+           uib-tooltip="Click to expand {{ model.module.name.singular }} list"
+           tooltip-placement="left"></i>
+      </div>
+      Description Editing Hints
+    </h4>
+  </div>
+  <div class="container-fluid rounded-bottom">
+    <div class="collapse" id="descriptionHelp">
+      <div class="vertical-spacer">
+        <div class="row">
+          <div class="col-sm-6">
+            <h3>HTML Syntax</h3>
+            <p>
+              All HTML elements which enclose text must have an open and close element.
+              Elements which do not enclose text don't need to be closed.
+            </p>
+            <p>
+              For example
+              <ul>
+                <li class="text-danger">This is incorrect: <code>&lt;p&gt;This is a paragraph.</code> (no closing tag)</li>
+                <li class="text-danger">This is also incorrect: <code>&lt;b&gt;This is a paragraph.&lt;b&gt;</code> (closing tag is missing slash "/")</li>
+                <li class="text-success"><b>This is correct: <code>&lt;b&gt;This is a paragraph.&lt;/b&gt;</code></b></li>
+              </ul>
+            </p>
+            <p>
+              HTML elements can be nested, and they can span multiple lines.  For example, if you want bold and italic text inside of text which is italic:<br>
+              <pre ng-bind="'<i>
+    This full sentence is italic
+    but <b>this part</b> is bold.
+  </i>'"></pre>
+            </p>
+          </div>
+          <div class="col-sm-6">
+            <h3>Comment elements</h3>
+            <ul>
+              <li>Paragraph: <code ng-bind="'<p>paragraph</p>'"></code></li>
+              <li>Newline: <code ng-bind="'<br>'"></code></li>
+              <li>Bold: <code ng-bind="'<b>bold</b>'"></code></li>
+              <li>Italic: <code ng-bind="'<i>italic</i>'"></code></li>
+              <li>Link: <code>&lt;a href="https://mcmcaster.ca/"&gt;Link Text&lt;/a&gt;</code></li>
+              <li>Heading 1: <code ng-bind="'<h1>heading</h1>'"></code></li>
+              <li>Heading 2: <code ng-bind="'<h2>heading</h2>'"></code></li>
+              <li>Heading 3: <code ng-bind="'<h3>heading</h3>'"></code></li>
+              <li>Heading 4: <code ng-bind="'<h4>heading</h4>'"></code></li>
+                <div class="row">
+                  <div class="col-sm-6">
+                    <li>Unordered List (list of ticked items):
+  <pre ng-bind="'<ul>
+    <li>an item</li>
+    <li>another item</li>
+    <li>a third item</li>
+  </lu>'"></pre></li>
+                  </div>
+                  <div class="col-sm-6">
+                    Ordered List (list of numbered items):
+  <pre ng-bind="'<ol>
+    <li>an item</li>
+    <li>another item</li>
+    <li>a third item</li>
+  </ol>'"></pre>
+                  </div>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

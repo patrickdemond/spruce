@@ -11,6 +11,17 @@ cenozo.controller( 'HeaderCtrl', [
 ] );
 
 /* ######################################################################################################## */
+cenozo.directive( 'cnDescriptionHelp', [
+  function() {
+    return {
+      templateUrl: cenozoApp.getFileUrl( 'pine', 'description_help.tpl.html' ),
+      restrict: 'E',
+      scope: { model: '=' }
+    };
+  }
+] );
+
+/* ######################################################################################################## */
 cenozo.directive( 'cnDescriptionPatch', [
   function() {
     return {
