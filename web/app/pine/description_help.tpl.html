@@ -29,16 +29,16 @@
               For example
               <ul>
                 <li class="text-danger">This is incorrect: <code>&lt;p&gt;This is a paragraph.</code> (no closing tag)</li>
-                <li class="text-danger">This is also incorrect: <code>&lt;b&gt;This is a paragraph.&lt;b&gt;</code> (closing tag is missing slash "/")</li>
-                <li class="text-success"><b>This is correct: <code>&lt;b&gt;This is a paragraph.&lt;/b&gt;</code></b></li>
+                <li class="text-danger">This is also incorrect: <code>&lt;p&gt;This is a paragraph.&lt;p&gt;</code> (closing tag is missing slash "/")</li>
+                <li class="text-success"><b>This is correct: <code>&lt;p&gt;This is a paragraph.&lt;/p&gt;</code></b></li>
               </ul>
             </p>
             <p>
               HTML elements can be nested, and they can span multiple lines.  For example, if you want bold and italic text inside of text which is italic:<br>
               <pre ng-bind="'<i>
-    This full sentence is italic
-    but <b>this part</b> is bold.
-  </i>'"></pre>
+  This full sentence is italic
+  but <b>this part</b> is bold.
+</i>'"></pre>
             </p>
           </div>
           <div class="col-sm-6">
@@ -48,6 +48,7 @@
               <li>Newline: <code ng-bind="'<br>'"></code></li>
               <li>Bold: <code ng-bind="'<b>bold</b>'"></code></li>
               <li>Italic: <code ng-bind="'<i>italic</i>'"></code></li>
+              <li>Underline: <code ng-bind="'<u>underline</u>'"></code></li>
               <li>Link: <code>&lt;a href="https://mcmcaster.ca/"&gt;Link Text&lt;/a&gt;</code></li>
               <li>Heading 1: <code ng-bind="'<h1>heading</h1>'"></code></li>
               <li>Heading 2: <code ng-bind="'<h2>heading</h2>'"></code></li>
@@ -57,18 +58,18 @@
                   <div class="col-sm-6">
                     <li>Unordered List (list of ticked items):
   <pre ng-bind="'<ul>
-    <li>an item</li>
-    <li>another item</li>
-    <li>a third item</li>
-  </lu>'"></pre></li>
+  <li>an item</li>
+  <li>another item</li>
+  <li>a third item</li>
+</ul>'"></pre></li>
                   </div>
                   <div class="col-sm-6">
                     Ordered List (list of numbered items):
   <pre ng-bind="'<ol>
-    <li>an item</li>
-    <li>another item</li>
-    <li>a third item</li>
-  </ol>'"></pre>
+  <li>an item</li>
+  <li>another item</li>
+  <li>a third item</li>
+</ol>'"></pre>
                   </div>
                 </div>
               </li>
