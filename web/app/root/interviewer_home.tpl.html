@@ -1,0 +1,64 @@
+<div class="inner-view-frame">
+  <div class="container-fluid bg-white allow-select">
+    <div class="row">
+      <div class="col-sm-8">
+        <h3 class="text-primary">
+          Welcome to {{ session.application.title }}, the CLSA online data and biospecimen application system.<br/>
+          <i>Bienvenue sur {{ session.application.title }}, le système de demande d’accès aux données et aux échantillons biologiques de l’ÉLCV en ligne.</i>
+        </h3>
+        <div class="container-fluid">
+          You are currently logged on as / <i>Vous êtes actuellement connecté en tant que</i> <strong>{{ session.user.firstName }} {{ session.user.lastName }}</strong>.<br/>
+          <span class="text-warning">
+            If this is not you please <a style="cursor:pointer" ng-click="session.logout()">click here</a> to log in.<br>
+            <i>Si ce n’est pas vous, <a style="cursor:pointer" ng-click="session.logout()">cliquez ici</a> pour vous connecter.</i>
+          </span>
+        </div>
+        <div class="vertical-spacer"></div>
+      </div>
+      <div class="col-sm-4 hidden-xs">
+        <h3>
+          <img ng-src="{{ cenozoUrl }}/img/branding.png"
+               class="img-responsive"
+               onerror="this.style.display='none'"
+               alt="" />
+        </h3>
+      </div>
+    </div>
+    <div class="vertical-spacer"></div>
+    <h3 class="text-primary">Newsletter</h3>
+    <div class="container-fluid vertical-spacer">
+      <label style="font-weight: normal">
+        I consent to receiving a monthly email newsletter from the Canadian Longitudinal Study on Aging /<br/>
+        J’accepte de recevoir le bulletin électronique mensuel de l’Étude longitudinale canadienne sur le vieillissement:
+        <input type="checkbox" ng-change="toggleNewsletter()" ng-model="user.newsletter"></input>
+      </label>
+    </div>
+    <h3 class="text-primary">Instructions</h3>
+    <div class="container-fluid vertical-spacer">
+      To begin the online process, please click on the “+ Add” button on the lower right to create a new requisition (Data and Biospecimen Access Application). The information you enter in Magnolia will be auto-saved. You may come back and edit your application at any time. Only once it is finalized and you are ready to submit your application, should you click on 'Submit'. Once you have submitted, you will receive a confirmation email of your submission. Completed but unsubmitted applications will not be reviewed.<br/>
+      <i>Pour commencer le processus de demande en ligne, veuillez cliquer sur le bouton « + Ajouter » en bas à droite pour créer une nouvelle demande (Demande d’accès aux données et aux échantillons biologiques). Les informations que vous entrez dans Magnolia seront sauvegardées automatiquement. Vous pouvez modifier votre demande à tout moment. Lorsque la demande est finalisée et que vous êtes prêt à la soumettre, cliquez sur le bouton « Soumettre ». Une fois la demande soumise, vous recevrez un courriel de confirmation de votre soumission. Les demandes complètes, mais qui n’ont pas été soumises ne seront pas évaluées.</i>
+    </div>
+    <div class="vertical-spacer"></div>
+    <h3 class="text-primary">Messages</h3>
+    <div class="container-fluid" ng-repeat="message in session.messageList">
+      <h4>
+        <button type="button"
+                class="btn"
+                ng-class="message.unread ? 'btn-warning' : 'btn-default'"
+                ng-click="markMessage( message.id )"
+                uib-tooltip="Click to mark message as {{ message.unread ? 'read' : 'unread' }}"
+                tooltip-placement="right">
+          <i class="glyphicon" ng-class="message.unread ? 'glyphicon-envelope' : 'glyphicon-ok'"></i>
+        </button>
+        {{ message.title }}
+      </h4>
+      <blockquote class="text-info" style="white-space: pre-wrap;">{{ message.note }}</blockquote>
+    </div>
+    <div ng-if="0 == session.messageList.length">
+      <blockquote class="text-info" style="white-space: pre-wrap;">There are no messages.</blockquote>
+    </div>
+    <cn-reqn-list model="reqnModel"></cn-reqn-list>
+    <div class="vertical-spacer"></div>
+  </div>
+</div>
+<div class="gradient-footer"></div>

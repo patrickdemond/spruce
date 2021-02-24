@@ -21,6 +21,7 @@ class get extends \cenozo\service\self\get
     $setting_manager = lib::create( 'business\setting_manager' );
 
     $resource = parent::create_resource( $index );
+    $resource['setting']['detached'] = $setting_manager->get_setting( 'general', 'detached' );
     $resource['setting']['default_page_max_time'] = $setting_manager->get_setting( 'general', 'default_page_max_time' );
 
     return $resource;

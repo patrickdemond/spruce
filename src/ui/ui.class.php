@@ -86,6 +86,7 @@ class ui extends \cenozo\ui\ui
       $module->add_child( 'qnaire_consent_type' );
       $module->add_choose( 'language' );
       $module->add_action( 'clone', '/{identifier}' );
+      $module->add_action( 'get_respondent', '/{identifier}' );
       $module->add_action( 'mass_respondent', '/{identifier}' );
       $module->add_action( 'import' );
       $module->add_action( 'patch', '/{identifier}' );
@@ -156,6 +157,12 @@ class ui extends \cenozo\ui\ui
     if( 'readonly' == $db_role->name ) $this->add_listitem( 'Overviews', 'overview' );
     $this->remove_listitem( 'Collections' );
     $this->remove_listitem( 'Participants' );
+
+    if( 'interviewer' == $db_role->name )
+    {
+      $this->remove_listitem( 'Questionnaires' );
+      $this->remove_listitem( 'Users' );
+    }
   }
 
   /**
@@ -165,11 +172,16 @@ class ui extends \cenozo\ui\ui
   {
     $list = parent::get_utility_items();
     
+    $db_role = lib::create( 'business\session' )->get_role();
+
     // remove participant utilities
     unset( $list['Participant Multiedit'] );
     unset( $list['Participant Export'] );
     unset( $list['Participant Search'] );
     unset( $list['Tracing'] );
+
+    // don't show the user overview to respondents
+    if( 'interviewer' == $db_role->name ) unset( $list['User Overview'] );
 
     return $list;
   }

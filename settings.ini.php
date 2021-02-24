@@ -21,6 +21,12 @@ $SETTINGS['general']['default_page_max_time'] = 60;
 // hard-coded databaseaccess ID which identifies the respondent's access record
 $SETTINGS['general']['respondent_access_id'] = NULL;
 
+// whether this instance gets its respondents from a detached beartooth instance
+$SETTINGS['general']['detached'] = false;
+
+// the parent instance of pine that this instance will sync its qnaires with
+$SETTINGS['url']['parent_instance'] = NULL;
+
 // the location of the application's internal path
 $SETTINGS['path']['APPLICATION'] = str_replace( '/settings.ini.php', '', __FILE__ );
 

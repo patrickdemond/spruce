@@ -23,6 +23,45 @@ CREATE PROCEDURE patch_qnaire()
                          DROP COLUMN email_reminder_offset;
     END IF;
 
+    SELECT "Adding new beartooth_password column to qnaire table" AS "";
+
+    SELECT COUNT(*) INTO @test
+    FROM information_schema.COLUMNS
+    WHERE table_schema = DATABASE()
+    AND table_name = "qnaire"
+    AND column_name = "beartooth_password";
+
+    IF @test = 0 THEN
+      ALTER TABLE qnaire
+      ADD COLUMN beartooth_password VARCHAR(255) NULL DEFAULT NULL AFTER email_invitation;
+    END IF;
+
+    SELECT "Adding new beartooth_username column to qnaire table" AS "";
+
+    SELECT COUNT(*) INTO @test
+    FROM information_schema.COLUMNS
+    WHERE table_schema = DATABASE()
+    AND table_name = "qnaire"
+    AND column_name = "beartooth_username";
+
+    IF @test = 0 THEN
+      ALTER TABLE qnaire
+      ADD COLUMN beartooth_username VARCHAR(255) NULL DEFAULT NULL AFTER email_invitation;
+    END IF;
+
+    SELECT "Adding new beartooth_url column to qnaire table" AS "";
+
+    SELECT COUNT(*) INTO @test
+    FROM information_schema.COLUMNS
+    WHERE table_schema = DATABASE()
+    AND table_name = "qnaire"
+    AND column_name = "beartooth_url";
+
+    IF @test = 0 THEN
+      ALTER TABLE qnaire
+      ADD COLUMN beartooth_url VARCHAR(255) NULL DEFAULT NULL AFTER email_invitation;
+    END IF;
+
   END //
 DELIMITER ;
 

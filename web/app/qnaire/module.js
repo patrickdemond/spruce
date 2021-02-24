@@ -17,27 +17,33 @@ define( [ 'module' ].reduce( function( list, name ) {
       },
       base_language_id: {
         title: 'Base Language',
-        column: 'base_language.name'
+        column: 'base_language.name',
+        isIncluded: function( $state, model ) { return !model.isRole( 'interviewer' ); }
       },
       closed: {
         title: 'Closed',
-        type: 'boolean'
+        type: 'boolean',
+        isIncluded: function( $state, model ) { return !model.isRole( 'interviewer' ); }
       },
       debug: {
         title: 'Debug Mode',
-        type: 'boolean'
+        type: 'boolean',
+        isIncluded: function( $state, model ) { return !model.isRole( 'interviewer' ); }
       },
       readonly: {
         title: 'Read-Only',
-        type: 'boolean'
+        type: 'boolean',
+        isIncluded: function( $state, model ) { return !model.isRole( 'interviewer' ); }
       },
       repeat_detail: {
         title: 'Repeated',
-        type: 'string'
+        type: 'string',
+        isIncluded: function( $state, model ) { return !model.isRole( 'interviewer' ); }
       },
       max_responses: {
         title: 'Max Responses',
-        type: 'string'
+        type: 'string',
+        isIncluded: function( $state, model ) { return !model.isRole( 'interviewer' ); }
       },
       module_count: {
         title: 'Modules'
@@ -61,11 +67,13 @@ define( [ 'module' ].reduce( function( list, name ) {
     variable_suffix: {
       title: 'Variable Suffix',
       type: 'string',
+      isExcluded: function( $state, model ) { return model.isRole( 'interviewer' ); },
       isConstant: function( $state, model ) { return model.viewModel.record.readonly; }
     },
     base_language_id: {
       title: 'Base Language',
       type: 'enum',
+      isExcluded: function( $state, model ) { return model.isRole( 'interviewer' ); },
       isConstant: function( $state, model ) { return model.viewModel.record.readonly; }
     },
     average_time: {
@@ -77,21 +85,23 @@ define( [ 'module' ].reduce( function( list, name ) {
     debug: {
       title: 'Debug Mode',
       type: 'boolean',
+      isExcluded: function( $state, model ) { return model.isRole( 'interviewer' ); },
       isConstant: function( $state, model ) { return model.viewModel.record.readonly; }
     },
     readonly: {
       title: 'Read Only',
       type: 'boolean',
-      isExcluded: 'add'
+      isExcluded: function( $state, model ) { return model.isRole( 'interviewer' ) ? true : 'add'; }
     },
     closed: {
       title: 'Closed',
       type: 'boolean',
-      isExcluded: 'add'
+      isExcluded: function( $state, model ) { return model.isRole( 'interviewer' ) ? true : 'add'; }
     },
     repeated: {
       title: 'Repeated',
       type: 'enum',
+      isExcluded: function( $state, model ) { return model.isRole( 'interviewer' ); },
       isConstant: function( $state, model ) { return model.viewModel.record.readonly; }
     },
     repeat_offset: {
@@ -99,31 +109,55 @@ define( [ 'module' ].reduce( function( list, name ) {
       type: 'string',
       format: 'integer',
       isConstant: function( $state, model ) { return model.viewModel.record.readonly; },
-      isExcluded: function( $state, model ) { return !model.viewModel.record.repeated; }
+      isExcluded: function( $state, model ) { return model.isRole( 'interviewer' ) ? true : !model.viewModel.record.repeated; }
     },
     max_responses: {
       title: 'Maximum Number of Responses',
       type: 'string',
       format: 'integer',
       isConstant: function( $state, model ) { return model.viewModel.record.readonly; },
-      isExcluded: function( $state, model ) { return !model.viewModel.record.repeated; },
+      isExcluded: function( $state, model ) { return model.isRole( 'interviewer' ) ? true : !model.viewModel.record.repeated; },
       help: 'If set to 0 then there will be no maximum number of responses'
     },
     email_invitation: {
       title: 'Send Invitation Email',
       type: 'boolean',
+      isExcluded: function( $state, model ) { return model.isRole( 'interviewer' ); },
       isConstant: function( $state, model ) { return model.viewModel.record.readonly; }
     },
     email_from_name: {
       title: 'Email From Name',
       type: 'string',
+      isExcluded: function( $state, model ) { return model.isRole( 'interviewer' ); },
       isConstant: function( $state, model ) { return model.viewModel.record.readonly; }
     },
     email_from_address: {
       title: 'Email From Address',
       type: 'string',
       format: 'email',
+      isExcluded: function( $state, model ) { return model.isRole( 'interviewer' ); },
       isConstant: function( $state, model ) { return model.viewModel.record.readonly; }
+    },
+    beartooth_url: {
+      title: 'Beartooth URL',
+      type: 'string',
+      help: 'The URL used to connect to Beartooth. ' +
+            'This information is never included in the import/export process.',
+      isExcluded: function( $state, model ) { return model.isRole( 'interviewer' ) || !model.isDetached(); }
+    },
+    beartooth_username: {
+      title: 'Beartooth Username',
+      type: 'string',
+      help: 'The interviewing instance\'s username used to connect to Beartooth ' +
+            'This information is never included in the import/export process.',
+      isExcluded: function( $state, model ) { return model.isRole( 'interviewer' ) || !model.isDetached(); }
+    },
+    beartooth_password: {
+      title: 'Beartooth Password',
+      type: 'string',
+      help: 'The interviewing instance\'s password used to connect to Beartooth ' +
+            'This information is never included in the import/export process.',
+      isExcluded: function( $state, model ) { return model.isRole( 'interviewer' ) || !model.isDetached(); }
     },
     description: {
       title: 'Description',
@@ -168,14 +202,6 @@ define( [ 'module' ].reduce( function( list, name ) {
     title: 'Patch',
     operation: function( $state, model ) {
       $state.go( 'qnaire.patch', { identifier: model.viewModel.record.getIdentifier() } );
-    },
-    isIncluded: function( $state, model ) { return model.getEditEnabled(); }
-  } );
-
-  module.addExtraOperation( 'view', {
-    title: 'Mass Respondent',
-    operation: function( $state, model ) {
-      $state.go( 'qnaire.mass_respondent', { identifier: model.viewModel.record.getIdentifier() } );
     },
     isIncluded: function( $state, model ) { return model.getEditEnabled(); }
   } );
@@ -510,7 +536,7 @@ define( [ 'module' ].reduce( function( list, name ) {
                 }
               } ).post().then( function( response ) {
                 CnModalMessageFactory.instance( {
-                  title: 'Recipients Created',
+                  title: 'Respondents Created',
                   message: 'You have successfully created ' + self.participantSelection.confirmedCount + ' new recipients for the "' +
                            self.qnaireName + '" questionnaire.'
                 } ).show().then( function() { self.onLoad(); } );
@@ -539,7 +565,8 @@ define( [ 'module' ].reduce( function( list, name ) {
     function( CnBaseViewFactory, CnHttpFactory, $filter, $state, $rootScope ) {
       var object = function( parentModel, root ) {
         var self = this;
-        CnBaseViewFactory.construct( this, parentModel, root, 'respondent' );
+        // the respondent only has one list (respondent list) so the default tab for them is null
+        CnBaseViewFactory.construct( this, parentModel, root, parentModel.isRole( 'interviewer' ) ? null : 'respondent' );
 
         this.deferred.promise.then( function() {
           if( angular.isDefined( self.moduleModel ) ) {
@@ -567,6 +594,13 @@ define( [ 'module' ].reduce( function( list, name ) {
           file: null,
           difference: null,
           differenceIsEmpty: false,
+
+          // only show the respondent list to respondents
+          getChildList: function() {
+            return self.parentModel.isRole( 'interviewer' ) ?
+              self.$$getChildList().filter( child => ['respondent'].includes( child.subject.snake ) ) :
+              self.$$getChildList();
+          },
 
           onView: function( force ) {
             return this.$$onView( force ).then( function() {
@@ -627,8 +661,8 @@ define( [ 'module' ].reduce( function( list, name ) {
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnQnaireModelFactory', [
-    'CnBaseModelFactory', 'CnQnaireAddFactory', 'CnQnaireListFactory', 'CnQnaireViewFactory', 'CnHttpFactory',
-    function( CnBaseModelFactory, CnQnaireAddFactory, CnQnaireListFactory, CnQnaireViewFactory, CnHttpFactory ) {
+    'CnBaseModelFactory', 'CnQnaireAddFactory', 'CnQnaireListFactory', 'CnQnaireViewFactory', 'CnHttpFactory', 'CnSession',
+    function( CnBaseModelFactory, CnQnaireAddFactory, CnQnaireListFactory, CnQnaireViewFactory, CnHttpFactory, CnSession ) {
       var object = function( root ) {
         var self = this;
         CnBaseModelFactory.construct( this, module );
@@ -636,33 +670,43 @@ define( [ 'module' ].reduce( function( list, name ) {
         this.listModel = CnQnaireListFactory.instance( this );
         this.viewModel = CnQnaireViewFactory.instance( this, root );
 
-        this.getBreadcrumbTitle = function() { return this.viewModel.record.name; };
+        angular.extend( this, {
+          getBreadcrumbTitle: function() { return this.viewModel.record.name; },
 
-        // extend getMetadata
-        this.getMetadata = function() {
-          return this.$$getMetadata().then( function() {
-            return CnHttpFactory.instance( {
-              path: 'language',
-              data: {
-                select: { column: [ 'id', 'name', 'code' ] },
-                modifier: {
-                  where: { column: 'active', operator: '=', value: true },
-                  order: 'name',
-                  limit: 1000
+          isDetached: function() { return CnSession.setting.detached; },
+
+          // override the service collection path so that respondents can view the qnaire list from the home screen
+          getServiceCollectionPath: function() {
+            // ignore the parent if it is root
+            return this.$$getServiceCollectionPath( 'root' == this.getSubjectFromState() );
+          },
+
+          // extend getMetadata
+          getMetadata: function() {
+            return this.$$getMetadata().then( function() {
+              return CnHttpFactory.instance( {
+                path: 'language',
+                data: {
+                  select: { column: [ 'id', 'name', 'code' ] },
+                  modifier: {
+                    where: { column: 'active', operator: '=', value: true },
+                    order: 'name',
+                    limit: 1000
+                  }
                 }
-              }
-            } ).query().then( function success( response ) {
-              self.metadata.columnList.base_language_id.enumList = [];
-              response.data.forEach( function( item ) {
-                self.metadata.columnList.base_language_id.enumList.push( {
-                  value: item.id,
-                  name: item.name,
-                  code: item.code // code is needed by the withdraw action
+              } ).query().then( function success( response ) {
+                self.metadata.columnList.base_language_id.enumList = [];
+                response.data.forEach( function( item ) {
+                  self.metadata.columnList.base_language_id.enumList.push( {
+                    value: item.id,
+                    name: item.name,
+                    code: item.code // code is needed by the withdraw action
+                  } );
                 } );
               } );
             } );
-          } );
-        };
+          }
+        } );
       };
 
       return {

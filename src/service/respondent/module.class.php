@@ -48,6 +48,12 @@ class module extends \cenozo\service\module
     }
     else
     {
+      if( $select->has_column( 'sends_mail' ) )
+      {
+        $select->add_constant( $db_respondent->get_qnaire()->sends_mail(), 'sends_mail', 'boolean' );
+      
+      }
+
       // include the participant first/last/uid as supplemental data
       $select->add_column(
         'CONCAT( participant.first_name, " ", participant.last_name, " (", participant.uid, ")" )',

@@ -253,6 +253,15 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
+   * Determines whether mail is sent by the qnaire
+   * @return boolean
+   */
+   public function sends_mail()
+   {
+     return $this->email_invitation || 0 < $this->get_reminder_count();
+   }
+
+  /**
    * Sends all qnaire mail for the given identifier list
    * @param array $identifier_list A list of participant identifiers to affect
    */
@@ -314,6 +323,483 @@ class qnaire extends \cenozo\database\record
     ) );
 
     static::db()->execute( 'DELETE FROM mail WHERE id IN ( SELECT id FROM delete_mail )' );
+  }
+
+  /**
+   * Synchronizes this qnaire with the qnaire belonging to the parent instance
+   */
+  public function sync_with_parent()
+  {
+    if( is_null( PARENT_INSTANCE_URL ) ) return;
+
+    $url = sprintf( '%s/api/qnaire/name=%s?output=export&download=true', PARENT_INSTANCE_URL, util::full_urlencode( $this->name ) );
+    $curl = curl_init();
+    curl_setopt( $curl, CURLOPT_URL, $url );
+    curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
+    curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+    curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, 5 );
+    curl_setopt(
+      $curl,
+      CURLOPT_HTTPHEADER,
+      array( sprintf(
+        'Authorization: Basic %s',
+        base64_encode( sprintf( '%s:%s', $this->beartooth_username, $this->beartooth_password ) )
+      ) )
+    );
+
+    $response = curl_exec( $curl );
+    if( curl_errno( $curl ) )
+    {
+      throw lib::create( 'exception\runtime',
+        sprintf( 'Got error code %s when synchronizing qnaire with parent instance.  Message: %s',
+                 curl_errno( $curl ),
+                 curl_error( $curl ) ),
+        __METHOD__
+      );
+    }
+
+    $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
+    if( 401 == $code )
+    {
+      throw lib::create( 'exception\notice',
+        'Unable to synchronize questionnaire, invalid Beartooth username and/or password.',
+        __METHOD__
+      );
+    }
+    else if( 404 == $code )
+    {
+      // ignore missing qnaires, it just means the parent doesn't have it
+      log::info( sprintf( 'Questionnaire "%s" was not found in the parent instance, can\'t synchronize.', $this->name ) );
+    }
+    else if( 300 <= $code )
+    {
+      throw lib::create( 'exception\runtime',
+        sprintf( 'Got error code %s when synchronizing qnaire with parent instance.', $code ),
+        __METHOD__
+      );
+    }
+    else
+    {
+      $parent_qnaire = util::json_decode( $response );
+      $current_qnaire = util::json_decode( $this->generate( 'export', true ) );
+
+      if( $current_qnaire != $parent_qnaire )
+      {
+        // if the parent is different then apply it
+        $this->process_patch( $parent_qnaire, true );
+        log::info( sprintf( 'Questionnaire "%s" was out of sync with parent instance and has been updated.', $this->name ) );
+      }
+    }
+  }
+
+  /**
+   * Sends response data to a parent instance of Pine
+   */
+  public function export_response_data()
+  {
+    if( is_null( PARENT_INSTANCE_URL ) ) return;
+
+    // encode all respondent and response data into an array
+    $respondent_list = array();
+    $respondent_mod = lib::create( 'database\modifier' );
+    $respondent_mod->order( 'id' );
+    foreach( $this->get_respondent_object_list( $respondent_mod ) as $db_respondent )
+    {
+      $respondent = array(
+        'uid' => $db_respondent->get_participant()->uid,
+        'token' => $db_respondent->token,
+        'start_datetime' => $db_respondent->start_datetime->format( 'c' ),
+        'end_datetime' => $db_respondent->end_datetime->format( 'c' ),
+        'response_list' => array()
+      );
+
+      $response_mod = lib::create( 'database\modifier' );
+      $response_mod->order( 'rank' );
+      foreach( $db_respondent->get_response_object_list( $response_mod ) as $db_response )
+      {
+        $db_page = $db_response->get_page();
+        $db_module = is_null( $db_page ) ? NULL : $db_page->get_module();
+        $response = array(
+          'rank' => $db_response->rank,
+          'language' => $db_response->get_language()->code,
+          'module' => is_null( $db_module ) ? NULL : $db_module->name,
+          'page' => is_null( $db_page ) ? NULL : $db_page->name,
+          'submitted' => $db_response->submitted,
+          'show_hidden' => $db_response->show_hidden,
+          'start_datetime' => $db_response->start_datetime->format( 'c' ),
+          'last_datetime' => $db_response->last_datetime->format( 'c' ),
+          'answer_list' => array()
+        );
+
+        foreach( $db_response->get_answer_object_list() as $db_answer )
+        {
+          $response['answer_list'][] = array(
+            'question' => $db_answer->get_question()->name,
+            'language' => $db_answer->get_language()->code,
+            'value' => $db_answer->value
+          );
+        }
+
+        $respondent['response_list'][] = $response;
+      }
+
+      $respondent_list[] = $respondent;
+    }
+
+    $url = sprintf( '%s/api/qnaire/name=%s/respondent?operation=import', PARENT_INSTANCE_URL, util::full_urlencode( $this->name ) );
+    $curl = curl_init();
+    curl_setopt( $curl, CURLOPT_URL, $url );
+    curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
+    curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+    curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, 5 );
+    curl_setopt( $curl, CURLOPT_POST, true );
+    curl_setopt( $curl, CURLOPT_POSTFIELDS, util::json_encode( $respondent_list ) );
+    curl_setopt(
+      $curl,
+      CURLOPT_HTTPHEADER,
+      array(
+        sprintf(
+          'Authorization: Basic %s',
+          base64_encode( sprintf( '%s:%s', $this->beartooth_username, $this->beartooth_password ) )
+        ),
+        'Content-Type: application/json'
+      )
+    );
+
+    $response = curl_exec( $curl );
+    if( curl_errno( $curl ) )
+    {
+      throw lib::create( 'exception\runtime',
+        sprintf( 'Got error code %s when synchronizing qnaire with parent instance.  Message: %s',
+                 curl_errno( $curl ),
+                 curl_error( $curl ) ),
+        __METHOD__
+      );
+    }
+
+    $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
+    if( 401 == $code )
+    {
+      throw lib::create( 'exception\notice',
+        'Unable to synchronize questionnaire, invalid Beartooth username and/or password.',
+        __METHOD__
+      );
+    }
+    else if( 404 == $code )
+    {
+      // ignore missing qnaires, it just means the parent doesn't have it
+      log::info( sprintf( 'Questionnaire "%s" was not found in the parent instance, can\'t synchronize.', $this->name ) );
+    }
+    else if( 300 <= $code )
+    {
+      throw lib::create( 'exception\runtime',
+        sprintf( 'Got error code %s when synchronizing qnaire with parent instance.', $code ),
+        __METHOD__
+      );
+    }
+  }
+
+  /**
+   * Imports response data from a child instance of Pine
+   * @param array $respondent_list
+   */
+  public function import_response_data( $respondent_list )
+  {
+    $participant_class_name = lib::get_class_name( 'database\participant' );
+    $respondent_class_name = lib::get_class_name( 'database\respondent' );
+    $response_class_name = lib::get_class_name( 'database\response' );
+    $language_class_name = lib::get_class_name( 'database\language' );
+    $module_class_name = lib::get_class_name( 'database\module' );
+    $page_class_name = lib::get_class_name( 'database\page' );
+    $answer_class_name = lib::get_class_name( 'database\answer' );
+
+    foreach( $respondent_list as $respondent )
+    {
+      $db_participant = $participant_class_name::get_unique_record( 'uid', $respondent->uid );
+      if( !is_null( $db_participant ) )
+      {
+        $db_respondent = $respondent_class_name::get_unique_record(
+          array( 'qnaire_id', 'participant_id' ),
+          array( $this->id, $db_participant->id )
+        );
+
+        $new_respondent = false;
+        if( is_null( $db_respondent ) )
+        {
+          $new_respondent = true;
+          $db_respondent = lib::create( 'database\respondent' );
+          $db_respondent->qnaire_id = $this->id;
+          $db_respondent->participant_id = $db_participant->id;
+          $db_respondent->save();
+        }
+
+        $db_respondent->start_datetime = $respondent->start_datetime;
+        $db_respondent->end_datetime = $respondent->end_datetime;
+        $db_respondent->token = $respondent->token;
+        $db_respondent->save();
+
+        foreach( $respondent->response_list as $response )
+        {
+          $db_response = NULL;
+          if( !$new_respondent )
+          { // only bother to check for an existing response if the respondent isn't new
+            $db_response = $response_class_name::get_unique_record(
+              array( 'respondent_id', 'rank' ),
+              array( $db_respondent->id, $response->rank )
+            );
+          }
+
+          $new_response = false;
+          if( is_null( $db_response ) )
+          {
+            $new_response = true;
+            $db_response = lib::create( 'database\response' );
+            $db_response->respondent_id = $db_respondent->id;
+            $db_response->rank = $response->rank;
+          }
+
+          $db_module = $module_class_name::get_unique_record(
+            array( 'qnaire_id', 'name' ),
+            array( $this->id, $response->module )
+          );
+          $db_page = is_null( $db_module )
+                   ? NULL
+                   : $page_class_name::get_unique_record(
+                       array( 'module_id', 'name' ),
+                       array( $db_module->id, $response->page )
+                     );
+
+          $db_response->language_id = $language_class_name::get_unique_record( 'code', $response->language )->id;
+          if( !is_null( $db_page ) ) $db_response->page_id = $db_page->id;
+          $db_response->submitted = $response->submitted;
+          $db_response->show_hidden = $response->show_hidden;
+          $db_response->start_datetime = $response->start_datetime;
+          $db_response->last_datetime = $response->last_datetime;
+          $db_response->save();
+
+          foreach( $response->answer_list as $answer )
+          {
+            $db_question = $this->get_question( $answer->question );
+            $db_answer = NULL;
+            if( !$new_response )
+            { // only bother to check for an existing answer if the response isn't new
+              $db_answer = $answer_class_name::get_unique_record(
+                array( 'response_id', 'question_id' ),
+                array( $db_response->id, $db_question->id )
+              );
+            }
+
+            if( is_null( $db_answer ) )
+            {
+              $db_answer = lib::create( 'database\answer' );
+              $db_answer->response_id = $db_response->id;
+              $db_answer->question_id = $db_question->id;
+            }
+
+            $db_answer->language_id = $language_class_name::get_unique_record( 'code', $answer->language )->id;
+            $db_answer->value = $answer->value;
+            $db_answer->save();
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Imports a list of respondents to the qnaire from Beartooth
+   */
+  public function get_respondents_from_beartooth()
+  {
+    $respondent_class_name = lib::get_class_name( 'database\respondent' );
+    $participant_class_name = lib::get_class_name( 'database\participant' );
+    $cohort_class_name = lib::get_class_name( 'database\cohort' );
+    $language_class_name = lib::get_class_name( 'database\language' );
+    $region_class_name = lib::get_class_name( 'database\region' );
+
+    if( is_null( $this->beartooth_url ) || is_null( $this->beartooth_username ) || is_null( $this->beartooth_password ) )
+    {
+      throw lib::create( 'expression\runtime',
+        'Tried to get respondents from Beartooth without a URL, username and password.',
+        __METHOD__
+      );
+    }
+
+    $url = sprintf( '%s/api/appointment', $this->beartooth_url );
+    $curl = curl_init();
+    curl_setopt( $curl, CURLOPT_URL, $url );
+    curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
+    curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+    curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, 5 );
+    curl_setopt(
+      $curl,
+      CURLOPT_HTTPHEADER,
+      array(
+        sprintf(
+          'Authorization: Basic %s',
+          base64_encode( sprintf( '%s:%s', $this->beartooth_username, $this->beartooth_password ) )
+        )
+      )
+    );
+
+    $response = curl_exec( $curl );
+    if( curl_errno( $curl ) )
+    {
+      throw lib::create( 'exception\runtime',
+        sprintf( 'Got error code %s when getting appointment list from Beartooth.  Message: %s',
+                 curl_errno( $curl ),
+                 curl_error( $curl ) ),
+        __METHOD__
+      );
+    }
+
+    $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
+    if( 401 == $code )
+    {
+      throw lib::create( 'exception\notice',
+        'Unable to get appointment list, invalid Beartooth username and/or password.',
+        __METHOD__
+      );
+    }
+    else if( 300 <= $code )
+    {
+      throw lib::create( 'exception\runtime',
+        sprintf( 'Got response code %s when getting appointment list from Beartooth.', $code ),
+        __METHOD__
+      );
+    }
+
+    foreach( util::json_decode( $response ) as $participant )
+    {
+      // see whether the participant already exists
+      $db_participant = $participant_class_name::get_unique_record( 'uid', $participant->uid );
+      if( is_null( $db_participant ) )
+      {
+        $db_cohort = $cohort_class_name::get_unique_record( 'name', $participant->cohort );
+        $db_language = $language_class_name::get_unique_record( 'code', $participant->language );
+        $db_region = $region_class_name::get_unique_record( 'name', $participant->province );
+
+        // create the participant record
+        $db_participant = lib::create( 'database\participant' );
+        $db_participant->uid = $participant->uid;
+        $db_participant->cohort_id = $db_cohort->id;
+        $db_participant->language_id = $db_language->id;
+        $db_participant->honorific = $participant->honorific;
+        $db_participant->first_name = $participant->first_name;
+        $db_participant->last_name = $participant->last_name;
+        $db_participant->sex = $participant->gender;
+        $db_participant->current_sex = $participant->gender;
+        $db_participant->email = $participant->email;
+        $db_participant->other_name = $participant->otherName;
+        $db_participant->date_of_birth = $participant->dob;
+        $db_participant->save();
+
+        // create the address record
+        $db_address = lib::create( 'database\address' );
+        $db_address->participant_id = $db_participant->id;
+        $db_address->rank = 1;
+        $db_address->address1 = $participant->street;
+        $db_address->city = $participant->city;
+        $db_address->region_id = $db_region->id;
+        $db_address->postcode = $participant->postcode;
+        $db_address->save();
+      }
+
+      // add the participant's respondent file
+      $db_respondent = $respondent_class_name::get_unique_record(
+        array( 'qnaire_id', 'participant_id' ),
+        array( $this->id, $db_participant->id )
+      );
+
+      if( is_null( $db_respondent ) )
+      {
+        $db_respondent = lib::create( 'database\respondent' );
+        $db_respondent->qnaire_id = $this->id;
+        $db_respondent->participant_id = $db_participant->id;
+        $db_respondent->save();
+      }
+    }
+  }
+
+  /** 
+   * Updates beartooth with respondents' complete status
+   */
+  public function send_respondents_to_beartooth()
+  {
+    if( is_null( $this->beartooth_url ) || is_null( $this->beartooth_username ) || is_null( $this->beartooth_password ) )
+    {
+      throw lib::create( 'expression\runtime',
+        'Tried to send respondents to Beartooth without a URL, username and password.',
+        __METHOD__
+      );
+    }
+
+    // get a list of all completed respondents
+    $respondent_list = array();
+    $respondent_sel = lib::create( 'database\select' );
+    $respondent_sel->add_table_column( 'participant', 'uid' );
+    $respondent_sel->add_column( 'end_datetime' );
+    $respondent_mod = lib::create( 'database\modifier' );
+    $respondent_mod->join( 'participant', 'respondent.participant_id', 'participant.id' );
+    $respondent_mod->where( 'end_datetime', '!=', NULL );
+    foreach( $this->get_respondent_list( $respondent_sel, $respondent_mod ) as $respondent )
+    {
+      $respondent_list[] = array(
+        'uid' => $respondent['uid'],
+        'object' => array(
+          'end_datetime' => $respondent['end_datetime']
+        )
+      );
+    }
+
+    if( 0 < count( $respondent_list ) )
+    {
+      $url = sprintf( '%s/api/pine', $this->beartooth_url );
+      $curl = curl_init();
+      curl_setopt( $curl, CURLOPT_URL, $url );
+      curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
+      curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+      curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, 5 );
+      curl_setopt( $curl, CURLOPT_POST, true );
+      curl_setopt( $curl, CURLOPT_POSTFIELDS, util::json_encode( $respondent_list ) );
+      curl_setopt(
+        $curl,
+        CURLOPT_HTTPHEADER,
+        array(
+          sprintf(
+            'Authorization: Basic %s',
+            base64_encode( sprintf( '%s:%s', $this->beartooth_username, $this->beartooth_password ) )
+          ),
+          'Content-Type: application/json'
+        )
+      );
+
+      $response = curl_exec( $curl );
+      if( curl_errno( $curl ) )
+      {
+        throw lib::create( 'exception\runtime',
+          sprintf( 'Got error code %s when getting appointment list from Beartooth.  Message: %s',
+                   curl_errno( $curl ),
+                   curl_error( $curl ) ),
+          __METHOD__
+        );
+      }
+
+      $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
+      if( 401 == $code )
+      {
+        throw lib::create( 'exception\notice',
+          'Unable to get appointment list, invalid Beartooth username and/or password.',
+          __METHOD__
+        );
+      }
+      else if( 300 <= $code )
+      {
+        throw lib::create( 'exception\runtime',
+          sprintf( 'Got response code %s when getting appointment list from Beartooth.', $code ),
+          __METHOD__
+        );
+      }
+    }
   }
 
   /**
@@ -1251,8 +1737,10 @@ class qnaire extends \cenozo\database\record
   /**
    * Exports or prints the qnaire
    * @param string $type One of "export" or "print"
+   * @param boolean $return_value Whether to return the generated data or write it to a file
+   * @return NULL|string|object
    */
-  public function generate( $type = 'export' )
+  public function generate( $type = 'export', $return_value = false )
   {
     $qnaire_data = array(
       'base_language' => $this->get_base_language()->code,
@@ -1580,7 +2068,11 @@ class qnaire extends \cenozo\database\record
       }
     }
 
-    if( false === file_put_contents( $filename, $contents, LOCK_EX ) )
+    if( $return_value )
+    {
+      return $contents;
+    }
+    else if( false === file_put_contents( $filename, $contents, LOCK_EX ) )
     {
       throw lib::create( 'exception\runtime',
         sprintf(

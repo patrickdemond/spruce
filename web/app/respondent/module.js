@@ -70,7 +70,35 @@ define( [ 'page' ].reduce( function( list, name ) {
       type: 'datetime',
       isConstant: true,
       isExcluded: 'add'
+    },
+    sends_mail: {
+      type: 'boolean',
+      isExcluded: true
     }
+  } );
+
+  module.addExtraOperation( 'list', {
+    title: 'Get Respondents',
+    operation: function( $state, model ) {
+      model.getRespondents();
+    },
+    isIncluded: function( $state, model ) { return model.isDetached() },
+    isDisabled: function( $state, model ) { return model.workInProgress; }
+  } );
+
+  module.addExtraOperation( 'list', {
+    title: 'Export Data',
+    operation: function( $state, model ) {
+      model.export();
+    },
+    isIncluded: function( $state, model ) { return model.isDetached() },
+    isDisabled: function( $state, model ) { return model.workInProgress; }
+  } );
+
+  module.addExtraOperation( 'list', {
+    title: 'Mass Respondent',
+    operation: function( $state, model ) { $state.go( 'qnaire.mass_respondent', { identifier: $state.params.identifier } ); },
+    isIncluded: function( $state, model ) { return !model.isDetached(); }
   } );
 
   module.addExtraOperation( 'view', {
@@ -88,6 +116,7 @@ define( [ 'page' ].reduce( function( list, name ) {
           model.viewModel.respondentMailModel.listModel.onList( true );
       } );
     },
+    isIncluded: function( $state, model ) { return model.viewModel.record.sends_mail; },
     help: 'This will re-schedule all mail for this respondent. ' + 
       'This is useful if mail was never sent or if email settings have changed since email was last scheduled.'
   } );
@@ -183,11 +212,18 @@ define( [ 'page' ].reduce( function( list, name ) {
         var self = this;
         CnBaseViewFactory.construct( this, parentModel, root, 'response' );
 
-        this.resendMail = function() {
-          return CnHttpFactory.instance( {
-            path: this.parentModel.getServiceResourcePath() + '?action=resend_mail'
-          } ).patch();
-        };
+        angular.extend( this, {
+          // only show the respondent list to respondents
+          getChildList: function() {
+            return self.$$getChildList().filter( child => 'response' == child.subject.snake || self.record.sends_mail );
+          },
+
+          resendMail: function() {
+            return CnHttpFactory.instance( {
+              path: this.parentModel.getServiceResourcePath() + '?action=resend_mail'
+            } ).patch();
+          }
+        } );
       }
       return { instance: function( parentModel, root ) { return new object( parentModel, root ); } };
     }
@@ -196,15 +232,56 @@ define( [ 'page' ].reduce( function( list, name ) {
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnRespondentModelFactory', [
     'CnBaseModelFactory', 'CnRespondentAddFactory', 'CnRespondentListFactory', 'CnRespondentViewFactory',
-    'CnHttpFactory',
+    'CnModalMessageFactory', 'CnSession', 'CnHttpFactory', '$state',
     function( CnBaseModelFactory, CnRespondentAddFactory, CnRespondentListFactory, CnRespondentViewFactory,
-              CnHttpFactory ) {
+              CnModalMessageFactory, CnSession, CnHttpFactory, $state ) {
       var object = function( root ) {
         var self = this;
         CnBaseModelFactory.construct( this, module );
         this.addModel = CnRespondentAddFactory.instance( this );
         this.listModel = CnRespondentListFactory.instance( this );
         this.viewModel = CnRespondentViewFactory.instance( this, root );
+
+        angular.extend( this, {
+          isDetached: function() { return CnSession.setting.detached; },
+          workInProgress: false,
+          getRespondents: function() {
+            var modal = CnModalMessageFactory.instance( {
+              title: 'Communicating with Remote Server',
+              message: 'Please wait while the respondent list is retrieved.',
+              block: true
+            } );
+            modal.show();
+
+            self.workInProgress = true;
+            CnHttpFactory.instance( {
+              path: 'qnaire/' + $state.params.identifier + '/respondent?operation=get_respondents'
+            } ).post().then( function() {
+              self.listModel.onList( true );
+            } ).finally( function() {
+              self.workInProgress = false;
+              modal.close();
+            } );
+          },
+          export: function() {
+            var modal = CnModalMessageFactory.instance( {
+              title: 'Communicating with Remote Server',
+              message: 'Please wait while the questionnaire responses are exported.',
+              block: true
+            } );
+            modal.show();
+
+            self.exportExportInProgress = true;
+            CnHttpFactory.instance( {
+              path: 'qnaire/' + $state.params.identifier + '/respondent?operation=export'
+            } ).post().then( function() {
+              self.listModel.onList( true );
+            } ).finally( function() {
+              self.exportExportInProgress = false;
+              modal.close();
+            } );
+          }
+        } );
       };
 
       return {

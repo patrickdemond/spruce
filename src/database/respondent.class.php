@@ -24,7 +24,7 @@ class respondent extends \cenozo\database\record
     if( $new )
     {
       $this->token = static::generate_token();
-      $this->start_datetime = util::get_datetime_object();
+      if( is_null( $this->start_datetime ) ) $this->start_datetime = util::get_datetime_object();
     }
 
     parent::save();
