@@ -18,7 +18,11 @@ define( function() {
 
   module.addInput( '', 'exclusive', { title: 'Exclusive', type: 'boolean' } );
   module.addInput( '', 'extra', { title: 'Extra', type: 'enum' } );
-  module.addInput( '', 'multiple_answers', { title: 'Multiple Answers', type: 'boolean' } );
+  module.addInput( '', 'multiple_answers', {
+    title: 'Multiple Answers',
+    type: 'boolean',
+    isExcluded: function( $state, model ) { return !model.viewModel.record.extra ? true : 'add'; }
+  } );
   module.addInput( '', 'minimum', {
     title: 'Minimum',
     type: 'string',
@@ -41,10 +45,10 @@ define( function() {
         scope: { model: '=?' },
         controller: function( $scope ) {
           if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnairePartCloneFactory.instance( 'question_option' );
-          
+
           $scope.model.onLoad().then( function() {
             CnSession.setBreadcrumbTrail( [ {
-              title: 'Page', 
+              title: 'Page',
               go: function() { return $state.go( 'question.list' ); }
             }, {
               title: $scope.model.parentSourceName,
@@ -60,6 +64,37 @@ define( function() {
           } );
         }
       };
+    }
+  ] );
+
+  // extend the view factory created by caling initQnairePartModule()
+  cenozo.providers.decorator( 'CnQuestionOptionViewFactory', [
+    '$delegate', '$filter',
+    function( $delegate, $filter ) {
+      var instance = $delegate.instance;
+      $delegate.instance = function( parentModel, root ) {
+        var object = instance( parentModel, root );
+
+        // when changing the extra value the multiple-answers, min and max columns are automatically updated by the DB
+        angular.extend( object, {
+          onPatch: function( data ) {
+            var self = this;
+            return this.$$onPatch( data ).then( function() {
+              if( angular.isDefined( data.extra ) ) {
+                if( !data.extra ) self.record.multiple_answers = false;
+                if( !['date', 'number'].includes( data.extra ) ) {
+                  self.record.minimum = '';
+                  self.record.maximum = '';
+                }
+              }
+            } );
+          }
+        } );
+
+        return object;
+      };
+
+      return $delegate;
     }
   ] );
 } );

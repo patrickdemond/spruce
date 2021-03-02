@@ -14,6 +14,7 @@ SOURCE qnaire_has_language.sql
 SOURCE qnaire.sql
 SOURCE qnaire_description.sql
 SOURCE respondent_mail.sql
+SOURCE question_option.sql
 
 SOURCE update_version_number.sql
 
