@@ -44,7 +44,7 @@ abstract class base_description_module extends \cenozo\service\module
         $description_mod = lib::create( 'database\modifier' );
         $description_mod->join( 'language', sprintf( '%s.language_id', $subject ), 'language.id' );
         $description_mod->order( 'language.code' );
-        $description_mod->order( 'type' );
+        $description_mod->order( $subject.'.type' );
         $description_list = $parent_record->$get_description_list_function( $description_sel, $description_mod );
 
         // loop until we find the current description and get the previous/next descriptions from there
