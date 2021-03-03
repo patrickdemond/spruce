@@ -853,10 +853,6 @@ class qnaire extends \cenozo\database\record
         $question_mod->order( 'question.rank' );
         foreach( $db_page->get_question_object_list( $question_mod ) as $db_question )
         {
-          // figure out the full variable name in pieces
-          $variable_pieces = array( $db_question->name );
-          if( !is_null( $this->variable_suffix ) ) $variable_pieces[] = $this->variable_suffix;
-
           $option_sel = lib::create( 'database\select' );
           $option_sel->add_column( 'id' );
           $option_sel->add_column( 'name' );
@@ -868,45 +864,51 @@ class qnaire extends \cenozo\database\record
           $option_mod->order( 'question_option.rank' );
           $option_list = $db_question->get_question_option_list( $option_sel, $option_mod );
 
-          // only create a variable for all options if at least one is not exclusive or has extra data
+          // only create a variable for all options if at least one is not exclusive
           $all_exclusive = true;
-          $no_extra = true;
           if( 'list' == $db_question->type )
-          {
             foreach( $option_list as $option )
-            {
               if( !$option['exclusive'] ) $all_exclusive = false;
-              if( !is_null( $option['extra'] ) ) $no_extra = false;
-            }
-          }
 
-          if( !$all_exclusive || !$no_extra )
+          // only create a single column for this question if there are no options or they are all exclusive
+          if( $all_exclusive )
           {
-            foreach( $option_list as $option )
-            {
-              // add the option name in the middle of the variable name pieces
-              $pieces = $variable_pieces;
-              array_splice( $pieces, 1, 0, $option['name'] );
-              $column_name = implode( '_', $pieces );
-              $column_list[$column_name] = array(
-                'question_id' => $db_question->id,
-                'option_id' => $option['id'],
-                'extra' => $option['extra'],
-                'multiple_answers' => $option['multiple_answers'],
-                'all_exclusive' => $all_exclusive,
-                'no_extra' => $no_extra
-              );
-            }
-          }
-          else
-          {
-            $column_name = implode( '_', $variable_pieces );
+            // get the base column name from the question's name
+            $column_name = $db_question->name;
+
+            // if it exists then add the qnaire's variable suffix to the question name
+            if( !is_null( $this->variable_suffix ) ) $column_name = sprintf( '%s_%s', $column_name, $this->variable_suffix );
+
             $column_list[$column_name] = array(
               'question_id' => $db_question->id,
               'type' => $db_question->type
             );
 
             if( 0 < count( $option_list ) ) $column_list[$column_name]['option_list'] = $option_list;
+          }
+
+          foreach( $option_list as $option )
+          {
+            // add an additional column for all options if any are not exclusive, or for all which have extra data
+            if( !$all_exclusive || $option['extra'] )
+            {
+              // get the base column name from the question's name
+              $column_name = $db_question->name;
+
+              // add the option's name as a suffix to the column name
+              $column_name = sprintf( '%s_%s', $column_name, $option['name'] );
+
+              // if it exists then add the qnaire's variable suffix to the question name
+              if( !is_null( $this->variable_suffix ) ) $column_name = sprintf( '%s_%s', $column_name, $this->variable_suffix );
+
+              $column_list[$column_name] = array(
+                'question_id' => $db_question->id,
+                'option_id' => $option['id'],
+                'extra' => $option['extra'],
+                'multiple_answers' => $option['multiple_answers'],
+                'all_exclusive' => $all_exclusive
+              );
+            }
           }
         }
       }
@@ -944,7 +946,7 @@ class qnaire extends \cenozo\database\record
         is_null( $db_response->start_datetime ) ? NULL : $db_response->start_datetime->format( 'c' ),
         is_null( $db_response->last_datetime ) ? NULL : $db_response->last_datetime->format( 'c' )
       );
-      foreach( $column_list as $column )
+      foreach( $column_list as $column_name => $column )
       {
         $row_value = NULL;
 
@@ -984,7 +986,8 @@ class qnaire extends \cenozo\database\record
               { // this is a "select one option" so set the answer to the option's name
                 if( is_array( $answer ) )
                 {
-                  $option_id = current( $answer );
+                  $this_answer = current( $answer );
+                  $option_id = is_object( $this_answer ) ? $this_answer->id : $this_answer;
                   foreach( $column['option_list'] as $option )
                   {
                     if( $option_id == $option['id'] )
@@ -1003,7 +1006,7 @@ class qnaire extends \cenozo\database\record
           }
         }
 
-        $data_row[] = $row_value;
+        $data_row[] = is_array( $row_value ) ? implode( ';', $row_value ) : $row_value;
       }
 
       $data[] = $data_row;

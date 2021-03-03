@@ -330,8 +330,18 @@ define( function() {
                           option.selected = false;
                           option.value = null;
                           if( angular.isArray( question.value ) ) {
-                            if( question.value.includes( option.id ) ) {
+                            var matchedValue = null;
+                            if( question.value.some( function( value ) {
+                              matchedValue = value;
+                              return ( angular.isObject( value ) && value.id == option.id ) ||
+                                     ( !angular.isObject( value ) && value == option.id );
+                            } ) ) {
                               option.selected = true;
+                              if( angular.isObject( matchedValue ) ) {
+                                option.value = angular.isArray( matchedValue.value )
+                                             ? matchedValue.value.join( '; ' )
+                                             : matchedValue.value;
+                              }
                             } else {
                               var obj = question.value.findByProperty( 'id', option.id );
                               if( null != obj ) {
