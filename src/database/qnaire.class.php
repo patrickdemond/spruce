@@ -858,7 +858,6 @@ class qnaire extends \cenozo\database\record
           $option_sel->add_column( 'name' );
           $option_sel->add_column( 'exclusive' );
           $option_sel->add_column( 'extra' );
-          $option_sel->add_column( 'multiple_answers' );
 
           $option_mod = lib::create( 'database\modifier' );
           $option_mod->order( 'question_option.rank' );
@@ -892,11 +891,8 @@ class qnaire extends \cenozo\database\record
             // add an additional column for all options if any are not exclusive, or for all which have extra data
             if( !$all_exclusive || $option['extra'] )
             {
-              // get the base column name from the question's name
-              $column_name = $db_question->name;
-
-              // add the option's name as a suffix to the column name
-              $column_name = sprintf( '%s_%s', $column_name, $option['name'] );
+              // get the base column name from the question's name and add the option's name as a suffix
+              $column_name = sprintf( '%s_%s', $db_question->name, $option['name'] );
 
               // if it exists then add the qnaire's variable suffix to the question name
               if( !is_null( $this->variable_suffix ) ) $column_name = sprintf( '%s_%s', $column_name, $this->variable_suffix );
@@ -905,10 +901,37 @@ class qnaire extends \cenozo\database\record
                 'question_id' => $db_question->id,
                 'option_id' => $option['id'],
                 'extra' => $option['extra'],
-                'multiple_answers' => $option['multiple_answers'],
                 'all_exclusive' => $all_exclusive
               );
             }
+          }
+
+          // finally, if not all exclusive and dkna/refuse is enabled then create these options as columns as well
+          if( !$all_exclusive && $db_question->dkna_refuse )
+          {
+            // get the base column name from the question's name and add DK_NA as a suffix
+            $column_name = sprintf( '%s_DK_NA', $db_question->name );
+
+            // if it exists then add the qnaire's variable suffix to the question name
+            if( !is_null( $this->variable_suffix ) ) $column_name = sprintf( '%s_%s', $column_name, $this->variable_suffix );
+
+            $column_list[$column_name] = array(
+              'question_id' => $db_question->id,
+              'option_id' => 'dkna',
+              'all_exclusive' => $all_exclusive
+            );
+
+            // get the base column name from the question's name and add REFUSED as a suffix
+            $column_name = sprintf( '%s_REFUSED', $db_question->name );
+
+            // if it exists then add the qnaire's variable suffix to the question name
+            if( !is_null( $this->variable_suffix ) ) $column_name = sprintf( '%s_%s', $column_name, $this->variable_suffix );
+
+            $column_list[$column_name] = array(
+              'question_id' => $db_question->id,
+              'option_id' => 'refuse',
+              'all_exclusive' => $all_exclusive
+            );
           }
         }
       }
@@ -955,24 +978,46 @@ class qnaire extends \cenozo\database\record
           $answer = util::json_decode( $answer_list[$column['question_id']] );
           if( is_object( $answer ) && property_exists( $answer, 'dkna' ) && $answer->dkna )
           {
-            $row_value = 'DK_NA';
+            if( array_key_exists( 'option_id', $column ) )
+            { // this is a multiple-answer question, so set the value to no unless this is the DN_KA column
+              $row_value = 'dkna' == $column['option_id'] ? 'YES' : 'NO';
+            }
+            else
+            {
+              $row_value = 'DK_NA';
+            }
           }
           else if( is_object( $answer ) && property_exists( $answer, 'refuse' ) && $answer->refuse )
           {
-            $row_value = 'REFUSED';
+            if( array_key_exists( 'option_id', $column ) )
+            { // this is a multiple-answer question, so set the value to no unless this is the REFUSED column
+              $row_value = 'refuse' == $column['option_id'] ? 'YES' : 'NO';
+            }
+            else
+            {
+              $row_value = 'REFUSED';
+            }
           }
           else
           {
             if( array_key_exists( 'option_id', $column ) )
             { // this is a multiple-answer question, so every answer is its own variable
-              $row_value = !$column['all_exclusive'] ? 'NO' : NULL;
-              if( is_array( $answer ) ) foreach( $answer as $a )
+              if( 'dkna' == $column['option_id'] || 'refuse' == $column['option_id'] )
               {
-                if( ( is_object( $a ) && $column['option_id'] == $a->id ) || ( !is_object( $a ) && $column['option_id'] == $a ) )
+                // whatever the answer is it isn't dkna or refused
+                $row_value = 'NO';
+              }
+              else
+              {
+                $row_value = !$column['all_exclusive'] ? 'NO' : NULL;
+                if( is_array( $answer ) ) foreach( $answer as $a )
                 {
-                  // use the value if the option asks for extra data
-                  $row_value = is_null( $column['extra'] ) ? 'YES' : ( property_exists( $a, 'value' ) ? $a->value : NULL );
-                  break;
+                  if( ( is_object( $a ) && $column['option_id'] == $a->id ) || ( !is_object( $a ) && $column['option_id'] == $a ) )
+                  {
+                    // use the value if the option asks for extra data
+                    $row_value = is_null( $column['extra'] ) ? 'YES' : ( property_exists( $a, 'value' ) ? $a->value : NULL );
+                    break;
+                  }
                 }
               }
             }
