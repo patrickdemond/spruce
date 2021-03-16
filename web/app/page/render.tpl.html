@@ -60,8 +60,17 @@
                      'text-info': 'comment' == question.type,
                      'text-danger': true === question.incomplete
                    }"
-                   ng-bind-html="question.prompts[model.renderModel.currentLanguage]"
-                   uib-tooltip-html="question.popups[model.renderModel.currentLanguage]"></div>
+                   ng-bind-html="question.prompts[model.renderModel.currentLanguage] + (
+                     question.popups[model.renderModel.currentLanguage] || question.minimum || question.maximum ? ' <sup>ⓘ</sup>' : ''
+                   )"
+                   uib-tooltip-html="question.popups[model.renderModel.currentLanguage] + (
+                     ( question.minimum || question.maximum ? ' [' : '' ) +
+                     ( question.minimum ? 'Min: ' + question.minimum : '' ) +
+                     ( question.minimum && question.maximum ? ', ' : '' ) +
+                     ( question.maximum ? 'Max: ' + question.maximum : '' ) +
+                     ( question.minimum || question.maximum ? ']' : '' )
+                   )">
+              </div>
               <div class="horizontal-spacer"
                    ng-class="{ 'has-error': true === question.incomplete }"
                    ng-if="'comment' != question"
@@ -105,9 +114,15 @@
                       ng-bind-html="'<i class=\'glyphicon ' + (
                         question.answer.optionList[option.id].selected ? 'glyphicon-check' : 'glyphicon-unchecked'
                       ) + '\'></i> ' + option.prompts[model.renderModel.currentLanguage] + (
-                        option.popups[model.renderModel.currentLanguage] ? ' ⓘ' : ''
+                        option.popups[model.renderModel.currentLanguage] || option.minimum || option.maximum ? ' ⓘ' : ''
                       )"
-                      uib-tooltip-html="option.popups[model.renderModel.currentLanguage]"
+                      uib-tooltip-html="option.popups[model.renderModel.currentLanguage] + (
+                        ( option.minimum || option.maximum ? ' [' : '' ) +
+                        ( option.minimum ? 'Min: ' + option.minimum : '' ) +
+                        ( option.minimum && option.maximum ? ', ' : '' ) +
+                        ( option.maximum ? 'Max: ' + option.maximum : '' ) +
+                        ( option.minimum || option.maximum ? ']' : '' )
+                      )"
                       uib-btn-checkbox>
                     </label>
                   </div>
@@ -119,9 +134,15 @@
                       ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal', 'font-weight': 'normal' }"
                       ng-bind-html="
                         option.prompts[model.renderModel.currentLanguage] + (
-                          option.popups[model.renderModel.currentLanguage] ? ' ⓘ' : ''
+                          option.popups[model.renderModel.currentLanguage] || option.minimum || option.maximum ? ' ⓘ' : ''
                         ) + ' <i class=\'glyphicon glyphicon-plus\'></i>'"
-                      uib-tooltip-html="option.popups[model.renderModel.currentLanguage]"
+                      uib-tooltip-html="option.popups[model.renderModel.currentLanguage] + (
+                        ( option.minimum || option.maximum ? ' [' : '' ) +
+                        ( option.minimum ? 'Min: ' + option.minimum : '' ) +
+                        ( option.minimum && option.maximum ? ', ' : '' ) +
+                        ( option.maximum ? 'Max: ' + option.maximum : '' ) +
+                        ( option.minimum || option.maximum ? ']' : '' )
+                      )"
                       ng-click="model.renderModel.addAnswerValue( question, option )">
                     </label>
                   </div>
