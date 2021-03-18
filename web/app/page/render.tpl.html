@@ -65,9 +65,9 @@
                    )"
                    uib-tooltip-html="question.popups[model.renderModel.currentLanguage] + (
                      ( question.minimum || question.maximum ? ' [' : '' ) +
-                     ( question.minimum ? 'Min: ' + question.minimum : '' ) +
+                     ( question.minimum ? 'Min: ' + model.renderModel.evaluateLimit( question.minimum ) : '' ) +
                      ( question.minimum && question.maximum ? ', ' : '' ) +
-                     ( question.maximum ? 'Max: ' + question.maximum : '' ) +
+                     ( question.maximum ? 'Max: ' + model.renderModel.evaluateLimit( question.maximum ) : '' ) +
                      ( question.minimum || question.maximum ? ']' : '' )
                    )">
               </div>
@@ -118,9 +118,9 @@
                       )"
                       uib-tooltip-html="option.popups[model.renderModel.currentLanguage] + (
                         ( option.minimum || option.maximum ? ' [' : '' ) +
-                        ( option.minimum ? 'Min: ' + option.minimum : '' ) +
+                        ( option.minimum ? 'Min: '+ model.renderModel.evaluateLimit( option.minimum ) : '' ) +
                         ( option.minimum && option.maximum ? ', ' : '' ) +
-                        ( option.maximum ? 'Max: ' + option.maximum : '' ) +
+                        ( option.maximum ? 'Max: '+ model.renderModel.evaluateLimit( option.maximum ) : '' ) +
                         ( option.minimum || option.maximum ? ']' : '' )
                       )"
                       uib-btn-checkbox>
@@ -138,9 +138,9 @@
                         ) + ' <i class=\'glyphicon glyphicon-plus\'></i>'"
                       uib-tooltip-html="option.popups[model.renderModel.currentLanguage] + (
                         ( option.minimum || option.maximum ? ' [' : '' ) +
-                        ( option.minimum ? 'Min: ' + option.minimum : '' ) +
+                        ( option.minimum ? 'Min: '+ model.renderModel.evaluateLimit( option.minimum ) : '' ) +
                         ( option.minimum && option.maximum ? ', ' : '' ) +
-                        ( option.maximum ? 'Max: ' + option.maximum : '' ) +
+                        ( option.maximum ? 'Max: '+ model.renderModel.evaluateLimit( option.maximum ) : '' ) +
                         ( option.minimum || option.maximum ? ']' : '' )
                       )"
                       ng-click="model.renderModel.addAnswerValue( question, option )">
