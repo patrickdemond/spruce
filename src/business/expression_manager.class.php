@@ -213,7 +213,7 @@ class expression_manager extends \cenozo\singleton
         }
         else if( 'constant' == $this->active_term )
         {
-          if( preg_match( '/[a-z]/', $char ) )
+          if( preg_match( '/[a-z_]/', $char ) )
           {
             $this->term .= $char;
             $process_char = false;
@@ -353,6 +353,7 @@ class expression_manager extends \cenozo\singleton
     $type = NULL;
     if( 'null' == $this->term ) $type = 'null';
     else if( in_array( $this->term, ['true', 'false', 'showhidden'] ) ) $type = 'boolean';
+    else if( in_array( $this->term, ['current_year', 'current_month', 'current_day'] ) ) $type = 'string';
 
     if( is_null( $type ) )
       throw lib::create( 'exception\runtime', sprintf( 'Invalid constant "%s"', $this->term ), __METHOD__ );
