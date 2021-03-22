@@ -829,15 +829,19 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
-   * Returns an array of all responses to this qnaire
-   * @param database\modifier $modifier
-   * @return array( 'header', 'data' )
+   * Returns an array of all questions belonging to this qnaire
+   * @param boolean $descriptions If true then include module, page and question descriptions
+   * @return array
    */
-  public function get_response_data( $modifier = NULL )
+  public function get_all_questions( $descriptions = false )
   {
-    set_time_limit( 900 ); // 15 minutes max
+    $column_list = array();
 
-    $response_class_name = lib::get_class_name( 'database\response' );
+    // determine which languages the qnaire uses
+    $language_list = array();
+    $language_sel = lib::create( 'database\select' );
+    $language_sel->add_column( 'code' );
+    foreach( $this->get_language_list( $language_sel ) as $language ) $language_list[] = $language['code'];
 
     // first get a list of all columns to include in the data
     $module_mod = lib::create( 'database\modifier' );
@@ -853,21 +857,49 @@ class qnaire extends \cenozo\database\record
         $question_mod->order( 'question.rank' );
         foreach( $db_page->get_question_object_list( $question_mod ) as $db_question )
         {
-          $option_sel = lib::create( 'database\select' );
-          $option_sel->add_column( 'id' );
-          $option_sel->add_column( 'name' );
-          $option_sel->add_column( 'exclusive' );
-          $option_sel->add_column( 'extra' );
+          $prompt_list = array( 'module_prompt' => array(), 'page_prompt' => array(), 'question_prompt' => array() );
+          if( $descriptions )
+          {
+            // add the module's prompt
+            $description_sel = lib::create( 'database\select' );
+            $description_sel->add_table_column( 'language', 'code', 'language' );
+            $description_sel->add_column( 'value' );
+            $description_mod = lib::create( 'database\modifier' );
+            $description_mod->join( 'language', 'module_description.language_id', 'language.id' );
+            $description_mod->where( 'module_description.type', '=', 'prompt' );
+            foreach( $db_module->get_module_description_list( $description_sel, $description_mod ) as $item )
+              $prompt_list['module_prompt'][$item['language']] = $item['value'];
+
+            // add the page's prompt
+            $description_sel = lib::create( 'database\select' );
+            $description_sel->add_table_column( 'language', 'code', 'language' );
+            $description_sel->add_column( 'value' );
+            $description_mod = lib::create( 'database\modifier' );
+            $description_mod->join( 'language', 'page_description.language_id', 'language.id' );
+            $description_mod->where( 'page_description.type', '=', 'prompt' );
+            foreach( $db_page->get_page_description_list( $description_sel, $description_mod ) as $item )
+              $prompt_list['page_prompt'][$item['language']] = $item['value'];
+
+            // add the question's prompt
+            $description_sel = lib::create( 'database\select' );
+            $description_sel->add_table_column( 'language', 'code', 'language' );
+            $description_sel->add_column( 'value' );
+            $description_mod = lib::create( 'database\modifier' );
+            $description_mod->join( 'language', 'question_description.language_id', 'language.id' );
+            $description_mod->where( 'question_description.type', '=', 'prompt' );
+            foreach( $db_question->get_question_description_list( $description_sel, $description_mod ) as $item )
+              $prompt_list['question_prompt'][$item['language']] = $item['value'];
+          }
 
           $option_mod = lib::create( 'database\modifier' );
           $option_mod->order( 'question_option.rank' );
-          $option_list = $db_question->get_question_option_list( $option_sel, $option_mod );
+          $option_list = $db_question->get_question_option_object_list( $option_mod );
 
           // only create a variable for all options if at least one is not exclusive
           $all_exclusive = true;
           if( 'list' == $db_question->type )
-            foreach( $option_list as $option )
-              if( !$option['exclusive'] ) $all_exclusive = false;
+            foreach( $option_list as $db_option )
+              if( !$db_option->exclusive ) $all_exclusive = false;
 
           // only create a single column for this question if there are no options or they are all exclusive
           if( $all_exclusive )
@@ -879,30 +911,82 @@ class qnaire extends \cenozo\database\record
             if( !is_null( $this->variable_suffix ) ) $column_name = sprintf( '%s_%s', $column_name, $this->variable_suffix );
 
             $column_list[$column_name] = array(
+              'module_name' => $db_module->name,
+              'page_name' => $db_page->name,
+              'question_name' => $db_question->name,
               'question_id' => $db_question->id,
-              'type' => $db_question->type
+              'type' => $db_question->type,
+              'minimum' => $db_question->minimum,
+              'maximum' => $db_question->maximum,
+              'module_precondition' => $db_module->precondition,
+              'page_precondition' => $db_page->precondition,
+              'question_precondition' => $db_question->precondition
             );
 
-            if( 0 < count( $option_list ) ) $column_list[$column_name]['option_list'] = $option_list;
+            if( $descriptions ) $column_list[$column_name] = array_merge( $column_list[$column_name], $prompt_list );
+
+            if( 0 < count( $option_list ) )
+            {
+              $column_list[$column_name]['option_list'] = array();
+              foreach( $option_list as $db_option )
+                $column_list[$column_name]['option_list'][] = array( 'id' => $db_option->id, 'name' => $db_option->name );
+            }
           }
 
-          foreach( $option_list as $option )
+          foreach( $option_list as $db_option )
           {
             // add an additional column for all options if any are not exclusive, or for all which have extra data
-            if( !$all_exclusive || $option['extra'] )
+            if( !$all_exclusive || $db_option->extra )
             {
               // get the base column name from the question's name and add the option's name as a suffix
-              $column_name = sprintf( '%s_%s', $db_question->name, $option['name'] );
+              $column_name = sprintf( '%s_%s', $db_question->name, $db_option->name );
 
               // if it exists then add the qnaire's variable suffix to the question name
               if( !is_null( $this->variable_suffix ) ) $column_name = sprintf( '%s_%s', $column_name, $this->variable_suffix );
 
+              $precondition = NULL;
+              $precondition = $db_question->precondition;
+              if( !is_null( $db_option->precondition ) )
+              {
+                if( is_null( $precondition ) ) $precondition = $db_option->precondition;
+                else $precondition = sprintf( '(%s) && (%s)', $precondition, $db_option->precondition );
+              }
+
               $column_list[$column_name] = array(
+                'module_name' => $db_module->name,
+                'page_name' => $db_page->name,
+                'question_name' => $db_question->name,
+                'question_option_name' => $db_option->name,
                 'question_id' => $db_question->id,
-                'option_id' => $option['id'],
-                'extra' => $option['extra'],
-                'all_exclusive' => $all_exclusive
+                'type' => $db_question->type,
+                'option_id' => $db_option->id,
+                'type' => $db_question->type,
+                'minimum' => $db_option->minimum,
+                'maximum' => $db_option->maximum,
+                'extra' => $db_option->extra,
+                'all_exclusive' => $all_exclusive,
+                'module_precondition' => $db_module->precondition,
+                'page_precondition' => $db_page->precondition,
+                'question_precondition' => $db_question->precondition,
+                'question_option_precondition' => $db_option->precondition
               );
+
+              if( $descriptions )
+              {
+                $column_list[$column_name] = array_merge( $column_list[$column_name], $prompt_list );
+
+                $column_list[$column_name]['question_option_prompt'] = array();
+
+                // add the question option's prompt
+                $description_sel = lib::create( 'database\select' );
+                $description_sel->add_table_column( 'language', 'code', 'language' );
+                $description_sel->add_column( 'value' );
+                $description_mod = lib::create( 'database\modifier' );
+                $description_mod->join( 'language', 'question_option_description.language_id', 'language.id' );
+                $description_mod->where( 'question_option_description.type', '=', 'prompt' );
+                foreach( $db_option->get_question_option_description_list( $description_sel, $description_mod ) as $item )
+                  $column_list[$column_name]['question_option_prompt'][$item['language']] = $item['value'];
+              }
             }
           }
 
@@ -916,10 +1000,28 @@ class qnaire extends \cenozo\database\record
             if( !is_null( $this->variable_suffix ) ) $column_name = sprintf( '%s_%s', $column_name, $this->variable_suffix );
 
             $column_list[$column_name] = array(
+              'module_name' => $db_module->name,
+              'page_name' => $db_page->name,
+              'question_name' => $db_question->name,
+              'question_option_name' => 'DK_NA',
               'question_id' => $db_question->id,
+              'type' => $db_question->type,
               'option_id' => 'dkna',
-              'all_exclusive' => $all_exclusive
+              'all_exclusive' => $all_exclusive,
+              'module_precondition' => $db_module->precondition,
+              'page_precondition' => $db_page->precondition,
+              'question_precondition' => $db_question->precondition
             );
+
+            if( $descriptions )
+            {
+              $column_list[$column_name] = array_merge( $column_list[$column_name], $prompt_list );
+
+              $prompt = array();
+              if( in_array( 'en', $language_list ) ) $prompt['en'] = 'Don\'t Know / No Answer';
+              if( in_array( 'fr', $language_list ) ) $prompt['fr'] = 'Ne sais pas / pas de réponse';
+              $column_list[$column_name]['question_option_prompt'] = $prompt;
+            }
 
             // get the base column name from the question's name and add REFUSED as a suffix
             $column_name = sprintf( '%s_REFUSED', $db_question->name );
@@ -928,14 +1030,47 @@ class qnaire extends \cenozo\database\record
             if( !is_null( $this->variable_suffix ) ) $column_name = sprintf( '%s_%s', $column_name, $this->variable_suffix );
 
             $column_list[$column_name] = array(
+              'module_name' => $db_module->name,
+              'page_name' => $db_page->name,
+              'question_name' => $db_question->name,
+              'question_option_name' => 'REFUSED',
               'question_id' => $db_question->id,
+              'type' => $db_question->type,
               'option_id' => 'refuse',
-              'all_exclusive' => $all_exclusive
+              'all_exclusive' => $all_exclusive,
+              'module_precondition' => $db_module->precondition,
+              'page_precondition' => $db_page->precondition,
+              'question_precondition' => $db_question->precondition,
             );
+
+            if( $descriptions )
+            {
+              $column_list[$column_name] = array_merge( $column_list[$column_name], $prompt_list );
+
+              $prompt = array();
+              if( in_array( 'en', $language_list ) ) $prompt['en'] = 'Prefer not to answer';
+              if( in_array( 'fr', $language_list ) ) $prompt['fr'] = 'Préfère ne pas répondre';
+              $column_list[$column_name]['question_option_prompt'] = $prompt;
+            }
           }
         }
       }
     }
+
+    return $column_list;
+  }
+
+  /**
+   * Returns an array of all responses to this qnaire
+   * @param database\modifier $modifier
+   * @return array( 'header', 'data' )
+   */
+  public function get_response_data( $modifier = NULL )
+  {
+    set_time_limit( 900 ); // 15 minutes max
+
+    $response_class_name = lib::get_class_name( 'database\response' );
+    $column_list = $this->get_all_questions();
 
     // now loop through all responses and fill in the data array
     $data = array();
@@ -969,6 +1104,7 @@ class qnaire extends \cenozo\database\record
         is_null( $db_response->start_datetime ) ? NULL : $db_response->start_datetime->format( 'c' ),
         is_null( $db_response->last_datetime ) ? NULL : $db_response->last_datetime->format( 'c' )
       );
+
       foreach( $column_list as $column_name => $column )
       {
         $row_value = NULL;
