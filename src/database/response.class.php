@@ -70,8 +70,8 @@ class response extends \cenozo\database\has_rank
 
     parent::save();
 
-    // create the new response's attributes
-    if( $new ) $this->create_attributes();
+    // create the response's attributes
+    $this->create_attributes();
 
     // see if the qnaire exists as a script and apply the started/finished events if it does
     if( $new && 1 == $this->rank )
@@ -426,13 +426,24 @@ class response extends \cenozo\database\has_rank
    */
   public function create_attributes()
   {
+    $response_attribute_class_name = lib::get_class_name( 'database\response_attribute' );
+
     $db_participant = $this->get_participant();
 
     foreach( $this->get_qnaire()->get_attribute_object_list() as $db_attribute )
     {
-      $db_response_attribute = lib::create( 'database\response_attribute' );
-      $db_response_attribute->response_id = $this->id;
-      $db_response_attribute->attribute_id = $db_attribute->id;
+      $db_response_attribute = $response_attribute_class_name::get_unique_record(
+        array( 'response_id', 'attribute_id' ),
+        array( $this->id, $db_attribute->id )
+      );
+
+      if( is_null( $db_response_attribute ) )
+      {
+        $db_response_attribute = lib::create( 'database\response_attribute' );
+        $db_response_attribute->response_id = $this->id;
+        $db_response_attribute->attribute_id = $db_attribute->id;
+      }
+
       $db_response_attribute->value = $db_attribute->get_participant_value( $db_participant );
       $db_response_attribute->save();
     }
