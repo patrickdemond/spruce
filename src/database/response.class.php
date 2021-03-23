@@ -442,10 +442,9 @@ class response extends \cenozo\database\has_rank
         $db_response_attribute = lib::create( 'database\response_attribute' );
         $db_response_attribute->response_id = $this->id;
         $db_response_attribute->attribute_id = $db_attribute->id;
+        $db_response_attribute->value = $db_attribute->get_participant_value( $db_participant );
+        $db_response_attribute->save();
       }
-
-      $db_response_attribute->value = $db_attribute->get_participant_value( $db_participant );
-      $db_response_attribute->save();
     }
   }
 
