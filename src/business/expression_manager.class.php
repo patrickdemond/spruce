@@ -452,7 +452,9 @@ class expression_manager extends \cenozo\singleton
         array( 'response_id', 'attribute_id' ),
         array( $this->db_response->id, $db_attribute->id )
       );
-      $compiled = sprintf( '%s', addslashes( $this->db_response_attribute->value ) );
+      $compiled = is_null( $this->db_response_attribute->value )
+                ? 'null'
+                : sprintf( '%s', addslashes( $this->db_response_attribute->value ) );
 
       // add quotes if required
       if( 'null' != $compiled && !util::string_matches_int( $compiled ) && !util::string_matches_float( $compiled ) )
