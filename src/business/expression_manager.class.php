@@ -637,6 +637,10 @@ class expression_manager extends \cenozo\singleton
       if( 0 > $this->open_bracket )
         throw lib::create( 'exception\runtime', 'Found closing bracket without a matching opening bracket.', __METHOD__ );
     }
+    else if( '{' == $char || '}' == $char )
+    {
+      throw lib::create( 'exception\runtime', 'Curly braces, { and }, are not allowed.', __METHOD__ );
+    }
     else if( in_array( $char, ["'", '"', '`'] ) )
     {
       $this->active_term = 'string';
