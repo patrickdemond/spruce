@@ -103,6 +103,52 @@ define( [ 'question_option' ].reduce( function( list, name ) {
     }
   ] );
 
+  // extend the model factory
+  cenozo.providers.decorator( 'CnQuestionViewFactory', [
+    '$delegate', 'CnModalConfirmFactory', '$q',
+    function( $delegate, CnModalConfirmFactory, $q ) {
+      var instance = $delegate.instance;
+      $delegate.instance = function( parentModel, root ) {
+        // if we are looking at the list of questions in a qnaire then we must change the default column order
+        var object = instance( parentModel, root );
+        angular.extend( object, {
+          getChildList: function() {
+            return object.$$getChildList().filter( child => 'list' == object.record.type || 'question_option' != child.subject.snake );
+          },
+
+          onPatch: function( data ) {
+            // warn if changing from a list question which has options
+            var promiseList = [];
+            if( angular.isDefined( data.type ) && 'list' != object.record.type && 0 < object.record.question_option_count ) {
+              promiseList.push( CnModalConfirmFactory.instance( {
+                message: 'By changing this question\'s type to "' + object.record.type + '" ' + object.record.question_option_count +
+                         ' question option' + ( 1 == object.record.question_option_count ? '' : 's' ) + ' will be deleted. ' +
+                         'Are you sure you wish to proceed?'
+              } ).show() );
+
+            }
+
+            return $q.all( promiseList ).then( function( response ) {
+              if( 0 < response.length && !response[0] ) {
+                // put the old value back
+                object.record.type = object.backupRecord.type;
+              } else {
+                return object.$$onPatch( data ).then( function() {
+                  // update the question option list since we may have deleted them
+                  if( 0 < response.length && angular.isDefined( object.questionOptionModel ) )
+                    object.questionOptionModel.listModel.onList( true );
+                } );
+              }
+            } );
+          }
+        } );
+        return object;
+      };
+
+      return $delegate;
+    }
+  ] );
+
   // extend the base model factory created by caling initQnairePartModule()
   cenozo.providers.decorator( 'CnQuestionModelFactory', [
     '$delegate',

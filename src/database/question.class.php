@@ -24,6 +24,17 @@ class question extends base_qnaire_part
   /**
    * Overview parent method
    */
+  public function save()
+  {
+    parent::save();
+
+    // remove all question options if the question's type isn't list
+    if( 'list' != $this->type && 0 < $this->get_question_option_count() ) $this->remove_question_option( NULL );
+  }
+
+  /**
+   * Overview parent method
+   */
   public function get_qnaire()
   {
     return $this->get_page()->get_qnaire();
