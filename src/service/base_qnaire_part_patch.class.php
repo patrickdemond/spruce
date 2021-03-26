@@ -28,7 +28,6 @@ abstract class base_qnaire_part_patch extends \cenozo\service\patch
     $data = $this->get_file_as_array();
     if( array_key_exists( 'precondition', $data ) )
     {
-
       // validate the precondition
       $expression_manager = lib::create( 'business\expression_manager', $db_qnaire );
       $error = $expression_manager->validate( $data['precondition'] );
