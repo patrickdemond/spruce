@@ -13,6 +13,21 @@ class patch extends \cenozo\service\patch
   /**
    * Extend parent method
    */
+  public function validate()
+  {
+    parent::validate();
+
+    if( 300 > $this->get_status()->get_code() )
+    {
+      // only jump when in debug mode
+      if( 'jump' == $this->get_argument( 'action', false ) && !$this->get_leaf_record()->get_qnaire()->debug )
+        $this->get_status()->set_code( 403 );
+    }
+  }
+
+  /**
+   * Extend parent method
+   */
   public function execute()
   {
     parent::execute();
@@ -51,6 +66,12 @@ class patch extends \cenozo\service\patch
       {
         if( 'proceed' == $action ) $db_response->move_to_next_page();
         else if( 'backup' == $action ) $db_response->move_to_previous_page();
+        else if( 'jump' == $action )
+        {
+          $db_module = lib::create( 'database\module', $this->get_argument( 'module_id' ) );
+          $db_response->page_id = $db_module->get_first_page()->id;
+          $db_response->save();
+        }
         else if( 'set_language' == $action )
         {
           // set the response's new language

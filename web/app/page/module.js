@@ -24,6 +24,7 @@ define( [ 'question' ].reduce( function( list, name ) {
   module.addInput( '', 'note', { title: 'Note', type: 'text' } );
   module.addInput( '', 'qnaire_id', { column: 'qnaire.id', isExcluded: true } );
   module.addInput( '', 'qnaire_name', { column: 'qnaire.name', isExcluded: true } );
+  module.addInput( '', 'debug', { column: 'qnaire.debug', isExcluded: true } );
   module.addInput( '', 'base_language', { column: 'base_language.code', isExcluded: true } );
   module.addInput( '', 'prompts', { isExcluded: true } );
   module.addInput( '', 'module_prompts', { isExcluded: true } );
@@ -243,6 +244,8 @@ define( [ 'question' ].reduce( function( list, name ) {
 
         angular.extend( this, {
           parentModel: parentModel,
+          prevModuleList: [],
+          nextModuleList: [],
           working: false,
           activeAttributeList: [],
           questionList: [],
@@ -508,7 +511,9 @@ define( [ 'question' ].reduce( function( list, name ) {
             angular.extend( this, {
               questionList: [],
               keyQuestionIndex: null,
-              activeAttributeList: []
+              activeAttributeList: [],
+              prevModuleList: [],
+              nextModuleList: []
             } );
           },
 
@@ -540,6 +545,27 @@ define( [ 'question' ].reduce( function( list, name ) {
               if( 0 < self.questionList.length && angular.isDefined( self.questionList[0].language ) ) {
                 self.currentLanguage = self.questionList[0].language;
                 cenozoApp.setLang( self.currentLanguage );
+              }
+
+              // if in debug mode then get a list of all modules before and after the current
+              if( self.parentModel.viewModel.record.debug ) {
+                CnHttpFactory.instance( {
+                  path: ['qnaire', self.parentModel.viewModel.record.qnaire_id , 'module'].join( '/' ),
+                  data: {
+                    select: { column: [ 'id', 'rank', 'name' ] },
+                    module: { order: 'module.rank' }
+                  }
+                } ).query().then( function( response ) {
+                  var foundCurrentModule = false;
+                  response.data.forEach( function( module ) {
+                    if( !foundCurrentModule && module.id == self.parentModel.viewModel.record.module_id ) {
+                      foundCurrentModule = true
+                    } else {
+                      if( foundCurrentModule ) self.nextModuleList.push( module );
+                      else self.prevModuleList.push( module );
+                    }
+                  } );
+                } );
               }
 
               var activeAttributeList = [];
@@ -979,8 +1005,8 @@ define( [ 'question' ].reduce( function( list, name ) {
                 return CnHttpFactory.instance( {
                   path: 'respondent/token=' + $state.params.token + '?action=proceed'
                 } ).patch().then( function() {
-                  self.parentModel.reloadState( true ).then( function() { self.working = false; } );
-                } );
+                  return self.parentModel.reloadState( true );
+                } ).finally( function() { self.working = false; } );
               } );
             } else {
               self.working = false;
@@ -994,8 +1020,20 @@ define( [ 'question' ].reduce( function( list, name ) {
               return CnHttpFactory.instance( {
                 path: 'respondent/token=' + $state.params.token + '?action=backup'
               } ).patch().then( function() {
-                self.parentModel.reloadState( true ).then( function() { self.working = false; } );
-              } );
+                return self.parentModel.reloadState( true );
+              } ).finally( function() { self.working = false; } );
+            } );
+          },
+
+          jump: function( moduleId ) {
+            // jump to the first page in the provided module
+            this.working = true;
+            return this.runQuery( function() {
+              return CnHttpFactory.instance( {
+                path: 'respondent/token=' + $state.params.token + '?action=jump&module_id=' + moduleId,
+              } ).patch().then( function() {
+                return self.parentModel.reloadState( true );
+              } ).finally( function() { self.working = false; } );
             } );
           },
 

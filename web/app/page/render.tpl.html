@@ -276,6 +276,23 @@
               <i class="glyphicon glyphicon-chevron-right"></i>
             </button>
             <button type="button"
+                    class="btn btn-default dropdown-toggle larger"
+                    ng-if="'respondent' == model.getSubjectFromState()"
+                    ng-show="model.viewModel.record.debug && 0 < model.renderModel.prevModuleList.length"
+                    ng-disabled="!isComplete || model.renderModel.working"
+                    id="jumpBackwardModule"
+                    data-toggle="dropdown"
+                    aria-haspopup="true"
+                    aira-expanded="false"
+                    style="width: 12em;">
+              <i class="glyphicon glyphicon-chevron-left"></i><i class="glyphicon glyphicon-chevron-left"></i> Skip
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="jumpBackwardModule">
+              <li ng-repeat="module in model.renderModel.prevModuleList">
+                <a ng-click="model.renderModel.jump( module.id )">{{ module.rank }}. {{ module.name }}</a>
+              </li>
+            </ul>
+            <button type="button"
                     ng-if="'respondent' == model.getSubjectFromState()"
                     ng-show="null != model.viewModel.record.previous_id"
                     ng-disabled="!isComplete || model.renderModel.working"
@@ -303,6 +320,23 @@
               {{ text( null != model.viewModel.record.next_id ? 'misc.next' : 'misc.submit' ) }}
               <i ng-if="null != model.viewModel.record.next_id" class="glyphicon glyphicon-chevron-right"></i>
             </button>
+            <button type="button"
+                    class="btn btn-default dropdown-toggle larger"
+                    id="jumpForwardModule"
+                    ng-if="'respondent' == model.getSubjectFromState()"
+                    ng-show="model.viewModel.record.debug && 0 < model.renderModel.nextModuleList.length"
+                    ng-disabled="!isComplete || model.renderModel.working"
+                    data-toggle="dropdown"
+                    aria-haspopup="true"
+                    aira-expanded="false"
+                    style="width: 12em;">
+              Skip <i class="glyphicon glyphicon-chevron-right"></i><i class="glyphicon glyphicon-chevron-right"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-right" aria-labelledby="jumpForwardModule">
+              <li ng-repeat="module in model.renderModel.nextModuleList">
+                <a ng-click="model.renderModel.jump( module.id )">{{ module.rank }}. {{ module.name }}</a>
+              </li>
+            </ul>
           </div>
         </div>
       </fieldset></form>
