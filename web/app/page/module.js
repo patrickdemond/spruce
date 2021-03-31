@@ -93,6 +93,23 @@ define( [ 'question' ].reduce( function( list, name ) {
   ] );
 
   /* ######################################################################################################## */
+  cenozo.providers.directive( 'cnPageNavigator', [
+    function() {
+      return {
+        templateUrl: module.getFileUrl( 'page_navigator.tpl.html' ),
+        restrict: 'E',
+        scope: {
+          model: '=?',
+          isComplete: '='
+        },
+        controller: function( $scope ) {
+          $scope.text = function( address ) { return $scope.model.renderModel.text( address ); };
+        }
+      };
+    }
+  ] );
+
+  /* ######################################################################################################## */
   cenozo.providers.directive( 'cnPageRender', [
     'CnPageModelFactory', 'CnTranslationHelper', 'CnSession', 'CnHttpFactory', '$q', '$state', '$document',
     function( CnPageModelFactory, CnTranslationHelper, CnSession, CnHttpFactory, $q, $state, $document ) {
