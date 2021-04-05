@@ -253,6 +253,90 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
+   * Updates all preconditions refering to a question name to a new name
+   * @param string type One of "question" or "question_option"
+   * @param string $old_name The question or option's old name
+   * @param string $new_name The question or option's new name
+   */
+  public function update_name_in_preconditions( $type, $old_name, $new_name )
+  {
+    // The sql regex match depends on whether we're changing a question's name or an question option's name
+    // Questions will all start with a $ and end with either a $ (for direct references), : (for options), or . (for functions)
+    $match = sprintf( 'question' == $type ? '\\$%s[$:.]' : ':%s\\$', $old_name );
+
+    // The replacement syntax is also different for question or question-options
+    $replace = 'question' == $type
+             ? sprintf(
+                 'REPLACE( REPLACE( REPLACE( %%s.precondition, "$%s$", "$%s$" ), "$%s:", "$%s:" ), "$%s.", "$%s." )',
+                 $old_name, $new_name, $old_name, $new_name, $old_name, $new_name
+               )
+             : sprintf( 'REPLACE( %%s.precondition, ":%s$", ":%s$" )', $old_name, $new_name );
+
+    // update all modules
+    $where_mod = lib::create( 'database\modifier' );
+    $where_mod->where( 'module.precondition', 'RLIKE', $match );
+    $where_mod->where( 'module.qnaire_id', '=', $this->id );
+
+    $sql = sprintf(
+      'UPDATE module SET module.precondition = %s %s',
+      sprintf( $replace, 'module' ),
+      $where_mod->get_sql()
+    );
+    static::db()->execute( $sql );
+
+    // update all pages
+    $join_mod = lib::create( 'database\modifier' );
+    $join_mod->join( 'page', 'module.id', 'page.module_id' );
+
+    $where_mod = lib::create( 'database\modifier' );
+    $where_mod->where( 'page.precondition', 'RLIKE', $match );
+    $where_mod->where( 'module.qnaire_id', '=', $this->id );
+
+    $sql = sprintf(
+      'UPDATE module %s SET page.precondition = %s %s',
+      $join_mod->get_sql(),
+      sprintf( $replace, 'page' ),
+      $where_mod->get_sql()
+    );
+    static::db()->execute( $sql );
+
+    // update all questions
+    $join_mod = lib::create( 'database\modifier' );
+    $join_mod->join( 'page', 'module.id', 'page.module_id' );
+    $join_mod->join( 'question', 'page.id', 'question.page_id' );
+
+    $where_mod = lib::create( 'database\modifier' );
+    $where_mod->where( 'question.precondition', 'RLIKE', $match );
+    $where_mod->where( 'module.qnaire_id', '=', $this->id );
+
+    $sql = sprintf(
+      'UPDATE module %s SET question.precondition = %s %s',
+      $join_mod->get_sql(),
+      sprintf( $replace, 'question' ),
+      $where_mod->get_sql()
+    );
+    static::db()->execute( $sql );
+
+    // update all question_options
+    $join_mod = lib::create( 'database\modifier' );
+    $join_mod->join( 'page', 'module.id', 'page.module_id' );
+    $join_mod->join( 'question', 'page.id', 'question.page_id' );
+    $join_mod->join( 'question_option', 'question.id', 'question_option.question_id' );
+
+    $where_mod = lib::create( 'database\modifier' );
+    $where_mod->where( 'question_option.precondition', 'RLIKE', $match );
+    $where_mod->where( 'module.qnaire_id', '=', $this->id );
+
+    $sql = sprintf(
+      'UPDATE module %s SET question_option.precondition = %s %s',
+      $join_mod->get_sql(),
+      sprintf( $replace, 'question_option' ),
+      $where_mod->get_sql()
+    );
+    static::db()->execute( $sql );
+  }
+
+  /**
    * Determines whether mail is sent by the qnaire
    * @return boolean
    */

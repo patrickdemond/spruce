@@ -69,8 +69,8 @@ define( function() {
 
   // extend the view factory created by caling initQnairePartModule()
   cenozo.providers.decorator( 'CnQuestionOptionViewFactory', [
-    '$delegate', '$filter',
-    function( $delegate, $filter ) {
+    '$delegate', 'CnHttpFactory', 'CnModalConfirmFactory', '$q',
+    function( $delegate, CnHttpFactory, CnModalConfirmFactory, $q ) {
       var instance = $delegate.instance;
       $delegate.instance = function( parentModel, root ) {
         var object = instance( parentModel, root );
@@ -78,14 +78,58 @@ define( function() {
         // when changing the extra value the multiple-answers, min and max columns are automatically updated by the DB
         angular.extend( object, {
           onPatch: function( data ) {
-            var self = this;
-            return this.$$onPatch( data ).then( function() {
-              if( angular.isDefined( data.extra ) ) {
-                if( !data.extra ) self.record.multiple_answers = false;
-                if( !['date', 'number'].includes( data.extra ) ) {
-                  self.record.minimum = '';
-                  self.record.maximum = '';
+            var promiseList = [];
+
+            // warn if changing name will cause automatic change to preconditions
+            if( angular.isDefined( data.name ) ) {
+              promiseList.push( CnHttpFactory.instance( {
+                path: object.parentModel.getServiceResourcePath(),
+                data: { select: { column: [
+                  'module_precondition_dependencies',
+                  'page_precondition_dependencies',
+                  'question_precondition_dependencies',
+                  'question_option_precondition_dependencies'
+                ] } }
+              } ).query().then( function( response ) {
+                if( null != response.data.module_precondition_dependencies ||
+                    null != response.data.page_precondition_dependencies ||
+                    null != response.data.question_precondition_dependencies ||
+                    null != response.data.question_option_precondition_dependencies ) { 
+                  var message =
+                    'The following parts of the questionnaire refer to this question-option in their precondition and will ' +
+                    'automatically be updated to refer to the question option\'s new name:\n';
+                  if( null != response.data.module_precondition_dependencies )
+                    message += '\nModule(s): ' + response.data.module_precondition_dependencies
+                  if( null != response.data.page_precondition_dependencies )
+                    message += '\nPage(s): ' + response.data.page_precondition_dependencies
+                  if( null != response.data.question_precondition_dependencies )
+                    message += '\nQuestion(s): ' + response.data.question_precondition_dependencies
+                  if( null != response.data.question_option_precondition_dependencies )
+                    message += '\nQuestion Option(s): ' + response.data.question_option_precondition_dependencies
+                  message += '\n\nAre you sure you wish to proceed?';
+                  return CnModalConfirmFactory.instance( { message: message } ).show();
                 }
+              } ) );
+            }
+
+            return $q.all( promiseList ).then( function( response ) {
+              if( angular.isDefined( data.name ) ) {
+                if( false === response[0] ) {
+                  // put the old value back
+                  object.record.name = object.backupRecord.name;
+                } else {
+                  return object.$$onPatch( data );
+                }
+              } else {
+                return object.$$onPatch( data ).then( function() {
+                  if( angular.isDefined( data.extra ) ) {
+                    if( !data.extra ) object.record.multiple_answers = false;
+                    if( !['date', 'number'].includes( data.extra ) ) {
+                      object.record.minimum = '';
+                      object.record.maximum = '';
+                    }
+                  }
+                } );
               }
             } );
           }

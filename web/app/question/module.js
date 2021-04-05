@@ -105,8 +105,8 @@ define( [ 'question_option' ].reduce( function( list, name ) {
 
   // extend the model factory
   cenozo.providers.decorator( 'CnQuestionViewFactory', [
-    '$delegate', 'CnModalConfirmFactory', '$q',
-    function( $delegate, CnModalConfirmFactory, $q ) {
+    '$delegate', 'CnHttpFactory', 'CnModalConfirmFactory', '$q',
+    function( $delegate, CnHttpFactory, CnModalConfirmFactory, $q ) {
       var instance = $delegate.instance;
       $delegate.instance = function( parentModel, root ) {
         // if we are looking at the list of questions in a qnaire then we must change the default column order
@@ -117,28 +117,70 @@ define( [ 'question_option' ].reduce( function( list, name ) {
           },
 
           onPatch: function( data ) {
-            // warn if changing from a list question which has options
             var promiseList = [];
-            if( angular.isDefined( data.type ) && 'list' != object.record.type && 0 < object.record.question_option_count ) {
+
+            // warn if changing name will cause automatic change to preconditions
+            if( angular.isDefined( data.name ) ) {
+              promiseList.push( CnHttpFactory.instance( {
+                path: object.parentModel.getServiceResourcePath(),
+                data: { select: { column: [
+                  'module_precondition_dependencies',
+                  'page_precondition_dependencies',
+                  'question_precondition_dependencies',
+                  'question_option_precondition_dependencies'
+                ] } }
+              } ).query().then( function( response ) {
+                if( null != response.data.module_precondition_dependencies ||
+                    null != response.data.page_precondition_dependencies ||
+                    null != response.data.question_precondition_dependencies ||
+                    null != response.data.question_option_precondition_dependencies ) {
+                  var message =
+                    'The following parts of the questionnaire refer to this question in their precondition and will ' +
+                    'automatically be updated to refer to the question\'s new name:\n';
+                  if( null != response.data.module_precondition_dependencies )
+                    message += '\nModule(s): ' + response.data.module_precondition_dependencies
+                  if( null != response.data.page_precondition_dependencies )
+                    message += '\nPage(s): ' + response.data.page_precondition_dependencies
+                  if( null != response.data.question_precondition_dependencies )
+                    message += '\nQuestion(s): ' + response.data.question_precondition_dependencies
+                  if( null != response.data.question_option_precondition_dependencies )
+                    message += '\nQuestion Option(s): ' + response.data.question_option_precondition_dependencies
+                  message += '\n\nAre you sure you wish to proceed?';
+                  return CnModalConfirmFactory.instance( { message: message } ).show();
+                }
+              } ) );
+            } else if( angular.isDefined( data.type ) && 'list' != object.record.type && 0 < object.record.question_option_count ) {
+              // warn if changing from a list question which has options
               promiseList.push( CnModalConfirmFactory.instance( {
                 message: 'By changing this question\'s type to "' + object.record.type + '" ' + object.record.question_option_count +
                          ' question option' + ( 1 == object.record.question_option_count ? '' : 's' ) + ' will be deleted. ' +
                          'Are you sure you wish to proceed?'
               } ).show() );
-
             }
 
             return $q.all( promiseList ).then( function( response ) {
-              if( 0 < response.length && !response[0] ) {
-                // put the old value back
-                object.record.type = object.backupRecord.type;
+              if( angular.isDefined( data.name ) ) {
+                if( false === response[0] ) {
+                  // put the old value back
+                  object.record.name = object.backupRecord.name;
+                } else { 
+                  return object.$$onPatch( data );
+                }
+              } else if( angular.isDefined( data.type ) && 'list' != object.record.type && 0 < object.record.question_option_count ) {
+                if( 0 < response.length && !response[0] ) {
+                  // put the old value back
+                  object.record.type = object.backupRecord.type;
+                } else {
+                  return object.$$onPatch( data ).then( function() {
+                    // update the question option list since we may have deleted them
+                    if( 0 < response.length && angular.isDefined( object.questionOptionModel ) )
+                      object.questionOptionModel.listModel.onList( true );
+                  } );
+                }
               } else {
-                return object.$$onPatch( data ).then( function() {
-                  // update the question option list since we may have deleted them
-                  if( 0 < response.length && angular.isDefined( object.questionOptionModel ) )
-                    object.questionOptionModel.listModel.onList( true );
-                } );
+                return object.$$onPatch( data );
               }
+
             } );
           }
         } );

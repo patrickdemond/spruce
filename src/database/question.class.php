@@ -26,10 +26,16 @@ class question extends base_qnaire_part
    */
   public function save()
   {
+    $changing_name = !is_null( $this->id ) && $this->has_column_changed( 'name' );
+    $old_name = $this->get_passive_column_value( 'name' );
+
     parent::save();
 
     // remove all question options if the question's type isn't list
     if( 'list' != $this->type && 0 < $this->get_question_option_count() ) $this->remove_question_option( NULL );
+
+    // update all preconditions if the question's name is changing
+    if( $changing_name ) $this->get_qnaire()->update_name_in_preconditions( 'question', $old_name, $this->name ); 
   }
 
   /**

@@ -24,6 +24,20 @@ class question_option extends base_qnaire_part
   /**
    * Overview parent method
    */
+  public function save()
+  {
+    $changing_name = !is_null( $this->id ) && $this->has_column_changed( 'name' );
+    $old_name = $this->get_passive_column_value( 'name' );
+
+    parent::save();
+
+    // update all preconditions if the question's name is changing
+    if( $changing_name ) $this->get_qnaire()->update_name_in_preconditions( 'question_option', $old_name, $this->name ); 
+  }
+
+  /**
+   * Overview parent method
+   */
   public function get_qnaire()
   {
     return $this->get_question()->get_qnaire();
