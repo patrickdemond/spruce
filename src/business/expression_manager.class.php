@@ -134,9 +134,9 @@ class expression_manager extends \cenozo\singleton
    * values:
    *   @NAME@ (response attribute)
    *   $NAME$ (question)
-   *   $NAME:empty()$ (true if question hasn't been answered, false if it has)
-   *   $NAME:dkna()$ (true if a question's answer is don't know or no answer)
-   *   $NAME:refuse()$ (true if a question is refused)
+   *   $NAME.empty()$ (true if question hasn't been answered, false if it has)
+   *   $NAME.dkna()$ (true if a question's answer is don't know or no answer)
+   *   $NAME.refuse()$ (true if a question is refused)
    *   showhidden true if showing hidden elements (launched by phone) false if not (launched by web)
    *   null (when a question has no answer - it's skipped)
    *   true|false (boolean)
@@ -511,7 +511,7 @@ class expression_manager extends \cenozo\singleton
 
       if( '.' == $matches[2] )
       {
-        if( !in_array( $matches[3], ['count()', 'empty()', 'dkna()', 'refuse()'] ) )
+        if( !in_array( $matches[3], ['empty()', 'dkna()', 'refuse()'] ) )
           throw lib::create( 'exception\runtime', sprintf( 'Invalid function "%s"', $matches[3] ), __METHOD__ );
         $special_function = substr( $matches[3], 0, -2 );
       }
