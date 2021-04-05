@@ -57,35 +57,76 @@ class query extends \cenozo\service\query
       {
         $expression_manager->process_hidden_text( $record );
 
-        // compile preconditions
-        if( array_key_exists( 'precondition', $record ) )
+        $processing = '';
+        try
         {
-          $list[$index]['precondition'] = $expression_manager->compile(
-            $record['precondition'],
-            lib::create( 'database\question', $record['id'] )
-          );
-        }
+          // compile preconditions
+          if( array_key_exists( 'precondition', $record ) )
+          {
+            $processing = 'precondition';
+            $list[$index]['precondition'] = $expression_manager->compile(
+              $record['precondition'],
+              lib::create( 'database\question', $record['id'] )
+            );
+          }
 
-        if( array_key_exists( 'minimum', $record ) && 'date' != $record['type'] && !is_null( $record['minimum'] ) )
+          if( array_key_exists( 'minimum', $record ) && 'date' != $record['type'] && !is_null( $record['minimum'] ) )
+          {
+            $processing = 'minimum';
+            $list[$index]['minimum'] = $expression_manager->compile(
+              $record['minimum'],
+              lib::create( 'database\question', $record['id'] )
+            );
+          }
+
+          if( array_key_exists( 'maximum', $record ) && 'date' != $record['type'] && !is_null( $record['maximum'] ) )
+          {
+            $processing = 'maximum';
+            $list[$index]['maximum'] = $expression_manager->compile(
+              $record['maximum'],
+              lib::create( 'database\question', $record['id'] )
+            );
+          }
+
+          if( array_key_exists( 'prompts', $record ) )
+          {
+            $processing = 'prompts';
+            $list[$index]['prompts'] = $db_response->compile_description( $record['prompts'] );
+          }
+
+          if( array_key_exists( 'popups', $record ) )
+          {
+            $processing = 'popups';
+            $list[$index]['popups'] = $db_response->compile_description( $record['popups'] );
+          }
+        }
+        catch( \cenozo\exception\runtime $e )
         {
-          $list[$index]['minimum'] = $expression_manager->compile(
-            $record['minimum'],
-            lib::create( 'database\question', $record['id'] )
-          );
-        }
+          // when in debug mode display the compile error details
+          if( $db_respondent->get_qnaire()->debug )
+          {
+            $db_question = lib::create( 'database\question', $record['id'] );
+            $db_page = $db_question->get_page();
+            $db_module = $db_page->get_module();
 
-        if( array_key_exists( 'maximum', $record ) && 'date' != $record['type'] && !is_null( $record['maximum'] ) )
-        {
-          $list[$index]['maximum'] = $expression_manager->compile(
-            $record['maximum'],
-            lib::create( 'database\question', $record['id'] )
-          );
-        }
+            $messages = array();
+            do { $messages[] = $e->get_raw_message(); } while( $e = $e->get_previous() );
+            $e = lib::create( 'exception\notice',
+              sprintf(
+                "Unable to compile %s for question \"%s\" on page \"%s\" in module \"%s\".\n\n%s",
+                $processing,
+                $db_question->name,
+                $db_page->name,
+                $db_module->name,
+                implode( "\n", $messages )
+              ),
+              __METHOD__,
+              $e
+            );
+          }
 
-        if( array_key_exists( 'prompts', $record ) ) $list[$index]['prompts'] =
-          $db_response->compile_description( $record['prompts'] );
-        if( array_key_exists( 'popups', $record ) ) $list[$index]['popups'] =
-          $db_response->compile_description( $record['popups'] );
+          throw $e;
+        }
       }
     }
 

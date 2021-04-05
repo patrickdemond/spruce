@@ -279,7 +279,7 @@ class expression_manager extends \cenozo\singleton
     catch( \cenozo\exception\runtime $e )
     {
       throw lib::create( 'exception\runtime',
-        sprintf( 'Error while evaluating precondition:%s', "\n".$precondition ),
+        sprintf( 'Error while evaluating expression:%s', "\n".$precondition ),
         __METHOD__,
         $e
       );
