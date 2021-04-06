@@ -1624,7 +1624,7 @@ class qnaire extends \cenozo\database\record
             if( !is_null( $db_module ) )
             {
               // confirm that the name is the only thing that has changed
-              $properties = array_keys( get_object_vars( $db_child->process_patch( $child, $name_suffix, false ) ) );
+              $properties = array_keys( get_object_vars( $db_module->process_patch( $module, $name_suffix, false ) ) );
               if( 1 != count( $properties ) || 'name' != current( $properties ) ) $db_module = NULL;
             }
           }
