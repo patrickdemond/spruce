@@ -209,11 +209,14 @@ define( [ 'question' ].reduce( function( list, name ) {
             } );
           }
 
-          if( 'respondent' != $scope.model.getSubjectFromState() ) render();
-          else {
+          $scope.showHidden = angular.isDefined( $state.params.show_hidden ) ? $state.params.show_hidden : false;
+          if( 'respondent' != $scope.model.getSubjectFromState() ) {
+            $scope.showHidden = true;
+            render();
+          } else {
             // check for the respondent using the token
             var params = '?assert_response=1';
-            if( $state.params.show_hidden ) params += '&&show_hidden=1';
+            if( $scope.showHidden ) params += '&&show_hidden=1';
             CnHttpFactory.instance( {
               path: 'respondent/token=' + $state.params.token + params,
               data: { select: { column: [
@@ -229,11 +232,10 @@ define( [ 'question' ].reduce( function( list, name ) {
                 $state.go( 'error.' + response.status, response );
               }
             } ).get().then( function( response ) {
-              var showHidden = angular.isDefined( $state.params.show_hidden ) ? $state.params.show_hidden : false;
               $scope.data = response.data;
-              $scope.data.introductions = CnTranslationHelper.parseDescriptions( $scope.data.introductions, showHidden );
-              $scope.data.conclusions = CnTranslationHelper.parseDescriptions( $scope.data.conclusions, showHidden );
-              $scope.data.closes = CnTranslationHelper.parseDescriptions( $scope.data.closes, showHidden );
+              $scope.data.introductions = CnTranslationHelper.parseDescriptions( $scope.data.introductions, $scope.showHidden );
+              $scope.data.conclusions = CnTranslationHelper.parseDescriptions( $scope.data.conclusions, $scope.showHidden );
+              $scope.data.closes = CnTranslationHelper.parseDescriptions( $scope.data.closes, $scope.showHidden );
               $scope.data.title = null != $scope.data.page_id ? '' : $scope.data.submitted ? 'Conclusion' : 'Introduction';
               render();
             } );
@@ -801,26 +803,6 @@ define( [ 'question' ].reduce( function( list, name ) {
                                         : true === complete ? false
                                         : complete;
                   }
-
-                  /*
-                  NOTE: The "element.value = null" line below was causing answers in different questions on the same page to blank out.
-                  By removing the following code the problem goes away, but it isn't clear if removing this code will cause some other
-                  bug.  If the code needs to be re-added then make sure that when there are two questions on the same page, both which
-                  have the option to add a value to an option that clicking one of the options doesn't remove the answer to the already
-                  selected option's value in the other question.
-
-                  if( 'respondent' == self.parentModel.getSubjectFromState() ) {
-                    if( 'list' == question.type ) {
-                      for( var element of document.getElementsByName( 'answerValue' ) ) {
-                        var match = element.id.match( /option([0-9]+)value[0-9]+/ );
-                        if( 1 < match.length ) {
-                          var optionId = match[1];
-                          if( null == searchOptionList( question.value, optionId ) ) element.value = null;
-                        }
-                      }
-                    }
-                  }
-                  */
                 } ).finally( function() { self.working = false; } );
               }
             );
@@ -1063,7 +1045,7 @@ define( [ 'question' ].reduce( function( list, name ) {
     }
   ] );
 
-  // extend the add factory created by caling initQnairePartModule()
+  // extend the add factory created by calling initQnairePartModule()
   cenozo.providers.decorator( 'CnPageAddFactory', [
     '$delegate', 'CnSession',
     function( $delegate, CnSession ) {
@@ -1089,7 +1071,7 @@ define( [ 'question' ].reduce( function( list, name ) {
     }
   ] );
 
-  // extend the view factory created by caling initQnairePartModule()
+  // extend the view factory created by calling initQnairePartModule()
   cenozo.providers.decorator( 'CnPageViewFactory', [
     '$delegate', '$filter', 'CnTranslationHelper',
     function( $delegate, $filter, CnTranslationHelper ) {
@@ -1118,7 +1100,7 @@ define( [ 'question' ].reduce( function( list, name ) {
     }
   ] );
 
-  // extend the base model factory created by caling initQnairePartModule()
+  // extend the base model factory created by calling initQnairePartModule()
   cenozo.providers.decorator( 'CnPageModelFactory', [
     '$delegate', 'CnPageRenderFactory', '$state',
     function( $delegate, CnPageRenderFactory, $state ) {
