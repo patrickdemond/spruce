@@ -27,6 +27,7 @@ class expression_manager extends \cenozo\singleton
     if( is_a( $record, lib::get_class_name( 'database\qnaire' ) ) )
     {
       $this->db_qnaire = $record;
+      $this->show_hidden = true;
       $this->db_response = NULL;
     }
     else if( is_a( $record, lib::get_class_name( 'database\response' ) ) )
