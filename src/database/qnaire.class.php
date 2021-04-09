@@ -1074,8 +1074,8 @@ class qnaire extends \cenozo\database\record
             }
           }
 
-          // finally, if not all exclusive and dkna/refuse is enabled then create these options as columns as well
-          if( !$all_exclusive && $db_question->dkna_refuse )
+          // finally, if not all exclusive then create these options as columns as well
+          if( !$all_exclusive )
           {
             // get the base column name from the question's name and add DK_NA as a suffix
             $column_name = sprintf( '%s_DK_NA', $db_question->name );
@@ -2132,7 +2132,8 @@ class qnaire extends \cenozo\database\record
             'name' => $db_question->name,
             'type' => $db_question->type,
             'mandatory' => $db_question->mandatory,
-            'dkna_refuse' => $db_question->dkna_refuse,
+            'dkna_allowed' => $db_question->dkna_allowed,
+            'refuse_allowed' => $db_question->refuse_allowed,
             'minimum' => $db_question->minimum,
             'maximum' => $db_question->maximum,
             'default_answer' => $db_question->default_answer,
@@ -2465,7 +2466,8 @@ class qnaire extends \cenozo\database\record
           $db_question->name = $question_object->name;
           $db_question->type = $question_object->type;
           $db_question->mandatory = $question_object->mandatory;
-          $db_question->dkna_refuse = $question_object->dkna_refuse;
+          $db_question->dkna_allowed = $question_object->dkna_allowed;
+          $db_question->refuse_allowed = $question_object->refuse_allowed;
           $db_question->minimum = $question_object->minimum;
           $db_question->maximum = $question_object->maximum;
           $db_question->default_answer = $question_object->default_answer;

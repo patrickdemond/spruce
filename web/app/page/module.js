@@ -552,7 +552,8 @@ define( [ 'question' ].reduce( function( list, name ) {
               path: this.parentModel.getServiceResourceBasePath() + '/question',
               data: {
                 select: { column: [
-                  'rank', 'name', 'type', 'mandatory', 'dkna_refuse', 'minimum', 'maximum', 'precondition', 'prompts', 'popups'
+                  'rank', 'name', 'type', 'mandatory', 'dkna_allowed', 'refuse_allowed',
+                  'minimum', 'maximum', 'precondition', 'prompts', 'popups'
                 ] },
                 modifier: { order: 'question.rank' }
               }

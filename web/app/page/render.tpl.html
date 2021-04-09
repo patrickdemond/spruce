@@ -238,9 +238,15 @@
                   cn-autofocus="$first"
                   cn-elastic>
                 </textarea>
-                <div class="btn-group full-width" ng-if="'comment' != question.type && question.dkna_refuse">
-                  <label class="btn btn-default col-xs-6 larger"
-                         ng-class="{ 'color-red': true === question.incomplete }"
+                <div class="btn-group full-width"
+                     ng-if="'comment' != question.type && ( question.dkna_allowed || question.refuse_allowed )">
+                  <label class="btn btn-default larger"
+                         ng-if="question.dkna_allowed"
+                         ng-class="{
+                           'color-red': true === question.incomplete,
+                           'col-xs-6': question.refuse_allowed,
+                           'col-xs-12': !question.refuse_allowed
+                         }"
                          style="text-align: left; font-style: italic; font-weight: normal;"
                          ng-model="question.answer.dkna"
                          ng-click="model.renderModel.setAnswer( question, question.answer.dkna ? { dkna: true } : null )"
@@ -248,8 +254,13 @@
                     <i class="glyphicon" ng-class="question.answer.dkna ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
                     {{ text( 'misc.dkna' ) }}
                   </label>
-                  <label class="btn btn-default col-xs-6 larger"
-                         ng-class="{ 'color-red': true === question.incomplete }"
+                  <label class="btn btn-default larger"
+                         ng-if="question.refuse_allowed"
+                         ng-class="{
+                           'color-red': true === question.incomplete,
+                           'col-xs-6': question.dkna_allowed,
+                           'col-xs-12': !question.dkna_allowed
+                         }"
                          style="text-align: left; font-style: italic; font-weight: normal;"
                          ng-model="question.answer.refuse"
                          ng-click="model.renderModel.setAnswer( question, question.answer.refuse ? { refuse: true } : null )"
