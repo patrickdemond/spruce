@@ -282,8 +282,9 @@ abstract class base_qnaire_part extends \cenozo\database\has_rank
               if( 'question' == $child_subject )
               {
                 $db_child->type = $child->type;
-                // NOTE: if this isn't set now then new questions which have dkna_refuse = false won't be patched correctly
-                $db_child->dkna_refuse = true;
+                // NOTE: if this isn't set now then new questions which have dkna or refuse = false won't be patched correctly
+                $db_child->dkna_allowed = true;
+                $db_child->refuse_allowed = true;
               }
               $db_child->save();
 

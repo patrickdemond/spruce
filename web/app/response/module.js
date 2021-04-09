@@ -251,7 +251,7 @@ define( function() {
                     path: ['response', self.parentModel.getQueryParameter( 'identifier' ), 'question'].join( '/' ),
                     data: {
                       select: { column: [
-                        'id', 'page_id', 'prompts', 'type', 'dkna_refuse',
+                        'id', 'page_id', 'prompts', 'type', 'dkna_allowed', 'refuse_allowed',
                         { table: 'page', column: 'module_id' },
                         { table: 'language', column: 'code', alias: 'language' },
                         { table: 'answer', column: 'value' }
@@ -313,17 +313,21 @@ define( function() {
                                            .questionList.findByProperty( 'id', option.question_id )
                         if( null != question ) {
                           // first make sure the dkna/refuse options are included
-                          if( 0 == question.optionList.length && question.dkna_refuse ) {
-                            question.optionList.push( {
-                              prompts: dknaPrompts,
-                              value: null,
-                              selected: angular.isObject( question.value ) && question.value.dkna
-                            } );
-                            question.optionList.push( {
-                              prompts: refusePrompts,
-                              value: null,
-                              selected: angular.isObject( question.value ) && question.value.refuse
-                            } );
+                          if( 0 == question.optionList.length ) {
+                            if( question.dkna_allowed ) {
+                              question.optionList.push( {
+                                prompts: dknaPrompts,
+                                value: null,
+                                selected: angular.isObject( question.value ) && question.value.dkna
+                              } );
+                            }
+                            if( question.refuse_allowed ) {
+                              question.optionList.push( {
+                                prompts: refusePrompts,
+                                value: null,
+                                selected: angular.isObject( question.value ) && question.value.refuse
+                              } );
+                            }
                           }
 
                           question.optionList.unshift( option );
