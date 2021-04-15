@@ -457,6 +457,7 @@ class response extends \cenozo\database\has_rank
     $attribute_class_name = lib::get_class_name( 'database\attribute' );
     $response_attribute_class_name = lib::get_class_name( 'database\response_attribute' );
     $answer_class_name = lib::get_class_name( 'database\answer' );
+    $question_option_description_class_name = lib::get_class_name( 'database\question_option_description' );
 
     $db_qnaire = $this->get_qnaire();
 
@@ -492,15 +493,20 @@ class response extends \cenozo\database\has_rank
     preg_match_all( '/\$[A-Za-z0-9_]+\$/', $description, $matches );
     foreach( $matches[0] as $match )
     {
+      $modifier = lib::create( 'database\modifier' );
+      $modifier->where( 'exclusive', '=', false );
       $question_name = substr( $match, 1, -1 );
       $db_question = $db_qnaire->get_question( $question_name );
-      if( is_null( $db_question ) || 'comment' == $db_question->type || 'list' == $db_question->type )
+      if( is_null( $db_question ) || 'comment' == $db_question->type )
       {
-        if( $db_qnaire->debug )
-        {
-          log::warning( sprintf( 'Invalid question "%s" found while compiling description', $question_name ) );
-          $description = str_replace( $match, '', $description );
-        }
+        $warning = sprintf(
+          'Invalid question "%s" found while compiling description: %s',
+          $question_name,
+          is_null( $db_question ) ?  'question doesn\'t exist' : 'question type "comment" does not have a value'
+        );
+
+        $description = str_replace( $match, $db_qnaire->debug ? '<b><i>WARNING: '.$warning.'</i></b>' : '', $description );
+        log::warning( $warning );
       }
       else
       {
@@ -512,6 +518,20 @@ class response extends \cenozo\database\has_rank
 
         if( is_object( $value ) && property_exists( $value, 'dkna' ) && $value->dkna ) $compiled = '(no answer)';
         else if( is_object( $value ) && property_exists( $value, 'refuse' ) && $value->refuse ) $compiled = '(no answer)';
+        else if( is_array( $value ) )
+        {
+          $answers = array();
+          $description_sel = lib::create( 'database\select' );
+          $description_sel->add_column( 'value' );
+          $description_mod = lib::create( 'database\modifier' );
+          $description_mod->where( 'question_option_id', 'IN', $value );
+          $description_mod->where( 'type', '=', 'prompt' );
+          $description_mod->where( 'language_id', '=', $this->language_id );
+          foreach( $question_option_description_class_name::select( $description_sel, $description_mod ) as $row )
+            $answers[] = $row['value'];
+
+          $compiled = implode( ', ', $answers );
+        }
         else if( is_null( $value ) ) $compiled = '';
         else if( 'boolean' == $db_question->type ) $compiled = $value ? 'true' : 'false';
         else $compiled = $value;
