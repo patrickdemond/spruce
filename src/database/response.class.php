@@ -325,6 +325,7 @@ class response extends \cenozo\database\has_rank
       array( 'response_id', 'page_id' ),
       array( $this->id, $db_page->id )
     );
+    if( is_null( $db_page_time->datetime ) ) $db_page_time->datetime = util::get_datetime_object();
     if( is_null( $db_page_time->time ) ) $db_page_time->time = 0;
     $microtime = microtime();
     $db_page_time->time += (
@@ -521,16 +522,36 @@ class response extends \cenozo\database\has_rank
         else if( is_object( $value ) && property_exists( $value, 'refuse' ) && $value->refuse ) $compiled = '(no answer)';
         else if( is_array( $value ) )
         {
+          $question_option_id_list = array();
+          $raw_answer_list = array();
+          foreach( $value as $option )
+          {
+            // selected option may have additional details (so the answer is an object)
+            if( is_object( $option ) )
+            {
+              // the option's extra data may have multiple answers (an array) or a single answer
+              if( is_array( $option->value ) ) $raw_answer_list = array_merge( $raw_answer_list, $option->value );
+              else $raw_answer_list[] = $option->value;
+            }
+            else
+            {
+              $question_option_id_list[] = $option;
+            }
+          }
+
+          // get the description of all selected options
           $answers = array();
           $description_sel = lib::create( 'database\select' );
           $description_sel->add_column( 'value' );
           $description_mod = lib::create( 'database\modifier' );
-          $description_mod->where( 'question_option_id', 'IN', $value );
+          $description_mod->where( 'question_option_id', 'IN', $question_option_id_list );
           $description_mod->where( 'type', '=', 'prompt' );
           $description_mod->where( 'language_id', '=', $this->language_id );
           foreach( $question_option_description_class_name::select( $description_sel, $description_mod ) as $row )
             $answers[] = $row['value'];
 
+          // append any extra option values to the list
+          if( 0 < count( $raw_answer_list ) ) $answers = array_merge( $answers, $raw_answer_list );
           $compiled = implode( ', ', $answers );
         }
         else if( is_null( $value ) ) $compiled = '';
