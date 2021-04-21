@@ -100,7 +100,8 @@ define( [ 'question' ].reduce( function( list, name ) {
         restrict: 'E',
         scope: {
           model: '=?',
-          isComplete: '='
+          isComplete: '=',
+          placement: '@'
         },
         controller: function( $scope ) {
           $scope.text = function( address ) { return $scope.model.renderModel.text( address ); };

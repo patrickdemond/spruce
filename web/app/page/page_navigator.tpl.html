@@ -1,4 +1,4 @@
-<div class="btn-group pull-left">
+<div class="btn-group pull-left" ng-class="{ 'dropup': 'bottom' == placement }">
   <button type="button"
           ng-if="'page' == model.getSubjectFromState()"
           ng-disabled="null == model.viewModel.record.previous_id"
@@ -41,7 +41,7 @@
     {{ text( 'misc.previous' ) }}
   </button>
 </div>
-<div class="btn-group">
+<div class="btn-group" ng-class="{ 'dropup': 'bottom' == placement }">
   <button type="button"
           ng-if="'page' == model.getSubjectFromState()"
           ng-click="model.renderModel.viewPage()"
