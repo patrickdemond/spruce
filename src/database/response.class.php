@@ -249,15 +249,16 @@ class response extends \cenozo\database\has_rank
       if( $complete )
       {
         // before proceeding remove any empty option values
-        foreach( $object_list as $objects )
-          if( 'list' == $objects['question']->type )
-            $db_answer->remove_empty_answer_values();
+        foreach( $object_list as $object )
+          if( 'list' == $object['question']->type )
+            $object['answer']->remove_empty_answer_values();
 
         // record the time spent on the page (add time if there is already time set)
         $db_page_time = $page_time_class_name::get_unique_record(
           array( 'response_id', 'page_id' ),
           array( $this->id, $db_page->id )
         );
+        if( is_null( $db_page_time->datetime ) ) $db_page_time->datetime = util::get_datetime_object();
         if( is_null( $db_page_time->time ) ) $db_page_time->time = 0;
         $microtime = microtime();
         $db_page_time->time += (

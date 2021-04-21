@@ -239,9 +239,15 @@ class answer extends \cenozo\database\record
       if( !is_array( $matches ) ) $matches = array( $matches );
       foreach( $matches as $match )
       {
+        // It is possible that there is an "other" data option containing an array containing a single null value.
+        // We can detect this by seeing if the match has a .value[0] at the end.
+        // If this is the case we want to delete the full option's object from the answer.  Otherwise removing the
+        // null value is enough.
+        $preg_array = array();
+        $remove_match = 0 < preg_match( '/(.+)\.value\[0\]$/', $match, $preg_array ) ? $preg_array[1] : $match;
         static::db()->execute( sprintf(
           'UPDATE answer SET value = JSON_REMOVE( value, "%s" ) WHERE id = %d',
-          $match,
+          $remove_match,
           $this->id
         ) );
       }
