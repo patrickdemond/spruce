@@ -346,6 +346,12 @@ class response extends \cenozo\database\has_rank
         array( $this->id, $db_previous_page->id )
       );
 
+      if( is_null( $db_previous_page_time ) ) {
+        $db_previous_page_time = lib::create( 'database\page_time' );
+        $db_previous_page_tinme->response_id = $this->id;
+        $db_previous_page_tinme->page_id = $db_previous_page->id;
+      }
+
       $microtime = microtime();
       $db_previous_page_time->datetime = util::get_datetime_object();
       $db_previous_page_time->microtime = substr( $microtime, 0, strpos( $microtime, ' ' ) );
