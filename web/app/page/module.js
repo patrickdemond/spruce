@@ -447,7 +447,7 @@ define( [ 'question' ].reduce( function( list, name ) {
               if( 1 < subparts.length ) {
                 if( 'count()' == subparts[1] ) fnName = 'count()';
                 else optionName = subparts[1];
-              } else if( 'extra(' == fnName.substr( 0, 6 ) ) {
+              } else if( null != fnName && 'extra(' == fnName.substr( 0, 6 ) ) {
                 optionName = fnName.match( /extra\(([^)]+)\)/ )[1];
                 fnName = 'extra()';
               }
