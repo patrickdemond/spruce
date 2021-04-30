@@ -24,7 +24,7 @@ class module extends \pine\service\base_qnaire_part_module
     $modifier->join( 'page', 'question.page_id', 'page.id' );
     $modifier->join( 'module', 'page.module_id', 'module.id' );
     $modifier->join( 'qnaire', 'module.qnaire_id', 'qnaire.id' );
-  
+
     $db_question_option = $this->get_resource();
     if( !is_null( $db_question_option ) )
     {
@@ -37,8 +37,10 @@ class module extends \pine\service\base_qnaire_part_module
       {
         // get a list of all modules which have a precondition referring to this question_option
         $module_sel = lib::create( 'database\select' );
+        $module_sel->from( 'module' );
         $module_sel->add_column( 'name' );
         $module_mod = lib::create( 'database\modifier' );
+        $module_mod->where( 'module.qnaire_id', '=', $db_qnaire->id );
         $module_mod->where( 'module.precondition', 'RLIKE', $match );
 
         $module_list = array();
@@ -53,10 +55,11 @@ class module extends \pine\service\base_qnaire_part_module
       {
         // get a list of all pages which have a precondition referring to this question_option
         $page_sel = lib::create( 'database\select' );
+        $page_sel->from( 'page' );
         $page_sel->add_table_column( 'page', 'name' );
         $page_mod = lib::create( 'database\modifier' );
-        $page_mod->join( 'module', 'qnaire.id', 'module.qnaire_id' );
-        $page_mod->join( 'page', 'module.id', 'page.module_id' );
+        $page_mod->join( 'module', 'page.module_id', 'page.id' );
+        $page_mod->where( 'module.qnaire_id', '=', $db_qnaire->id );
         $page_mod->where( 'page.precondition', 'RLIKE', $match );
 
         $page_list = array();
@@ -71,11 +74,12 @@ class module extends \pine\service\base_qnaire_part_module
       {
         // get a list of all questions which have a precondition referring to this question_option
         $question_sel = lib::create( 'database\select' );
+        $question_sel->from( 'question' );
         $question_sel->add_table_column( 'question', 'name' );
         $question_mod = lib::create( 'database\modifier' );
-        $question_mod->join( 'module', 'qnaire.id', 'module.qnaire_id' );
-        $question_mod->join( 'page', 'module.id', 'page.module_id' );
-        $question_mod->join( 'question', 'page.id', 'question.page_id' );
+        $question_mod->join( 'page', 'question.page_id', 'page.id' );
+        $question_mod->join( 'module', 'page.module_id', 'module.id' );
+        $question_mod->where( 'module.qnaire_id', '=', $db_qnaire->id );
         $question_mod->where( 'question.precondition', 'RLIKE', $match );
 
         $question_list = array();
@@ -90,13 +94,14 @@ class module extends \pine\service\base_qnaire_part_module
       {
         // get a list of all question options which have a precondition referring to this question_option
         $question_option_sel = lib::create( 'database\select' );
+        $question_option_sel->from( 'question_option' );
         $question_option_sel->add_table_column( 'question', 'name', 'qname' );
         $question_option_sel->add_table_column( 'question_option', 'name', 'oname' );
         $question_option_mod = lib::create( 'database\modifier' );
-        $question_option_mod->join( 'module', 'qnaire.id', 'module.qnaire_id' );
-        $question_option_mod->join( 'page', 'module.id', 'page.module_id' );
-        $question_option_mod->join( 'question', 'page.id', 'question.page_id' );
-        $question_option_mod->join( 'question_option', 'question.id', 'question_option.question_id' );
+        $question_option_mod->join( 'question', 'question_option.question_id', 'question.id' );
+        $question_option_mod->join( 'page', 'question.page_id', 'page.id' );
+        $question_option_mod->join( 'module', 'page.module_id', 'module.id' );
+        $question_option_mod->where( 'module.qnaire_id', '=', $db_qnaire->id );
         $question_option_mod->where( 'question_option.precondition', 'RLIKE', $match );
 
         $question_option_list = array();
