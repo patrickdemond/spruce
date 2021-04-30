@@ -249,15 +249,16 @@ class response extends \cenozo\database\has_rank
       if( $complete )
       {
         // before proceeding remove any empty option values
-        foreach( $object_list as $objects )
-          if( 'list' == $objects['question']->type )
-            $db_answer->remove_empty_answer_values();
+        foreach( $object_list as $object )
+          if( 'list' == $object['question']->type )
+            $object['answer']->remove_empty_answer_values();
 
         // record the time spent on the page (add time if there is already time set)
         $db_page_time = $page_time_class_name::get_unique_record(
           array( 'response_id', 'page_id' ),
           array( $this->id, $db_page->id )
         );
+        if( is_null( $db_page_time->datetime ) ) $db_page_time->datetime = util::get_datetime_object();
         if( is_null( $db_page_time->time ) ) $db_page_time->time = 0;
         $microtime = microtime();
         $db_page_time->time += (
@@ -324,6 +325,7 @@ class response extends \cenozo\database\has_rank
       array( 'response_id', 'page_id' ),
       array( $this->id, $db_page->id )
     );
+    if( is_null( $db_page_time->datetime ) ) $db_page_time->datetime = util::get_datetime_object();
     if( is_null( $db_page_time->time ) ) $db_page_time->time = 0;
     $microtime = microtime();
     $db_page_time->time += (
@@ -343,6 +345,12 @@ class response extends \cenozo\database\has_rank
         array( 'response_id', 'page_id' ),
         array( $this->id, $db_previous_page->id )
       );
+
+      if( is_null( $db_previous_page_time ) ) {
+        $db_previous_page_time = lib::create( 'database\page_time' );
+        $db_previous_page_tinme->response_id = $this->id;
+        $db_previous_page_tinme->page_id = $db_previous_page->id;
+      }
 
       $microtime = microtime();
       $db_previous_page_time->datetime = util::get_datetime_object();
@@ -457,6 +465,7 @@ class response extends \cenozo\database\has_rank
     $attribute_class_name = lib::get_class_name( 'database\attribute' );
     $response_attribute_class_name = lib::get_class_name( 'database\response_attribute' );
     $answer_class_name = lib::get_class_name( 'database\answer' );
+    $question_option_description_class_name = lib::get_class_name( 'database\question_option_description' );
 
     $db_qnaire = $this->get_qnaire();
 
@@ -492,15 +501,20 @@ class response extends \cenozo\database\has_rank
     preg_match_all( '/\$[A-Za-z0-9_]+\$/', $description, $matches );
     foreach( $matches[0] as $match )
     {
+      $modifier = lib::create( 'database\modifier' );
+      $modifier->where( 'exclusive', '=', false );
       $question_name = substr( $match, 1, -1 );
       $db_question = $db_qnaire->get_question( $question_name );
-      if( is_null( $db_question ) || 'comment' == $db_question->type || 'list' == $db_question->type )
+      if( is_null( $db_question ) || 'comment' == $db_question->type )
       {
-        if( $db_qnaire->debug )
-        {
-          log::warning( sprintf( 'Invalid question "%s" found while compiling description', $question_name ) );
-          $description = str_replace( $match, '', $description );
-        }
+        $warning = sprintf(
+          'Invalid question "%s" found while compiling description: %s',
+          $question_name,
+          is_null( $db_question ) ?  'question doesn\'t exist' : 'question type "comment" does not have a value'
+        );
+
+        $description = str_replace( $match, $db_qnaire->debug ? '<b><i>WARNING: '.$warning.'</i></b>' : '', $description );
+        log::warning( $warning );
       }
       else
       {
@@ -512,6 +526,40 @@ class response extends \cenozo\database\has_rank
 
         if( is_object( $value ) && property_exists( $value, 'dkna' ) && $value->dkna ) $compiled = '(no answer)';
         else if( is_object( $value ) && property_exists( $value, 'refuse' ) && $value->refuse ) $compiled = '(no answer)';
+        else if( is_array( $value ) )
+        {
+          $question_option_id_list = array();
+          $raw_answer_list = array();
+          foreach( $value as $option )
+          {
+            // selected option may have additional details (so the answer is an object)
+            if( is_object( $option ) )
+            {
+              // the option's extra data may have multiple answers (an array) or a single answer
+              if( is_array( $option->value ) ) $raw_answer_list = array_merge( $raw_answer_list, $option->value );
+              else $raw_answer_list[] = $option->value;
+            }
+            else
+            {
+              $question_option_id_list[] = $option;
+            }
+          }
+
+          // get the description of all selected options
+          $answers = array();
+          $description_sel = lib::create( 'database\select' );
+          $description_sel->add_column( 'value' );
+          $description_mod = lib::create( 'database\modifier' );
+          $description_mod->where( 'question_option_id', 'IN', $question_option_id_list );
+          $description_mod->where( 'type', '=', 'prompt' );
+          $description_mod->where( 'language_id', '=', $this->language_id );
+          foreach( $question_option_description_class_name::select( $description_sel, $description_mod ) as $row )
+            $answers[] = $row['value'];
+
+          // append any extra option values to the list
+          if( 0 < count( $raw_answer_list ) ) $answers = array_merge( $answers, $raw_answer_list );
+          $compiled = implode( ', ', $answers );
+        }
         else if( is_null( $value ) ) $compiled = '';
         else if( 'boolean' == $db_question->type ) $compiled = $value ? 'true' : 'false';
         else $compiled = $value;

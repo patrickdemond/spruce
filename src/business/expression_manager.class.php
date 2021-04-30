@@ -147,6 +147,7 @@ class expression_manager extends \cenozo\singleton
    * lists:
    *   $NAME:OPTION$ (always true if it is selected, false if not)
    *   $NAME:count()$ (always a number representing how many options are selected)
+   *   $NAME.extra(OPTION)$ Used to get the extra value associated with a selected option
 
    * operators:
    *   -  function(x,y) where x,y must be number, A:NAME, Q:NAME(type=number)
@@ -512,9 +513,37 @@ class expression_manager extends \cenozo\singleton
 
       if( '.' == $matches[2] )
       {
-        if( !in_array( $matches[3], ['empty()', 'dkna()', 'refuse()'] ) )
-          throw lib::create( 'exception\runtime', sprintf( 'Invalid function "%s"', $matches[3] ), __METHOD__ );
-        $special_function = substr( $matches[3], 0, -2 );
+        if( 'extra(' == substr( $matches[3], 0, 6 ) )
+        {
+          $special_function = 'extra';
+
+          if( !preg_match( '/extra\(([^)]+)\)/', $matches[3], $sub_matches ) )
+            throw lib::create( 'exception\runtime', sprintf( 'Invalid syntax "%s"', $matches[3] ), __METHOD__ );
+
+          $db_question_option = $question_option_class_name::get_unique_record(
+            array( 'question_id', 'name' ),
+            array( $db_question->id, $sub_matches[1] )
+          );
+          if( is_null( $db_question_option ) )
+          {
+            throw lib::create( 'exception\runtime',
+              sprintf( 'Invalid question option "%s" for question "%s"', $sub_matches[1], $matches[1] ),
+              __METHOD__
+            );
+          }
+          else if( is_null( $db_question_option->extra ) )
+          {
+            throw lib::create( 'exception\runtime',
+              sprintf( 'Question option "%s" for question "%s" does not have extra values.', $sub_matches[1], $matches[1] ),
+              __METHOD__
+            );
+          }
+        }
+        else if( in_array( $matches[3], ['empty()', 'dkna()', 'refuse()'] ) )
+        {
+          $special_function = substr( $matches[3], 0, -2 );
+        }
+        else throw lib::create( 'exception\runtime', sprintf( 'Invalid function "%s"', $matches[3] ), __METHOD__ );
       }
       else if( ':' == $matches[2] )
       {
@@ -591,12 +620,23 @@ class expression_manager extends \cenozo\singleton
       else if( is_null( $value ) || $dkna || $refuse ) $compiled = 'NULL';
       else if( !is_null( $db_question_option ) )
       {
-        // set whether or not the response checked off the option
-        $compiled = 'false';
+        // set whether or not the response checked off the option, or provide extra data if requested
+        $compiled = 'extra' == $special_function ? 'NULL' : 'false';
         if( is_array( $value ) )
         {
           foreach( $value as $selected_option )
           {
+            if( 'extra' == $special_function )
+            {
+              if( ( is_object( $selected_option ) && $db_question_option->id == $selected_option->id ) )
+              {
+                $compiled = 'number' == $db_question_option->extra
+                          ? $selected_option->value
+                          : sprintf( '"%s"', str_replace( '"', '\"', $selected_option->value ) );
+              }
+            }
+            else
+
             if( ( is_object( $selected_option ) && $db_question_option->id == $selected_option->id ) ||
                 ( !is_object( $selected_option ) && $db_question_option->id == $selected_option ) )
             {
@@ -614,9 +654,11 @@ class expression_manager extends \cenozo\singleton
       }
     }
 
-    $this->last_term = is_null( $special_function )
-                     ? ( !is_null( $db_question_option ) ? 'boolean' : $db_question->type )
-                     : ( 'count' == $special_function ? 'number' : 'boolean' );
+    // determine the last term
+    if( is_null( $special_function ) ) $this->last_term = !is_null( $db_question_option ) ? 'boolean' : $db_question->type;
+    else if( 'extra' == $special_function ) $this->last_term = $db_question_option->extra;
+    else $this->last_term = 'count' == $special_function ? 'number' : 'boolean';
+
     $this->active_term = NULL;
 
     return $compiled;

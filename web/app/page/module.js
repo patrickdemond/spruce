@@ -100,7 +100,8 @@ define( [ 'question' ].reduce( function( list, name ) {
         restrict: 'E',
         scope: {
           model: '=?',
-          isComplete: '='
+          isComplete: '=',
+          placement: '@'
         },
         controller: function( $scope ) {
           $scope.text = function( address ) { return $scope.model.renderModel.text( address ); };
@@ -446,6 +447,9 @@ define( [ 'question' ].reduce( function( list, name ) {
               if( 1 < subparts.length ) {
                 if( 'count()' == subparts[1] ) fnName = 'count()';
                 else optionName = subparts[1];
+              } else if( null != fnName && 'extra(' == fnName.substr( 0, 6 ) ) {
+                optionName = fnName.match( /extra\(([^)]+)\)/ )[1];
+                fnName = 'extra()';
               }
 
               // find the referenced question
@@ -492,11 +496,13 @@ define( [ 'question' ].reduce( function( list, name ) {
                     } else {
                       var answer = matchedQuestion.value.findByProperty( 'id', matchedOption.id );
                       if( !angular.isObject( answer ) ) {
-                        compiled = 'false';
+                        compiled = 'extra()' == fnName ? 'null' : 'false';
                       } else {
                         if( matchedOption.multiple_answers ) {
                           // make sure at least one of the answers isn't null
                           compiled = answer.value.some( v => v != null ) ? 'true' : 'false';
+                        } else if( 'extra()' == fnName ) {
+                          compiled = 'number' == matchedOption.extra ? answer.value : '"' + answer.value.replace( '"', '\"' ) + '"';
                         } else {
                           compiled = null != answer.value ? 'true' : 'false';
                         }

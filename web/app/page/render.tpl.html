@@ -153,6 +153,7 @@
                        ng-repeat="value in question.answer.optionList[option.id].valueList">
                     <div class="col-slim" ng-class="option.multiple_answers ? 'col-xs-11' : 'col-xs-6'" ng-switch="option.extra">
                       <input ng-switch-when="date"
+                        cn-ignore-mouse-wheel
                         type="text"
                         id="option{{ option.id }}value{{ $index }}"
                         name="answerValue"
@@ -163,6 +164,7 @@
                         ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
                         class="form-control rounded-bottom-left rounded-bottom-right larger"></input>
                       <input ng-switch-when="number"
+                        cn-ignore-mouse-wheel
                         type="number"
                         id="option{{ option.id }}value{{ $index }}"
                         name="answerValue"
@@ -173,6 +175,7 @@
                         ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
                         class="form-control rounded-bottom-left rounded-bottom-right larger"></input>
                       <input ng-switch-when="string"
+                        cn-ignore-mouse-wheel
                         type="string"
                         id="option{{ option.id }}value{{ $index }}"
                         name="answerValue"
@@ -202,6 +205,7 @@
                   </div>
                 </div>
                 <input ng-switch-when="date"
+                  cn-ignore-mouse-wheel
                   type="text"
                   class="form-control larger"
                   ng-class="{ 'color-red': true === question.incomplete }"
@@ -210,6 +214,7 @@
                   onkeydown="return false">
                 </input>
                 <input ng-switch-when="number"
+                  cn-ignore-mouse-wheel
                   type="number"
                   class="form-control larger"
                   ng-class="{ 'color-red': true === question.incomplete }"
@@ -220,6 +225,7 @@
                   autocomplete="off">
                 </input>
                 <input ng-switch-when="string"
+                  cn-ignore-mouse-wheel
                   type="text"
                   class="form-control larger"
                   ng-class="{ 'color-red': true === question.incomplete }"
@@ -274,7 +280,7 @@
           </div>
         </div>
         <div class="form-footer text-right rounded-bottom bg-info">
-          <cn-page-navigator model="model" is-complete="isComplete" text="text"></cn-page-navigator>
+          <cn-page-navigator model="model" is-complete="isComplete" text="text" placement="bottom"></cn-page-navigator>
         </div>
       </fieldset></form>
     </div>
