@@ -271,13 +271,13 @@ define( [ 'page' ].reduce( function( list, name ) {
             } );
             modal.show();
 
-            self.exportExportInProgress = true;
+            self.workInProgress = true;
             CnHttpFactory.instance( {
               path: 'qnaire/' + $state.params.identifier + '/respondent?operation=export'
             } ).post().then( function() {
               self.listModel.onList( true );
             } ).finally( function() {
-              self.exportExportInProgress = false;
+              self.workInProgress = false;
               modal.close();
             } );
           }
