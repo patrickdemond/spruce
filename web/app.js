@@ -129,8 +129,8 @@ cenozoApp.initQnairePartModule = function( module, type ) {
 
   module.addExtraOperation( 'view', {
     title: 'Move/Copy',
-    operation: function( $state, model ) {
-      $state.go( type + '.clone', { identifier: model.viewModel.record.getIdentifier() } );
+    operation: async function( $state, model ) {
+      await $state.go( type + '.clone', { identifier: model.viewModel.record.getIdentifier() } );
     }
   } );
 
@@ -203,7 +203,6 @@ cenozoApp.initQnairePartModule = function( module, type ) {
     'CnBaseAddFactory', 'CnHttpFactory',
     function( CnBaseAddFactory, CnHttpFactory ) {
       var object = function( parentModel ) {
-        var self = this;
         CnBaseAddFactory.construct( this, parentModel );
 
         // transition to viewing the new record instead of the default functionality
@@ -211,20 +210,20 @@ cenozoApp.initQnairePartModule = function( module, type ) {
 
         // get the parent's name for the breadcrumb trail
         angular.extend( this, {
-          onNew: function( record ) {
-            return self.$$onNew( record ).then( function() {
-              // get the parent page's name
-              self.parentName = null;
-              var parentIdentifier = parentModel.getParentIdentifier();
-              if( angular.isDefined( parentIdentifier.subject ) ) {
-                return CnHttpFactory.instance( {
-                  path: parentIdentifier.subject + '/' + parentIdentifier.identifier,
-                  data: { select: { column: 'name' } }
-                } ).get().then( function( response ) {
-                  self.parentName = response.data.name;
-                } );
-              }
-            } );
+          onNew: async function( record ) {
+            await this.$$onNew( record );
+
+            // get the parent page's name
+            this.parentName = null;
+            var parentIdentifier = parentModel.getParentIdentifier();
+            if( angular.isDefined( parentIdentifier.subject ) ) {
+              var response = await CnHttpFactory.instance( {
+                path: parentIdentifier.subject + '/' + parentIdentifier.identifier,
+                data: { select: { column: 'name' } }
+              } ).get();
+
+              this.parentName = response.data.name;
+            }
           }
         } );
       };
@@ -246,7 +245,6 @@ cenozoApp.initQnairePartModule = function( module, type ) {
     'CnBaseViewFactory', 'CnBaseQnairePartViewFactory',
     function( CnBaseViewFactory, CnBaseQnairePartViewFactory ) {
       var object = function( parentModel, root ) {
-        var self = this;
         CnBaseViewFactory.construct( this, parentModel, root, childType );
         CnBaseQnairePartViewFactory.construct( this, type );
       }
@@ -259,7 +257,6 @@ cenozoApp.initQnairePartModule = function( module, type ) {
     'CnBaseModelFactory', 'Cn'+typeCamel+'AddFactory', 'Cn'+typeCamel+'ListFactory', 'Cn'+typeCamel+'ViewFactory', 'CnHttpFactory',
     function( CnBaseModelFactory, CnAddFactory, CnListFactory, CnViewFactory, CnHttpFactory ) {
       var object = function( root ) {
-        var self = this;
         CnBaseModelFactory.construct( this, module );
         this.addModel = CnAddFactory.instance( this );
         this.listModel = CnListFactory.instance( this );
@@ -270,19 +267,19 @@ cenozoApp.initQnairePartModule = function( module, type ) {
         };
 
         // extend getMetadata
-        this.getMetadata = function() {
-          return this.$$getMetadata().then( function() {
-            // setup non-record description input
-            return CnHttpFactory.instance( {
-              path: type + '_description'
-            } ).head().then( function( response ) {
-              var columnList = angular.fromJson( response.headers( 'Columns' ) );
-              columnList.value.required = '1' == columnList.value.required;
-              if( angular.isUndefined( self.metadata.columnList.description ) )
-                self.metadata.columnList.description = {};
-              angular.extend( self.metadata.columnList.description, columnList.value );
-            } );
-          } );
+        this.getMetadata = async function() {
+          await this.$$getMetadata();
+
+          // setup non-record description input
+          var response = await CnHttpFactory.instance( {
+            path: type + '_description'
+          } ).head();
+
+          var columnList = angular.fromJson( response.headers( 'Columns' ) );
+          columnList.value.required = '1' == columnList.value.required;
+          if( angular.isUndefined( this.metadata.columnList.description ) )
+            this.metadata.columnList.description = {};
+          angular.extend( this.metadata.columnList.description, columnList.value );
         };
 
         // extend getEditEnabled and getDeleteEnabled based on the parent qnaire readonly column
@@ -356,7 +353,7 @@ cenozoApp.initDescriptionModule = function( module, type ) {
   module.addExtraOperation( 'view', {
     title: '<i class="glyphicon glyphicon-chevron-left"></i>',
     classes: 'btn-info',
-    operation: function( $state, model ) { model.viewModel.viewPreviousDescription(); },
+    operation: async function( $state, model ) { await model.viewModel.viewPreviousDescription(); },
     isDisabled: function( $state, model ) {
       return model.viewModel.navigating || null == model.viewModel.record.previous_description_id;
     }
@@ -365,7 +362,7 @@ cenozoApp.initDescriptionModule = function( module, type ) {
   module.addExtraOperation( 'view', {
     title: '<i class="glyphicon glyphicon-chevron-right"></i>',
     classes: 'btn-info',
-    operation: function( $state, model ) { model.viewModel.viewNextDescription(); },
+    operation: async function( $state, model ) { await model.viewModel.viewNextDescription(); },
     isDisabled: function( $state, model ) {
       return model.viewModel.navigating || null == model.viewModel.record.next_description_id;
     }
@@ -380,20 +377,24 @@ cenozo.factory( 'CnBaseQnairePartViewFactory', [
       construct: function( object, type ) {
         angular.extend( object, {
           navigating: false,
-          viewPrevious: function() {
+          viewPrevious: async function() {
             if( !this.navigating && this.record.previous_id ) {
-              this.navigating = true;
-              $state.go( type + '.view', { identifier: this.record.previous_id }, { reload: true } ).finally( function() {
+              try {
+                this.navigating = true;
+                await $state.go( type + '.view', { identifier: this.record.previous_id }, { reload: true } );
+              } finally {
                 object.navigating = false;
-              } );
+              }
             }
           },
-          viewNext: function() {
+          viewNext: async function() {
             if( !this.navigating && this.record.next_id ) {
-              this.navigating = true;
-              $state.go( type + '.view', { identifier: this.record.next_id }, { reload: true } ).finally( function() {
+              try {
+                this.navigating = true;
+                await $state.go( type + '.view', { identifier: this.record.next_id }, { reload: true } );
+              } finally {
                 object.navigating = false;
-              } );
+              }
             }
           }
         } );
@@ -410,28 +411,32 @@ cenozo.factory( 'CnBaseDescriptionViewFactory', [
       construct: function( object, type ) {
         angular.extend( object, {
           navigating: false,
-          viewPreviousDescription: function() {
+          viewPreviousDescription: async function() {
             if( !this.navigating && this.record.previous_description_id ) {
-              this.navigating = true;
-              $state.go(
-                type + '_description.view',
-                { identifier: this.record.previous_description_id },
-                { reload: true }
-              ).finally( function() {
-                object.navigating = false;
-              } );
+              try {
+                this.navigating = true;
+                await $state.go(
+                  type + '_description.view',
+                  { identifier: this.record.previous_description_id },
+                  { reload: true }
+                );
+              } finally {
+                this.navigating = false;
+              }
             }
           },
-          viewNextDescription: function() {
+          viewNextDescription: async function() {
             if( !this.navigating && this.record.next_description_id ) {
-              this.navigating = true;
-              $state.go(
-                type + '_description.view',
-                { identifier: this.record.next_description_id },
-                { reload: true }
-              ).finally( function() {
-                object.navigating = false;
-              } );
+              try {
+                this.navigating = true;
+                await $state.go(
+                  type + '_description.view',
+                  { identifier: this.record.next_description_id },
+                  { reload: true }
+                );
+              } finally {
+                this.navigating = false;
+              }
             }
           }
         } );
@@ -442,28 +447,25 @@ cenozo.factory( 'CnBaseDescriptionViewFactory', [
 
 /* ######################################################################################################## */
 cenozo.directive( 'cnQnaireNavigator', [
-  'CnHttpFactory', '$state', '$q',
-  function( CnHttpFactory, $state, $q ) {
+  'CnHttpFactory', '$state',
+  function( CnHttpFactory, $state ) {
     return {
       templateUrl: cenozoApp.getFileUrl( 'pine', 'qnaire_navigator.tpl.html' ),
       restrict: 'E',
-      controller: function( $scope ) {
+      controller: async function( $scope ) {
         // used to navigate to another qnaire part (either root or description)
-        function viewQnairePart( subject, id ) {
+        async function viewQnairePart( subject, id ) {
           var keys = null;
-          var promiseList = [];
           if( subject + '_description.view' == $state.current.name ) {
             var languageMatch = $state.params.identifier.match( /language_id=([0-9]+)/ );
             var typeMatch = $state.params.identifier.match( /type=([a-z]+)/ );
             if( null == languageMatch || null == typeMatch ) {
-              promiseList.push(
-                CnHttpFactory.instance( {
-                  path: subject + '_description/' + $state.params.identifier,
-                  data: { select: { column: [ 'language_id', 'type' ] } }
-                } ).get().then( function( response ) {
-                  keys = response.data;
-                } )
-              );
+              var response = await CnHttpFactory.instance( {
+                path: subject + '_description/' + $state.params.identifier,
+                data: { select: { column: [ 'language_id', 'type' ] } }
+              } ).get();
+
+              keys = response.data;
             } else {
               keys = {
                 language_id: languageMatch[1],
@@ -472,17 +474,15 @@ cenozo.directive( 'cnQnaireNavigator', [
             }
           }
 
-          return $q.all( promiseList ).then( function() {
-            // if we are returned description keys then use them to navigate to the sister description
-            var identifier = null != keys
-                           ? [ subject + '_id='+id, 'language_id='+keys.language_id, 'type='+keys.type ].join( ';' )
-                           : id;
-            return $state.go(
-              ( null != keys ? subject + '_description' : subject ) + '.view',
-              { identifier: identifier },
-              { reload: true }
-            );
-          } );
+          // if we are returned description keys then use them to navigate to the sister description
+          var identifier = null != keys
+                         ? [ subject + '_id='+id, 'language_id='+keys.language_id, 'type='+keys.type ].join( ';' )
+                         : id;
+          await $state.go(
+            ( null != keys ? subject + '_description' : subject ) + '.view',
+            { identifier: identifier },
+            { reload: true }
+          );
         }
         
         angular.extend( $scope, {
@@ -497,10 +497,10 @@ cenozo.directive( 'cnQnaireNavigator', [
           pageList: [],
           questionList: [],
 
-          viewQnaire: function( id ) { return $state.go( 'qnaire.view', { identifier: id }, { reload: true } ); },
-          viewModule: function( id ) { return viewQnairePart( 'module', id ); },
-          viewPage: function( id ) { return viewQnairePart( 'page', id ); },
-          viewQuestion: function( id ) { return viewQnairePart( 'question', id ); }
+          viewQnaire: async function( id ) { await $state.go( 'qnaire.view', { identifier: id }, { reload: true } ); },
+          viewModule: async function( id ) { await viewQnairePart( 'module', id ); },
+          viewPage: async function( id ) { await viewQnairePart( 'page', id ); },
+          viewQuestion: async function( id ) { await viewQnairePart( 'question', id ); }
         } );
 
         // fill in the qnaire, module, page and question data
@@ -552,88 +552,80 @@ cenozo.directive( 'cnQnaireNavigator', [
           );
         }
 
-        CnHttpFactory.instance( {
+        var response = await CnHttpFactory.instance( {
           path: $scope.subject + '/' + $state.params.identifier,
           data: { select: { column: columnList } }
-        } ).get().then( function( response ) {
-          $scope.currentQnaire = {
-            id: response.data.qnaire_id ? response.data.qnaire_id : response.data.id,
-            name: response.data.qnaire_name ? response.data.qnaire_name : response.data.name
+        } ).get();
+
+        $scope.currentQnaire = {
+          id: response.data.qnaire_id ? response.data.qnaire_id : response.data.id,
+          name: response.data.qnaire_name ? response.data.qnaire_name : response.data.name
+        };
+
+        if( moduleDetails ) {
+          $scope.currentModule = {
+            id: response.data.module_id,
+            rank: response.data.module_rank,
+            name: response.data.module_name
           };
+        }
 
-          if( moduleDetails ) {
-            $scope.currentModule = {
-              id: response.data.module_id,
-              rank: response.data.module_rank,
-              name: response.data.module_name
-            };
+        if( pageDetails ) {
+          $scope.currentPage = {
+            id: response.data.page_id,
+            rank: response.data.page_rank,
+            name: response.data.page_name
+          };
+        }
+
+        if( questionDetails ) {
+          $scope.currentQuestion = {
+            id: response.data.question_id,
+            rank: response.data.question_rank,
+            name: response.data.question_name
+          };
+        }
+
+        // get the list of qnaires, modules, pages and questions (depending on what we're looking at)
+        var response = await CnHttpFactory.instance( {
+          path: 'qnaire',
+          data: {
+            select: { column: [ 'id', 'name' ] },
+            modifier: { order: 'name', limit: 1000 }
           }
+        } ).query();
+        $scope.qnaireList = response.data;
 
-          if( pageDetails ) {
-            $scope.currentPage = {
-              id: response.data.page_id,
-              rank: response.data.page_rank,
-              name: response.data.page_name
-            };
+        var response = await CnHttpFactory.instance( {
+          path: [ 'qnaire', $scope.currentQnaire.id, 'module' ].join( '/' ),
+          data: {
+            select: { column: [ 'id', 'rank', 'name' ] },
+            modifier: { order: 'rank', limit: 1000 }
           }
+        } ).query();
+        $scope.moduleList = response.data;
 
-          if( questionDetails ) {
-            $scope.currentQuestion = {
-              id: response.data.question_id,
-              rank: response.data.question_rank,
-              name: response.data.question_name
-            };
-          }
+        if( $scope.currentModule ) {
+          var response = await CnHttpFactory.instance( {
+            path: [ 'module', $scope.currentModule.id, 'page' ].join( '/' ),
+            data: {
+              select: { column: [ 'id', 'rank', 'name' ] },
+              modifier: { order: 'rank', limit: 1000 }
+            }
+          } ).query();
+          $scope.pageList = response.data;
+        }
 
-          // get the list of qnaires, modules, pages and questions (depending on what we're looking at)
-          var promiseList = [
-            CnHttpFactory.instance( {
-              path: 'qnaire',
-              data: {
-                select: { column: [ 'id', 'name' ] },
-                modifier: { order: 'name', limit: 1000 }
-              }
-            } ).query().then( function( response ) {
-              $scope.qnaireList = response.data;
-            } ),
-
-            CnHttpFactory.instance( {
-              path: [ 'qnaire', $scope.currentQnaire.id, 'module' ].join( '/' ),
-              data: {
-                select: { column: [ 'id', 'rank', 'name' ] },
-                modifier: { order: 'rank', limit: 1000 }
-              }
-            } ).query().then( function( response ) {
-              $scope.moduleList = response.data;
-            } )
-          ];
-
-          if( $scope.currentModule ) promiseList.push(
-            CnHttpFactory.instance( {
-              path: [ 'module', $scope.currentModule.id, 'page' ].join( '/' ),
-              data: {
-                select: { column: [ 'id', 'rank', 'name' ] },
-                modifier: { order: 'rank', limit: 1000 }
-              }
-            } ).query().then( function( response ) {
-              $scope.pageList = response.data;
-            } )
-          );
-
-          if( $scope.currentPage ) promiseList.push(
-            CnHttpFactory.instance( {
-              path: [ 'page', $scope.currentPage.id, 'question' ].join( '/' ),
-              data: {
-                select: { column: [ 'id', 'rank', 'name' ] },
-                modifier: { order: 'rank', limit: 1000 }
-              }
-            } ).query().then( function( response ) {
-              $scope.questionList = response.data;
-            } )
-          );
-
-          $q.all( promiseList );
-        } );
+        if( $scope.currentPage ) {
+          var response = await CnHttpFactory.instance( {
+            path: [ 'page', $scope.currentPage.id, 'question' ].join( '/' ),
+            data: {
+              select: { column: [ 'id', 'rank', 'name' ] },
+              modifier: { order: 'rank', limit: 1000 }
+            }
+          } ).query();
+          $scope.questionList = response.data;
+        }
       }
     };
   }
@@ -709,10 +701,9 @@ cenozo.service( 'CnTranslationHelper', [
 
 /* ######################################################################################################## */
 cenozo.factory( 'CnQnairePartCloneFactory', [
-  'CnHttpFactory', 'CnModalMessageFactory', '$q', '$filter', '$state',
-  function( CnHttpFactory, CnModalMessageFactory, $q, $filter, $state ) {
+  'CnHttpFactory', 'CnModalMessageFactory', '$filter', '$state',
+  function( CnHttpFactory, CnModalMessageFactory, $filter, $state ) {
     var object = function( type ) {
-      var self = this;
       var parentType = 'module' == type ? 'qnaire' : 'page' == type ? 'module' : 'question' == type ? 'page' : 'question';
 
       angular.extend( this, {
@@ -744,23 +735,23 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
 
         resetData: function( subject ) {
           // reset data
-          if( angular.isUndefined( subject ) ) self.data.qnaireId = null;
-          if( [ undefined, 'qnaire' ].includes( subject ) ) self.data.moduleId = null;
-          if( [ undefined, 'qnaire', 'module' ].includes( subject ) ) self.data.pageId = null;
-          if( [ undefined, 'qnaire', 'module', 'page' ].includes( subject ) ) self.data.questionId = null;
-          self.data.rank = null;
-          if( angular.isUndefined( subject ) ) self.data.name = null;
-          self.formatError = false;
-          self.nameConflict = false;
+          if( angular.isUndefined( subject ) ) this.data.qnaireId = null;
+          if( [ undefined, 'qnaire' ].includes( subject ) ) this.data.moduleId = null;
+          if( [ undefined, 'qnaire', 'module' ].includes( subject ) ) this.data.pageId = null;
+          if( [ undefined, 'qnaire', 'module', 'page' ].includes( subject ) ) this.data.questionId = null;
+          this.data.rank = null;
+          if( angular.isUndefined( subject ) ) this.data.name = null;
+          this.formatError = false;
+          this.nameConflict = false;
 
           // reset lists
-          if( [ undefined, 'qnaire' ].includes( subject ) ) self.moduleList = [];
-          if( [ undefined, 'qnaire', 'module' ].includes( subject ) ) self.pageList = [];
-          if( [ undefined, 'qnaire', 'module', 'page' ].includes( subject ) ) self.questionList = [];
-          if( [ undefined, 'qnaire', 'module', 'page', 'question' ].includes( subject ) ) self.rankList = [];
+          if( [ undefined, 'qnaire' ].includes( subject ) ) this.moduleList = [];
+          if( [ undefined, 'qnaire', 'module' ].includes( subject ) ) this.pageList = [];
+          if( [ undefined, 'qnaire', 'module', 'page' ].includes( subject ) ) this.questionList = [];
+          if( [ undefined, 'qnaire', 'module', 'page', 'question' ].includes( subject ) ) this.rankList = [];
         },
 
-        onLoad: function() {
+        onLoad: async function() {
           this.resetData();
 
           var columnList = [
@@ -775,162 +766,166 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
           if( 'question_option' == this.type )
             columnList.push( { table: 'question_option', column: 'question_id' } );
 
-          return CnHttpFactory.instance( {
+          var response = await CnHttpFactory.instance( {
             path: [this.type, this.sourceId].join( '/' ),
             data: { select: { column: columnList } }
-          } ).get().then( function( response ) {
-            self.data.name = response.data.name;
-            self.sourceName = response.data.name;
-            self.parentSourceName = response.data.parentName;
-            self.sourceParentId = response.data[self.parentType + '_id'];
-            angular.extend( self.data, {
-              qnaireId: 'qnaire' == self.parentType ? null : response.data.qnaire_id,
-              moduleId: 'module' == self.parentType ? null : response.data.module_id,
-              pageId: 'page' == self.parentType ? null : response.data.page_id,
-              questionId: 'question' == self.parentType ? null : response.data.question_id
-            } );
-          } ).then( function() {
-            return $q.all( [
-              self.resetQnaireList(),
-              self.setQnaire( true ),
-              self.setModule( true ),
-              self.setPage( true ),
-              self.setQuestion( true )
-            ] );
+          } ).get();
+
+          this.data.name = response.data.name;
+          this.sourceName = response.data.name;
+          this.parentSourceName = response.data.parentName;
+          this.sourceParentId = response.data[this.parentType + '_id'];
+          angular.extend( this.data, {
+            qnaireId: 'qnaire' == this.parentType ? null : response.data.qnaire_id,
+            moduleId: 'module' == this.parentType ? null : response.data.module_id,
+            pageId: 'page' == this.parentType ? null : response.data.page_id,
+            questionId: 'question' == this.parentType ? null : response.data.question_id
           } );
+
+          await Promise.all( [
+            this.resetQnaireList(),
+            this.setQnaire( true ),
+            this.setModule( true ),
+            this.setPage( true ),
+            this.setQuestion( true )
+          ] );
         },
 
-        setOperation: function() {
+        setOperation: async function() {
           // update the parent list when the operation type changes
           if( 'qnaire' == this.parentType ) {
-            return this.resetQnaireList();
+            await this.resetQnaireList();
           } else if( 'module' == this.parentType ) {
-            return this.setQnaire( true );
+            await this.setQnaire( true );
           } else if( 'page' == this.parentType ) {
-            return this.setModule( true );
+            await this.setModule( true );
           } else if( 'question' == this.parentType ) {
-            return this.setPage( true );
+            await this.setPage( true );
           }
         },
 
-        resetQnaireList: function() {
-          return CnHttpFactory.instance( {
+        resetQnaireList: async function() {
+          var response = await CnHttpFactory.instance( {
             path: 'qnaire',
             data: {
               select: { column: [ 'id', 'name' ] },
               modifier: { order: { name: false } }
             },
-          } ).query().then( function( response ) {
-            self.qnaireList = response.data
-              .filter( item => 'move' != self.operation || 'qnaire' != self.parentType || self.sourceParentId != item.id )
-              .map( item => ({ value: item.id, name: item.name }) );
-            self.qnaireList.unshift( { value: null, name: '(choose target questionnaire)' } );
-          } );
+          } ).query();
+
+          var self = this;
+          this.qnaireList = response.data
+            .filter( item => 'move' != self.operation || 'qnaire' != self.parentType || self.sourceParentId != item.id )
+            .map( item => ({ value: item.id, name: item.name }) );
+          this.qnaireList.unshift( { value: null, name: '(choose target questionnaire)' } );
         },
 
-        setQnaire: function( noReset ) {
+        setQnaire: async function( noReset ) {
           if( angular.isUndefined( noReset ) ) noReset = false;
-          if( !noReset ) self.resetData( 'qnaire' );
+          if( !noReset ) this.resetData( 'qnaire' );
 
           // either update the rank list or the module list depending on the type
           if( 'module' == this.type ) {
-            return this.updateRankList();
-          } else if( null == self.data.qnaireId ) {
-            self.moduleList = [];
+            await this.updateRankList();
+          } else if( null == this.data.qnaireId ) {
+            this.moduleList = [];
           } else {
-            return CnHttpFactory.instance( {
-              path: ['qnaire', self.data.qnaireId, 'module'].join( '/' ),
+            var response = await CnHttpFactory.instance( {
+              path: ['qnaire', this.data.qnaireId, 'module'].join( '/' ),
               data: {
                 select: { column: [ 'id', 'rank', 'name' ] },
                 modifier: { order: { rank: false } }
               },
-            } ).query().then( function( response ) {
-              self.moduleList = response.data
-                .filter( item => 'move' != self.operation || 'module' != self.parentType || self.sourceParentId != item.id )
-                .map( item => ({ value: item.id, name: item.rank + '. ' + item.name }) );
-              self.moduleList.unshift( { value: null, name: '(choose target module)' } );
-            } );
+            } ).query();
+
+            var self = this;
+            this.moduleList = response.data
+              .filter( item => 'move' != self.operation || 'module' != self.parentType || self.sourceParentId != item.id )
+              .map( item => ({ value: item.id, name: item.rank + '. ' + item.name }) );
+            this.moduleList.unshift( { value: null, name: '(choose target module)' } );
           }
         },
 
-        setModule: function( noReset ) {
+        setModule: async function( noReset ) {
           if( angular.isUndefined( noReset ) ) noReset = false;
-          if( !noReset ) self.resetData( 'module' );
+          if( !noReset ) this.resetData( 'module' );
 
           // either update the rank list or the page list depending on the type
           if( 'page' == this.type ) {
-            return this.updateRankList();
-          } else if( null == self.data.moduleId ) {
-            self.pageList = [];
+            await this.updateRankList();
+          } else if( null == this.data.moduleId ) {
+            this.pageList = [];
           } else {
-            return CnHttpFactory.instance( {
-              path: ['module', self.data.moduleId, 'page'].join( '/' ),
+            var response = await CnHttpFactory.instance( {
+              path: ['module', this.data.moduleId, 'page'].join( '/' ),
               data: {
                 select: { column: [ 'id', 'rank', 'name' ] },
                 modifier: { order: { rank: false } }
               },
-            } ).query().then( function( response ) {
-              self.pageList = response.data
-                .filter( item => 'move' != self.operation || 'page' != self.parentType || self.sourceParentId != item.id )
-                .map( item => ({ value: item.id, name: item.rank + '. ' + item.name }) );
-              self.pageList.unshift( { value: null, name: '(choose target page)' } );
-            } );
+            } ).query();
+
+            var self = this;
+            this.pageList = response.data
+              .filter( item => 'move' != self.operation || 'page' != self.parentType || self.sourceParentId != item.id )
+              .map( item => ({ value: item.id, name: item.rank + '. ' + item.name }) );
+            this.pageList.unshift( { value: null, name: '(choose target page)' } );
           }
         },
 
-        setPage: function( noReset ) {
+        setPage: async function( noReset ) {
           if( angular.isUndefined( noReset ) ) noReset = false;
-          if( !noReset ) self.resetData( 'page' );
+          if( !noReset ) this.resetData( 'page' );
 
           // either update the rank list or the question list depending on the type
           if( 'question' == this.type ) {
-            return this.updateRankList();
-          } else if( null == self.data.pageId ) {
-            self.questionList = [];
+            await this.updateRankList();
+          } else if( null == this.data.pageId ) {
+            this.questionList = [];
           } else {
-            return CnHttpFactory.instance( {
-              path: ['page', self.data.pageId, 'question'].join( '/' ),
+            var response = await CnHttpFactory.instance( {
+              path: ['page', this.data.pageId, 'question'].join( '/' ),
               data: {
                 select: { column: [ 'id', 'rank', 'name' ] },
                 modifier: { where: { column: 'question.type', operator: '=', value: 'list' }, order: { rank: false } }
               },
-            } ).query().then( function( response ) {
-              self.questionList = response.data
-                .filter( item => 'move' != self.operation || 'question' != self.parentType || self.sourceParentId != item.id )
-                .map( item => ({ value: item.id, name: item.rank + '. ' + item.name }) );
-              self.questionList.unshift( {
-                value: null,
-                name: 0 == self.questionList.length ?
-                  '(the selected page has no list type questions)' : '(choose target list question)'
-              } );
+            } ).query();
+
+            var self = this;
+            this.questionList = response.data
+              .filter( item => 'move' != self.operation || 'question' != self.parentType || self.sourceParentId != item.id )
+              .map( item => ({ value: item.id, name: item.rank + '. ' + item.name }) );
+            this.questionList.unshift( {
+              value: null,
+              name: 0 == this.questionList.length ?
+                '(the selected page has no list type questions)' : '(choose target list question)'
             } );
           }
         },
 
-        setQuestion: function( noReset ) {
+        setQuestion: async function( noReset ) {
           if( angular.isUndefined( noReset ) ) noReset = false;
-          if( !noReset ) self.resetData( 'question' );
-          return this.updateRankList();
+          if( !noReset ) await this.resetData( 'question' );
+          await this.updateRankList();
         },
 
-        updateRankList: function() {
+        updateRankList: async function() {
           // if the parent hasn't been selected then the rank list should be empty
-          if( null == self.data[this.parentIdName] ) {
-            self.rankList = [];
+          if( null == this.data[this.parentIdName] ) {
+            this.rankList = [];
           } else {
-            return CnHttpFactory.instance( {
-              path: [this.parentType, this.data[self.parentIdName], this.type].join( '/' ),
+            var response = await CnHttpFactory.instance( {
+              path: [this.parentType, this.data[this.parentIdName], this.type].join( '/' ),
               data: {
                 select: { column: { column: 'MAX( ' + this.type + '.rank )', alias: 'max', table_prefix: false } }
               },
-            } ).query().then( function( response ) {
-              var maxRank = null == response.data[0].max ? 1 : parseInt( response.data[0].max ) + 1;
-              self.rankList = [];
-              for( var rank = 1; rank <= maxRank; rank++ ) {
-                self.rankList.push( { value: rank, name: $filter( 'cnOrdinal' )( rank ) } );
-              }
-              self.rankList.unshift( { value: null, name: '(choose target rank)' } );
-            } );
+            } ).query();
+
+            var maxRank = null == response.data[0].max ? 1 : parseInt( response.data[0].max ) + 1;
+            this.rankList = [];
+            for( var rank = 1; rank <= maxRank; rank++ ) {
+              this.rankList.push( { value: rank, name: $filter( 'cnOrdinal' )( rank ) } );
+            }
+            this.rankList.unshift( { value: null, name: '(choose target rank)' } );
           }
         },
 
@@ -962,24 +957,22 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
           );
         },
 
-        cancel: function() {
-          $state.go( this.type + '.view', { identifier: self.sourceId } );
+        cancel: async function() {
+          await $state.go( this.type + '.view', { identifier: this.sourceId } );
         },
 
-        save: function() {
-          this.working = true;
+        save: async function() {
           var data = { rank: this.data.rank };
           data[this.parentType + '_id'] = this.data[this.parentIdName];
 
           if( 'move' == this.operation ) {
-            return CnHttpFactory.instance( {
-              path: this.type + '/' + this.sourceId,
-              data: data
-            } ).patch().then( function() {
-              $state.go( self.type + '.view', { identifier: self.sourceId } );
-            } ).finally( function() {
-              self.working = false;
-            } );
+            try {
+              this.working = true;
+              await CnHttpFactory.instance( { path: this.type + '/' + this.sourceId, data: data } ).patch();
+              await $state.go( this.type + '.view', { identifier: this.sourceId } );
+            } finally {
+              this.working = false;
+            }
           } else { // clone
             // make sure the name is valid
             var re = new RegExp( 'question_option' == this.type ? '^[a-zA-Z0-9_]*$' : '^[a-zA-Z_][a-zA-Z0-9_]*$' );
@@ -988,18 +981,22 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
             } else {
               // add the new name to the http data
               data.name = this.data.name;
-              return CnHttpFactory.instance( {
-                path: this.type + '?clone=' + this.sourceId,
-                data: data,
-                onError: function( response ) {
-                  if( 409 == response.status ) self.nameConflict = true;
-                  else CnModalMessageFactory.httpError( response );
-                }
-              } ).post().then( function( response ) {
-                $state.go( self.type + '.view', { identifier: response.data } );
-              } ).finally( function() {
-                self.working = false;
-              } );
+              try {
+                var self = this;
+                this.working = true;
+                var response = await CnHttpFactory.instance( {
+                  path: this.type + '?clone=' + this.sourceId,
+                  data: data,
+                  onError: function( error ) {
+                    if( 409 == error.status ) self.nameConflict = true;
+                    else CnModalMessageFactory.httpError( error );
+                  }
+                } ).post();
+
+                await $state.go( this.type + '.view', { identifier: response.data } );
+              } finally {
+                this.working = false;
+              }
             }
           }
         }

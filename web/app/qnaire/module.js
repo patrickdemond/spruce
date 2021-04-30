@@ -174,15 +174,15 @@ define( [ 'module' ].reduce( function( list, name ) {
 
   module.addExtraOperation( 'list', {
     title: 'Import',
-    operation: function( $state, model ) { $state.go( 'qnaire.import' ); },
+    operation: async function( $state, model ) { await $state.go( 'qnaire.import' ); },
     isIncluded: function( $state, model ) { return model.getEditEnabled(); }
   } );
 
   module.addExtraOperation( 'view', {
     title: 'Preview',
     isDisabled: function( $state, model ) { return !model.viewModel.record.first_page_id; },
-    operation: function( $state, model ) {
-      $state.go(
+    operation: async function( $state, model ) {
+      await $state.go(
         'page.render',
         { identifier: model.viewModel.record.first_page_id },
         { reload: true }
@@ -192,16 +192,16 @@ define( [ 'module' ].reduce( function( list, name ) {
 
   module.addExtraOperation( 'view', {
     title: 'Export',
-    operation: function( $state, model ) {
-      $state.go( 'qnaire.clone', { identifier: model.viewModel.record.getIdentifier() } );
+    operation: async function( $state, model ) {
+      await $state.go( 'qnaire.clone', { identifier: model.viewModel.record.getIdentifier() } );
     },
     isIncluded: function( $state, model ) { return model.getEditEnabled(); }
   } );
 
   module.addExtraOperation( 'view', {
     title: 'Patch',
-    operation: function( $state, model ) {
-      $state.go( 'qnaire.patch', { identifier: model.viewModel.record.getIdentifier() } );
+    operation: async function( $state, model ) {
+      await $state.go( 'qnaire.patch', { identifier: model.viewModel.record.getIdentifier() } );
     },
     isIncluded: function( $state, model ) { return model.getEditEnabled(); }
   } );
@@ -266,20 +266,20 @@ define( [ 'module' ].reduce( function( list, name ) {
         templateUrl: module.getFileUrl( 'clone.tpl.html' ),
         restrict: 'E',
         scope: { model: '=?' },
-        controller: function( $scope ) {
+        controller: async function( $scope ) {
           if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnaireCloneFactory.instance();
 
-          $scope.model.onLoad().then( function() {
-            CnSession.setBreadcrumbTrail( [ {
-              title: 'Questionnaires',
-              go: function() { return $state.go( 'qnaire.list' ); }
-            }, {
-              title: $scope.model.sourceName,
-              go: function() { return $state.go( 'qnaire.view', { identifier: $scope.model.parentQnaireId } ); }
-            }, {
-              title: 'Export'
-            } ] );
-          } );
+          await $scope.model.onLoad();
+
+          CnSession.setBreadcrumbTrail( [ {
+            title: 'Questionnaires',
+            go: async function() { await $state.go( 'qnaire.list' ); }
+          }, {
+            title: $scope.model.sourceName,
+            go: async function() { await $state.go( 'qnaire.view', { identifier: $scope.model.parentQnaireId } ); }
+          }, {
+            title: 'Export'
+          } ] );
         }
       };
     }
@@ -298,7 +298,7 @@ define( [ 'module' ].reduce( function( list, name ) {
 
           CnSession.setBreadcrumbTrail( [ {
             title: 'Questionnaires',
-            go: function() { return $state.go( 'qnaire.list' ); }
+            go: async function() { await $state.go( 'qnaire.list' ); }
           }, {
             title: 'Import'
           } ] );
@@ -315,20 +315,20 @@ define( [ 'module' ].reduce( function( list, name ) {
         templateUrl: module.getFileUrl( 'mass_respondent.tpl.html' ),
         restrict: 'E',
         scope: { model: '=?' },
-        controller: function( $scope ) {
+        controller: async function( $scope ) {
           if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnaireMassRespondentFactory.instance();
 
-          $scope.model.onLoad().then( function() {
-            CnSession.setBreadcrumbTrail( [ {
-              title: 'Questionnaires',
-              go: function() { return $state.go( 'qnaire.list' ); }
-            }, {
-              title: $scope.model.qnaireName,
-              go: function() { return $state.go( 'qnaire.view', { identifier: $scope.model.qnaireId } ); }
-            }, {
-              title: 'Mass Respondent'
-            } ] );
-          } );
+          await $scope.model.onLoad();
+          
+          CnSession.setBreadcrumbTrail( [ {
+            title: 'Questionnaires',
+            go: async function() { await $state.go( 'qnaire.list' ); }
+          }, {
+            title: $scope.model.qnaireName,
+            go: async function() { await $state.go( 'qnaire.view', { identifier: $scope.model.qnaireId } ); }
+          }, {
+            title: 'Mass Respondent'
+          } ] );
         }
       };
     }
@@ -342,20 +342,20 @@ define( [ 'module' ].reduce( function( list, name ) {
         templateUrl: module.getFileUrl( 'patch.tpl.html' ),
         restrict: 'E',
         scope: { model: '=?' },
-        controller: function( $scope ) {
+        controller: async function( $scope ) {
           if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnaireModelFactory.root;
 
-          $scope.model.viewModel.onView().then( function() {
-            CnSession.setBreadcrumbTrail( [ {
-              title: 'Questionnaires',
-              go: function() { return $state.go( 'qnaire.list' ); }
-            }, {
-              title: $scope.model.viewModel.record.name,
-              go: function() { return $state.go( 'qnaire.view', { identifier: $scope.model.viewModel.record.getIdentifier() } ); }
-            }, {
-              title: 'Patch'
-            } ] );
-          } );
+          await $scope.model.viewModel.onView();
+
+          CnSession.setBreadcrumbTrail( [ {
+            title: 'Questionnaires',
+            go: async function() { await $state.go( 'qnaire.list' ); }
+          }, {
+            title: $scope.model.viewModel.record.name,
+            go: async function() { await $state.go( 'qnaire.view', { identifier: $scope.model.viewModel.record.getIdentifier() } ); }
+          }, {
+            title: 'Patch'
+          } ] );
         }
       };
     }
@@ -405,7 +405,6 @@ define( [ 'module' ].reduce( function( list, name ) {
     'CnHttpFactory', 'CnModalMessageFactory', '$state',
     function( CnHttpFactory, CnModalMessageFactory, $state ) {
       var object = function() {
-        var self = this;
         angular.extend( this, {
           parentQnaireId: $state.params.identifier,
           sourceName: null,
@@ -414,27 +413,25 @@ define( [ 'module' ].reduce( function( list, name ) {
           name: null,
           nameConflict: false,
 
-          onLoad: function() {
+          onLoad: async function() {
             // reset data
             this.name = null;
             this.nameConflict = false;
-            return CnHttpFactory.instance( {
+            var response = CnHttpFactory.instance( {
               path: 'qnaire/' + this.parentQnaireId,
               data: { select: { column: 'name' } }
-            } ).get().then( function( response ) {
-              self.sourceName = response.data.name;
-            } );
+            } ).get();
+            this.sourceName = response.data.name;
           },
           isComplete: function() { return !this.working && !this.nameConflict && ( null != this.name || 'clone' != this.operation ); },
-          cancel: function() { $state.go( 'qnaire.view', { identifier: this.parentQnaireId } ); },
+          cancel: async function() { await $state.go( 'qnaire.view', { identifier: this.parentQnaireId } ); },
 
-          save: function() {
-            this.working = true;
-
+          save: async function() {
+            var self = this;
             var httpObj = {
-              onError: function( response ) {
-                if( 409 == response.status ) self.nameConflict = true;
-                else CnModalMessageFactory.httpError( response );
+              onError: function( error ) {
+                if( 409 == error.status ) self.nameConflict = true;
+                else CnModalMessageFactory.httpError( error );
               }
             };
 
@@ -449,13 +446,14 @@ define( [ 'module' ].reduce( function( list, name ) {
               httpObj.format = 'txt';
             }
 
-            var http = CnHttpFactory.instance( httpObj );
-            var promise = 'clone' == this.operation ? http.post() : http.file();
-            return promise.then( function( response ) {
-              if( 'clone' == self.operation ) $state.go( 'qnaire.view', { identifier: response.data } );
-            } ).finally( function() {
-              self.working = false;
-            } );
+            try {
+              this.working = true;
+              var http = CnHttpFactory.instance( httpObj );
+              var response = await( 'clone' == this.operation ? http.post() : http.file() );
+              if( 'clone' == this.operation ) await $state.go( 'qnaire.view', { identifier: response.data } );
+            } finally {
+              this.working = false;
+            }
           }
         } );
       }
@@ -468,26 +466,27 @@ define( [ 'module' ].reduce( function( list, name ) {
     'CnHttpFactory', '$state',
     function( CnHttpFactory, $state ) {
       var object = function() {
-        var self = this;
         angular.extend( this, {
           working: false,
           file: null,
 
-          cancel: function() { $state.go( 'qnaire.list' ); },
+          cancel: async function() { await $state.go( 'qnaire.list' ); },
 
-          import: function() {
-            this.working = true;
-
+          import: async function() {
             var data = new FormData();
             data.append( 'file', this.file );
             var fileDetails = data.get( 'file' );
 
-            return CnHttpFactory.instance( {
-              path: 'qnaire?import=1',
-              data: self.file
-            } ).post().then( function( response ) {
-              $state.go( 'qnaire.view', { identifier: response.data } );
-            } ).finally( function() { self.working = false; } );
+            try {
+              this.working = true;
+              var response = await CnHttpFactory.instance( {
+                path: 'qnaire?import=1',
+                data: this.file
+              } ).post();
+              await $state.go( 'qnaire.view', { identifier: response.data } );
+            } finally {
+              this.working = false;
+            }
           }
         } );
       }
@@ -500,7 +499,6 @@ define( [ 'module' ].reduce( function( list, name ) {
     'CnSession', 'CnHttpFactory', 'CnModalMessageFactory', 'CnParticipantSelectionFactory', '$state',
     function( CnSession, CnHttpFactory, CnModalMessageFactory, CnParticipantSelectionFactory, $state ) {
       var object = function() {
-        var self = this;
         angular.extend( this, {
           working: false,
           participantSelection: CnParticipantSelectionFactory.instance( {
@@ -510,37 +508,44 @@ define( [ 'module' ].reduce( function( list, name ) {
           qnaireId: $state.params.identifier,
           qnaireName: null,
 
-          onLoad: function() {
+          onLoad: async function() {
             // reset data
-            return CnHttpFactory.instance( {
+            var response = CnHttpFactory.instance( {
               path: 'qnaire/' + this.qnaireId,
               data: { select: { column: 'name' } }
-            } ).get().then( function( response ) {
-              self.qnaireName = response.data.name;
-              self.participantSelection.reset();
-            } );
+            } ).get();
+
+            this.qnaireName = response.data.name;
+            this.participantSelection.reset();
           },
 
-          proceed: function() {
-            this.working = true;
+          proceed: async function() {
             if( !this.participantSelection.confirmInProgress && 0 < this.participantSelection.confirmedCount ) {
-              CnHttpFactory.instance( {
-                path: ['qnaire', this.qnaireId, 'participant'].join( '/' ),
-                data: {
-                  mode: 'create',
-                  identifier_id: this.participantSelection.identifierId,
-                  identifier_list: this.participantSelection.getIdentifierList()
-                },
-                onError: function( response ) {
-                  CnModalMessageFactory.httpError( response ).then( function() { self.onLoad(); } );
-                }
-              } ).post().then( function( response ) {
-                CnModalMessageFactory.instance( {
+              try {
+                this.working = true;
+                var self = this;
+                var response = await CnHttpFactory.instance( {
+                  path: ['qnaire', this.qnaireId, 'participant'].join( '/' ),
+                  data: {
+                    mode: 'create',
+                    identifier_id: this.participantSelection.identifierId,
+                    identifier_list: this.participantSelection.getIdentifierList()
+                  },
+                  onError: async function( error ) {
+                    await CnModalMessageFactory.httpError( error );
+                    self.onLoad();
+                  }
+                } ).post();
+
+                await CnModalMessageFactory.instance( {
                   title: 'Respondents Created',
-                  message: 'You have successfully created ' + self.participantSelection.confirmedCount + ' new recipients for the "' +
-                           self.qnaireName + '" questionnaire.'
-                } ).show().then( function() { self.onLoad(); } );
-              } ).finally( function() { self.working = false; } );
+                  message: 'You have successfully created ' + this.participantSelection.confirmedCount + ' new recipients for the "' +
+                           this.qnaireName + '" questionnaire.'
+                } ).show();
+                await this.onLoad();
+              } finally {
+                this.working = false;
+              }
             }
           }
 
@@ -564,11 +569,85 @@ define( [ 'module' ].reduce( function( list, name ) {
     'CnBaseViewFactory', 'CnHttpFactory', '$filter', '$state', '$rootScope',
     function( CnBaseViewFactory, CnHttpFactory, $filter, $state, $rootScope ) {
       var object = function( parentModel, root ) {
-        var self = this;
         // the respondent only has one list (respondent list) so the default tab for them is null
         CnBaseViewFactory.construct( this, parentModel, root, parentModel.isRole( 'interviewer' ) ? null : 'respondent' );
 
-        this.deferred.promise.then( function() {
+        angular.extend( this, {
+          uploadReadReady: false,
+          working: false,
+          file: null,
+          difference: null,
+          differenceIsEmpty: false,
+
+          // only show the respondent list to respondents
+          getChildList: function() {
+            return this.parentModel.isRole( 'interviewer' ) ?
+              this.$$getChildList().filter( child => ['respondent'].includes( child.subject.snake ) ) :
+              this.$$getChildList();
+          },
+
+          onView: async function( force ) {
+            await this.$$onView( force );
+            this.record.average_time = $filter( 'cnSeconds' )( Math.round( this.record.average_time ) );
+            this.working = false;
+            this.file = null;
+            this.difference = null;
+            this.differenceIsEmpty = false;
+          },
+
+          onPatch: async function( data ) {
+            await this.$$onPatch( data );
+            if( angular.isDefined( data.repeated ) && data.repeated ) await this.onView();
+          },
+
+          cancel: async function() { await $state.go( 'qnaire.view', { identifier: this.record.getIdentifier() } ); },
+
+          checkPatch: function() {
+            if( !this.uploadReadReady ) {
+              var self = this;
+              // need to wait for cnUplod to do its thing
+              $rootScope.$on( 'cnUpload read', async function() {
+                try {
+                  self.working = true;
+                  self.uploadReadReady = true;
+
+                  var data = new FormData();
+                  data.append( 'file', self.file );
+
+                  // check the patch file
+                  var response = CnHttpFactory.instance( {
+                    path: self.parentModel.getServiceResourcePath() + '?patch=check',
+                    data: self.file
+                  } ).patch();
+
+                  self.difference = response.data;
+                  self.differenceIsEmpty = 0 == Object.keys( self.difference ).length;
+                } finally {
+                  self.working = false;
+                }
+              } );
+            }
+          },
+
+          applyPatch: async function() {
+            try {
+              // apply the patch file
+              this.working = true;
+              await CnHttpFactory.instance( {
+                path: this.parentModel.getServiceResourcePath() + '?patch=apply',
+                data: this.file
+              } ).patch();
+              await $state.go( 'qnaire.view', { identifier: this.record.getIdentifier() } );
+            } finally {
+              this.working = false;
+            }
+          }
+        } );
+
+        var self = this;
+        async function init() {
+          await self.deferred.promise;
+
           if( angular.isDefined( self.moduleModel ) ) {
             self.moduleModel.getAddEnabled = function() {
               return !self.record.readonly && self.moduleModel.$$getAddEnabled();
@@ -586,74 +665,9 @@ define( [ 'module' ].reduce( function( list, name ) {
               return !self.record.readonly && self.attributeModel.$$getDeleteEnabled();
             }
           }
-        } );
+        }
 
-        angular.extend( this, {
-          uploadReadReady: false,
-          working: false,
-          file: null,
-          difference: null,
-          differenceIsEmpty: false,
-
-          // only show the respondent list to respondents
-          getChildList: function() {
-            return self.parentModel.isRole( 'interviewer' ) ?
-              self.$$getChildList().filter( child => ['respondent'].includes( child.subject.snake ) ) :
-              self.$$getChildList();
-          },
-
-          onView: function( force ) {
-            return this.$$onView( force ).then( function() {
-              self.record.average_time = $filter( 'cnSeconds' )( Math.round( self.record.average_time ) );
-              self.working = false;
-              self.file = null;
-              self.difference = null;
-              self.differenceIsEmpty = false;
-            } );
-          },
-
-          onPatch: function( data ) {
-            return this.$$onPatch( data ).then( function() {
-              if( angular.isDefined( data.repeated ) && data.repeated ) self.onView();
-            } );
-          },
-
-          cancel: function() { $state.go( 'qnaire.view', { identifier: this.record.getIdentifier() } ); },
-
-          checkPatch: function() {
-            if( !self.uploadReadReady ) {
-              // need to wait for cnUplod to do its thing
-              $rootScope.$on( 'cnUpload read', function() {
-                self.working = true;
-                self.uploadReadReady = true;
-
-                var data = new FormData();
-                data.append( 'file', self.file );
-
-                // check the patch file
-                return CnHttpFactory.instance( {
-                  path: self.parentModel.getServiceResourcePath() + '?patch=check',
-                  data: self.file
-                } ).patch().then( function( response ) {
-                  self.difference = response.data;
-                  self.differenceIsEmpty = 0 == Object.keys( self.difference ).length;
-                } ).finally( function() { self.working = false; } );
-              } );
-            }
-          },
-
-          applyPatch: function() {
-            self.working = true;
-
-            // apply the patch file
-            return CnHttpFactory.instance( {
-              path: self.parentModel.getServiceResourcePath() + '?patch=apply',
-              data: self.file
-            } ).patch().then( function() {
-              $state.go( 'qnaire.view', { identifier: self.record.getIdentifier() } );
-            } ).finally( function() { self.working = false; } );
-          }
-        } );
+        init();
       }
       return { instance: function( parentModel, root ) { return new object( parentModel, root ); } };
     }
@@ -664,7 +678,6 @@ define( [ 'module' ].reduce( function( list, name ) {
     'CnBaseModelFactory', 'CnQnaireAddFactory', 'CnQnaireListFactory', 'CnQnaireViewFactory', 'CnHttpFactory', 'CnSession',
     function( CnBaseModelFactory, CnQnaireAddFactory, CnQnaireListFactory, CnQnaireViewFactory, CnHttpFactory, CnSession ) {
       var object = function( root ) {
-        var self = this;
         CnBaseModelFactory.construct( this, module );
         this.addModel = CnQnaireAddFactory.instance( this );
         this.listModel = CnQnaireListFactory.instance( this );
@@ -682,27 +695,28 @@ define( [ 'module' ].reduce( function( list, name ) {
           },
 
           // extend getMetadata
-          getMetadata: function() {
-            return this.$$getMetadata().then( function() {
-              return CnHttpFactory.instance( {
-                path: 'language',
-                data: {
-                  select: { column: [ 'id', 'name', 'code' ] },
-                  modifier: {
-                    where: { column: 'active', operator: '=', value: true },
-                    order: 'name',
-                    limit: 1000
-                  }
+          getMetadata: async function() {
+            await this.$$getMetadata();
+
+            var response = await CnHttpFactory.instance( {
+              path: 'language',
+              data: {
+                select: { column: [ 'id', 'name', 'code' ] },
+                modifier: {
+                  where: { column: 'active', operator: '=', value: true },
+                  order: 'name',
+                  limit: 1000
                 }
-              } ).query().then( function success( response ) {
-                self.metadata.columnList.base_language_id.enumList = [];
-                response.data.forEach( function( item ) {
-                  self.metadata.columnList.base_language_id.enumList.push( {
-                    value: item.id,
-                    name: item.name,
-                    code: item.code // code is needed by the withdraw action
-                  } );
-                } );
+              }
+            } ).query();
+
+            this.metadata.columnList.base_language_id.enumList = [];
+            var self = this;
+            response.data.forEach( function( item ) {
+              self.metadata.columnList.base_language_id.enumList.push( {
+                value: item.id,
+                name: item.name,
+                code: item.code // code is needed by the withdraw action
               } );
             } );
           }

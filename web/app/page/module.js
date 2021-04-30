@@ -39,8 +39,8 @@ define( [ 'question' ].reduce( function( list, name ) {
 
   module.addExtraOperation( 'view', {
     title: 'Preview',
-    operation: function( $state, model ) {
-      $state.go(
+    operation: async function( $state, model ) {
+      await $state.go(
         'page.render',
         { identifier: model.viewModel.record.getIdentifier() },
         { reload: true }
@@ -68,25 +68,25 @@ define( [ 'question' ].reduce( function( list, name ) {
         templateUrl: cenozoApp.getFileUrl( 'pine', 'qnaire_part_clone.tpl.html' ),
         restrict: 'E',
         scope: { model: '=?' },
-        controller: function( $scope ) {
+        controller: async function( $scope ) {
           if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnairePartCloneFactory.instance( 'page' );
 
-          $scope.model.onLoad().then( function() {
-            CnSession.setBreadcrumbTrail( [ {
-              title: 'Module',
-              go: function() { return $state.go( 'module.list' ); }
-            }, {
-              title: $scope.model.parentSourceName,
-              go: function() { return $state.go( 'module.view', { identifier: $scope.model.sourceParentId } ); }
-            }, {
-              title: 'Pages'
-            }, {
-              title: $scope.model.sourceName,
-              go: function() { return $state.go( 'page.view', { identifier: $scope.model.sourceId } ); }
-            }, {
-              title: 'move/copy'
-            } ] );
-          } );
+          await $scope.model.onLoad();
+          
+          CnSession.setBreadcrumbTrail( [ {
+            title: 'Module',
+            go: async function() { await $state.go( 'module.list' ); }
+          }, {
+            title: $scope.model.parentSourceName,
+            go: async function() { await $state.go( 'module.view', { identifier: $scope.model.sourceParentId } ); }
+          }, {
+            title: 'Pages'
+          }, {
+            title: $scope.model.sourceName,
+            go: async function() { await $state.go( 'page.view', { identifier: $scope.model.sourceId } ); }
+          }, {
+            title: 'move/copy'
+          } ] );
         }
       };
     }
@@ -112,13 +112,13 @@ define( [ 'question' ].reduce( function( list, name ) {
 
   /* ######################################################################################################## */
   cenozo.providers.directive( 'cnPageRender', [
-    'CnPageModelFactory', 'CnTranslationHelper', 'CnSession', 'CnHttpFactory', '$q', '$state', '$document',
-    function( CnPageModelFactory, CnTranslationHelper, CnSession, CnHttpFactory, $q, $state, $document ) {
+    'CnPageModelFactory', 'CnTranslationHelper', 'CnSession', 'CnHttpFactory', '$state', '$document',
+    function( CnPageModelFactory, CnTranslationHelper, CnSession, CnHttpFactory, $state, $document ) {
       return {
         templateUrl: module.getFileUrl( 'render.tpl.html' ),
         restrict: 'E',
         scope: { model: '=?' },
-        controller: function( $scope ) {
+        controller: async function( $scope ) {
           function isNumpadInput( event ) {
             // only send keyup events when on the render page and the key is a numpad number
             return ['render','run'].includes( $scope.model.getActionFromState() ) && (
@@ -127,19 +127,29 @@ define( [ 'question' ].reduce( function( list, name ) {
             );
           }
 
-          $scope.data = {
-            page_id: null,
-            qnaire_id: null,
-            qnaire_name: null,
-            base_language: null,
-            title: null,
-            uid: null
-          };
-          $scope.isComplete = false;
           if( angular.isUndefined( $scope.model ) ) $scope.model = CnPageModelFactory.root;
+          angular.extend( $scope, {
+            data: {
+              page_id: null,
+              qnaire_id: null,
+              qnaire_name: null,
+              base_language: null,
+              title: null,
+              uid: null
+            },
+            isComplete: false,
+            progress: 0,
+            showHidden: angular.isDefined( $state.params.show_hidden ) ? $state.params.show_hidden : false,
+            text: function( address ) { return $scope.model.renderModel.text( address ); },
+            validateKeydown: function( event ) {
+              // prevent numpad keys from entering into inputs and textareas
+              // (PROBLEMATIC, DISABLING THIS FOR NOW)
+              // if( isNumpadInput( event ) ) { event.returnValue = false; event.preventDefault(); }
+            }
+          } );
 
           /*
-          DISABLING THIS FOR NOW BECAUSE IT DOESN'T WORK WELL FOR END-USERS
+          PROBLEMATIC, DISABLING THIS FOR NOW
           // bind keyup (first unbind to prevent duplicates)
           $document.unbind( 'keyup' );
           $document.bind( 'keyup', function( event ) {
@@ -151,74 +161,13 @@ define( [ 'question' ].reduce( function( list, name ) {
           } );
           */
 
-          // prevent numpad keys from entering into inputs and textareas
-          $scope.validateKeydown = function( event ) {
-            /*
-            if( isNumpadInput( event ) ) {
-              event.returnValue = false;
-              event.preventDefault();
-            }
-            */
-          };
-
-          if( angular.isUndefined( $scope.progress ) ) $scope.progress = 0;
-
-          $scope.text = function( address ) { return $scope.model.renderModel.text( address ); };
-
-          function render() {
-            var promiseList = [];
-            if( 'respondent' != $scope.model.getSubjectFromState() || null != $scope.data.page_id ) {
-              promiseList.push(
-                $scope.model.viewModel.onView( true ).then( function() {
-                  angular.extend( $scope.data, {
-                    page_id: $scope.model.viewModel.record.id,
-                    qnaire_id: $scope.model.viewModel.record.qnaire_id,
-                    qnaire_name: $scope.model.viewModel.record.qnaire_name,
-                    base_language: $scope.model.viewModel.record.base_language,
-                    uid: $scope.model.viewModel.record.uid
-                  } );
-
-                  $scope.progress = Math.round(
-                    100 * $scope.model.viewModel.record.qnaire_page / $scope.model.viewModel.record.qnaire_pages
-                  );
-                  return $scope.model.renderModel.onLoad();
-                } )
-              );
-            } else if( null == $scope.data.page_id ) {
-              promiseList.push( $scope.model.renderModel.reset() );
-            }
-
-            $q.all( promiseList ).then( function() {
-              CnHttpFactory.instance( {
-                path: [ 'qnaire', $scope.data.qnaire_id, 'language' ].join( '/' ),
-                data: { select: { column: [ 'id', 'code', 'name' ] } }
-              } ).query().then( function( response ) {
-                $scope.languageList = response.data;
-              } );
-
-              CnSession.setBreadcrumbTrail( [ {
-                title: $scope.data.qnaire_name,
-                go: function() { return $state.go( 'qnaire.view', { identifier: $scope.data.qnaire_id } ); }
-              }, {
-                title: $scope.data.uid ? $scope.data.uid : 'Preview'
-              } ] );
-
-              if( null == $scope.model.renderModel.currentLanguage )
-                $scope.model.renderModel.currentLanguage = $scope.data.base_language;
-
-              $scope.isComplete = true;
-            } );
-          }
-
-          $scope.showHidden = angular.isDefined( $state.params.show_hidden ) ? $state.params.show_hidden : false;
           if( 'respondent' != $scope.model.getSubjectFromState() ) {
             $scope.showHidden = true;
-            render();
           } else {
             // check for the respondent using the token
             var params = '?assert_response=1';
             if( $scope.showHidden ) params += '&&show_hidden=1';
-            CnHttpFactory.instance( {
+            var response = await CnHttpFactory.instance( {
               path: 'respondent/token=' + $state.params.token + params,
               data: { select: { column: [
                 'qnaire_id', 'introductions', 'conclusions', 'closes',
@@ -229,18 +178,55 @@ define( [ 'question' ].reduce( function( list, name ) {
                 { table: 'participant', column: 'uid' },
                 { table: 'language', column: 'code', alias: 'base_language' }
               ] } },
-              onError: function( response ) {
-                $state.go( 'error.' + response.status, response );
+              onError: function( error ) {
+                $state.go( 'error.' + error.status, error );
               }
-            } ).get().then( function( response ) {
-              $scope.data = response.data;
-              $scope.data.introductions = CnTranslationHelper.parseDescriptions( $scope.data.introductions, $scope.showHidden );
-              $scope.data.conclusions = CnTranslationHelper.parseDescriptions( $scope.data.conclusions, $scope.showHidden );
-              $scope.data.closes = CnTranslationHelper.parseDescriptions( $scope.data.closes, $scope.showHidden );
-              $scope.data.title = null != $scope.data.page_id ? '' : $scope.data.submitted ? 'Conclusion' : 'Introduction';
-              render();
-            } );
+            } ).get();
+
+            $scope.data = response.data;
+            $scope.data.introductions = CnTranslationHelper.parseDescriptions( $scope.data.introductions, $scope.showHidden );
+            $scope.data.conclusions = CnTranslationHelper.parseDescriptions( $scope.data.conclusions, $scope.showHidden );
+            $scope.data.closes = CnTranslationHelper.parseDescriptions( $scope.data.closes, $scope.showHidden );
+            $scope.data.title = null != $scope.data.page_id ? '' : $scope.data.submitted ? 'Conclusion' : 'Introduction';
           }
+
+          if( 'respondent' != $scope.model.getSubjectFromState() || null != $scope.data.page_id ) {
+            await $scope.model.viewModel.onView( true );
+
+            angular.extend( $scope.data, {
+              page_id: $scope.model.viewModel.record.id,
+              qnaire_id: $scope.model.viewModel.record.qnaire_id,
+              qnaire_name: $scope.model.viewModel.record.qnaire_name,
+              base_language: $scope.model.viewModel.record.base_language,
+              uid: $scope.model.viewModel.record.uid
+            } );
+
+            $scope.progress = Math.round(
+              100 * $scope.model.viewModel.record.qnaire_page / $scope.model.viewModel.record.qnaire_pages
+            );
+
+            await $scope.model.renderModel.onLoad();
+          } else if( null == $scope.data.page_id ) {
+            await $scope.model.renderModel.reset();
+          }
+
+          var response = await CnHttpFactory.instance( {
+            path: [ 'qnaire', $scope.data.qnaire_id, 'language' ].join( '/' ),
+            data: { select: { column: [ 'id', 'code', 'name' ] } }
+          } ).query();
+          $scope.languageList = response.data;
+
+          CnSession.setBreadcrumbTrail( [ {
+            title: $scope.data.qnaire_name,
+            go: async function() { await $state.go( 'qnaire.view', { identifier: $scope.data.qnaire_id } ); }
+          }, {
+            title: $scope.data.uid ? $scope.data.uid : 'Preview'
+          } ] );
+
+          if( null == $scope.model.renderModel.currentLanguage )
+            $scope.model.renderModel.currentLanguage = $scope.data.base_language;
+
+          $scope.isComplete = true;
         }
       };
     }
@@ -248,8 +234,8 @@ define( [ 'question' ].reduce( function( list, name ) {
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnPageRenderFactory', [
-    'CnHttpFactory', 'CnTranslationHelper', 'CnModalMessageFactory', 'CnModalDatetimeFactory', '$q', '$state', '$timeout',
-    function( CnHttpFactory, CnTranslationHelper, CnModalMessageFactory, CnModalDatetimeFactory, $q, $state, $timeout ) {
+    'CnHttpFactory', 'CnTranslationHelper', 'CnModalMessageFactory', 'CnModalDatetimeFactory', '$state', '$timeout',
+    function( CnHttpFactory, CnTranslationHelper, CnModalMessageFactory, CnModalDatetimeFactory, $state, $timeout ) {
       var object = function( parentModel ) {
         var self = this;
 
@@ -274,21 +260,23 @@ define( [ 'question' ].reduce( function( list, name ) {
           keyQuestionIndex: null,
           writePromiseList: [],
           promiseIndex: 0,
-          // Used to maintain a semaphore of queries so that they are all executed in sequence without any bumping the queue
-          runQuery: function( fn ) {
-            return $q.all( this.writePromiseList ).then( function() {
-              var newIndex = self.promiseIndex++;
-              var promise = fn().finally( function() {
-                // remove the promise from the write promise list
-                var index = self.writePromiseList.findIndexByProperty( 'index', newIndex );
-                if( null != index ) self.writePromiseList.splice( index, 1 );
-              } );
 
-              // mark the promise with a new index and store it in the write promise list
-              promise.index = newIndex;
-              self.writePromiseList.push( promise );
-              return promise;
-            } );
+          // Used to maintain a semaphore of queries so that they are all executed in sequence without any bumping the queue
+          runQuery: async function( fn ) {
+            await Promise.all( this.writePromiseList );
+
+            var response = null;
+            var newIndex = self.promiseIndex++;
+            try {
+              response = fn();
+              response.index = newIndex;
+            } finally {
+              // remove the promise from the write promise list
+              var index = self.writePromiseList.findIndexByProperty( 'index', newIndex );
+              if( null != index ) self.writePromiseList.splice( index, 1 );
+            }
+
+            await response;
           },
 
           convertValueToModel: function( question ) {
@@ -409,8 +397,8 @@ define( [ 'question' ].reduce( function( list, name ) {
             if( !isLimit && true == expression || false == expression ) return expression;
 
             // replace any attributes
-            if( 'respondent' != self.parentModel.getSubjectFromState() ) {
-              self.activeAttributeList.forEach( function( attribute ) {
+            if( 'respondent' != this.parentModel.getSubjectFromState() ) {
+              this.activeAttributeList.forEach( function( attribute ) {
                 var qualifier = 'showhidden' == attribute.name ? '\\b' : '@';
                 var re = new RegExp( qualifier + attribute.name + qualifier );
                 var value = attribute.value;
@@ -542,7 +530,9 @@ define( [ 'question' ].reduce( function( list, name ) {
             } );
           },
 
-          onLoad: function() {
+          onLoad: async function() {
+            var self = this;
+
             function getAttributeNames( precondition ) {
               // scan the precondition for active attributes (also include the showhidden constant)
               var list = [];
@@ -554,7 +544,7 @@ define( [ 'question' ].reduce( function( list, name ) {
             }
 
             this.reset();
-            return CnHttpFactory.instance( {
+            var response = await CnHttpFactory.instance( {
               path: this.parentModel.getServiceResourceBasePath() + '/question',
               data: {
                 select: { column: [
@@ -563,52 +553,53 @@ define( [ 'question' ].reduce( function( list, name ) {
                 ] },
                 modifier: { order: 'question.rank' }
               }
-            } ).query().then( function( response ) {
-              var promiseList = [];
-              self.questionList = response.data;
+            } ).query();
 
-              // set the current language to the first question's language
-              if( 0 < self.questionList.length && angular.isDefined( self.questionList[0].language ) ) {
-                self.currentLanguage = self.questionList[0].language;
-                cenozoApp.setLang( self.currentLanguage );
-              }
+            this.questionList = response.data;
 
-              // if in debug mode then get a list of all modules before and after the current
-              if( self.parentModel.viewModel.record.debug ) {
-                CnHttpFactory.instance( {
-                  path: ['qnaire', self.parentModel.viewModel.record.qnaire_id , 'module'].join( '/' ),
-                  data: {
-                    select: { column: [ 'id', 'rank', 'name' ] },
-                    module: { order: 'module.rank' }
-                  }
-                } ).query().then( function( response ) {
-                  var foundCurrentModule = false;
-                  response.data.forEach( function( module ) {
-                    if( !foundCurrentModule && module.id == self.parentModel.viewModel.record.module_id ) {
-                      foundCurrentModule = true
-                    } else {
-                      if( foundCurrentModule ) self.nextModuleList.push( module );
-                      else self.prevModuleList.push( module );
-                    }
-                  } );
-                } );
-              }
+            // set the current language to the first question's language
+            if( 0 < this.questionList.length && angular.isDefined( this.questionList[0].language ) ) {
+              this.currentLanguage = this.questionList[0].language;
+              cenozoApp.setLang( this.currentLanguage );
+            }
 
-              var activeAttributeList = [];
-              self.questionList.forEach( function( question, questionIndex ) {
-                question.incomplete = false;
-                question.prompts = CnTranslationHelper.parseDescriptions( question.prompts );
-                question.popups = CnTranslationHelper.parseDescriptions( question.popups );
-                question.value = angular.fromJson( question.value );
-                question.backupValue = angular.copy( question.value );
-                activeAttributeList = activeAttributeList.concat( getAttributeNames( question.precondition ) );
+            // if in debug mode then get a list of all modules before and after the current
+            if( this.parentModel.viewModel.record.debug ) {
+              var response = await CnHttpFactory.instance( {
+                path: ['qnaire', this.parentModel.viewModel.record.qnaire_id , 'module'].join( '/' ),
+                data: {
+                  select: { column: [ 'id', 'rank', 'name' ] },
+                  module: { order: 'module.rank' }
+                }
+              } ).query();
 
-                // make sure we have the first non-comment question set as the first key question
-                if( null == self.keyQuestionIndex && 'comment' != question.type ) self.keyQuestionIndex = questionIndex;
+              var foundCurrentModule = false;
+              response.data.forEach( function( module ) {
+                if( !foundCurrentModule && module.id == self.parentModel.viewModel.record.module_id ) {
+                  foundCurrentModule = true
+                } else {
+                  if( foundCurrentModule ) self.nextModuleList.push( module );
+                  else self.prevModuleList.push( module );
+                }
+              } );
+            }
 
-                // if the question is a list type then get the options
-                if( 'list' == question.type ) {
-                  promiseList.push( CnHttpFactory.instance( {
+            var activeAttributeList = [];
+            var promiseList = this.questionList.reduce( function( list, question, questionIndex ) {
+              question.incomplete = false;
+              question.prompts = CnTranslationHelper.parseDescriptions( question.prompts );
+              question.popups = CnTranslationHelper.parseDescriptions( question.popups );
+              question.value = angular.fromJson( question.value );
+              question.backupValue = angular.copy( question.value );
+              activeAttributeList = activeAttributeList.concat( getAttributeNames( question.precondition ) );
+
+              // make sure we have the first non-comment question set as the first key question
+              if( null == self.keyQuestionIndex && 'comment' != question.type ) self.keyQuestionIndex = questionIndex;
+
+              // if the question is a list type then get the options
+              if( 'list' == question.type ) {
+                var getOptionsFn = async function() {
+                  var response = await CnHttpFactory.instance( {
                     path: ['question', question.id, 'question_option'].join( '/' ) + (
                       'respondent' == self.parentModel.getSubjectFromState() ? '?token=' + $state.params.token : ''
                     ),
@@ -618,35 +609,39 @@ define( [ 'question' ].reduce( function( list, name ) {
                       ] },
                       modifier: { order: 'question_option.rank' }
                     }
-                  } ).query().then( function( response ) {
-                    question.optionList = response.data;
-                    question.optionList.forEach( function( option ) {
-                      activeAttributeList = activeAttributeList.concat( getAttributeNames( option.precondition ) );
-                      option.prompts = CnTranslationHelper.parseDescriptions( option.prompts );
-                      option.popups = CnTranslationHelper.parseDescriptions( option.popups );
-                      self.optionListById[option.id] = option;
-                    } );
-                  } ) );
+                  } ).query();
+
+                  question.optionList = response.data;
+                  question.optionList.forEach( function( option ) {
+                    activeAttributeList = activeAttributeList.concat( getAttributeNames( option.precondition ) );
+                    option.prompts = CnTranslationHelper.parseDescriptions( option.prompts );
+                    option.popups = CnTranslationHelper.parseDescriptions( option.popups );
+                    self.optionListById[option.id] = option;
+                  } );
                 }
-              } );
 
-              return $q.all( promiseList ).then( function() {
-                self.questionList.forEach( question => self.convertValueToModel( question ) );
+                list.push( getOptionsFn() );
+              }
 
-                // sort active attribute and make a unique list
-                self.activeAttributeList = activeAttributeList
-                  .sort()
-                  .filter( ( attribute, index, array ) => index === array.indexOf( attribute ) )
-                  .map( attribute => ( { name: attribute, value: null } ) );
-              } );
-            } );
+              return list;
+            }, [] );
+
+            await Promise.all( promiseList );
+
+            this.questionList.forEach( question => self.convertValueToModel( question ) );
+
+            // sort active attribute and make a unique list
+            this.activeAttributeList = activeAttributeList
+              .sort()
+              .filter( ( attribute, index, array ) => index === array.indexOf( attribute ) )
+              .map( attribute => ( { name: attribute, value: null } ) );
           },
 
-          setLanguage: function() {
-            cenozoApp.setLang( self.currentLanguage );
+          setLanguage: async function() {
+            cenozoApp.setLang( this.currentLanguage );
             if( 'respondent' == this.parentModel.getSubjectFromState() && null != this.currentLanguage ) {
-              return this.runQuery( function() {
-                return CnHttpFactory.instance( {
+              await this.runQuery( async function() {
+                await CnHttpFactory.instance( {
                   path: self.parentModel.getServiceResourceBasePath().replace( 'page/', 'respondent/' ) +
                     '?action=set_language&code=' + self.currentLanguage
                 } ).patch();
@@ -654,18 +649,17 @@ define( [ 'question' ].reduce( function( list, name ) {
             }
           },
 
-          onKeyup: function( key ) {
-            $q.all( this.writePromiseList ).then( function() {
+          onKeyup: async function( key ) {
+            await Promise.all( this.writePromiseList );
+
+            if( 'enter' == key ) {
               // proceed to the next page when the enter key is clicked
-              if( 'enter' == key ) {
-                self.proceed();
-                return;
-              }
-
+              await this.proceed();
+            } else {
               // do nothing if we have no key question index (which means the page only has comments)
-              if( null == self.keyQuestionIndex ) return;
+              if( null == this.keyQuestionIndex ) return;
 
-              var question = self.questionList[self.keyQuestionIndex];
+              var question = this.questionList[this.keyQuestionIndex];
 
               if( 'boolean' == question.type ) {
                 var value = undefined;
@@ -674,33 +668,39 @@ define( [ 'question' ].reduce( function( list, name ) {
                 else if( 3 == key ) value = question.answer.dkna ? null : { dkna: true };
                 else if( 4 == key ) value = question.answer.refuse ? null : { refuse: true };
 
-                if( angular.isDefined( value ) ) self.setAnswer( question, value );
+                if( angular.isDefined( value ) ) await this.setAnswer( question, value );
               } else if( 'list' == question.type ) {
                 // check if the key is within the option list or the 2 dkna/refuse options
                 if( key <= question.optionList.length ) {
                   var option = question.optionList[key-1];
-                  if( question.answer.optionList[option.id].selected ) self.removeOption( question, option );
-                  else self.addOption( question, option );
+                  if( question.answer.optionList[option.id].selected ) {
+                    await this.removeOption( question, option );
+                  } else {
+                    await this.addOption( question, option );
+                  }
                 } else if( key == question.optionList.length + 1 ) {
-                  self.setAnswer( question, question.answer.dkna ? null : { dkna: true } );
+                  await this.setAnswer( question, question.answer.dkna ? null : { dkna: true } );
                 } else if( key == question.optionList.length + 2 ) {
-                  self.setAnswer( question, question.answer.refuse ? null : { refuse: true } );
+                  await this.setAnswer( question, question.answer.refuse ? null : { refuse: true } );
                 }
               } else {
                 // 1 is dkna and 2 is refuse
-                if( 1 == key ) self.setAnswer( question, question.answer.dkna ? null : { dkna: true } );
-                else if( 2 == key ) self.setAnswer( question, question.answer.refuse ? null : { refuse: true } );
+                if( 1 == key ) {
+                  await this.setAnswer( question, question.answer.dkna ? null : { dkna: true } );
+                } else if( 2 == key ) {
+                  await this.setAnswer( question, question.answer.refuse ? null : { refuse: true } );
+                }
               }
 
               // advance to the next non-comment question, looping back to the first when we're at the end of the list
               do {
-                self.keyQuestionIndex++;
-                if( self.keyQuestionIndex == self.questionList.length ) self.keyQuestionIndex = 0;
-              } while( 'comment' == self.questionList[self.keyQuestionIndex].type );
-            } );
+                this.keyQuestionIndex++;
+                if( this.keyQuestionIndex == this.questionList.length ) this.keyQuestionIndex = 0;
+              } while( 'comment' == this.questionList[this.keyQuestionIndex].type );
+            }
           },
 
-          setAnswer: function( question, value, noCompleteCheck ) {
+          setAnswer: async function( question, value, noCompleteCheck ) {
             if( angular.isUndefined( noCompleteCheck ) ) noCompleteCheck = false;
 
             // if the question's type is a number then make sure it falls within the min/max values
@@ -715,26 +715,28 @@ define( [ 'question' ].reduce( function( list, name ) {
                            !angular.isObject( value ) &&
                            ( null != maximum && value > maximum );
 
-            return this.runQuery(
+            await this.runQuery(
               tooSmall || tooLarge ?
 
               // When the number is out of bounds then alert the user
-              function() {
-                return CnModalMessageFactory.instance( {
+              async function() {
+                await CnModalMessageFactory.instance( {
                   title: self.text( tooSmall ? 'misc.minimumTitle' : 'misc.maximumTitle' ),
                   message: self.text( 'misc.limitMessage' ) + ' ' + (
                     null == maximum ? self.text( 'misc.equalOrGreater' ) + ' ' + minimum + '.' :
                     null == minimum ? self.text( 'misc.equalOrLess' ) + ' ' + maximum + '.' :
                     [self.text( 'misc.between' ), minimum, self.text( 'misc.and' ), maximum + '.'].join( ' ' )
                   )
-                } ).show().then( function() {
-                  question.value = angular.copy( question.backupValue );
-                  self.convertValueToModel( question );
-                } );
+                } ).show();
+
+                question.value = angular.copy( question.backupValue );
+                self.convertValueToModel( question );
               } :
 
               // No out of bounds detected, so proceed with setting the value
-              function() {
+              async function() {
+                var proceed = true;
+
                 // Note that we need to treat entering text values a bit differently than other question types.
                 // Some participants may wish to fill in a value after they have already selected dkna or refuse.
                 // When entering their text they may then immediatly click the selected dkna/refuse button to
@@ -753,64 +755,70 @@ define( [ 'question' ].reduce( function( list, name ) {
                   ) {
                     // we may have tried setting dkna or refuse when it should be ignored, so change it in the model
                     self.convertValueToModel( question );
-                    return $q.all().finally( function() { self.working = false; } );
+                    proceed = false;
                   }
                 }
 
-                self.working = true;
-                if( "" === value ) value = null;
-                var promise = 'respondent' == self.parentModel.getSubjectFromState() ?
-                  // first communicate with the server (if we're working with a respondent)
-                  CnHttpFactory.instance( {
-                    path: 'answer/' + question.answer_id,
-                    data: { value: angular.toJson( value ) },
-                    onError: function() {
-                      question.value = angular.copy( question.backupValue );
-                      self.convertValueToModel( question );
+                if( proceed ) {
+                  try {
+                    self.working = true;
+                    if( "" === value ) value = null;
+
+                    if( 'respondent' == self.parentModel.getSubjectFromState() ) {
+                      // first communicate with the server (if we're working with a respondent)
+                      await CnHttpFactory.instance( {
+                        path: 'answer/' + question.answer_id,
+                        data: { value: angular.toJson( value ) },
+                        onError: function( error ) {
+                          question.value = angular.copy( question.backupValue );
+                          self.convertValueToModel( question );
+                        }
+                      } ).patch();
                     }
-                  } ).patch() : $q.all();
 
-                return promise.then( function() {
-                  question.value = value;
-                  question.backupValue = angular.copy( question.value );
-                  self.convertValueToModel( question );
+                    question.value = value;
+                    question.backupValue = angular.copy( question.value );
+                    self.convertValueToModel( question );
 
-                  // now blank out answers to questions which are no longer visible (this is done automatically on the server side)
-                  var visibleQuestionList = self.getVisibleQuestionList();
-                  self.questionList.forEach( function( q ) {
-                    if( null == visibleQuestionList.findByProperty( 'id', q.id ) ) {
-                      // q isn't visible so set its value to null if it isn't already
-                      if( null != q.value ) {
-                        q.value = null;
-                        self.convertValueToModel( q );
+                    // now blank out answers to questions which are no longer visible (this is done automatically on the server side)
+                    var visibleQuestionList = self.getVisibleQuestionList();
+                    self.questionList.forEach( function( q ) {
+                      if( null == visibleQuestionList.findByProperty( 'id', q.id ) ) {
+                        // q isn't visible so set its value to null if it isn't already
+                        if( null != q.value ) {
+                          q.value = null;
+                          self.convertValueToModel( q );
+                        }
+                      } else {
+                        // q is visible, now check its options (assuming we haven't selected dkna/refused)
+                        if( 'list' == q.type && !isDknaOrRefuse( q.value ) ) {
+                          var visibleOptionList = self.getVisibleOptionList( q );
+                          q.optionList.forEach( function( o ) {
+                            if( null == visibleOptionList.findByProperty( 'id', o.id ) ) {
+                              // o isn't visible so make sure it isn't selected
+                              var v = angular.isArray( q.value ) ? q.value : [];
+                              var i = searchOptionList( v, o.id );
+                              if( null != i ) v.splice( i, 1 );
+                              if( 0 == v.length ) v = null;
+
+                              q.value = v;
+                              self.convertValueToModel( q );
+                            }
+                          } );
+                        }
                       }
-                    } else {
-                      // q is visible, now check its options (assuming we haven't selected dkna/refused)
-                      if( 'list' == q.type && !isDknaOrRefuse( q.value ) ) {
-                        var visibleOptionList = self.getVisibleOptionList( q );
-                        q.optionList.forEach( function( o ) {
-                          if( null == visibleOptionList.findByProperty( 'id', o.id ) ) {
-                            // o isn't visible so make sure it isn't selected
-                            var v = angular.isArray( q.value ) ? q.value : [];
-                            var i = searchOptionList( v, o.id );
-                            if( null != i ) v.splice( i, 1 );
-                            if( 0 == v.length ) v = null;
+                    } );
 
-                            q.value = v;
-                            self.convertValueToModel( q );
-                          }
-                        } );
-                      }
+                    if( !noCompleteCheck ) {
+                      var complete = self.questionIsComplete( question );
+                      question.incomplete = false === complete ? true
+                                          : true === complete ? false
+                                          : complete;
                     }
-                  } );
-
-                  if( !noCompleteCheck ) {
-                    var complete = self.questionIsComplete( question );
-                    question.incomplete = false === complete ? true
-                                        : true === complete ? false
-                                        : complete;
+                  } finally {
+                    self.working = false;
                   }
-                } ).finally( function() { self.working = false; } );
+                }
               }
             );
           },
@@ -831,26 +839,26 @@ define( [ 'question' ].reduce( function( list, name ) {
             return value;
           },
 
-          addOption: function( question, option ) {
-            this.setAnswer( question, this.getValueForNewOption( question, option ) ).then( function() {
-              // if the option has extra data then focus its associated input
-              if( null != option.extra ) {
-                $timeout( function() { document.getElementById( 'option' + option.id + 'value0' ).focus(); }, 50 );
-              }
-            } );
+          addOption: async function( question, option ) {
+            await this.setAnswer( question, this.getValueForNewOption( question, option ) );
+
+            // if the option has extra data then focus its associated input
+            if( null != option.extra ) {
+              $timeout( function() { document.getElementById( 'option' + option.id + 'value0' ).focus(); }, 50 );
+            }
           },
 
-          removeOption: function( question, option ) {
+          removeOption: async function( question, option ) {
             // get the current value array and remove the option from it
             var value = angular.isArray( question.value ) ? question.value : [];
             var optionIndex = searchOptionList( value, option.id );
             if( null != optionIndex ) value.splice( optionIndex, 1 );
             if( 0 == value.length ) value = null;
 
-            this.setAnswer( question, value );
+            await this.setAnswer( question, value );
           },
 
-          addAnswerValue: function( question, option ) {
+          addAnswerValue: async function( question, option ) {
             var value = angular.isArray( question.value ) ? question.value : [];
             var optionIndex = searchOptionList( value, option.id );
             if( null == optionIndex ) {
@@ -860,57 +868,61 @@ define( [ 'question' ].reduce( function( list, name ) {
 
             var valueIndex = value[optionIndex].value.indexOf( null );
             if( -1 == valueIndex ) valueIndex = value[optionIndex].value.push( null ) - 1;
-            this.setAnswer( question, value, true ).then( function() {
-              // focus the new answer value's associated input
-              $timeout( function() { document.getElementById( 'option' + option.id + 'value' + valueIndex ).focus(); }, 50 );
-            } );
+            await this.setAnswer( question, value, true );
+
+            // focus the new answer value's associated input
+            $timeout( function() { document.getElementById( 'option' + option.id + 'value' + valueIndex ).focus(); }, 50 );
           },
 
-          removeAnswerValue: function( question, option, valueIndex ) {
+          removeAnswerValue: async function( question, option, valueIndex ) {
             var value = question.value;
             var optionIndex = searchOptionList( value, option.id );
             value[optionIndex].value.splice( valueIndex, 1 );
             if( 0 == value[optionIndex].value.length ) value.splice( optionIndex, 1 );
             if( 0 == value.length ) value = null;
 
-            this.setAnswer( question, value, true );
+            await this.setAnswer( question, value, true );
           },
 
-          selectDateForOption: function( question, option, valueIndex, answerValue ) {
-            CnModalDatetimeFactory.instance( {
-              locale: self.currentLanguage,
+          selectDateForOption: async function( question, option, valueIndex, answerValue ) {
+            var response = await CnModalDatetimeFactory.instance( {
+              locale: this.currentLanguage,
               date: answerValue,
               pickerType: 'date',
               minDate: getDate( this.evaluateLimit( option.minimum ) ),
               maxDate: getDate( this.evaluateLimit( option.maximum ) ),
               emptyAllowed: true
-            } ).show().then( function( response ) {
-              if( false !== response ) self.setAnswerValue(
+            } ).show();
+
+            if( false !== response ) {
+              await this.setAnswerValue(
                 question,
                 option,
                 valueIndex,
                 null == response ? null : response.replace( /T.*/, '' )
               );
-            } );
+            }
           },
 
-          selectDate: function( question, value ) {
-            CnModalDatetimeFactory.instance( {
-              locale: self.currentLanguage,
+          selectDate: async function( question, value ) {
+            var response = await CnModalDatetimeFactory.instance( {
+              locale: this.currentLanguage,
               date: value,
               pickerType: 'date',
               minDate: getDate( this.evaluateLimit( question.minimum ) ),
               maxDate: getDate( this.evaluateLimit( question.maximum ) ),
               emptyAllowed: true
-            } ).show().then( function( response ) {
-              if( false !== response ) self.setAnswer(
+            } ).show();
+
+            if( false !== response ) {
+              await this.setAnswer(
                 question,
                 null == response ? null : response.replace( /T.*/, '' )
               );
-            } );
+            }
           },
 
-          setAnswerValue: function( question, option, valueIndex, answerValue ) {
+          setAnswerValue: async function( question, option, valueIndex, answerValue ) {
             // if the question option's extra type is a number then make sure it falls within the min/max values
             var minimum = this.evaluateLimit( option.minimum );
             var maximum = this.evaluateLimit( option.maximum );
@@ -918,19 +930,19 @@ define( [ 'question' ].reduce( function( list, name ) {
             var tooLarge = 'number' == option.extra && null != answerValue && ( null != maximum && answerValue > maximum );
 
             if( tooSmall || tooLarge ) {
-              this.runQuery( function() {
-                return CnModalMessageFactory.instance( {
+              await this.runQuery( async function() {
+                await CnModalMessageFactory.instance( {
                   title: self.text( tooSmall ? 'misc.minimumTitle' : 'misc.maximumTitle' ),
                   message: self.text( 'misc.limitMessage' ) + ' ' + (
                     null == maximum ? self.text( 'misc.equalOrGreater' ) + ' ' + minimum + '.' :
                     null == minimum ? self.text( 'misc.equalOrLess' ) + ' ' + maximum + '.' :
                     [self.text( 'misc.between' ), minimum, self.text( 'misc.and' ), maximum + '.'].join( ' ' )
                   )
-                } ).show().then( function() {
-                  // put the old value back
-                  var element = document.getElementById( 'option' + option.id + 'value' + valueIndex );
-                  element.value = question.answer.optionList[option.id].valueList[valueIndex];
-                } );
+                } ).show();
+
+                // put the old value back
+                var element = document.getElementById( 'option' + option.id + 'value' + valueIndex );
+                element.value = question.answer.optionList[option.id].valueList[valueIndex];
               } );
             } else {
               var value = question.value;
@@ -961,86 +973,89 @@ define( [ 'question' ].reduce( function( list, name ) {
                 }
               }
 
-              this.setAnswer( question, value );
+              await this.setAnswer( question, value );
             }
           },
 
-          viewPage: function() {
-            $state.go(
+          viewPage: async function() {
+            await $state.go(
               'page.view',
               { identifier: this.parentModel.viewModel.record.getIdentifier() },
               { reload: true }
             );
           },
 
-          renderPreviousPage: function() {
-            $state.go(
+          renderPreviousPage: async function() {
+            await $state.go(
               'page.render',
               { identifier: this.parentModel.viewModel.record.previous_id },
               { reload: true }
             );
           },
 
-          renderNextPage: function() {
-            $state.go(
+          renderNextPage: async function() {
+            await $state.go(
               'page.render',
               { identifier: this.parentModel.viewModel.record.next_id },
               { reload: true }
             );
           },
 
-          proceed: function() {
-            this.working = true;
+          proceed: async function() {
+            try {
+              this.working = true;
 
-            // check to make sure that all questions are complete, and highlight any which aren't
-            var mayProceed = true;
-            this.questionList.some( function( question ) {
-              var complete = self.questionIsComplete( question );
-              question.incomplete = false === complete ? true
-                                  : true === complete ? false
-                                  : complete;
-              if( question.incomplete ) {
-                mayProceed = false;
-                return true;
-              }
-            } );
-
-            if( mayProceed ) {
-              // proceed to the respondent's next valid page
-              return this.runQuery( function() {
-                return CnHttpFactory.instance( {
-                  path: 'respondent/token=' + $state.params.token + '?action=proceed'
-                } ).patch().then( function() {
-                  return self.parentModel.reloadState( true );
-                } ).finally( function() { self.working = false; } );
+              // check to make sure that all questions are complete, and highlight any which aren't
+              var mayProceed = true;
+              this.questionList.some( function( question ) {
+                var complete = self.questionIsComplete( question );
+                question.incomplete = false === complete ? true
+                                    : true === complete ? false
+                                    : complete;
+                if( question.incomplete ) {
+                  mayProceed = false;
+                  return true;
+                }
               } );
-            } else {
-              self.working = false;
+
+              if( mayProceed ) {
+                // proceed to the respondent's next valid page
+                await this.runQuery( async function() {
+                  await CnHttpFactory.instance( { path: 'respondent/token=' + $state.params.token + '?action=proceed' } ).patch();
+                  await self.parentModel.reloadState( true );
+                } );
+              }
+            } finally {
+              this.working = false;
             }
           },
 
-          backup: function() {
-            // back up to the respondent's previous page
-            this.working = true;
-            return this.runQuery( function() {
-              return CnHttpFactory.instance( {
-                path: 'respondent/token=' + $state.params.token + '?action=backup'
-              } ).patch().then( function() {
-                return self.parentModel.reloadState( true );
-              } ).finally( function() { self.working = false; } );
-            } );
+          backup: async function() {
+            try {
+              // back up to the respondent's previous page
+              this.working = true;
+              await this.runQuery( async function() {
+                await CnHttpFactory.instance( { path: 'respondent/token=' + $state.params.token + '?action=backup' } ).patch();
+                await self.parentModel.reloadState( true );
+              } );
+            } finally {
+              this.working = false;
+            }
           },
 
-          jump: function( moduleId ) {
-            // jump to the first page in the provided module
-            this.working = true;
-            return this.runQuery( function() {
-              return CnHttpFactory.instance( {
-                path: 'respondent/token=' + $state.params.token + '?action=jump&module_id=' + moduleId,
-              } ).patch().then( function() {
-                return self.parentModel.reloadState( true );
-              } ).finally( function() { self.working = false; } );
-            } );
+          jump: async function( moduleId ) {
+            try {
+              // jump to the first page in the provided module
+              this.working = true;
+              await this.runQuery( async function() {
+                await CnHttpFactory.instance( {
+                  path: 'respondent/token=' + $state.params.token + '?action=jump&module_id=' + moduleId,
+                } ).patch();
+                await self.parentModel.reloadState( true );
+              } );
+            } finally {
+              this.working = false;
+            }
           },
 
           text: function( address ) {
@@ -1063,11 +1078,11 @@ define( [ 'question' ].reduce( function( list, name ) {
         // see if the form has a record in the data-entry module
         var onNew = object.onNew;
         angular.extend( object, {
-          onNew: function( record ) {
-            return onNew( record ).then( function() {
-              // set the default page max time
-              if( angular.isUndefined( record.max_time ) ) record.max_time = CnSession.setting.defaultPageMaxTime;
-            } );
+          onNew: async function( record ) {
+            await onNew( record );
+
+            // set the default page max time
+            if( angular.isUndefined( record.max_time ) ) record.max_time = CnSession.setting.defaultPageMaxTime;
           }
         } );
 
@@ -1088,15 +1103,13 @@ define( [ 'question' ].reduce( function( list, name ) {
 
         // see if the form has a record in the data-entry module
         angular.extend( object, {
-          onView: function( force ) {
-            var self = this;
-            return this.$$onView( force ).then( function() {
-              self.record.average_time = $filter( 'cnSeconds' )( Math.round( self.record.average_time ) );
-              self.record.prompts = CnTranslationHelper.parseDescriptions( self.record.prompts );
-              self.record.popups = CnTranslationHelper.parseDescriptions( self.record.popups );
-              self.record.module_prompts = CnTranslationHelper.parseDescriptions( self.record.module_prompts );
-              self.record.module_popups = CnTranslationHelper.parseDescriptions( self.record.module_popups );
-            } );
+          onView: async function( force ) {
+            await this.$$onView( force );
+            this.record.average_time = $filter( 'cnSeconds' )( Math.round( this.record.average_time ) );
+            this.record.prompts = CnTranslationHelper.parseDescriptions( this.record.prompts );
+            this.record.popups = CnTranslationHelper.parseDescriptions( this.record.popups );
+            this.record.module_prompts = CnTranslationHelper.parseDescriptions( this.record.module_prompts );
+            this.record.module_popups = CnTranslationHelper.parseDescriptions( this.record.module_popups );
           }
         } );
 

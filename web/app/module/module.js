@@ -24,8 +24,8 @@ define( [ 'page' ].reduce( function( list, name ) {
   module.addExtraOperation( 'view', {
     title: 'Preview',
     isDisabled: function( $state, model ) { return !model.viewModel.record.first_page_id; },
-    operation: function( $state, model ) {
-      $state.go(
+    operation: async function( $state, model ) {
+      await $state.go(
         'page.render',
         { identifier: model.viewModel.record.first_page_id },
         { reload: true }
@@ -41,25 +41,25 @@ define( [ 'page' ].reduce( function( list, name ) {
         templateUrl: cenozoApp.getFileUrl( 'pine', 'qnaire_part_clone.tpl.html' ),
         restrict: 'E',
         scope: { model: '=?' },
-        controller: function( $scope ) {
+        controller: async function( $scope ) {
           if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnairePartCloneFactory.instance( 'module' );
           
-          $scope.model.onLoad().then( function() {
-            CnSession.setBreadcrumbTrail( [ {
-              title: 'Questionnaire', 
-              go: function() { return $state.go( 'qnaire.list' ); }
-            }, {
-              title: $scope.model.parentSourceName,
-              go: function() { return $state.go( 'qnaire.view', { identifier: $scope.model.sourceParentId } ); }
-            }, {
-              title: 'Modules'
-            }, {
-              title: $scope.model.sourceName,
-              go: function() { return $state.go( 'module.view', { identifier: $scope.model.sourceId } ); }
-            }, {
-              title: 'move/copy'
-            } ] );
-          } );
+          await $scope.model.onLoad();
+
+          CnSession.setBreadcrumbTrail( [ {
+            title: 'Questionnaire', 
+            go: async function() { await $state.go( 'qnaire.list' ); }
+          }, {
+            title: $scope.model.parentSourceName,
+            go: async function() { await $state.go( 'qnaire.view', { identifier: $scope.model.sourceParentId } ); }
+          }, {
+            title: 'Modules'
+          }, {
+            title: $scope.model.sourceName,
+            go: async function() { await $state.go( 'module.view', { identifier: $scope.model.sourceId } ); }
+          }, {
+            title: 'move/copy'
+          } ] );
         }
       };
     }
@@ -75,11 +75,9 @@ define( [ 'page' ].reduce( function( list, name ) {
 
         // see if the form has a record in the data-entry module
         angular.extend( object, {
-          onView: function( force ) {
-            var self = this;
-            return this.$$onView( force ).then( function() {
-              self.record.average_time = $filter( 'cnSeconds' )( Math.round( self.record.average_time ) );
-            } );
+          onView: async function( force ) {
+            await this.$$onView( force );
+            this.record.average_time = $filter( 'cnSeconds' )( Math.round( this.record.average_time ) );
           }
         } );
 

@@ -97,24 +97,28 @@ define( [ 'page' ].reduce( function( list, name ) {
 
   module.addExtraOperation( 'list', {
     title: 'Mass Respondent',
-    operation: function( $state, model ) { $state.go( 'qnaire.mass_respondent', { identifier: $state.params.identifier } ); },
+    operation: async function( $state, model ) {
+      await $state.go( 'qnaire.mass_respondent', { identifier: $state.params.identifier } );
+    },
     isIncluded: function( $state, model ) { return !model.isDetached(); }
   } );
 
   module.addExtraOperation( 'view', {
     title: 'Launch',
-    operation: function( $state, model ) {
-      $state.go( 'respondent.run', { token: model.viewModel.record.token } );
+    operation: async function( $state, model ) {
+      await $state.go( 'respondent.run', { token: model.viewModel.record.token } );
     }
   } );
 
   module.addExtraOperation( 'view', {
     title: 'Re-schedule Email',
-    operation: function( $state, model ) {
-      model.viewModel.resendMail().finally( function() {
+    operation: async function( $state, model ) {
+      try {
+        model.viewModel.resendMail();
+      } finally {
         if( angular.isDefined( model.viewModel.respondentMailModel ) )
-          model.viewModel.respondentMailModel.listModel.onList( true );
-      } );
+          await model.viewModel.respondentMailModel.listModel.onList( true );
+      }
     },
     isIncluded: function( $state, model ) { return model.viewModel.record.sends_mail; },
     help: 'This will re-schedule all mail for this respondent. ' + 
@@ -209,13 +213,13 @@ define( [ 'page' ].reduce( function( list, name ) {
     'CnBaseViewFactory', 'CnHttpFactory',
     function( CnBaseViewFactory, CnHttpFactory ) {
       var object = function( parentModel, root ) {
-        var self = this;
         CnBaseViewFactory.construct( this, parentModel, root, 'response' );
 
         angular.extend( this, {
           // only show the respondent list to respondents
           getChildList: function() {
-            return self.$$getChildList().filter( child => 'response' == child.subject.snake || self.record.sends_mail );
+            var self = this;
+            return this.$$getChildList().filter( child => 'response' == child.subject.snake || self.record.sends_mail );
           },
 
           resendMail: function() {
@@ -236,7 +240,6 @@ define( [ 'page' ].reduce( function( list, name ) {
     function( CnBaseModelFactory, CnRespondentAddFactory, CnRespondentListFactory, CnRespondentViewFactory,
               CnModalMessageFactory, CnSession, CnHttpFactory, $state ) {
       var object = function( root ) {
-        var self = this;
         CnBaseModelFactory.construct( this, module );
         this.addModel = CnRespondentAddFactory.instance( this );
         this.listModel = CnRespondentListFactory.instance( this );
@@ -245,7 +248,7 @@ define( [ 'page' ].reduce( function( list, name ) {
         angular.extend( this, {
           isDetached: function() { return CnSession.setting.detached; },
           workInProgress: false,
-          getRespondents: function() {
+          getRespondents: async function() {
             var modal = CnModalMessageFactory.instance( {
               title: 'Communicating with Remote Server',
               message: 'Please wait while the respondent list is retrieved.',
@@ -253,17 +256,18 @@ define( [ 'page' ].reduce( function( list, name ) {
             } );
             modal.show();
 
-            self.workInProgress = true;
-            CnHttpFactory.instance( {
-              path: 'qnaire/' + $state.params.identifier + '/respondent?operation=get_respondents'
-            } ).post().then( function() {
-              self.listModel.onList( true );
-            } ).finally( function() {
-              self.workInProgress = false;
+            try {
+              this.workInProgress = true;
+              await CnHttpFactory.instance( {
+                path: 'qnaire/' + $state.params.identifier + '/respondent?operation=get_respondents'
+              } ).post();
+              await this.listModel.onList( true );
+            } finally {
               modal.close();
-            } );
+              this.workInProgress = false;
+            }
           },
-          export: function() {
+          export: async function() {
             var modal = CnModalMessageFactory.instance( {
               title: 'Communicating with Remote Server',
               message: 'Please wait while the questionnaire responses are exported.',
@@ -271,15 +275,16 @@ define( [ 'page' ].reduce( function( list, name ) {
             } );
             modal.show();
 
-            self.workInProgress = true;
-            CnHttpFactory.instance( {
-              path: 'qnaire/' + $state.params.identifier + '/respondent?operation=export'
-            } ).post().then( function() {
-              self.listModel.onList( true );
-            } ).finally( function() {
-              self.workInProgress = false;
+            try {
+              this.workInProgress = true;
+              await CnHttpFactory.instance( {
+                path: 'qnaire/' + $state.params.identifier + '/respondent?operation=export'
+              } ).post();
+              await this.listModel.onList( true );
+            } finally {
               modal.close();
-            } );
+              this.workInProgress = false;
+            }
           }
         } );
       };
