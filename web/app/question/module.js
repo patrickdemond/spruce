@@ -56,6 +56,7 @@ define( [ 'question_option' ].reduce( function( list, name ) {
   } );
   module.addInput( '', 'note', { title: 'Note', type: 'text' } );
   module.addInput( '', 'parent_name', { column: 'page.name', isExcluded: true } );
+  module.addInput( '', 'question_option_count', { isExcluded: true } );
 
   /* ######################################################################################################## */
   cenozo.providers.directive( 'cnQuestionClone', [
