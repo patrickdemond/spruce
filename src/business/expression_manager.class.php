@@ -388,7 +388,10 @@ class expression_manager extends \cenozo\singleton
     }
     else if( in_array( $this->term, ['<', '<=', '>', '>='] ) )
     { // quantity operator
-      if( !in_array( $this->last_term, ['number', 'string', 'attribute'] ) )
+      // Note that boolean was added to the acceptible list since attributes are sometimes interpreted as boolean when they
+      // come immediately after a logical operator.  This isn't ideal, but quantity operators can work with boolean values
+      // without an error so it's the best compromise.
+      if( !in_array( $this->last_term, ['boolean', 'number', 'string', 'attribute'] ) )
       {
         throw lib::create( 'exception\runtime', sprintf(
           'Expecting a number, string or attribute before "%s"', $this->term
