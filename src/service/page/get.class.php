@@ -85,10 +85,9 @@ class get extends \cenozo\service\get
             $value = $expression_manager->compile( $question['default_answer'] );
             if( 'null' != $value )
             {
-              if( 'date' == $question['type'] ) $value = sprintf( '"%s"', $value );
-              else if( 'string' == $question['type'] || 'text' == $question['type'] )
-                $value = preg_replace( "/^'?(.*?)'?$/", '"$1"', $value );
-              $db_answer->value = $value;
+              $db_answer->value = in_array( $question['type'], array( 'date', 'string', 'text' ) )
+                                ? preg_replace( '/^[\'"]?(.*?)[\'"]?$/', '"$1"', $value )
+                                : $value;
             }
           }
 
