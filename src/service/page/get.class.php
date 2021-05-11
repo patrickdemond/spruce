@@ -63,6 +63,7 @@ class get extends \cenozo\service\get
       // create answers for all questions on this page if they don't already exist
       $question_sel = lib::create( 'database\select' );
       $question_sel->add_column( 'id' );
+      $question_sel->add_column( 'type' );
       $question_sel->add_column( 'default_answer' );
       $question_mod = lib::create( 'database\modifier' );
       $question_mod->where( 'type', '!=', 'comment' ); // comments don't have answers
@@ -77,8 +78,20 @@ class get extends \cenozo\service\get
           $db_answer->response_id = $this->db_response->id;
           $db_answer->question_id = $question['id'];
           $db_answer->user_id = $qnaire_username == $db_user->name ? NULL : $db_user->id;
+
+          // apply the default answer if there is one
           if( !is_null( $question['default_answer'] ) )
-            $db_answer->value = $expression_manager->evaluate( $question['default_answer'] );
+          {
+            $value = $expression_manager->compile( $question['default_answer'] );
+            if( 'null' != $value )
+            {
+              if( 'date' == $question['type'] ) $value = sprintf( '"%s"', $value );
+              else if( 'string' == $question['type'] || 'text' == $question['type'] )
+                $value = preg_replace( "/^'?(.*?)'?$/", '"$1"', $value );
+              $db_answer->value = $value;
+            }
+          }
+
           $db_answer->save();
         }
       }
