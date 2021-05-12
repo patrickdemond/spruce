@@ -214,6 +214,12 @@ define( [ 'module' ].reduce( function( list, name ) {
     isIncluded: function( $state, model ) { return model.getEditEnabled(); }
   } );
 
+  module.addExtraOperation( 'view', {
+    title: 'Test Connection',
+    isIncluded: function( $state, model ) { return !model.isRole( 'interviewer' ) && model.isDetached(); },
+    operation: function( $state, model ) { model.viewModel.testConnection(); },
+  } );
+
   /* ######################################################################################################## */
   cenozo.providers.directive( 'cnQnaireAdd', [
     'CnQnaireModelFactory',
@@ -569,8 +575,8 @@ define( [ 'module' ].reduce( function( list, name ) {
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnQnaireViewFactory', [
-    'CnBaseViewFactory', 'CnHttpFactory', '$filter', '$state', '$rootScope',
-    function( CnBaseViewFactory, CnHttpFactory, $filter, $state, $rootScope ) {
+    'CnBaseViewFactory', 'CnHttpFactory', 'CnModalMessageFactory', '$filter', '$state', '$rootScope',
+    function( CnBaseViewFactory, CnHttpFactory, CnModalMessageFactory, $filter, $state, $rootScope ) {
       var object = function( parentModel, root ) {
         var self = this;
         // the respondent only has one list (respondent list) so the default tab for them is null
@@ -660,6 +666,17 @@ define( [ 'module' ].reduce( function( list, name ) {
             } ).patch().then( function() {
               $state.go( 'qnaire.view', { identifier: self.record.getIdentifier() } );
             } ).finally( function() { self.working = false; } );
+          },
+
+          testConnection: function() {
+            CnHttpFactory.instance( {
+              path: this.parentModel.getServiceResourcePath() + '?test_connection=1'
+            } ).get().then( function( response ) {
+              CnModalMessageFactory.instance( {
+                title: 'Test Connection',
+                message: response.data
+              } ).show();
+            } );
           }
         } );
       }

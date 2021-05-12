@@ -56,4 +56,21 @@ class get extends \cenozo\service\downloadable
       if( !is_null( $output ) ) $this->get_leaf_record()->generate( $output );
     }
   }
+
+  /**
+   * Extend parent method
+   */
+  public function execute()
+  {
+    if( $this->get_argument( 'test_connection', false ) )
+    {
+      // instead of returning the qnaire's details test the connection and return the result
+      $db_qnaire = $this->get_leaf_record();
+      $this->set_data( $db_qnaire->test_connection() );
+    }
+    else
+    {
+      parent::execute();
+    }
+  }
 }

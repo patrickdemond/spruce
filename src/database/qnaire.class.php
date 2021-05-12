@@ -410,6 +410,98 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
+   * Test a detached instance's connection to the parent beartooth and pine servers
+   */
+  public function test_connection()
+  {
+    if( is_null( PARENT_INSTANCE_URL ) ) return 'This instance of Pine is not detached so there is no remote connection to test.';
+
+    // test the beartooth connection
+    $url = sprintf( '%s/api/appointment', $this->beartooth_url );
+    $curl = curl_init();
+    curl_setopt( $curl, CURLOPT_URL, $url );
+    curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
+    curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+    curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, 5 );
+    curl_setopt(
+      $curl,
+      CURLOPT_HTTPHEADER,
+      array(
+        sprintf(
+          'Authorization: Basic %s',
+          base64_encode( sprintf( '%s:%s', $this->beartooth_username, $this->beartooth_password ) )
+        )
+      )
+    );
+
+    $response = curl_exec( $curl );
+    if( curl_errno( $curl ) )
+    {
+      return sprintf(
+        "Got error code %s while trying to connect to Beartooth server.\n\nMessage: %s",
+        curl_errno( $curl ),
+        curl_error( $curl )
+      );
+    }
+
+    $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
+    if( 401 == $code )
+    {
+      return 'Unable to connect to Beartooth server, invalid username and/or password.';
+    }
+    else if( 300 <= $code )
+    {
+      return sprintf( 'Got response code %s when connecting to Beartooth server.', $code );
+    }
+
+    // now test the pine connection
+    $url = sprintf(
+      '%s/api/qnaire/name=%s?select={"column":["version"]}',
+      PARENT_INSTANCE_URL,
+      util::full_urlencode( $this->name )
+    );
+    $curl = curl_init();
+    curl_setopt( $curl, CURLOPT_URL, $url );
+    curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
+    curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+    curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, 5 );
+    curl_setopt(
+      $curl,
+      CURLOPT_HTTPHEADER,
+      array( sprintf(
+        'Authorization: Basic %s',
+        base64_encode( sprintf( '%s:%s', $this->beartooth_username, $this->beartooth_password ) )
+      ) )
+    );
+
+    $response = curl_exec( $curl );
+    if( curl_errno( $curl ) )
+    {
+      return sprintf(
+        "Got error code %s when trying to connect to parent Pine server.\n\nMessage: %s",
+        curl_errno( $curl ),
+        curl_error( $curl )
+      );
+    }
+
+    $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
+    if( 401 == $code )
+    {
+      return 'Unable to connect to parent Pine server, invalid username and/or password.';
+    }
+    else if( 404 == $code )
+    {
+      return sprintf( 'The questionnaire "%s" does not exist on the parent Pine server.', $this->name );
+    }
+    else if( 300 <= $code )
+    {
+      return sprintf( 'Got error code %s when connecting to parent Pine server.', $code );
+    }
+
+    return 'Successfully connected to Beartooth and parent Pine servers.';
+  }
+
+  /**
    * Synchronizes this qnaire with the qnaire belonging to the parent instance
    */
   public function sync_with_parent()
