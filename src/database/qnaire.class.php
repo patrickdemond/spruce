@@ -416,7 +416,11 @@ class qnaire extends \cenozo\database\record
   {
     if( is_null( PARENT_INSTANCE_URL ) ) return;
 
-    $url = sprintf( '%s/api/qnaire/name=%s?output=export&download=true', PARENT_INSTANCE_URL, util::full_urlencode( $this->name ) );
+    $url = sprintf(
+      '%s/api/qnaire/name=%s?select={"column":["version"]}',
+      PARENT_INSTANCE_URL,
+      util::full_urlencode( $this->name )
+    );
     $curl = curl_init();
     curl_setopt( $curl, CURLOPT_URL, $url );
     curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
@@ -465,13 +469,62 @@ class qnaire extends \cenozo\database\record
     else
     {
       $parent_qnaire = util::json_decode( $response );
-      $current_qnaire = util::json_decode( $this->generate( 'export', true ) );
 
-      if( $current_qnaire != $parent_qnaire )
+      if( $this->version != $parent_qnaire->version )
       {
-        // if the parent is different then apply it
-        $this->process_patch( $parent_qnaire, true );
-        log::info( sprintf( 'Questionnaire "%s" was out of sync with parent instance and has been updated.', $this->name ) );
+        // if the version is different then download the parent qnaire and apply it as a patch
+        $old_version = $this->version;
+        $new_version = $parent_qnaire->version;
+
+        $url = sprintf(
+          '%s/api/qnaire/name=%s?output=export&download=true',
+          PARENT_INSTANCE_URL,
+          util::full_urlencode( $this->name )
+        );
+        $curl = curl_init();
+        curl_setopt( $curl, CURLOPT_URL, $url );
+        curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
+        curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+        curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, 5 );
+        curl_setopt(
+          $curl,
+          CURLOPT_HTTPHEADER,
+          array( sprintf(
+            'Authorization: Basic %s',
+            base64_encode( sprintf( '%s:%s', $this->beartooth_username, $this->beartooth_password ) )
+          ) )
+        );
+
+        $response = curl_exec( $curl );
+        if( curl_errno( $curl ) )
+        {
+          throw lib::create( 'exception\runtime',
+            sprintf( 'Got error code %s when synchronizing qnaire with parent instance (export).  Message: %s',
+                     curl_errno( $curl ),
+                     curl_error( $curl ) ),
+            __METHOD__
+          );
+        }
+
+        $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
+        if( 300 <= $code )
+        {
+          throw lib::create( 'exception\runtime',
+            sprintf( 'Got error code %s when synchronizing qnaire with parent instance (export).', $code ),
+            __METHOD__
+          );
+        }
+        else
+        {
+          $parent_qnaire = util::json_decode( $response );
+          $this->process_patch( $parent_qnaire, true );
+          log::info( sprintf(
+            'Questionnaire "%s" has been upgraded from version "%s" to "%s".',
+            $this->name,
+            $old_version,
+            $new_version
+          ) );
+        }
       }
     }
   }
