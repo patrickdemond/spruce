@@ -410,13 +410,109 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
+   * Test a detached instance's connection to the parent beartooth and pine servers
+   */
+  public function test_connection()
+  {
+    if( is_null( PARENT_INSTANCE_URL ) ) return 'This instance of Pine is not detached so there is no remote connection to test.';
+
+    // test the beartooth connection
+    $url = sprintf( '%s/api/appointment', $this->beartooth_url );
+    $curl = curl_init();
+    curl_setopt( $curl, CURLOPT_URL, $url );
+    curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
+    curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+    curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, 5 );
+    curl_setopt(
+      $curl,
+      CURLOPT_HTTPHEADER,
+      array(
+        sprintf(
+          'Authorization: Basic %s',
+          base64_encode( sprintf( '%s:%s', $this->beartooth_username, $this->beartooth_password ) )
+        )
+      )
+    );
+
+    $response = curl_exec( $curl );
+    if( curl_errno( $curl ) )
+    {
+      return sprintf(
+        "Got error code %s while trying to connect to Beartooth server.\n\nMessage: %s",
+        curl_errno( $curl ),
+        curl_error( $curl )
+      );
+    }
+
+    $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
+    if( 401 == $code )
+    {
+      return 'Unable to connect to Beartooth server, invalid username and/or password.';
+    }
+    else if( 300 <= $code )
+    {
+      return sprintf( 'Got response code %s when connecting to Beartooth server.', $code );
+    }
+
+    // now test the pine connection
+    $url = sprintf(
+      '%s/api/qnaire/name=%s?select={"column":["version"]}',
+      PARENT_INSTANCE_URL,
+      util::full_urlencode( $this->name )
+    );
+    $curl = curl_init();
+    curl_setopt( $curl, CURLOPT_URL, $url );
+    curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
+    curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+    curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, 5 );
+    curl_setopt(
+      $curl,
+      CURLOPT_HTTPHEADER,
+      array( sprintf(
+        'Authorization: Basic %s',
+        base64_encode( sprintf( '%s:%s', $this->beartooth_username, $this->beartooth_password ) )
+      ) )
+    );
+
+    $response = curl_exec( $curl );
+    if( curl_errno( $curl ) )
+    {
+      return sprintf(
+        "Got error code %s when trying to connect to parent Pine server.\n\nMessage: %s",
+        curl_errno( $curl ),
+        curl_error( $curl )
+      );
+    }
+
+    $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
+    if( 401 == $code )
+    {
+      return 'Unable to connect to parent Pine server, invalid username and/or password.';
+    }
+    else if( 404 == $code )
+    {
+      return sprintf( 'The questionnaire "%s" does not exist on the parent Pine server.', $this->name );
+    }
+    else if( 300 <= $code )
+    {
+      return sprintf( 'Got error code %s when connecting to parent Pine server.', $code );
+    }
+
+    return 'Successfully connected to Beartooth and parent Pine servers.';
+  }
+
+  /**
    * Synchronizes this qnaire with the qnaire belonging to the parent instance
    */
   public function sync_with_parent()
   {
     if( is_null( PARENT_INSTANCE_URL ) ) return;
 
-    $url = sprintf( '%s/api/qnaire/name=%s?output=export&download=true', PARENT_INSTANCE_URL, util::full_urlencode( $this->name ) );
+    $url = sprintf(
+      '%s/api/qnaire/name=%s?select={"column":["version"]}',
+      PARENT_INSTANCE_URL,
+      util::full_urlencode( $this->name )
+    );
     $curl = curl_init();
     curl_setopt( $curl, CURLOPT_URL, $url );
     curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
@@ -465,13 +561,62 @@ class qnaire extends \cenozo\database\record
     else
     {
       $parent_qnaire = util::json_decode( $response );
-      $current_qnaire = util::json_decode( $this->generate( 'export', true ) );
 
-      if( $current_qnaire != $parent_qnaire )
+      if( $this->version != $parent_qnaire->version )
       {
-        // if the parent is different then apply it
-        $this->process_patch( $parent_qnaire, true );
-        log::info( sprintf( 'Questionnaire "%s" was out of sync with parent instance and has been updated.', $this->name ) );
+        // if the version is different then download the parent qnaire and apply it as a patch
+        $old_version = $this->version;
+        $new_version = $parent_qnaire->version;
+
+        $url = sprintf(
+          '%s/api/qnaire/name=%s?output=export&download=true',
+          PARENT_INSTANCE_URL,
+          util::full_urlencode( $this->name )
+        );
+        $curl = curl_init();
+        curl_setopt( $curl, CURLOPT_URL, $url );
+        curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
+        curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+        curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, 5 );
+        curl_setopt(
+          $curl,
+          CURLOPT_HTTPHEADER,
+          array( sprintf(
+            'Authorization: Basic %s',
+            base64_encode( sprintf( '%s:%s', $this->beartooth_username, $this->beartooth_password ) )
+          ) )
+        );
+
+        $response = curl_exec( $curl );
+        if( curl_errno( $curl ) )
+        {
+          throw lib::create( 'exception\runtime',
+            sprintf( 'Got error code %s when synchronizing qnaire with parent instance (export).  Message: %s',
+                     curl_errno( $curl ),
+                     curl_error( $curl ) ),
+            __METHOD__
+          );
+        }
+
+        $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
+        if( 300 <= $code )
+        {
+          throw lib::create( 'exception\runtime',
+            sprintf( 'Got error code %s when synchronizing qnaire with parent instance (export).', $code ),
+            __METHOD__
+          );
+        }
+        else
+        {
+          $parent_qnaire = util::json_decode( $response );
+          $this->process_patch( $parent_qnaire, true );
+          log::info( sprintf(
+            'Questionnaire "%s" has been upgraded from version "%s" to "%s".',
+            $this->name,
+            $old_version,
+            $new_version
+          ) );
+        }
       }
     }
   }
@@ -505,6 +650,7 @@ class qnaire extends \cenozo\database\record
         $db_module = is_null( $db_page ) ? NULL : $db_page->get_module();
         $response = array(
           'rank' => $db_response->rank,
+          'qnaire_version' => $db_response->qnaire_version,
           'language' => $db_response->get_language()->code,
           'module' => is_null( $db_module ) ? NULL : $db_module->name,
           'page' => is_null( $db_page ) ? NULL : $db_page->name,
@@ -640,6 +786,7 @@ class qnaire extends \cenozo\database\record
             $db_response = lib::create( 'database\response' );
             $db_response->respondent_id = $db_respondent->id;
             $db_response->rank = $response->rank;
+            $db_response->qnaire_version = $response->qnaire_version;
           }
 
           $db_module = $module_class_name::get_unique_record(
@@ -1184,6 +1331,7 @@ class qnaire extends \cenozo\database\record
       $data_row = array(
         $db_response->get_respondent()->get_participant()->uid,
         $db_response->rank,
+        $db_response->qnaire_version,
         $db_response->submitted ? 1 : 0,
         is_null( $db_response->start_datetime ) ? NULL : $db_response->start_datetime->format( 'c' ),
         is_null( $db_response->last_datetime ) ? NULL : $db_response->last_datetime->format( 'c' )
@@ -1278,7 +1426,7 @@ class qnaire extends \cenozo\database\record
     }
 
     $header = array_keys( $column_list );
-    array_unshift( $header, 'uid', 'rank', 'submitted', 'start_datetime', 'last_datetime' );
+    array_unshift( $header, 'uid', 'rank', 'qnaire_version', 'submitted', 'start_datetime', 'last_datetime' );
     return array( 'header' => $header, 'data' => $data );
   }
 
@@ -2013,6 +2161,7 @@ class qnaire extends \cenozo\database\record
     $qnaire_data = array(
       'base_language' => $this->get_base_language()->code,
       'name' => $this->name,
+      'version' => $this->version,
       'variable_suffix' => $this->variable_suffix,
       'debug' => $this->debug,
       'readonly' => $this->readonly,
@@ -2213,7 +2362,11 @@ class qnaire extends \cenozo\database\record
     else // print
     {
       $filename = sprintf( '%s/%s.txt', QNAIRE_PRINT_PATH, $this->id );
-      $contents = sprintf( "%s\n", $qnaire_data['name'] )
+      $contents = sprintf(
+        "%s (%s)\n",
+        $qnaire_data['name'],
+        is_null( $qnaire_data['version'] ) ? 'no version specified' : sprintf( 'version %s', $qnaire_data['version'] )
+      )
                 . sprintf( "====================================================================================\n\n" );
       if( $qnaire_data['description'] )$contents .= sprintf( "%s\n\n", $qnaire_data['description'] );
 
@@ -2370,6 +2523,7 @@ class qnaire extends \cenozo\database\record
     $db_qnaire = lib::create( 'database\qnaire' );
     $db_qnaire->base_language_id = $language_class_name::get_unique_record( 'code', $qnaire_object->base_language )->id;
     $db_qnaire->name = $qnaire_object->name;
+    $db_qnaire->version = property_exists( $qnaire_object, 'version' ) ? $qnaire_object->version : NULL;
     $db_qnaire->variable_suffix = $qnaire_object->variable_suffix;
     $db_qnaire->debug = $qnaire_object->debug;
     $db_qnaire->repeated = $qnaire_object->repeated;

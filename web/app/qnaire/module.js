@@ -15,6 +15,9 @@ define( [ 'module' ].reduce( function( list, name ) {
       name: {
         title: 'Name'
       },
+      version: {
+        title: 'Version'
+      },
       base_language_id: {
         title: 'Base Language',
         column: 'base_language.name',
@@ -61,6 +64,11 @@ define( [ 'module' ].reduce( function( list, name ) {
   module.addInputGroup( '', {
     name: {
       title: 'Name',
+      type: 'string',
+      isConstant: function( $state, model ) { return model.viewModel.record.readonly; }
+    },
+    version: {
+      title: 'Version',
       type: 'string',
       isConstant: function( $state, model ) { return model.viewModel.record.readonly; }
     },
@@ -204,6 +212,12 @@ define( [ 'module' ].reduce( function( list, name ) {
       await $state.go( 'qnaire.patch', { identifier: model.viewModel.record.getIdentifier() } );
     },
     isIncluded: function( $state, model ) { return model.getEditEnabled(); }
+  } );
+
+  module.addExtraOperation( 'view', {
+    title: 'Test Connection',
+    isIncluded: function( $state, model ) { return !model.isRole( 'interviewer' ) && model.isDetached(); },
+    operation: function( $state, model ) { model.viewModel.testConnection(); },
   } );
 
   /* ######################################################################################################## */
@@ -566,8 +580,8 @@ define( [ 'module' ].reduce( function( list, name ) {
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnQnaireViewFactory', [
-    'CnBaseViewFactory', 'CnHttpFactory', '$filter', '$state', '$rootScope',
-    function( CnBaseViewFactory, CnHttpFactory, $filter, $state, $rootScope ) {
+    'CnBaseViewFactory', 'CnHttpFactory', 'CnModalMessageFactory', '$filter', '$state', '$rootScope',
+    function( CnBaseViewFactory, CnHttpFactory, CnModalMessageFactory, $filter, $state, $rootScope ) {
       var object = function( parentModel, root ) {
         // the respondent only has one list (respondent list) so the default tab for them is null
         CnBaseViewFactory.construct( this, parentModel, root, parentModel.isRole( 'interviewer' ) ? null : 'respondent' );
@@ -641,6 +655,17 @@ define( [ 'module' ].reduce( function( list, name ) {
             } finally {
               this.working = false;
             }
+          },
+
+          testConnection: async function() {
+            var response = await CnHttpFactory.instance( {
+              path: this.parentModel.getServiceResourcePath() + '?test_connection=1'
+            } ).get();
+
+            await CnModalMessageFactory.instance( {
+              title: 'Test Connection',
+              message: response.data
+            } ).show();
           }
         } );
 
