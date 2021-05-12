@@ -15,6 +15,9 @@ define( [ 'module' ].reduce( function( list, name ) {
       name: {
         title: 'Name'
       },
+      version: {
+        title: 'Version'
+      },
       base_language_id: {
         title: 'Base Language',
         column: 'base_language.name',
@@ -61,6 +64,11 @@ define( [ 'module' ].reduce( function( list, name ) {
   module.addInputGroup( '', {
     name: {
       title: 'Name',
+      type: 'string',
+      isConstant: function( $state, model ) { return model.viewModel.record.readonly; }
+    },
+    version: {
+      title: 'Version',
       type: 'string',
       isConstant: function( $state, model ) { return model.viewModel.record.readonly; }
     },

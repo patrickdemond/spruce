@@ -4,6 +4,8 @@ SET AUTOCOMMIT=0;
 
 SOURCE question.sql
 SOURCE question_option.sql
+SOURCE qnaire.sql
+SOURCE response.sql
 
 SOURCE update_version_number.sql
 

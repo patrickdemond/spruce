@@ -505,6 +505,7 @@ class qnaire extends \cenozo\database\record
         $db_module = is_null( $db_page ) ? NULL : $db_page->get_module();
         $response = array(
           'rank' => $db_response->rank,
+          'qnaire_version' => $db_response->qnaire_version,
           'language' => $db_response->get_language()->code,
           'module' => is_null( $db_module ) ? NULL : $db_module->name,
           'page' => is_null( $db_page ) ? NULL : $db_page->name,
@@ -640,6 +641,7 @@ class qnaire extends \cenozo\database\record
             $db_response = lib::create( 'database\response' );
             $db_response->respondent_id = $db_respondent->id;
             $db_response->rank = $response->rank;
+            $db_response->qnaire_version = $response->qnaire_version;
           }
 
           $db_module = $module_class_name::get_unique_record(
@@ -1184,6 +1186,7 @@ class qnaire extends \cenozo\database\record
       $data_row = array(
         $db_response->get_respondent()->get_participant()->uid,
         $db_response->rank,
+        $db_response->qnaire_version,
         $db_response->submitted ? 1 : 0,
         is_null( $db_response->start_datetime ) ? NULL : $db_response->start_datetime->format( 'c' ),
         is_null( $db_response->last_datetime ) ? NULL : $db_response->last_datetime->format( 'c' )
@@ -1278,7 +1281,7 @@ class qnaire extends \cenozo\database\record
     }
 
     $header = array_keys( $column_list );
-    array_unshift( $header, 'uid', 'rank', 'submitted', 'start_datetime', 'last_datetime' );
+    array_unshift( $header, 'uid', 'rank', 'qnaire_version', 'submitted', 'start_datetime', 'last_datetime' );
     return array( 'header' => $header, 'data' => $data );
   }
 
@@ -2013,6 +2016,7 @@ class qnaire extends \cenozo\database\record
     $qnaire_data = array(
       'base_language' => $this->get_base_language()->code,
       'name' => $this->name,
+      'version' => $this->version,
       'variable_suffix' => $this->variable_suffix,
       'debug' => $this->debug,
       'readonly' => $this->readonly,
@@ -2213,7 +2217,11 @@ class qnaire extends \cenozo\database\record
     else // print
     {
       $filename = sprintf( '%s/%s.txt', QNAIRE_PRINT_PATH, $this->id );
-      $contents = sprintf( "%s\n", $qnaire_data['name'] )
+      $contents = sprintf(
+        "%s (%s)\n",
+        $qnaire_data['name'],
+        is_null( $qnaire_data['version'] ) ? 'no version specified' : sprintf( 'version %s', $qnaire_data['version'] )
+      )
                 . sprintf( "====================================================================================\n\n" );
       if( $qnaire_data['description'] )$contents .= sprintf( "%s\n\n", $qnaire_data['description'] );
 
@@ -2370,6 +2378,7 @@ class qnaire extends \cenozo\database\record
     $db_qnaire = lib::create( 'database\qnaire' );
     $db_qnaire->base_language_id = $language_class_name::get_unique_record( 'code', $qnaire_object->base_language )->id;
     $db_qnaire->name = $qnaire_object->name;
+    $db_qnaire->version = property_exists( $qnaire_object, 'version' ) ? $qnaire_object->version : NULL;
     $db_qnaire->variable_suffix = $qnaire_object->variable_suffix;
     $db_qnaire->debug = $qnaire_object->debug;
     $db_qnaire->repeated = $qnaire_object->repeated;

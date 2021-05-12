@@ -20,6 +20,9 @@ define( function() {
         title: 'Rank',
         type: 'rank'
       },
+      qnaire_version: {
+        title: 'Version'
+      },
       language: {
         column: 'language.code',
         title: 'Language'
@@ -65,6 +68,11 @@ define( function() {
     rank: {
       title: 'rank',
       type: 'rank',
+      isConstant: true
+    },
+    qnaire_version: {
+      title: 'Questionnaire Version',
+      type: 'string',
       isConstant: true
     },
     language_id: {
