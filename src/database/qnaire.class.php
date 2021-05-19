@@ -1039,6 +1039,7 @@ class qnaire extends \cenozo\database\record
    */
   public function mass_respondent( $db_identifier, $identifier_list )
   {
+    ini_set( 'memory_limit', '1G' );
     set_time_limit( 900 ); // 15 minutes max
 
     $participant_class_name = lib::get_class_name( 'database\participant' );
@@ -1298,6 +1299,7 @@ class qnaire extends \cenozo\database\record
    */
   public function get_response_data( $modifier = NULL )
   {
+    ini_set( 'memory_limit', '1G' );
     set_time_limit( 900 ); // 15 minutes max
 
     $response_class_name = lib::get_class_name( 'database\response' );
@@ -1438,6 +1440,7 @@ class qnaire extends \cenozo\database\record
    */
   public function process_patch( $patch_object, $apply = false )
   {
+    ini_set( 'memory_limit', '1G' );
     set_time_limit( 900 ); // 15 minutes max
 
     $language_class_name = lib::get_class_name( 'database\language' );
