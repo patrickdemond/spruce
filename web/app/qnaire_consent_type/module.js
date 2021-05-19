@@ -116,16 +116,15 @@ define( function() {
     'CnBaseAddFactory',
     function( CnBaseAddFactory ) {
       var object = function( parentModel ) {
-        var self = this;
         CnBaseAddFactory.construct( this, parentModel );
 
-        this.onNew = function( record ) {
-          return self.$$onNew( record ).then( function() {
-            // update the question_id's typeahead table value (restrict to questions belonging to current qnaire only)
-            var inputList = self.parentModel.module.inputGroupList.findByProperty( 'title', '' ).inputList;
-            inputList.question_id.typeahead.table =
-              [ 'qnaire', self.parentModel.getParentIdentifier().identifier, 'question' ].join( '/' );
-          } );
+        this.onNew = async function( record ) {
+          await this.$$onNew( record );
+
+          // update the question_id's typeahead table value (restrict to questions belonging to current qnaire only)
+          var inputList = this.parentModel.module.inputGroupList.findByProperty( 'title', '' ).inputList;
+          inputList.question_id.typeahead.table =
+            [ 'qnaire', this.parentModel.getParentIdentifier().identifier, 'question' ].join( '/' );
         };
       };
       return { instance: function( parentModel ) { return new object( parentModel ); } };
@@ -146,15 +145,14 @@ define( function() {
     'CnBaseViewFactory',
     function( CnBaseViewFactory ) {
       var object = function( parentModel, root ) {
-        var self = this;
         CnBaseViewFactory.construct( this, parentModel, root );
 
-        this.onView = function( force ) {
-          return self.$$onView( force ).then( function() {
-            // update the question_id's typeahead table value (restrict to questions belonging to current qnaire only)
-            var inputList = self.parentModel.module.inputGroupList.findByProperty( 'title', '' ).inputList;
-            inputList.question_id.typeahead.table = [ 'qnaire', self.record.qnaire_id, 'question' ].join( '/' );
-          } );
+        this.onView = async function( force ) {
+          await this.$$onView( force );
+
+          // update the question_id's typeahead table value (restrict to questions belonging to current qnaire only)
+          var inputList = this.parentModel.module.inputGroupList.findByProperty( 'title', '' ).inputList;
+          inputList.question_id.typeahead.table = [ 'qnaire', this.record.qnaire_id, 'question' ].join( '/' );
         };
       }
       return { instance: function( parentModel, root ) { return new object( parentModel, root ); } };
@@ -168,28 +166,28 @@ define( function() {
     function( CnBaseModelFactory, CnQnaireConsentTypeAddFactory, CnQnaireConsentTypeListFactory, CnQnaireConsentTypeViewFactory,
               CnHttpFactory ) {
       var object = function( root ) {
-        var self = this;
         CnBaseModelFactory.construct( this, module );
         this.addModel = CnQnaireConsentTypeAddFactory.instance( this );
         this.listModel = CnQnaireConsentTypeListFactory.instance( this );
         this.viewModel = CnQnaireConsentTypeViewFactory.instance( this, root );
 
         // extend getMetadata
-        this.getMetadata = function() {
-          return this.$$getMetadata().then( function() {
-            return CnHttpFactory.instance( {
-              path: 'consent_type',
-              data: {
-                select: { column: [ 'id', 'name' ] },
-                modifier: { order: 'name', limit: 1000 }
-              }
-            } ).query().then( function( response ) {
-              self.metadata.columnList.consent_type_id.enumList = [];
-              response.data.forEach( function( item ) {
-                self.metadata.columnList.consent_type_id.enumList.push( { value: item.id, name: item.name } );
-              } );
-            } );
-          } )
+        this.getMetadata = async function() {
+          await this.$$getMetadata();
+          
+          var response = await CnHttpFactory.instance( {
+            path: 'consent_type',
+            data: {
+              select: { column: [ 'id', 'name' ] },
+              modifier: { order: 'name', limit: 1000 }
+            }
+          } ).query();
+
+          this.metadata.columnList.consent_type_id.enumList = [];
+          var self = this;
+          response.data.forEach( function( item ) {
+            self.metadata.columnList.consent_type_id.enumList.push( { value: item.id, name: item.name } );
+          } );
         };
       };
 

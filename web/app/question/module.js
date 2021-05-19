@@ -66,25 +66,24 @@ define( [ 'question_option' ].reduce( function( list, name ) {
         templateUrl: cenozoApp.getFileUrl( 'pine', 'qnaire_part_clone.tpl.html' ),
         restrict: 'E',
         scope: { model: '=?' },
-        controller: function( $scope ) {
+        controller: async function( $scope ) {
           if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnairePartCloneFactory.instance( 'question' );
           
-          $scope.model.onLoad().then( function() {
-            CnSession.setBreadcrumbTrail( [ {
-              title: 'Page', 
-              go: function() { return $state.go( 'page.list' ); }
-            }, {
-              title: $scope.model.parentSourceName,
-              go: function() { return $state.go( 'page.view', { identifier: $scope.model.sourceParentId } ); }
-            }, {
-              title: 'Questions'
-            }, {
-              title: $scope.model.sourceName,
-              go: function() { return $state.go( 'question.view', { identifier: $scope.model.sourceId } ); }
-            }, {
-              title: 'move/copy'
-            } ] );
-          } );
+          await $scope.model.onLoad();
+          CnSession.setBreadcrumbTrail( [ {
+            title: 'Page', 
+            go: async function() { await $state.go( 'page.list' ); }
+          }, {
+            title: $scope.model.parentSourceName,
+            go: async function() { await $state.go( 'page.view', { identifier: $scope.model.sourceParentId } ); }
+          }, {
+            title: 'Questions'
+          }, {
+            title: $scope.model.sourceName,
+            go: async function() { await $state.go( 'question.view', { identifier: $scope.model.sourceId } ); }
+          }, {
+            title: 'move/copy'
+          } ] );
         }
       };
     }
@@ -107,8 +106,8 @@ define( [ 'question_option' ].reduce( function( list, name ) {
 
   // extend the model factory
   cenozo.providers.decorator( 'CnQuestionViewFactory', [
-    '$delegate', 'CnHttpFactory', 'CnModalConfirmFactory', '$q',
-    function( $delegate, CnHttpFactory, CnModalConfirmFactory, $q ) {
+    '$delegate', 'CnHttpFactory', 'CnModalConfirmFactory',
+    function( $delegate, CnHttpFactory, CnModalConfirmFactory ) {
       var instance = $delegate.instance;
       $delegate.instance = function( parentModel, root ) {
         // if we are looking at the list of questions in a qnaire then we must change the default column order
@@ -118,12 +117,17 @@ define( [ 'question_option' ].reduce( function( list, name ) {
             return object.$$getChildList().filter( child => 'list' == object.record.type || 'question_option' != child.subject.snake );
           },
 
-          onPatch: function( data ) {
-            var promiseList = [];
+          onPatch: async function( data ) {
+            var proceed = true;
+
+            // see if we're changing from a list question which would result in deleting options
+            var removingOptions = angular.isDefined( data.type ) &&
+                                'list' != object.record.type &&
+                                0 < object.record.question_option_count;
 
             // warn if changing name will cause automatic change to preconditions
             if( angular.isDefined( data.name ) ) {
-              promiseList.push( CnHttpFactory.instance( {
+              var response = await CnHttpFactory.instance( {
                 path: object.parentModel.getServiceResourcePath(),
                 data: { select: { column: [
                   'module_precondition_dependencies',
@@ -131,59 +135,56 @@ define( [ 'question_option' ].reduce( function( list, name ) {
                   'question_precondition_dependencies',
                   'question_option_precondition_dependencies'
                 ] } }
-              } ).query().then( function( response ) {
-                if( null != response.data.module_precondition_dependencies ||
-                    null != response.data.page_precondition_dependencies ||
-                    null != response.data.question_precondition_dependencies ||
-                    null != response.data.question_option_precondition_dependencies ) {
-                  var message =
-                    'The following parts of the questionnaire refer to this question in their precondition and will ' +
-                    'automatically be updated to refer to the question\'s new name:\n';
-                  if( null != response.data.module_precondition_dependencies )
-                    message += '\nModule(s): ' + response.data.module_precondition_dependencies
-                  if( null != response.data.page_precondition_dependencies )
-                    message += '\nPage(s): ' + response.data.page_precondition_dependencies
-                  if( null != response.data.question_precondition_dependencies )
-                    message += '\nQuestion(s): ' + response.data.question_precondition_dependencies
-                  if( null != response.data.question_option_precondition_dependencies )
-                    message += '\nQuestion Option(s): ' + response.data.question_option_precondition_dependencies
-                  message += '\n\nAre you sure you wish to proceed?';
-                  return CnModalConfirmFactory.instance( { message: message } ).show();
+              } ).query();
+
+              if( null != response.data.module_precondition_dependencies ||
+                  null != response.data.page_precondition_dependencies ||
+                  null != response.data.question_precondition_dependencies ||
+                  null != response.data.question_option_precondition_dependencies ) {
+                var message =
+                  'The following parts of the questionnaire refer to this question in their precondition and will ' +
+                  'automatically be updated to refer to the question\'s new name:\n';
+                if( null != response.data.module_precondition_dependencies )
+                  message += '\nModule(s): ' + response.data.module_precondition_dependencies
+                if( null != response.data.page_precondition_dependencies )
+                  message += '\nPage(s): ' + response.data.page_precondition_dependencies
+                if( null != response.data.question_precondition_dependencies )
+                  message += '\nQuestion(s): ' + response.data.question_precondition_dependencies
+                if( null != response.data.question_option_precondition_dependencies )
+                  message += '\nQuestion Option(s): ' + response.data.question_option_precondition_dependencies
+                message += '\n\nAre you sure you wish to proceed?';
+                
+                var response = await CnModalConfirmFactory.instance( { message: message } ).show();
+
+                if( !response ) {
+                  // put the old value back
+                  object.record.name = object.backupRecord.name;
+                  proceed = false;
                 }
-              } ) );
-            } else if( angular.isDefined( data.type ) && 'list' != object.record.type && 0 < object.record.question_option_count ) {
-              // warn if changing from a list question which has options
-              promiseList.push( CnModalConfirmFactory.instance( {
+              }
+            } else if( removingOptions ) {
+              var response = await CnModalConfirmFactory.instance( {
                 message: 'By changing this question\'s type to "' + object.record.type + '" ' + object.record.question_option_count +
                          ' question option' + ( 1 == object.record.question_option_count ? '' : 's' ) + ' will be deleted. ' +
                          'Are you sure you wish to proceed?'
-              } ).show() );
+              } ).show();
+
+              if( !response ) {
+                // put the old value back
+                object.record.type = object.backupRecord.type;
+                proceed = false;
+              }
             }
 
-            return $q.all( promiseList ).then( function( response ) {
-              if( angular.isDefined( data.name ) ) {
-                if( false === response[0] ) {
-                  // put the old value back
-                  object.record.name = object.backupRecord.name;
-                } else { 
-                  return object.$$onPatch( data );
-                }
-              } else if( angular.isDefined( data.type ) && 'list' != object.record.type && 0 < object.record.question_option_count ) {
-                if( 0 < response.length && !response[0] ) {
-                  // put the old value back
-                  object.record.type = object.backupRecord.type;
-                } else {
-                  return object.$$onPatch( data ).then( function() {
-                    // update the question option list since we may have deleted them
-                    if( 0 < response.length && angular.isDefined( object.questionOptionModel ) )
-                      object.questionOptionModel.listModel.onList( true );
-                  } );
-                }
-              } else {
-                return object.$$onPatch( data );
-              }
+            if( proceed ) {
+              await object.$$onPatch( data );
 
-            } );
+              if( removingOptions ) {
+                // update the question option list since we may have deleted them
+                if( 0 < response.length && angular.isDefined( object.questionOptionModel ) )
+                  await object.questionOptionModel.listModel.onList( true );
+              }
+            }
           }
         } );
         return object;
