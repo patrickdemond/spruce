@@ -234,8 +234,8 @@ define( [ 'question' ].reduce( function( list, name ) {
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnPageRenderFactory', [
-    'CnHttpFactory', 'CnTranslationHelper', 'CnModalMessageFactory', 'CnModalDatetimeFactory', '$state', '$timeout',
-    function( CnHttpFactory, CnTranslationHelper, CnModalMessageFactory, CnModalDatetimeFactory, $state, $timeout ) {
+    'CnHttpFactory', 'CnTranslationHelper', 'CnModalMessageFactory', 'CnModalDatetimeFactory', '$state', '$timeout', '$interval',
+    function( CnHttpFactory, CnTranslationHelper, CnModalMessageFactory, CnModalDatetimeFactory, $state, $timeout, $interval ) {
       var object = function( parentModel ) {
         var self = this;
 
@@ -844,7 +844,17 @@ define( [ 'question' ].reduce( function( list, name ) {
 
             // if the option has extra data then focus its associated input
             if( null != option.extra ) {
-              $timeout( function() { document.getElementById( 'option' + option.id + 'value0' ).focus(); }, 50 );
+              // keep trying until the element exists (10 tries max)
+              var attempt = 0;
+              var promise = $interval(
+                function() {
+                  attempt++;
+                  var element = document.getElementById( 'option' + option.id + 'value0' );
+                  if( null != element ) element.focus();
+                  if( null != element || attempt >= 10 ) $interval.cancel( promise );
+                },
+                50
+              );
             }
           },
 
@@ -871,7 +881,17 @@ define( [ 'question' ].reduce( function( list, name ) {
             await this.setAnswer( question, value, true );
 
             // focus the new answer value's associated input
-            $timeout( function() { document.getElementById( 'option' + option.id + 'value' + valueIndex ).focus(); }, 50 );
+            // keep trying until the element exists (10 tries max)
+            var attempt = 0;
+            var promise = $interval(
+              function() {
+                attempt++;
+                var element = document.getElementById( 'option' + option.id + 'value' + valueIndex );
+                if( null != element ) element.focus();
+                if( null != element || attempt >= 10 ) $interval.cancel( promise );
+              },
+              50
+            );
           },
 
           removeAnswerValue: async function( question, option, valueIndex ) {
