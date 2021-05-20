@@ -567,11 +567,15 @@ define( [ 'question' ].reduce( function( list, name ) {
               var promiseList = [];
               self.questionList = response.data;
 
-              // set the current language to the first question's language
-              if( 0 < self.questionList.length && angular.isDefined( self.questionList[0].language ) ) {
-                self.currentLanguage = self.questionList[0].language;
-                cenozoApp.setLang( self.currentLanguage );
-              }
+              // set the current language to the first (visible) question's language
+              var found = self.questionList.some( function( question ) {
+                // questions which aren't visible will have a null language
+                if( null != question.language ) {
+                  self.currentLanguage = question.language;
+                  return true;
+                }
+              } );
+              if( found ) cenozoApp.setLang( self.currentLanguage );
 
               // if in debug mode then get a list of all modules before and after the current
               if( self.parentModel.viewModel.record.debug ) {
