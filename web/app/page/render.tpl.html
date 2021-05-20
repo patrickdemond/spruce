@@ -63,7 +63,9 @@
                      'text-info': 'comment' == question.type,
                      'text-danger': true === question.incomplete
                    }"
-                   ng-bind-html="question.prompts[model.renderModel.currentLanguage] + (
+                   ng-bind-html="(
+                     model.viewModel.record.debug ? '<b>[' + question.name + ']</b> ' : ''
+                   ) + question.prompts[model.renderModel.currentLanguage] + (
                      question.popups[model.renderModel.currentLanguage] || question.minimum || question.maximum ? ' <sup>ⓘ</sup>' : ''
                    )"
                    uib-tooltip-html="question.popups[model.renderModel.currentLanguage] + (
