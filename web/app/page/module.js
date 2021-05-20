@@ -554,12 +554,19 @@ define( [ 'question' ].reduce( function( list, name ) {
                 modifier: { order: 'question.rank' }
               }
             } ).query();
-
             this.questionList = response.data;
 
-            // set the current language to the first question's language
+            // set the current language to the first (visible) question's language
             if( 0 < this.questionList.length && angular.isDefined( this.questionList[0].language ) ) {
-              this.currentLanguage = this.questionList[0].language;
+              var self = this;
+              this.questionList.some( function( question ) {
+                // questions which aren't visible will have a null language
+                if( null != question.language ) {
+                  self.currentLanguage = question.language;
+                  return true;
+                }
+              } );
+
               cenozoApp.setLang( this.currentLanguage );
             }
 
