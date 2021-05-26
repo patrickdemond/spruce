@@ -172,7 +172,6 @@
                         name="answerValue"
                         ng-class="{ 'color-red': true === question.incomplete || option.id === question.incomplete }"
                         ng-model="value"
-                        ng-keydown="validateKeydown( $event )"
                         cn-change="model.renderModel.setAnswerValue( question, option, $index, value )"
                         ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
                         class="form-control rounded-bottom-left rounded-bottom-right larger"></input>
@@ -183,7 +182,6 @@
                         name="answerValue"
                         ng-class="{ 'color-red': true === question.incomplete || option.id === question.incomplete }"
                         ng-model="value"
-                        ng-keydown="validateKeydown( $event )"
                         cn-change="model.renderModel.setAnswerValue( question, option, $index, value )"
                         ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
                         class="form-control rounded-bottom-left rounded-bottom-right larger"></input>
@@ -193,7 +191,6 @@
                         name="answerValue"
                         ng-class="{ 'color-red': true === question.incomplete || option.id === question.incomplete }"
                         ng-model="value"
-                        ng-keydown="validateKeydown( $event )"
                         cn-change="model.renderModel.setAnswerValue( question, option, $index, value )"
                         ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
                         class="form-control rounded-bottom-left rounded-bottom-right larger"></textarea>
@@ -221,7 +218,6 @@
                   class="form-control larger"
                   ng-class="{ 'color-red': true === question.incomplete }"
                   ng-model="question.answer.value"
-                  ng-keydown="validateKeydown( $event )"
                   cn-change="model.renderModel.setAnswer( question, question.answer.value )"
                   cn-autofocus="$first"
                   autocomplete="off">
@@ -232,7 +228,6 @@
                   class="form-control larger"
                   ng-class="{ 'color-red': true === question.incomplete }"
                   ng-model="question.answer.value"
-                  ng-keydown="validateKeydown( $event )"
                   cn-change="model.renderModel.setAnswer( question, question.answer.value )"
                   cn-autofocus="$first"
                   autocomplete="off">
@@ -241,7 +236,6 @@
                   class="form-control larger"
                   ng-class="{ 'color-red': true === question.incomplete }"
                   ng-model="question.answer.value"
-                  ng-keydown="validateKeydown( $event )"
                   cn-change="model.renderModel.setAnswer( question, question.answer.value )"
                   cn-autofocus="$first"
                   cn-elastic>

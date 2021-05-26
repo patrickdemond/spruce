@@ -119,14 +119,6 @@ define( [ 'question' ].reduce( function( list, name ) {
         restrict: 'E',
         scope: { model: '=?' },
         controller: async function( $scope ) {
-          function isNumpadInput( event ) {
-            // only send keyup events when on the render page and the key is a numpad number
-            return ['render','run'].includes( $scope.model.getActionFromState() ) && (
-              ( 13 == event.which && 'NumpadEnter' == event.code ) || // numpad enter
-              ( 97 <= event.which && event.which <= 105 ) // numpad 0 to 9
-            );
-          }
-
           if( angular.isUndefined( $scope.model ) ) $scope.model = CnPageModelFactory.root;
           angular.extend( $scope, {
             data: {
@@ -140,26 +132,31 @@ define( [ 'question' ].reduce( function( list, name ) {
             isComplete: false,
             progress: 0,
             showHidden: angular.isDefined( $state.params.show_hidden ) ? $state.params.show_hidden : false,
-            text: function( address ) { return $scope.model.renderModel.text( address ); },
-            validateKeydown: function( event ) {
-              // prevent numpad keys from entering into inputs and textareas
-              // (PROBLEMATIC, DISABLING THIS FOR NOW)
-              // if( isNumpadInput( event ) ) { event.returnValue = false; event.preventDefault(); }
-            }
+            text: function( address ) { return $scope.model.renderModel.text( address ); }
           } );
 
-          /*
-          PROBLEMATIC, DISABLING THIS FOR NOW
           // bind keyup (first unbind to prevent duplicates)
           $document.unbind( 'keyup' );
-          $document.bind( 'keyup', function( event ) {
-            if( isNumpadInput( event ) ) {
+          $document.bind( 'keyup', async function( event ) {
+            var action = null;
+            if( $scope.isComplete && false == $scope.model.renderModel.working ) {
+              if( 'Minus' == event.code || 'NumpadSubtract' == event.code ) {
+                // proceed to the previous page when the minus key is pushed (keyboard or numpad)
+                if( null != $scope.model.viewModel.record.previous_id ) action = 'backup';
+              } else if( 'Equal' == event.code || 'NumpadAdd' == event.code ) {
+                // proceed to the next page when the plus key is pushed (keyboard "=" key or numpad)
+                if( angular.isUndefined( $scope.model.viewModel.record.next_id ) || null != $scope.model.viewModel.record.next_id )
+                  action = 'proceed';
+              }
+            }
+
+            if( null != action ) {
               event.stopPropagation();
-              $scope.model.renderModel.onKeyup( 13 == event.which ? 'enter' : event.which - 96 );
+              await Promise.all( $scope.model.renderModel.writePromiseList );
+              await 'backup' == action ? $scope.model.renderModel.backup() : $scope.model.renderModel.proceed();
               $scope.$apply();
             }
           } );
-          */
 
           if( 'respondent' != $scope.model.getSubjectFromState() ) {
             $scope.showHidden = true;
@@ -257,7 +254,6 @@ define( [ 'question' ].reduce( function( list, name ) {
           questionList: [],
           optionListById: {},
           currentLanguage: null,
-          keyQuestionIndex: null,
           writePromiseList: [],
           promiseIndex: 0,
 
@@ -523,7 +519,6 @@ define( [ 'question' ].reduce( function( list, name ) {
           reset: function() {
             angular.extend( this, {
               questionList: [],
-              keyQuestionIndex: null,
               activeAttributeList: [],
               prevModuleList: [],
               nextModuleList: []
@@ -600,9 +595,6 @@ define( [ 'question' ].reduce( function( list, name ) {
               question.backupValue = angular.copy( question.value );
               activeAttributeList = activeAttributeList.concat( getAttributeNames( question.precondition ) );
 
-              // make sure we have the first non-comment question set as the first key question
-              if( null == self.keyQuestionIndex && 'comment' != question.type ) self.keyQuestionIndex = questionIndex;
-
               // if the question is a list type then get the options
               if( 'list' == question.type ) {
                 var getOptionsFn = async function() {
@@ -659,52 +651,8 @@ define( [ 'question' ].reduce( function( list, name ) {
           onKeyup: async function( key ) {
             await Promise.all( this.writePromiseList );
 
-            if( 'enter' == key ) {
-              // proceed to the next page when the enter key is clicked
-              await this.proceed();
-            } else {
-              // do nothing if we have no key question index (which means the page only has comments)
-              if( null == this.keyQuestionIndex ) return;
-
-              var question = this.questionList[this.keyQuestionIndex];
-
-              if( 'boolean' == question.type ) {
-                var value = undefined;
-                if( 1 == key ) value = question.answer.yes ? null: true;
-                else if( 2 == key ) value = question.answer.no ? null : false;
-                else if( 3 == key ) value = question.answer.dkna ? null : { dkna: true };
-                else if( 4 == key ) value = question.answer.refuse ? null : { refuse: true };
-
-                if( angular.isDefined( value ) ) await this.setAnswer( question, value );
-              } else if( 'list' == question.type ) {
-                // check if the key is within the option list or the 2 dkna/refuse options
-                if( key <= question.optionList.length ) {
-                  var option = question.optionList[key-1];
-                  if( question.answer.optionList[option.id].selected ) {
-                    await this.removeOption( question, option );
-                  } else {
-                    await this.addOption( question, option );
-                  }
-                } else if( key == question.optionList.length + 1 ) {
-                  await this.setAnswer( question, question.answer.dkna ? null : { dkna: true } );
-                } else if( key == question.optionList.length + 2 ) {
-                  await this.setAnswer( question, question.answer.refuse ? null : { refuse: true } );
-                }
-              } else {
-                // 1 is dkna and 2 is refuse
-                if( 1 == key ) {
-                  await this.setAnswer( question, question.answer.dkna ? null : { dkna: true } );
-                } else if( 2 == key ) {
-                  await this.setAnswer( question, question.answer.refuse ? null : { refuse: true } );
-                }
-              }
-
-              // advance to the next non-comment question, looping back to the first when we're at the end of the list
-              do {
-                this.keyQuestionIndex++;
-                if( this.keyQuestionIndex == this.questionList.length ) this.keyQuestionIndex = 0;
-              } while( 'comment' == this.questionList[this.keyQuestionIndex].type );
-            }
+            // proceed to the next page when the + key is pushed
+            if( '+' == key ) await this.proceed();
           },
 
           setAnswer: async function( question, value, noCompleteCheck ) {
