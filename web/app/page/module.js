@@ -24,6 +24,7 @@ define( [ 'question' ].reduce( function( list, name ) {
   module.addInput( '', 'note', { title: 'Note', type: 'text' } );
   module.addInput( '', 'qnaire_id', { column: 'qnaire.id', isExcluded: true } );
   module.addInput( '', 'qnaire_name', { column: 'qnaire.name', isExcluded: true } );
+  module.addInput( '', 'variable_suffix', { column: 'qnaire.variable_suffix', isExcluded: true } );
   module.addInput( '', 'debug', { column: 'qnaire.debug', isExcluded: true } );
   module.addInput( '', 'base_language', { column: 'base_language.code', isExcluded: true } );
   module.addInput( '', 'prompts', { isExcluded: true } );
@@ -276,6 +277,11 @@ define( [ 'question' ].reduce( function( list, name ) {
           },
 
           convertValueToModel: function( question ) {
+            // get the full variable name
+            question.variable_name = question.name + (
+              this.parentModel.viewModel.record.variable_suffix ? ( '_' + this.parentModel.viewModel.record.variable_suffix ) : ''
+            );
+
             if( 'boolean' == question.type ) {
               question.answer = {
                 yes: true === question.value,

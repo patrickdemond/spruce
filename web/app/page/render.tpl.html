@@ -58,14 +58,13 @@
                   uib-tooltip-html="model.viewModel.record.popups[model.renderModel.currentLanguage]"></span>
             <div ng-repeat="question in model.renderModel.getVisibleQuestionList()">
               <hr ng-if="!$first" />
+              <div ng-if="model.viewModel.record.debug || showHidden" class="small text-muted">[{{ question.variable_name }}]</div>
               <div class="vertical-spacer larger"
                    ng-class="{
                      'text-info': 'comment' == question.type,
                      'text-danger': true === question.incomplete
                    }"
-                   ng-bind-html="(
-                     model.viewModel.record.debug ? '<b>[' + question.name + ']</b> ' : ''
-                   ) + question.prompts[model.renderModel.currentLanguage] + (
+                   ng-bind-html="question.prompts[model.renderModel.currentLanguage] + (
                      question.popups[model.renderModel.currentLanguage] || question.minimum || question.maximum ? ' <sup>ⓘ</sup>' : ''
                    )"
                    uib-tooltip-html="question.popups[model.renderModel.currentLanguage] + (
