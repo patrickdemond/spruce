@@ -82,7 +82,7 @@
                 <div ng-switch-when="boolean">
                   <label class="btn btn-default full-width larger"
                          ng-class="{ 'color-red': true === question.incomplete }"
-                         style="text-align: left; font-style: italic; font-weight: normal"
+                         style="text-align: left; font-style: italic; font-weight: normal; white-space: normal;"
                          ng-model="question.answer.yes"
                          ng-click="model.renderModel.setAnswer( question, question.answer.yes ? true : null )"
                          uib-btn-checkbox>
@@ -91,7 +91,7 @@
                   </label>
                   <label class="btn btn-default full-width larger"
                          ng-class="{ 'color-red': true === question.incomplete }"
-                         style="text-align: left; font-style: italic; font-weight: normal"
+                         style="text-align: left; font-style: italic; font-weight: normal; white-space: normal;"
                          ng-model="question.answer.no"
                          ng-click="model.renderModel.setAnswer( question, question.answer.no ? false : null )"
                          uib-btn-checkbox>
@@ -105,7 +105,7 @@
                   <div ng-if="!option.multiple_answers" ng-class="{ 'col-xs-6 col-slim': null != option.extra }">
                     <label
                       class="btn btn-default full-width larger"
-                      style="text-align: left"
+                      style="text-align: left; white-space: normal;"
                       ng-class="{
                         'rounded-bottom-left rounded-top-left': null != option.extra,
                         'color-red': true === question.incomplete || option.id === question.incomplete
@@ -134,7 +134,7 @@
                     <label
                       class="btn btn-default full-width rounded-bottom-left rounded-top-left larger"
                       ng-class="{ 'color-red': true === question.incomplete }"
-                      style="text-align: left"
+                      style="text-align: left; white-space: normal;"
                       ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal', 'font-weight': 'normal' }"
                       ng-bind-html="
                         option.prompts[model.renderModel.currentLanguage] + (
@@ -248,7 +248,7 @@
                            'col-xs-6': question.refuse_allowed,
                            'col-xs-12': !question.refuse_allowed
                          }"
-                         style="text-align: left; font-style: italic; font-weight: normal;"
+                         style="text-align: left; font-style: italic; font-weight: normal; white-space: normal;"
                          ng-model="question.answer.dkna"
                          ng-click="model.renderModel.setAnswer( question, question.answer.dkna ? { dkna: true } : null )"
                          uib-btn-checkbox>
@@ -262,7 +262,7 @@
                            'col-xs-6': question.dkna_allowed,
                            'col-xs-12': !question.dkna_allowed
                          }"
-                         style="text-align: left; font-style: italic; font-weight: normal;"
+                         style="text-align: left; font-style: italic; font-weight: normal; white-space: normal"
                          ng-model="question.answer.refuse"
                          ng-click="model.renderModel.setAnswer( question, question.answer.refuse ? { refuse: true } : null )"
                          uib-btn-checkbox>
