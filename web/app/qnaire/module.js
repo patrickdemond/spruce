@@ -431,7 +431,7 @@ define( [ 'module' ].reduce( function( list, name ) {
             // reset data
             this.name = null;
             this.nameConflict = false;
-            var response = CnHttpFactory.instance( {
+            var response = await CnHttpFactory.instance( {
               path: 'qnaire/' + this.parentQnaireId,
               data: { select: { column: 'name' } }
             } ).get();
@@ -462,7 +462,7 @@ define( [ 'module' ].reduce( function( list, name ) {
 
             try {
               this.working = true;
-              var http = CnHttpFactory.instance( httpObj );
+              var http = await CnHttpFactory.instance( httpObj );
               var response = await( 'clone' == this.operation ? http.post() : http.file() );
               if( 'clone' == this.operation ) await $state.go( 'qnaire.view', { identifier: response.data } );
             } finally {
@@ -524,7 +524,7 @@ define( [ 'module' ].reduce( function( list, name ) {
 
           onLoad: async function() {
             // reset data
-            var response = CnHttpFactory.instance( {
+            var response = await CnHttpFactory.instance( {
               path: 'qnaire/' + this.qnaireId,
               data: { select: { column: 'name' } }
             } ).get();
@@ -629,7 +629,7 @@ define( [ 'module' ].reduce( function( list, name ) {
                   data.append( 'file', self.file );
 
                   // check the patch file
-                  var response = CnHttpFactory.instance( {
+                  var response = await CnHttpFactory.instance( {
                     path: self.parentModel.getServiceResourcePath() + '?patch=check',
                     data: self.file
                   } ).patch();
