@@ -1057,10 +1057,10 @@ define( [ 'question' ].reduce( function( list, name ) {
         var object = instance( parentModel );
 
         // see if the form has a record in the data-entry module
-        var onNew = object.onNew;
+        object.baseOnNewFn = object.onNew;
         angular.extend( object, {
           onNew: async function( record ) {
-            await onNew( record );
+            await this.baseOnNewFn( record );
 
             // set the default page max time
             if( angular.isUndefined( record.max_time ) ) record.max_time = CnSession.setting.defaultPageMaxTime;
