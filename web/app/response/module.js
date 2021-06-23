@@ -198,10 +198,21 @@ define( function() {
 
         angular.extend( this, {
           parentModel: parentModel,
+          languageList: [],
           moduleList: [],
           questionList: [],
           onLoad: async function() {
             var self = this;
+
+            // get a list of all active languages
+            var response = await CnHttpFactory.instance( {
+              path: 'language',
+              data: {
+                select: { column: [ 'code', 'name' ] },
+                modifier: { where: { column: 'active', operator: '=', value: true } }
+              }
+            } ).get();
+            this.languageList = response.data;
 
             // get a list of all modules
             var response = await CnHttpFactory.instance( {

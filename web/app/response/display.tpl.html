@@ -1,4 +1,15 @@
 <div class="container-fluid">
+  <div class="form-group">
+    <label for="lang" class="control-label col-sm-3">Display Language:</label>
+    <div class="row col-sm-9">
+      <select id="lang"
+              name="lang"
+              class="form-control col-sm-9"
+              ng-options="language.code as language.name for language in model.displayModel.languageList"
+              ng-model="model.displayModel.lang"></select>
+    </div>
+  </div>
+  <hr/>
   <div class="container-fluid" ng-repeat="module in model.displayModel.moduleList">
     <div ng-if="module.prompts[model.displayModel.lang]" ng-bind-html="module.prompts[model.displayModel.lang]"></div>
     <div class="container-fluid" ng-repeat="page in module.pageList">
