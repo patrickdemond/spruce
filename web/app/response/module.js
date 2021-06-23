@@ -110,7 +110,7 @@ define( function() {
     page_id: { isExcluded: true },
     qnaire_id: { column: 'qnaire.id', isExcluded: true },
     lang: { column: 'language.code', isExcluded: true },
-    respondent_id: { column: 'respondent.id', isExluded: true }
+    respondent_id: { column: 'respondent.id', isExcluded: true }
   } );
 
   module.addExtraOperation( 'view', {
