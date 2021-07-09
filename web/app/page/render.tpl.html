@@ -64,9 +64,7 @@
                      'text-info': 'comment' == question.type,
                      'text-danger': true === question.incomplete
                    }"
-                   ng-bind-html="question.prompts[model.renderModel.currentLanguage] + (
-                     question.popups[model.renderModel.currentLanguage] || question.minimum || question.maximum ? ' <sup>ⓘ</sup>' : ''
-                   )"
+                   ng-bind-html="( question.popups[model.renderModel.currentLanguage] || question.minimum || question.maximum ? '<sup>ⓘ</sup> ' : '') + question.prompts[model.renderModel.currentLanguage]"
                    uib-tooltip-html="question.popups[model.renderModel.currentLanguage] + (
                      ( question.minimum || question.maximum ? ' [' : '' ) +
                      ( question.minimum ? 'Min: ' + model.renderModel.evaluateLimit( question.minimum ) : '' ) +
