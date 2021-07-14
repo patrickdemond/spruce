@@ -2,14 +2,14 @@
   <button type="button"
           ng-if="'page' == model.getSubjectFromState()"
           ng-disabled="null == model.viewModel.record.previous_id"
-          ng-click="model.renderModel.renderPreviousPage()"
+          ng-click="model.renderModel.backup()"
           class="btn btn-info larger">
     <i class="glyphicon glyphicon-chevron-left"></i>
   </button>
   <button type="button"
           ng-if="'page' == model.getSubjectFromState()"
           ng-disabled="null == model.viewModel.record.next_id"
-          ng-click="model.renderModel.renderNextPage()"
+          ng-click="model.renderModel.proceed()"
           class="btn btn-info larger">
     <i class="glyphicon glyphicon-chevron-right"></i>
   </button>

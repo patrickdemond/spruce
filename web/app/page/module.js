@@ -122,17 +122,7 @@ define( [ 'question' ].reduce( function( list, name ) {
         controller: async function( $scope ) {
           if( angular.isUndefined( $scope.model ) ) $scope.model = CnPageModelFactory.root;
           angular.extend( $scope, {
-            data: {
-              page_id: null,
-              qnaire_id: null,
-              qnaire_name: null,
-              base_language: null,
-              title: null,
-              uid: null
-            },
             isComplete: false,
-            progress: 0,
-            showHidden: angular.isDefined( $state.params.show_hidden ) ? $state.params.show_hidden : false,
             text: function( address ) { return $scope.model.renderModel.text( address ); }
           } );
 
@@ -150,7 +140,6 @@ define( [ 'question' ].reduce( function( list, name ) {
                   action = 'proceed';
               }
             }
-
             if( null != action ) {
               event.stopPropagation();
               await Promise.all( $scope.model.renderModel.writePromiseList );
@@ -159,72 +148,18 @@ define( [ 'question' ].reduce( function( list, name ) {
             }
           } );
 
-          if( 'respondent' != $scope.model.getSubjectFromState() ) {
-            $scope.showHidden = true;
-          } else {
-            // check for the respondent using the token
-            var params = '?assert_response=1';
-            if( $scope.showHidden ) params += '&&show_hidden=1';
-            var response = await CnHttpFactory.instance( {
-              path: 'respondent/token=' + $state.params.token + params,
-              data: { select: { column: [
-                'qnaire_id', 'introductions', 'conclusions', 'closes',
-                { table: 'qnaire', column: 'closed' },
-                { table: 'qnaire', column: 'name', alias: 'qnaire_name' },
-                { table: 'response', column: 'page_id' },
-                { table: 'response', column: 'submitted' },
-                { table: 'participant', column: 'uid' },
-                { table: 'language', column: 'code', alias: 'base_language' }
-              ] } },
-              onError: function( error ) {
-                $state.go( 'error.' + error.status, error );
-              }
-            } ).get();
+          try {
+            await $scope.model.renderModel.onReady();
 
-            $scope.data = response.data;
-            $scope.data.introductions = CnTranslationHelper.parseDescriptions( $scope.data.introductions, $scope.showHidden );
-            $scope.data.conclusions = CnTranslationHelper.parseDescriptions( $scope.data.conclusions, $scope.showHidden );
-            $scope.data.closes = CnTranslationHelper.parseDescriptions( $scope.data.closes, $scope.showHidden );
-            $scope.data.title = null != $scope.data.page_id ? '' : $scope.data.submitted ? 'Conclusion' : 'Introduction';
+            CnSession.setBreadcrumbTrail( [ {
+              title: $scope.model.renderModel.data.qnaire_name,
+              go: async function() { await $state.go( 'qnaire.view', { identifier: $scope.model.renderModel.data.qnaire_id } ); }
+            }, {
+              title: $scope.model.renderModel.data.uid ? $scope.model.renderModel.data.uid : 'Preview'
+            } ] );
+          } finally {
+            $scope.isComplete = true;
           }
-
-          if( 'respondent' != $scope.model.getSubjectFromState() || null != $scope.data.page_id ) {
-            await $scope.model.viewModel.onView( true );
-
-            angular.extend( $scope.data, {
-              page_id: $scope.model.viewModel.record.id,
-              qnaire_id: $scope.model.viewModel.record.qnaire_id,
-              qnaire_name: $scope.model.viewModel.record.qnaire_name,
-              base_language: $scope.model.viewModel.record.base_language,
-              uid: $scope.model.viewModel.record.uid
-            } );
-
-            $scope.progress = Math.round(
-              100 * $scope.model.viewModel.record.qnaire_page / $scope.model.viewModel.record.qnaire_pages
-            );
-
-            await $scope.model.renderModel.onLoad();
-          } else if( null == $scope.data.page_id ) {
-            await $scope.model.renderModel.reset();
-          }
-
-          var response = await CnHttpFactory.instance( {
-            path: [ 'qnaire', $scope.data.qnaire_id, 'language' ].join( '/' ),
-            data: { select: { column: [ 'id', 'code', 'name' ] } }
-          } ).query();
-          $scope.languageList = response.data;
-
-          CnSession.setBreadcrumbTrail( [ {
-            title: $scope.data.qnaire_name,
-            go: async function() { await $state.go( 'qnaire.view', { identifier: $scope.data.qnaire_id } ); }
-          }, {
-            title: $scope.data.uid ? $scope.data.uid : 'Preview'
-          } ] );
-
-          if( null == $scope.model.renderModel.currentLanguage )
-            $scope.model.renderModel.currentLanguage = $scope.data.base_language;
-
-          $scope.isComplete = true;
         }
       };
     }
@@ -237,6 +172,7 @@ define( [ 'question' ].reduce( function( list, name ) {
       var object = function( parentModel ) {
         var self = this;
 
+        // private helper functions
         function getDate( date ) {
           if( 'now' == date ) date = moment().format( 'YYYY-MM-DD' );
           return date && !angular.isObject( date ) ? moment( new Date( date ) ) : null;
@@ -245,18 +181,221 @@ define( [ 'question' ].reduce( function( list, name ) {
         function isDkna( value ) { return angular.isObject( value ) && true === value.dkna; }
         function isRefuse( value ) { return angular.isObject( value ) && true === value.refuse; }
         function isDknaOrRefuse( value ) { return angular.isObject( value ) && ( true === value.dkna || true === value.refuse ); }
+        function getAttributeNames( precondition ) {
+          // scan the precondition for active attributes (also include the showhidden constant)
+          var list = [];
+          if( angular.isString( precondition ) ) {
+            var matches = precondition.match( /@[^@]+@|\bshowhidden\b/g );
+            if( null != matches && 0 < matches.length ) list = matches.map( m => m.replace( /@/g, '' ) );
+          }
+          return list;
+        }
 
         angular.extend( this, {
           parentModel: parentModel,
           prevModuleList: [],
           nextModuleList: [],
           working: false,
+          progress: 0,
+          previewMode: 'respondent' != parentModel.getSubjectFromState(),
+          data: {
+            page_id: null,
+            qnaire_id: null,
+            qnaire_name: null,
+            base_language: null,
+            title: null,
+            uid: null,
+          },
+          languageList: null,
+          showHidden: false,
           activeAttributeList: [],
           questionList: [],
           optionListById: {},
           currentLanguage: null,
           writePromiseList: [],
           promiseIndex: 0,
+
+          reset: function() {
+            angular.extend( this, {
+              questionList: [],
+              activeAttributeList: [],
+              prevModuleList: [],
+              nextModuleList: []
+            } );
+          },
+
+          text: function( address ) { return CnTranslationHelper.translate( address, this.currentLanguage ); },
+          getVisibleQuestionList: function() {
+            return this.questionList.filter( question => self.evaluate( question.precondition ) );
+          },
+          getVisibleOptionList: function( question ) {
+            return question.optionList.filter( option => self.evaluate( option.precondition ) );
+          },
+
+
+          onReady: async function() {
+            // we show hidden stuff when previewing (not a respondent) or when there is a state parameter asking for it
+            this.showHidden = this.previewMode
+                            ? true
+                            : angular.isDefined( $state.params.show_hidden )
+                            ? $state.params.show_hidden
+                            : false;
+
+            if( !this.previewMode ) {
+              // check for the respondent using the token
+              var params = '?assert_response=1';
+              if( this.showHidden ) params += '&&show_hidden=1';
+              var response = await CnHttpFactory.instance( {
+                path: 'respondent/token=' + $state.params.token + params,
+                data: { select: { column: [
+                  'qnaire_id', 'introductions', 'conclusions', 'closes',
+                  { table: 'qnaire', column: 'closed' },
+                  { table: 'qnaire', column: 'name', alias: 'qnaire_name' },
+                  { table: 'response', column: 'page_id' },
+                  { table: 'response', column: 'submitted' },
+                  { table: 'participant', column: 'uid' },
+                  { table: 'language', column: 'code', alias: 'base_language' }
+                ] } },
+                onError: function( error ) {
+                  $state.go( 'error.' + error.status, error );
+                }
+              } ).get();
+
+              this.data = response.data;
+              angular.extend( this.data, {
+                introductions: CnTranslationHelper.parseDescriptions( this.data.introductions, this.showHidden ),
+                conclusions: CnTranslationHelper.parseDescriptions( this.data.conclusions, this.showHidden ),
+                closes: CnTranslationHelper.parseDescriptions( this.data.closes, this.showHidden ),
+                title: null != this.data.page_id ?
+                  '' : this.data.submitted ? 'Conclusion' : 'Introduction'
+              } );
+            }
+
+            if( this.previewMode || null != this.data.page_id ) {
+              await this.parentModel.viewModel.onView( true );
+
+              angular.extend( this.data, {
+                page_id: this.parentModel.viewModel.record.id,
+                qnaire_id: this.parentModel.viewModel.record.qnaire_id,
+                qnaire_name: this.parentModel.viewModel.record.qnaire_name,
+                base_language: this.parentModel.viewModel.record.base_language,
+                uid: this.parentModel.viewModel.record.uid
+              } );
+
+              this.progress = Math.round(
+                100 * this.parentModel.viewModel.record.qnaire_page / this.parentModel.viewModel.record.qnaire_pages
+              );
+
+              this.reset();
+              var response = await CnHttpFactory.instance( {
+                path: this.parentModel.getServiceResourceBasePath() + '/question',
+                data: {
+                  select: { column: [
+                    'rank', 'name', 'type', 'mandatory', 'dkna_allowed', 'refuse_allowed',
+                    'minimum', 'maximum', 'precondition', 'prompts', 'popups'
+                  ] },
+                  modifier: { order: 'question.rank' }
+                }
+              } ).query();
+              this.questionList = response.data;
+
+              // set the current language to the first (visible) question's language
+              if( 0 < this.questionList.length && angular.isDefined( this.questionList[0].language ) ) {
+                this.questionList.some( function( question ) {
+                  // questions which aren't visible will have a null language
+                  if( null != question.language ) {
+                    self.currentLanguage = question.language;
+                    return true;
+                  }
+                } );
+
+                cenozoApp.setLang( this.currentLanguage );
+              }
+
+              // if in debug mode then get a list of all modules before and after the current
+              if( this.parentModel.viewModel.record.debug ) {
+                var response = await CnHttpFactory.instance( {
+                  path: ['qnaire', this.parentModel.viewModel.record.qnaire_id , 'module'].join( '/' ),
+                  data: {
+                    select: { column: [ 'id', 'rank', 'name' ] },
+                    module: { order: 'module.rank' }
+                  }
+                } ).query();
+
+                var foundCurrentModule = false;
+                response.data.forEach( function( module ) {
+                  if( !foundCurrentModule && module.id == self.parentModel.viewModel.record.module_id ) {
+                    foundCurrentModule = true
+                  } else {
+                    if( foundCurrentModule ) self.nextModuleList.push( module );
+                    else self.prevModuleList.push( module );
+                  }
+                } );
+              }
+
+              var activeAttributeList = [];
+              var promiseList = this.questionList.reduce( function( list, question, questionIndex ) {
+                question.incomplete = false;
+                question.prompts = CnTranslationHelper.parseDescriptions( question.prompts );
+                question.popups = CnTranslationHelper.parseDescriptions( question.popups );
+                question.value = angular.fromJson( question.value );
+                question.backupValue = angular.copy( question.value );
+                activeAttributeList = activeAttributeList.concat( getAttributeNames( question.precondition ) );
+
+                // if the question is a list type then get the options
+                if( 'list' == question.type ) {
+                  var getOptionsFn = async function() {
+                    var response = await CnHttpFactory.instance( {
+                      path: ['question', question.id, 'question_option'].join( '/' ) + (
+                        !self.previewMode ? '?token=' + $state.params.token : ''
+                      ),
+                      data: {
+                        select: { column: [
+                          'name', 'exclusive', 'extra', 'multiple_answers', 'minimum', 'maximum', 'precondition', 'prompts', 'popups'
+                        ] },
+                        modifier: { order: 'question_option.rank' }
+                      }
+                    } ).query();
+
+                    question.optionList = response.data;
+                    question.optionList.forEach( function( option ) {
+                      activeAttributeList = activeAttributeList.concat( getAttributeNames( option.precondition ) );
+                      option.prompts = CnTranslationHelper.parseDescriptions( option.prompts );
+                      option.popups = CnTranslationHelper.parseDescriptions( option.popups );
+                      self.optionListById[option.id] = option;
+                    } );
+                  }
+
+                  list.push( getOptionsFn() );
+                }
+
+                return list;
+              }, [] );
+
+              await Promise.all( promiseList );
+
+              this.questionList.forEach( question => self.convertValueToModel( question ) );
+
+              // sort active attribute and make a unique list
+              this.activeAttributeList = activeAttributeList
+                .sort()
+                .filter( ( attribute, index, array ) => index === array.indexOf( attribute ) )
+                .map( attribute => ( { name: attribute, value: null } ) );
+
+            } else if( null == this.data.page_id ) {
+              await this.reset();
+            }
+
+            var response = await CnHttpFactory.instance( {
+              path: [ 'qnaire', this.data.qnaire_id, 'language' ].join( '/' ),
+              data: { select: { column: [ 'id', 'code', 'name' ] } }
+            } ).query();
+            this.languageList = response.data;
+
+            if( null == this.currentLanguage )
+              this.currentLanguage = this.data.base_language;
+
+          },
 
           // Used to maintain a semaphore of queries so that they are all executed in sequence without any bumping the queue
           runQuery: async function( fn ) {
@@ -399,7 +538,7 @@ define( [ 'question' ].reduce( function( list, name ) {
             if( !isLimit && true == expression || false == expression ) return expression;
 
             // replace any attributes
-            if( 'respondent' != this.parentModel.getSubjectFromState() ) {
+            if( this.previewMode ) {
               this.activeAttributeList.forEach( function( attribute ) {
                 var qualifier = 'showhidden' == attribute.name ? '\\b' : '@';
                 var re = new RegExp( qualifier + attribute.name + qualifier );
@@ -508,143 +647,13 @@ define( [ 'question' ].reduce( function( list, name ) {
             if( isLimit ) return expression;
 
             // create a function which can be used to evaluate the compiled precondition without calling eval()
-            function evaluateExpression( precondition ) {
-              return Function('"use strict"; return ' + precondition + ';')();
-            }
+            function evaluateExpression( precondition ) { return Function('"use strict"; return ' + precondition + ';')(); }
             return evaluateExpression( expression );
-          },
-
-          getVisibleQuestionList: function() {
-            return this.questionList.filter( question => self.evaluate( question.precondition ) );
-          },
-
-          getVisibleOptionList: function( question ) {
-            return question.optionList.filter( option => self.evaluate( option.precondition ) );
-          },
-
-          reset: function() {
-            angular.extend( this, {
-              questionList: [],
-              activeAttributeList: [],
-              prevModuleList: [],
-              nextModuleList: []
-            } );
-          },
-
-          onLoad: async function() {
-            var self = this;
-
-            function getAttributeNames( precondition ) {
-              // scan the precondition for active attributes (also include the showhidden constant)
-              var list = [];
-              if( angular.isString( precondition ) ) {
-                var matches = precondition.match( /@[^@]+@|\bshowhidden\b/g );
-                if( null != matches && 0 < matches.length ) list = matches.map( m => m.replace( /@/g, '' ) );
-              }
-              return list;
-            }
-
-            this.reset();
-            var response = await CnHttpFactory.instance( {
-              path: this.parentModel.getServiceResourceBasePath() + '/question',
-              data: {
-                select: { column: [
-                  'rank', 'name', 'type', 'mandatory', 'dkna_allowed', 'refuse_allowed',
-                  'minimum', 'maximum', 'precondition', 'prompts', 'popups'
-                ] },
-                modifier: { order: 'question.rank' }
-              }
-            } ).query();
-            this.questionList = response.data;
-
-            // set the current language to the first (visible) question's language
-            if( 0 < this.questionList.length && angular.isDefined( this.questionList[0].language ) ) {
-              var self = this;
-              this.questionList.some( function( question ) {
-                // questions which aren't visible will have a null language
-                if( null != question.language ) {
-                  self.currentLanguage = question.language;
-                  return true;
-                }
-              } );
-
-              cenozoApp.setLang( this.currentLanguage );
-            }
-
-            // if in debug mode then get a list of all modules before and after the current
-            if( this.parentModel.viewModel.record.debug ) {
-              var response = await CnHttpFactory.instance( {
-                path: ['qnaire', this.parentModel.viewModel.record.qnaire_id , 'module'].join( '/' ),
-                data: {
-                  select: { column: [ 'id', 'rank', 'name' ] },
-                  module: { order: 'module.rank' }
-                }
-              } ).query();
-
-              var foundCurrentModule = false;
-              response.data.forEach( function( module ) {
-                if( !foundCurrentModule && module.id == self.parentModel.viewModel.record.module_id ) {
-                  foundCurrentModule = true
-                } else {
-                  if( foundCurrentModule ) self.nextModuleList.push( module );
-                  else self.prevModuleList.push( module );
-                }
-              } );
-            }
-
-            var activeAttributeList = [];
-            var promiseList = this.questionList.reduce( function( list, question, questionIndex ) {
-              question.incomplete = false;
-              question.prompts = CnTranslationHelper.parseDescriptions( question.prompts );
-              question.popups = CnTranslationHelper.parseDescriptions( question.popups );
-              question.value = angular.fromJson( question.value );
-              question.backupValue = angular.copy( question.value );
-              activeAttributeList = activeAttributeList.concat( getAttributeNames( question.precondition ) );
-
-              // if the question is a list type then get the options
-              if( 'list' == question.type ) {
-                var getOptionsFn = async function() {
-                  var response = await CnHttpFactory.instance( {
-                    path: ['question', question.id, 'question_option'].join( '/' ) + (
-                      'respondent' == self.parentModel.getSubjectFromState() ? '?token=' + $state.params.token : ''
-                    ),
-                    data: {
-                      select: { column: [
-                        'name', 'exclusive', 'extra', 'multiple_answers', 'minimum', 'maximum', 'precondition', 'prompts', 'popups'
-                      ] },
-                      modifier: { order: 'question_option.rank' }
-                    }
-                  } ).query();
-
-                  question.optionList = response.data;
-                  question.optionList.forEach( function( option ) {
-                    activeAttributeList = activeAttributeList.concat( getAttributeNames( option.precondition ) );
-                    option.prompts = CnTranslationHelper.parseDescriptions( option.prompts );
-                    option.popups = CnTranslationHelper.parseDescriptions( option.popups );
-                    self.optionListById[option.id] = option;
-                  } );
-                }
-
-                list.push( getOptionsFn() );
-              }
-
-              return list;
-            }, [] );
-
-            await Promise.all( promiseList );
-
-            this.questionList.forEach( question => self.convertValueToModel( question ) );
-
-            // sort active attribute and make a unique list
-            this.activeAttributeList = activeAttributeList
-              .sort()
-              .filter( ( attribute, index, array ) => index === array.indexOf( attribute ) )
-              .map( attribute => ( { name: attribute, value: null } ) );
           },
 
           setLanguage: async function() {
             cenozoApp.setLang( this.currentLanguage );
-            if( 'respondent' == this.parentModel.getSubjectFromState() && null != this.currentLanguage ) {
+            if( !this.previewMode && null != this.currentLanguage ) {
               await this.runQuery( async function() {
                 await CnHttpFactory.instance( {
                   path: self.parentModel.getServiceResourceBasePath().replace( 'page/', 'respondent/' ) +
@@ -655,6 +664,7 @@ define( [ 'question' ].reduce( function( list, name ) {
           },
 
           onKeyup: async function( key ) {
+            console.log( key );
             await Promise.all( this.writePromiseList );
 
             // proceed to the next page when the + key is pushed
@@ -725,7 +735,7 @@ define( [ 'question' ].reduce( function( list, name ) {
                     self.working = true;
                     if( "" === value ) value = null;
 
-                    if( 'respondent' == self.parentModel.getSubjectFromState() ) {
+                    if( !self.previewMode ) {
                       // first communicate with the server (if we're working with a respondent)
                       await CnHttpFactory.instance( {
                         path: 'answer/' + question.answer_id,
@@ -966,61 +976,61 @@ define( [ 'question' ].reduce( function( list, name ) {
             );
           },
 
-          renderPreviousPage: async function() {
-            await $state.go(
-              'page.render',
-              { identifier: this.parentModel.viewModel.record.previous_id },
-              { reload: true }
-            );
-          },
-
-          renderNextPage: async function() {
-            await $state.go(
-              'page.render',
-              { identifier: this.parentModel.viewModel.record.next_id },
-              { reload: true }
-            );
-          },
-
           proceed: async function() {
-            try {
-              this.working = true;
+            if( this.previewMode ) {
+              await $state.go(
+                'page.render',
+                { identifier: this.parentModel.viewModel.record.next_id },
+                { reload: true }
+              );
+            } else {
+              try {
+                this.working = true;
 
-              // check to make sure that all questions are complete, and highlight any which aren't
-              var mayProceed = true;
-              this.questionList.some( function( question ) {
-                var complete = self.questionIsComplete( question );
-                question.incomplete = false === complete ? true
-                                    : true === complete ? false
-                                    : complete;
-                if( question.incomplete ) {
-                  mayProceed = false;
-                  return true;
-                }
-              } );
-
-              if( mayProceed ) {
-                // proceed to the respondent's next valid page
-                await this.runQuery( async function() {
-                  await CnHttpFactory.instance( { path: 'respondent/token=' + $state.params.token + '?action=proceed' } ).patch();
-                  await self.parentModel.reloadState( true );
+                // check to make sure that all questions are complete, and highlight any which aren't
+                var mayProceed = true;
+                this.questionList.some( function( question ) {
+                  var complete = self.questionIsComplete( question );
+                  question.incomplete = false === complete ? true
+                                      : true === complete ? false
+                                      : complete;
+                  if( question.incomplete ) {
+                    mayProceed = false;
+                    return true;
+                  }
                 } );
+
+                if( mayProceed ) {
+                  // proceed to the respondent's next valid page
+                  await this.runQuery( async function() {
+                    await CnHttpFactory.instance( { path: 'respondent/token=' + $state.params.token + '?action=proceed' } ).patch();
+                    await self.parentModel.reloadState( true );
+                  } );
+                }
+              } finally {
+                this.working = false;
               }
-            } finally {
-              this.working = false;
             }
           },
 
           backup: async function() {
-            try {
-              // back up to the respondent's previous page
-              this.working = true;
-              await this.runQuery( async function() {
-                await CnHttpFactory.instance( { path: 'respondent/token=' + $state.params.token + '?action=backup' } ).patch();
-                await self.parentModel.reloadState( true );
-              } );
-            } finally {
-              this.working = false;
+            if( this.previewMode ) {
+              await $state.go(
+                'page.render',
+                { identifier: this.parentModel.viewModel.record.previous_id },
+                { reload: true }
+              );
+            } else {
+              try {
+                // back up to the respondent's previous page
+                this.working = true;
+                await this.runQuery( async function() {
+                  await CnHttpFactory.instance( { path: 'respondent/token=' + $state.params.token + '?action=backup' } ).patch();
+                  await self.parentModel.reloadState( true );
+                } );
+              } finally {
+                this.working = false;
+              }
             }
           },
 
@@ -1037,10 +1047,6 @@ define( [ 'question' ].reduce( function( list, name ) {
             } finally {
               this.working = false;
             }
-          },
-
-          text: function( address ) {
-            return CnTranslationHelper.translate( address, this.currentLanguage );
           }
         } );
       }

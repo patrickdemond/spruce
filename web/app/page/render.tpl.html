@@ -2,31 +2,31 @@
 <div class="utility-view rounded">
   <div class="container-fluid bg-primary rounded-top">
     <h4>
-      {{ !isComplete ? 'Loading...' : data.closed ? text( 'misc.qnaireClosed' ) : data.title }}
+      {{ !isComplete ? 'Loading...' : model.renderModel.data.closed ? text( 'misc.qnaireClosed' ) : model.renderModel.data.title }}
       <div class="pull-right" style="margin-top: -7px;">
         <select class="form-control larger"
                 ng-model="model.renderModel.currentLanguage"
                 ng-change="model.renderModel.setLanguage()"
-                ng-options="lang.code as lang.name for lang in languageList">
+                ng-options="lang.code as lang.name for lang in model.renderModel.languageList">
         </select>
       </div>
     </h4>
   </div>
   <div ng-if="!isComplete" class="loading spacer" style="height: 8em;" uib-tooltip="Loading&hellip;"></div>
   <div ng-if="isComplete">
-    <div ng-if="data.closed || !data.page_id">
+    <div ng-if="model.renderModel.data.closed || !model.renderModel.data.page_id">
       <div class="spacer" style="min-height: 8em;">
         <div class="container-fluid vertical-spacer">
           <span class="larger" ng-bind-html="
-            data.closed ? data.closes[model.renderModel.currentLanguage] :
-            data.submitted ? data.conclusions[model.renderModel.currentLanguage] :
-                             data.introductions[model.renderModel.currentLanguage]">
+            model.renderModel.data.closed ? model.renderModel.data.closes[model.renderModel.currentLanguage] :
+            model.renderModel.data.submitted ? model.renderModel.data.conclusions[model.renderModel.currentLanguage] :
+                             model.renderModel.data.introductions[model.renderModel.currentLanguage]">
           </span>
         </div>
       </div>
       <div class="form-footer text-right rounded-bottom bg-info">
         <button type="button"
-                ng-if="!data.closed && !data.submitted"
+                ng-if="!model.renderModel.data.closed && !model.renderModel.data.submitted"
                 ng-disabled="model.renderModel.working || !isComplete"
                 ng-click="model.renderModel.proceed()"
                 class="btn btn-success larger"
@@ -35,17 +35,17 @@
         </button>
       </div>
     </div>
-    <div ng-if="!data.closed && data.page_id">
+    <div ng-if="!model.renderModel.data.closed && model.renderModel.data.page_id">
       <div ng-if="model.viewModel.record.debug" class="form-footer text-right bg-info">
         <cn-page-navigator model="model" is-complete="isComplete" text="text"></cn-page-navigator>
       </div>
       <div class="progress no-rounding">
         <div class="progress-bar larger"
              role="progressbar"
-             style="width: {{ progress }}%; -webkit-transition: none; transition: none;"
-             aria-valuenow="{{ progress }}"
+             style="width: {{ model.renderModel.progress }}%; -webkit-transition: none; transition: none;"
+             aria-valuenow="{{ model.renderModel.progress }}"
              aria-valuemin="0"
-             aria-valuemax="100">{{ progress }}%</div>
+             aria-valuemax="100">{{ model.renderModel.progress }}%</div>
       </div>
       <form name="form" novalidate><fieldset ng-disabled="model.renderModel.working">
         <div class="spacer">
@@ -58,13 +58,16 @@
                   uib-tooltip-html="model.viewModel.record.popups[model.renderModel.currentLanguage]"></span>
             <div ng-repeat="question in model.renderModel.getVisibleQuestionList()">
               <hr ng-if="!$first" />
-              <div ng-if="model.viewModel.record.debug || showHidden" class="small text-muted">[{{ question.variable_name }}]</div>
+              <div ng-if="model.viewModel.record.debug || model.renderModel.showHidden"
+                   class="small text-muted">[{{ question.variable_name }}]</div>
               <div class="vertical-spacer larger"
                    ng-class="{
                      'text-info': 'comment' == question.type,
                      'text-danger': true === question.incomplete
                    }"
-                   ng-bind-html="( question.popups[model.renderModel.currentLanguage] || question.minimum || question.maximum ? '<sup>ⓘ</sup> ' : '') + question.prompts[model.renderModel.currentLanguage]"
+                   ng-bind-html="(
+                     question.popups[model.renderModel.currentLanguage] || question.minimum || question.maximum ? '<sup>ⓘ</sup> ' : ''
+                   ) + question.prompts[model.renderModel.currentLanguage]"
                    uib-tooltip-html="question.popups[model.renderModel.currentLanguage] + (
                      ( question.minimum || question.maximum ? ' [' : '' ) +
                      ( question.minimum ? 'Min: ' + model.renderModel.evaluateLimit( question.minimum ) : '' ) +
@@ -265,7 +268,7 @@
                          ng-click="model.renderModel.setAnswer( question, question.answer.refuse ? { refuse: true } : null )"
                          uib-btn-checkbox>
                     <i class="glyphicon" ng-class="question.answer.refuse ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
-                    {{ text( showHidden ? 'misc.refuse' : 'misc.preferNotToAnswer' ) }}
+                    {{ text( model.renderModel.showHidden ? 'misc.refuse' : 'misc.preferNotToAnswer' ) }}
                   </label>
                 </div>
               </div>
@@ -281,8 +284,8 @@
 </div>
 <div class="vertical-spacer"></div>
 <div ng-if="isComplete &&
-            data.page_id &&
-            'respondent' != model.getSubjectFromState() &&
+            model.renderModel.data.page_id &&
+            model.renderModel.previewMode &&
             0 < model.renderModel.activeAttributeList.length"
      class="utility-view rounded">
   <div class="container-fluid bg-primary rounded-top">
