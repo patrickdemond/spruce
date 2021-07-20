@@ -3,13 +3,21 @@
   <div class="container-fluid bg-primary rounded-top">
     <h4>
       {{ !isComplete ? 'Loading...' : model.renderModel.data.closed ? text( 'misc.qnaireClosed' ) : model.renderModel.data.title }}
-      <div class="pull-right" style="margin-top: -7px;">
+      <div class="pull-right" style="margin-top: -7px; margin-bottom: 3px;">
         <select class="form-control larger"
                 ng-model="model.renderModel.currentLanguage"
                 ng-change="model.renderModel.setLanguage()"
                 ng-options="lang.code as lang.name for lang in model.renderModel.languageList">
         </select>
       </div>
+      <button class="btn btn-info pull-right horizontal-spacer"
+              ng-init="showHotKeyHint=false"
+              ng-show="model.renderModel.showHidden"
+              ng-click="showHotKeyHint = !showHotKeyHint"
+              style="margin-top: -5px;">
+        {{ showHotKeyHint ? 'Hide' : 'Show' }} Hot-key Hints
+        <i class="glyphicon" ng-class="showHotKeyHint ? 'glyphicon-chevron-up' : 'glyphicon-chevron-down'"></i>
+      </button>
     </h4>
   </div>
   <div ng-if="!isComplete" class="loading spacer" style="height: 8em;" uib-tooltip="Loading&hellip;"></div>
@@ -39,13 +47,32 @@
       <div ng-if="model.viewModel.record.debug" class="form-footer text-right bg-info">
         <cn-page-navigator model="model" is-complete="isComplete" text="text"></cn-page-navigator>
       </div>
-      <div class="progress no-rounding">
+      <div class="progress no-rounding" style="margin-bottom: 0;">
         <div class="progress-bar larger"
              role="progressbar"
              style="width: {{ model.renderModel.progress }}%; -webkit-transition: none; transition: none;"
              aria-valuenow="{{ model.renderModel.progress }}"
              aria-valuemin="0"
              aria-valuemax="100">{{ model.renderModel.progress }}%</div>
+      </div>
+      <div class="container-fluid bg-warning"
+           ng-if="model.renderModel.showHidden"
+           ng-show="showHotKeyHint">
+        <h3>Hot-key Hints</h3>
+        <ul>
+          <li>Navigation "-" and "+" hot-keys (keyboard or numpad) moves page backward and forward, respectively</li>
+          <li>Navigation "[" and "]" hot-keys moves focused question backward and forward, respectively (When page is first loaded, no question is focused)</li>
+          <li>Focused question is highlighted in pale yellow and numeric options identified by a number in square brackets (e.g.: "[1]")</li>
+          <li>Numeric hot-keys "1" through "9" and "0" (numpad not included) will do the following based on the question type which is currently focused:</li>
+            <ul>
+              <li>List: the option will be toggled (off to on, or on to off) - if extra details are required then the input box will automatically be given focus</li>
+              <li>Number/String/Text: the input box is focused</li>
+              <li>Date: the date picker will show</li>
+            </ul>
+          <li>When an input box has focus the enter key must be pressed to leave focus and re-activate hot-keys</li>
+          <li>All hot-keys are deactivated when no question is focused, or when focus is in an input box</li>
+          <li>Hot-keys are disabled when questionnaire is launched via a web-link (directly by the participant and not through Sabretooth, Beartooth or Cedar)</li>
+        </ul>
       </div>
       <form name="form" novalidate><fieldset ng-disabled="model.renderModel.working">
         <div class="spacer">
