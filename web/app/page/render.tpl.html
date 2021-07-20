@@ -56,7 +56,9 @@
             <span class="text-info vertical-spacer larger"
                   ng-bind-html="model.viewModel.record.prompts[model.renderModel.currentLanguage]"
                   uib-tooltip-html="model.viewModel.record.popups[model.renderModel.currentLanguage]"></span>
-            <div ng-repeat="question in model.renderModel.getVisibleQuestionList()">
+            <div ng-class="{ 'highlight-no-bold': model.renderModel.focusQuestionId == question.id }"
+                 ng-attr-id="baseQuestion{{ question.id }}"
+                 ng-repeat="question in model.renderModel.getVisibleQuestionList()">
               <hr ng-if="!$first" />
               <div ng-if="model.viewModel.record.debug || model.renderModel.showHidden"
                    class="small text-muted">[{{ question.variable_name }}]</div>
@@ -87,6 +89,7 @@
                          ng-model="question.answer.yes"
                          ng-click="model.renderModel.setAnswer( question, question.answer.yes ? true : null )"
                          uib-btn-checkbox>
+                    {{ model.renderModel.getHotKey( question, true, true ) }}
                     <i class="glyphicon" ng-class="question.answer.yes ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
                     {{ text( 'misc.yes' ) }}
                   </label>
@@ -96,6 +99,7 @@
                          ng-model="question.answer.no"
                          ng-click="model.renderModel.setAnswer( question, question.answer.no ? false : null )"
                          uib-btn-checkbox>
+                    {{ model.renderModel.getHotKey( question, false, true ) }}
                     <i class="glyphicon" ng-class="question.answer.no ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
                     {{ text( 'misc.no' ) }}
                   </label>
@@ -116,7 +120,7 @@
                       ng-click="question.answer.optionList[option.id].selected ?
                         model.renderModel.addOption( question, option ) :
                         model.renderModel.removeOption( question, option )"
-                      ng-bind-html="'<i class=\'glyphicon ' + (
+                      ng-bind-html="model.renderModel.getHotKey( question, option.id, true ) + '<i class=\'glyphicon ' + (
                         question.answer.optionList[option.id].selected ? 'glyphicon-check' : 'glyphicon-unchecked'
                       ) + '\'></i> ' + option.prompts[model.renderModel.currentLanguage] + (
                         option.popups[model.renderModel.currentLanguage] || option.minimum || option.maximum ? ' ⓘ' : ''
@@ -137,10 +141,11 @@
                       ng-class="{ 'color-red': true === question.incomplete }"
                       style="text-align: left; white-space: normal;"
                       ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal', 'font-weight': 'normal' }"
-                      ng-bind-html="
+                      ng-bind-html="model.renderModel.getHotKey( question, option.id, true ) +
                         option.prompts[model.renderModel.currentLanguage] + (
                           option.popups[model.renderModel.currentLanguage] || option.minimum || option.maximum ? ' ⓘ' : ''
-                        ) + ' <i class=\'glyphicon glyphicon-plus\'></i>'"
+                        ) +
+                        ' <i class=\'glyphicon glyphicon-plus\'></i>'"
                       uib-tooltip-html="option.popups[model.renderModel.currentLanguage] + (
                         ( option.minimum || option.maximum ? ' [' : '' ) +
                         ( option.minimum ? 'Min: '+ model.renderModel.evaluateLimit( option.minimum ) : '' ) +
@@ -204,8 +209,10 @@
                   </div>
                 </div>
                 <input ng-switch-when="date"
+                  ng-attr-id="question{{ question.id }}"
                   cn-ignore-mouse-wheel
                   type="text"
+                  placeholder="{{ model.renderModel.getHotKey( question, null, true ) }}"
                   class="form-control larger"
                   ng-class="{ 'color-red': true === question.incomplete }"
                   ng-model="question.answer.formattedValue"
@@ -213,31 +220,34 @@
                   onkeydown="return false">
                 </input>
                 <input ng-switch-when="number"
+                  ng-attr-id="question{{ question.id }}"
                   cn-ignore-mouse-wheel
                   type="number"
+                  placeholder="{{ model.renderModel.getHotKey( question, null, true ) }}"
                   class="form-control larger"
                   ng-class="{ 'color-red': true === question.incomplete }"
                   ng-model="question.answer.value"
                   cn-change="model.renderModel.setAnswer( question, question.answer.value )"
-                  cn-autofocus="$first"
                   autocomplete="off">
                 </input>
                 <input ng-switch-when="string"
+                  ng-attr-id="question{{ question.id }}"
                   cn-ignore-mouse-wheel
                   type="text"
+                  placeholder="{{ model.renderModel.getHotKey( question, null, true ) }}"
                   class="form-control larger"
                   ng-class="{ 'color-red': true === question.incomplete }"
                   ng-model="question.answer.value"
                   cn-change="model.renderModel.setAnswer( question, question.answer.value )"
-                  cn-autofocus="$first"
                   autocomplete="off">
                 </input>
                 <textarea ng-switch-when="text"
+                  ng-attr-id="question{{ question.id }}"
+                  placeholder="{{ model.renderModel.getHotKey( question, null, true ) }}"
                   class="form-control larger"
                   ng-class="{ 'color-red': true === question.incomplete }"
                   ng-model="question.answer.value"
                   cn-change="model.renderModel.setAnswer( question, question.answer.value )"
-                  cn-autofocus="$first"
                   cn-elastic>
                 </textarea>
                 <div class="btn-group full-width"
@@ -253,6 +263,7 @@
                          ng-model="question.answer.dkna"
                          ng-click="model.renderModel.setAnswer( question, question.answer.dkna ? { dkna: true } : null )"
                          uib-btn-checkbox>
+                    {{ model.renderModel.getHotKey( question, 'dkna', true ) }}
                     <i class="glyphicon" ng-class="question.answer.dkna ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
                     {{ text( 'misc.dkna' ) }}
                   </label>
@@ -267,6 +278,7 @@
                          ng-model="question.answer.refuse"
                          ng-click="model.renderModel.setAnswer( question, question.answer.refuse ? { refuse: true } : null )"
                          uib-btn-checkbox>
+                    {{ model.renderModel.getHotKey( question, 'refuse', true ) }}
                     <i class="glyphicon" ng-class="question.answer.refuse ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
                     {{ text( model.renderModel.showHidden ? 'misc.refuse' : 'misc.preferNotToAnswer' ) }}
                   </label>

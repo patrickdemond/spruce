@@ -73,7 +73,7 @@ define( [ 'question' ].reduce( function( list, name ) {
           if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnairePartCloneFactory.instance( 'page' );
 
           await $scope.model.onLoad();
-          
+
           CnSession.setBreadcrumbTrail( [ {
             title: 'Module',
             go: async function() { await $state.go( 'module.list' ); }
@@ -129,22 +129,45 @@ define( [ 'question' ].reduce( function( list, name ) {
           // bind keyup (first unbind to prevent duplicates)
           $document.unbind( 'keyup' );
           $document.bind( 'keyup', async function( event ) {
+            // deactivate hotkeys when inside a number, text or textbox
+            if( !$scope.model.renderModel.showHidden || ['number','text','textarea'].includes( event.target.type ) ) return;
+
             var action = null;
-            if( $scope.isComplete && false == $scope.model.renderModel.working ) {
+            if( $scope.isComplete && !$scope.model.renderModel.working && !$scope.model.renderModel.hotKeyDisabled ) {
               if( 'Minus' == event.code || 'NumpadSubtract' == event.code ) {
                 // proceed to the previous page when the minus key is pushed (keyboard or numpad)
-                if( null != $scope.model.viewModel.record.previous_id ) action = 'backup';
+                if( null != $scope.model.viewModel.record.previous_id ) action = 'prevPage';
               } else if( 'Equal' == event.code || 'NumpadAdd' == event.code ) {
                 // proceed to the next page when the plus key is pushed (keyboard "=" key or numpad)
                 if( angular.isUndefined( $scope.model.viewModel.record.next_id ) || null != $scope.model.viewModel.record.next_id )
-                  action = 'proceed';
+                  action = 'nextPage';
+              } else if( 'BracketLeft' == event.code ) {
+                // focus on the previous question when the open square bracket key is pushed (keyboard "[")
+                action = 'prevQuestion';
+              } else if( 'BracketRight' == event.code ) {
+                // focus on the next question when the close square bracket key is pushed (keyboard "]")
+                action = 'nextQuestion';
+              } else {
+                var match = event.code.match( /^Digit([0-9])$/ );
+                if( match ) action = match[1];
               }
-            }
-            if( null != action ) {
-              event.stopPropagation();
-              await Promise.all( $scope.model.renderModel.writePromiseList );
-              await 'backup' == action ? $scope.model.renderModel.backup() : $scope.model.renderModel.proceed();
-              $scope.$apply();
+
+              if( null != action ) {
+                event.stopPropagation();
+                if( ['prevPage', 'nextPage'].includes( action ) ) {
+                  // move to the prev or next page
+                  await Promise.all( $scope.model.renderModel.writePromiseList );
+                  await 'prevPage' == action ? $scope.model.renderModel.backup() : $scope.model.renderModel.proceed();
+                  $scope.$apply();
+                } else if( ['prevQuestion', 'nextQuestion'].includes( action ) ) {
+                  // move to the prev or next question
+                  $scope.model.renderModel.focusQuestion( 'prevQuestion' == action );
+                  $scope.$apply();
+                } else if( null != action ) {
+                  $scope.model.renderModel.onDigitHotKey( parseInt( action ) );
+                  $scope.$apply();
+                }
+              }
             }
           } );
 
@@ -173,14 +196,16 @@ define( [ 'question' ].reduce( function( list, name ) {
         var self = this;
 
         // private helper functions
-        function getDate( date ) {
-          if( 'now' == date ) date = moment().format( 'YYYY-MM-DD' );
-          return date && !angular.isObject( date ) ? moment( new Date( date ) ) : null;
-        }
         function formatDate( date ) { var m = getDate( date ); return m ? m.format( 'dddd, MMMM Do YYYY' ) : null; }
         function isDkna( value ) { return angular.isObject( value ) && true === value.dkna; }
         function isRefuse( value ) { return angular.isObject( value ) && true === value.refuse; }
         function isDknaOrRefuse( value ) { return angular.isObject( value ) && ( true === value.dkna || true === value.refuse ); }
+
+        function getDate( date ) {
+          if( 'now' == date ) date = moment().format( 'YYYY-MM-DD' );
+          return date && !angular.isObject( date ) ? moment( new Date( date ) ) : null;
+        }
+
         function getAttributeNames( precondition ) {
           // scan the precondition for active attributes (also include the showhidden constant)
           var list = [];
@@ -189,6 +214,19 @@ define( [ 'question' ].reduce( function( list, name ) {
             if( null != matches && 0 < matches.length ) list = matches.map( m => m.replace( /@/g, '' ) );
           }
           return list;
+        }
+
+        function focusElement( id ) {
+          // keep trying until the element exists (10 tries max)
+          var promise = $interval(
+            function() { $timeout(
+              function() {
+                var element = document.getElementById( id );
+                if( null != element ) { element.focus(); $interval.cancel( promise ); }
+              }, 50
+            ) }, 50, 10
+          );
+          return promise;
         }
 
         angular.extend( this, {
@@ -208,6 +246,8 @@ define( [ 'question' ].reduce( function( list, name ) {
           },
           languageList: null,
           showHidden: false,
+          focusQuestionId: null,
+          hotKeyDisabled: false,
           activeAttributeList: [],
           questionList: [],
           optionListById: {},
@@ -220,18 +260,67 @@ define( [ 'question' ].reduce( function( list, name ) {
               questionList: [],
               activeAttributeList: [],
               prevModuleList: [],
-              nextModuleList: []
+              nextModuleList: [],
+              focusQuestionId: null
             } );
           },
 
           text: function( address ) { return CnTranslationHelper.translate( address, this.currentLanguage ); },
+
           getVisibleQuestionList: function() {
             return this.questionList.filter( question => self.evaluate( question.precondition ) );
           },
+
           getVisibleOptionList: function( question ) {
             return question.optionList.filter( option => self.evaluate( option.precondition ) );
           },
 
+          getFocusableQuestionList: function() {
+            return this.getVisibleQuestionList().filter( question => 'comment' != question.type );
+          },
+
+          getHotKey: function( question, item, display ) {
+            if( angular.isUndefined( display ) ) display = false;
+            var key = null;
+
+            if( this.focusQuestionId == question.id ) {
+              if( 'boolean' == question.type ) {
+                if( 'dkna' == item ) {
+                  key = 3;
+                } else if ( 'refuse' == item ) {
+                  key = question.dkna_allowed ? 4 : 3;
+                } else {
+                  var bool = item;
+                  key = bool ? 1 : 2;
+                }
+              } else if( 'list' == question.type ) {
+                var optionList = this.getVisibleOptionList( question );
+                if( 'dkna' == item ) {
+                  key = optionList.length + 1;
+                } else if ( 'refuse' == item ) {
+                  key = optionList.length + ( question.dkna_allowed ? 1 : 0 ) + 1;
+                } else {
+                  var optionId = item;
+                  var index = optionList.findIndexByProperty( 'id', optionId );
+                  if( null != index ) key = index + 1;
+                }
+              } else {
+                if( 'dkna' == item ) {
+                  key = 2;
+                } else if ( 'refuse' == item ) {
+                  key = ( question.dkna_allowed ? 1 : 0 ) + 2;
+                } else {
+                  key = 1;
+                }
+              }
+
+              // change 10 to 0 and don't allow any number above 10
+              key = 10 > key ? key : 10 == key ? 0 : null;
+            }
+
+            if( display ) key = null == key ? '' : ( '[' + key + ']' );
+            return key;
+          },
 
           onReady: async function() {
             // we show hidden stuff when previewing (not a respondent) or when there is a state parameter asking for it
@@ -291,7 +380,7 @@ define( [ 'question' ].reduce( function( list, name ) {
                 path: this.parentModel.getServiceResourceBasePath() + '/question',
                 data: {
                   select: { column: [
-                    'rank', 'name', 'type', 'mandatory', 'dkna_allowed', 'refuse_allowed',
+                    'id', 'rank', 'name', 'type', 'mandatory', 'dkna_allowed', 'refuse_allowed',
                     'minimum', 'maximum', 'precondition', 'prompts', 'popups'
                   ] },
                   modifier: { order: 'question.rank' }
@@ -351,7 +440,8 @@ define( [ 'question' ].reduce( function( list, name ) {
                       ),
                       data: {
                         select: { column: [
-                          'name', 'exclusive', 'extra', 'multiple_answers', 'minimum', 'maximum', 'precondition', 'prompts', 'popups'
+                          'id', 'question_id', 'name', 'exclusive', 'extra', 'multiple_answers',
+                          'minimum', 'maximum', 'precondition', 'prompts', 'popups'
                         ] },
                         modifier: { order: 'question_option.rank' }
                       }
@@ -663,14 +753,6 @@ define( [ 'question' ].reduce( function( list, name ) {
             }
           },
 
-          onKeyup: async function( key ) {
-            console.log( key );
-            await Promise.all( this.writePromiseList );
-
-            // proceed to the next page when the + key is pushed
-            if( '+' == key ) await this.proceed();
-          },
-
           setAnswer: async function( question, value, noCompleteCheck ) {
             if( angular.isUndefined( noCompleteCheck ) ) noCompleteCheck = false;
 
@@ -815,17 +897,7 @@ define( [ 'question' ].reduce( function( list, name ) {
 
             // if the option has extra data then focus its associated input
             if( null != option.extra ) {
-              // keep trying until the element exists (10 tries max)
-              var attempt = 0;
-              var promise = $interval(
-                function() {
-                  attempt++;
-                  var element = document.getElementById( 'option' + option.id + 'value0' );
-                  if( null != element ) element.focus();
-                  if( null != element || attempt >= 10 ) $interval.cancel( promise );
-                },
-                50
-              );
+              await focusElement( 'option' + option.id + 'value0' );
             }
           },
 
@@ -850,19 +922,7 @@ define( [ 'question' ].reduce( function( list, name ) {
             var valueIndex = value[optionIndex].value.indexOf( null );
             if( -1 == valueIndex ) valueIndex = value[optionIndex].value.push( null ) - 1;
             await this.setAnswer( question, value, true );
-
-            // focus the new answer value's associated input
-            // keep trying until the element exists (10 tries max)
-            var attempt = 0;
-            var promise = $interval(
-              function() {
-                attempt++;
-                var element = document.getElementById( 'option' + option.id + 'value' + valueIndex );
-                if( null != element ) element.focus();
-                if( null != element || attempt >= 10 ) $interval.cancel( promise );
-              },
-              50
-            );
+            await focusElement( 'option' + option.id + 'value' + valueIndex );
           },
 
           removeAnswerValue: async function( question, option, valueIndex ) {
@@ -876,40 +936,52 @@ define( [ 'question' ].reduce( function( list, name ) {
           },
 
           selectDateForOption: async function( question, option, valueIndex, answerValue ) {
-            var response = await CnModalDatetimeFactory.instance( {
-              locale: this.currentLanguage,
-              date: answerValue,
-              pickerType: 'date',
-              minDate: getDate( this.evaluateLimit( option.minimum ) ),
-              maxDate: getDate( this.evaluateLimit( option.maximum ) ),
-              emptyAllowed: true
-            } ).show();
+            try {
+              this.hotKeyDisabled = true;
 
-            if( false !== response ) {
-              await this.setAnswerValue(
-                question,
-                option,
-                valueIndex,
-                null == response ? null : response.replace( /T.*/, '' )
-              );
+              var response = await CnModalDatetimeFactory.instance( {
+                locale: this.currentLanguage,
+                date: answerValue,
+                pickerType: 'date',
+                minDate: getDate( this.evaluateLimit( option.minimum ) ),
+                maxDate: getDate( this.evaluateLimit( option.maximum ) ),
+                emptyAllowed: true
+              } ).show();
+
+              if( false !== response ) {
+                await this.setAnswerValue(
+                  question,
+                  option,
+                  valueIndex,
+                  null == response ? null : response.replace( /T.*/, '' )
+                );
+              }
+            } finally {
+              this.hotKeyDisabled = false;
             }
           },
 
           selectDate: async function( question, value ) {
-            var response = await CnModalDatetimeFactory.instance( {
-              locale: this.currentLanguage,
-              date: value,
-              pickerType: 'date',
-              minDate: getDate( this.evaluateLimit( question.minimum ) ),
-              maxDate: getDate( this.evaluateLimit( question.maximum ) ),
-              emptyAllowed: true
-            } ).show();
+            try {
+              this.hotKeyDisabled = true;
 
-            if( false !== response ) {
-              await this.setAnswer(
-                question,
-                null == response ? null : response.replace( /T.*/, '' )
-              );
+              var response = await CnModalDatetimeFactory.instance( {
+                locale: this.currentLanguage,
+                date: value,
+                pickerType: 'date',
+                minDate: getDate( this.evaluateLimit( question.minimum ) ),
+                maxDate: getDate( this.evaluateLimit( question.maximum ) ),
+                emptyAllowed: true
+              } ).show();
+
+              if( false !== response ) {
+                await this.setAnswer(
+                  question,
+                  null == response ? null : response.replace( /T.*/, '' )
+                );
+              }
+            } finally {
+              this.hotKeyDisabled = false;
             }
           },
 
@@ -1046,6 +1118,114 @@ define( [ 'question' ].reduce( function( list, name ) {
               } );
             } finally {
               this.working = false;
+            }
+          },
+
+          onDigitHotKey: async function( digit ) {
+            var question = this.questionList.findByProperty( 'id', this.focusQuestionId );
+            if( null == question ) return;
+
+            var value = undefined;
+            if( 'boolean' == question.type ) {
+              if( 1 == digit ) {
+                value = question.answer.yes ? true : null;
+              } else if ( 2 == digit ) {
+                value = question.answer.no ? false : null;
+              } else if( 3 == digit ) {
+                value = 'dkna_refuse_1';
+              } else if( 4 == digit ) {
+                value = 'dkna_refuse_1';
+              }
+            } else if( 'list' == question.type ) {
+              var optionList = this.getVisibleOptionList( question );
+
+              if( digit <= optionList.length ) {
+                // add or remove the option, depending on whether it is currently selected
+                value = optionList[digit-1];
+              } else {
+                if( digit == (optionList.length+1) ) {
+                  value = 'dkna_refuse_1';
+                } else if( digit == (optionList.length+2) ) {
+                  value = 'dkna_refuse_2';
+                }
+              }
+            } else {
+              if( 1 == digit ) {
+                if( 'date' == question.type ) {
+                  // show the date selection modal
+                  await this.selectDate( question, question.answer.value );
+                } else {
+                  // simply focus on the question's input box
+                  await focusElement( 'question' + question.id );
+                }
+
+              } else if( 2 == digit ) {
+                value = 'dkna_refuse_1';
+              } else if( 3 == digit ) {
+                value = 'dkna_refuse_2';
+              }
+            }
+
+            // if value is set the update the answer
+            if( angular.isDefined( value ) ) {
+              var setAnswerTo = undefined;
+              if( angular.isObject( value ) ) {
+                // we've selected an option
+                var option = value;
+                if( question.answer.optionList[option.id].selected ) {
+                  await this.removeOption( question, option );
+                } else {
+                  await this.addOption( question, option );
+                }
+              } else if( angular.isString( value ) ) {
+                // we've either selected the first or second dkna/refuse option
+                var match = value.match( /^dkna_refuse_([0-9])/ );
+                if( match ) {
+                  if( 1 == match[1] ) {
+                    // the first dkna/refuse option
+                    setAnswerTo = question.dkna_allowed
+                                ? ( question.answer.dkna ? null : { dkna: true } )
+                                : ( question.answer.refuse ? null : { refuse: true } );
+                  } else if( 2 == match[1] ) {
+                    // the second dkna/refuse option
+                    if( question.dkna_allowed && question.refuse_allowed )
+                      setAnswerTo = question.answer.refuse ? null : { refuse: true };
+                  }
+                }
+              } else {
+                // we've set a boolean value
+                setAnswerTo = value;
+              }
+
+              if( angular.isDefined( setAnswerTo ) ) await this.setAnswer( question, setAnswerTo );
+            }
+          },
+
+          // set prev to true to focus on previous question, otherwise focus on the next one
+          focusQuestion: function( prev ) {
+            if( angular.isUndefined( prev ) ) prev = true;
+
+            var requestedIndex = null;
+            var questionList = this.getFocusableQuestionList();
+            if( null == this.focusQuestionId ) {
+              // focus on the last/first question if no question is currently selected
+              if( 0 < questionList.length ) requestedIndex = prev ? questionList.length - 1 : 0;
+            } else {
+              // try to focus on the prev/next question, if there is one
+              var index = questionList.findIndexByProperty( 'id', this.focusQuestionId );
+              var requestedIndex = prev ? index - 1 : index + 1;
+            }
+
+            if( angular.isDefined( questionList[requestedIndex] ) ) {
+              var question = questionList[requestedIndex];
+              this.focusQuestionId = question.id;
+
+              // scroll so that the bottom of the div is visible
+              var element = document.getElementById( 'baseQuestion' + question.id );
+              if( null != element ) {
+                element.scrollTop += 100;
+                element.scrollIntoView( false );
+              }
             }
           }
         } );
