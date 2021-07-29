@@ -1148,9 +1148,9 @@ define( [ 'question' ].reduce( function( list, name ) {
             var value = undefined;
             if( 'boolean' == question.type ) {
               if( 1 == digit ) {
-                value = question.answer.yes ? true : null;
+                value = question.answer.yes ? null : true;
               } else if ( 2 == digit ) {
-                value = question.answer.no ? false : null;
+                value = question.answer.no ? null : false;
               } else if( 3 == digit ) {
                 value = 'dkna_refuse_1';
               } else if( 4 == digit ) {

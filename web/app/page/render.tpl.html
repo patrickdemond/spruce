@@ -12,7 +12,7 @@
       </div>
       <button class="btn btn-info pull-right horizontal-spacer"
               ng-init="showHotKeyHint=false"
-              ng-show="model.renderModel.showHidden"
+              ng-show="model.renderModel.showHidden && model.renderModel.data.page_id"
               ng-click="showHotKeyHint = !showHotKeyHint"
               style="margin-top: -5px;">
         {{ showHotKeyHint ? 'Hide' : 'Show' }} Hot-key Hints
@@ -116,7 +116,7 @@
                          ng-model="question.answer.yes"
                          ng-click="model.renderModel.setAnswer( question, question.answer.yes ? true : null )"
                          uib-btn-checkbox>
-                    {{ model.renderModel.getHotKey( question, true, true ) }}
+                    {{ model.renderModel.getHotKey( question, true, true ) }} 
                     <i class="glyphicon" ng-class="question.answer.yes ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
                     {{ text( 'misc.yes' ) }}
                   </label>
@@ -126,7 +126,7 @@
                          ng-model="question.answer.no"
                          ng-click="model.renderModel.setAnswer( question, question.answer.no ? false : null )"
                          uib-btn-checkbox>
-                    {{ model.renderModel.getHotKey( question, false, true ) }}
+                    {{ model.renderModel.getHotKey( question, false, true ) }} 
                     <i class="glyphicon" ng-class="question.answer.no ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
                     {{ text( 'misc.no' ) }}
                   </label>
@@ -147,7 +147,7 @@
                       ng-click="question.answer.optionList[option.id].selected ?
                         model.renderModel.addOption( question, option ) :
                         model.renderModel.removeOption( question, option )"
-                      ng-bind-html="model.renderModel.getHotKey( question, option.id, true ) + '<i class=\'glyphicon ' + (
+                      ng-bind-html="model.renderModel.getHotKey( question, option.id, true ) + ' <i class=\'glyphicon ' + (
                         question.answer.optionList[option.id].selected ? 'glyphicon-check' : 'glyphicon-unchecked'
                       ) + '\'></i> ' + option.prompts[model.renderModel.currentLanguage] + (
                         option.popups[model.renderModel.currentLanguage] || option.minimum || option.maximum ? ' ⓘ' : ''
@@ -290,7 +290,7 @@
                          ng-model="question.answer.dkna"
                          ng-click="model.renderModel.setAnswer( question, question.answer.dkna ? { dkna: true } : null )"
                          uib-btn-checkbox>
-                    {{ model.renderModel.getHotKey( question, 'dkna', true ) }}
+                    {{ model.renderModel.getHotKey( question, 'dkna', true ) }} 
                     <i class="glyphicon" ng-class="question.answer.dkna ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
                     {{ text( 'misc.dkna' ) }}
                   </label>
@@ -305,7 +305,7 @@
                          ng-model="question.answer.refuse"
                          ng-click="model.renderModel.setAnswer( question, question.answer.refuse ? { refuse: true } : null )"
                          uib-btn-checkbox>
-                    {{ model.renderModel.getHotKey( question, 'refuse', true ) }}
+                    {{ model.renderModel.getHotKey( question, 'refuse', true ) }} 
                     <i class="glyphicon" ng-class="question.answer.refuse ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
                     {{ text( model.renderModel.showHidden ? 'misc.refuse' : 'misc.preferNotToAnswer' ) }}
                   </label>
