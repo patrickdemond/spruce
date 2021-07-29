@@ -1203,9 +1203,8 @@ define( [ 'question' ].reduce( function( list, name ) {
                 if( match ) {
                   if( 1 == match[1] ) {
                     // the first dkna/refuse option
-                    setAnswerTo = question.dkna_allowed
-                                ? ( question.answer.dkna ? null : { dkna: true } )
-                                : ( question.answer.refuse ? null : { refuse: true } );
+                    if( question.dkna_allowed ) setAnswerTo = question.answer.dkna ? null : { dkna: true };
+                    else if( question.refuse_allowed ) setAnswerTo = question.answer.refuse ? null : { refuse: true };
                   } else if( 2 == match[1] ) {
                     // the second dkna/refuse option
                     if( question.dkna_allowed && question.refuse_allowed )
