@@ -1154,7 +1154,7 @@ define( [ 'question' ].reduce( function( list, name ) {
               } else if( 3 == digit ) {
                 value = 'dkna_refuse_1';
               } else if( 4 == digit ) {
-                value = 'dkna_refuse_1';
+                value = 'dkna_refuse_2';
               }
             } else if( 'list' == question.type ) {
               var optionList = this.getVisibleOptionList( question );
