@@ -1142,6 +1142,7 @@ define( [ 'question' ].reduce( function( list, name ) {
           },
 
           onDigitHotKey: async function( digit ) {
+            if( 0 == digit ) digit = 10;
             var question = this.questionList.findByProperty( 'id', this.focusQuestionId );
             if( null == question ) return;
 
@@ -1192,7 +1193,9 @@ define( [ 'question' ].reduce( function( list, name ) {
               if( angular.isObject( value ) ) {
                 // we've selected an option
                 var option = value;
-                if( question.answer.optionList[option.id].selected ) {
+                if( option.multiple_answers ) {
+                  await this.addAnswerValue( question, option );
+                } else if( question.answer.optionList[option.id].selected ) {
                   await this.removeOption( question, option );
                 } else {
                   await this.addOption( question, option );
