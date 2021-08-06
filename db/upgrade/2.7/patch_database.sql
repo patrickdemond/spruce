@@ -2,6 +2,9 @@
 
 SET AUTOCOMMIT=0;
 
+SOURCE stage.sql
+SOURCE deviation_type.sql
+SOURCE response_stage.sql
 SOURCE question.sql
 SOURCE question_option.sql
 SOURCE qnaire.sql

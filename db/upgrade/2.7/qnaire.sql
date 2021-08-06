@@ -15,6 +15,18 @@ CREATE PROCEDURE patch_qnaire()
       ALTER TABLE qnaire ADD COLUMN version VARCHAR(45) NULL DEFAULT NULL AFTER name;
     END IF;
 
+    SELECT "Adding new stages column to qnaire table" AS "";
+
+    SELECT COUNT(*) INTO @test
+    FROM information_schema.COLUMNS
+    WHERE table_schema = DATABASE()
+    AND table_name = "qnaire"
+    AND column_name = "stages";
+
+    IF @test = 0 THEN
+      ALTER TABLE qnaire ADD COLUMN stages TINYINT(1) NOT NULL DEFAULT 0 AFTER readonly;
+    END IF;
+
   END //
 DELIMITER ;
 
