@@ -32,6 +32,13 @@ class module extends \pine\service\base_qnaire_part_module
 
     $modifier->join( 'qnaire', 'module.qnaire_id', 'qnaire.id' );
 
+    // joining to the stage is unusual since stages give a first/last module, not a list of all modules
+    $join_mod = lib::create( 'database\modifier' );
+    $join_mod->where( 'module.qnaire_id', '=', 'stage.qnaire_id', false );
+    $join_mod->where( 'module.rank', '>=', '( SELECT rank FROM module WHERE id = stage.first_module_id )', false );
+    $join_mod->where( 'module.rank', '<=', '( SELECT rank FROM module WHERE id = stage.last_module_id )', false );
+    $modifier->join_modifier( 'stage', $join_mod, 'left' );
+
     $db_module = $this->get_resource();
     if( !is_null( $db_module ) )
     {

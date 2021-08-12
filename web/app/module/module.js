@@ -12,10 +12,23 @@ define( [ 'page' ].reduce( function( list, name ) {
     column: 'qnaire.name'
   };
 
+  module.addInput( '', 'Stage', {
+    column: 'stage.name',
+    title: 'Stage',
+    type: 'string',
+    isConstant: true,
+    isExcluded: 'add'
+  }, 'name' );
   module.addInput( '', 'average_time', { title: 'Average Time (seconds)', type: 'string', isConstant: true, isExcluded: 'add' } );
   module.addInput( '', 'note', { title: 'Note', type: 'text' } );
   module.addInput( '', 'first_page_id', { isExcluded: true } );
   module.addInput( '', 'parent_name', { column: 'qnaire.name', isExcluded: true } );
+  cenozo.insertPropertyAfter( module.columnList, 'name', 'stage_name', {
+    column: 'stage.name',
+    title: 'Stage',
+    type: 'string',
+    isIncluded: function( $state, model ) { return model.listModel.stages; }
+  } );
   cenozo.insertPropertyAfter( module.columnList, 'page_count', 'average_time', {
     title: 'Average Time',
     type: 'seconds'
@@ -65,6 +78,36 @@ define( [ 'page' ].reduce( function( list, name ) {
     }
   ] );
 
+  // extend the list factory created by caling initQnairePartModule()
+  cenozo.providers.decorator( 'CnModuleListFactory', [
+    '$delegate', '$filter', 'CnHttpFactory',
+    function( $delegate, $filter, CnHttpFactory ) {
+      var instance = $delegate.instance;
+      $delegate.instance = function( parentModel ) {
+        var object = instance( parentModel );
+
+        angular.extend( object, {
+          stages: false,
+          onList: async function( replace ) {
+            await this.$$onList( replace );
+            if( replace && 'qnaire' == this.parentModel.getSubjectFromState() && 'view' == this.parentModel.getActionFromState() ) {
+              var response = await CnHttpFactory.instance( {
+                path: this.parentModel.getServiceCollectionPath().replace( '/module', '' ),
+                data: { select: { column: 'stages' } }
+              } ).get();
+
+              this.stages = response.data.stages;
+            }
+          }
+        } );
+
+        return object;
+      };
+
+      return $delegate;
+    }
+  ] );
+
   // extend the view factory created by caling initQnairePartModule()
   cenozo.providers.decorator( 'CnModuleViewFactory', [
     '$delegate', '$filter',
@@ -73,7 +116,6 @@ define( [ 'page' ].reduce( function( list, name ) {
       $delegate.instance = function( parentModel, root ) {
         var object = instance( parentModel, root );
 
-        // see if the form has a record in the data-entry module
         angular.extend( object, {
           onView: async function( force ) {
             await this.$$onView( force );

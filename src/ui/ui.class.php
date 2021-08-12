@@ -84,6 +84,8 @@ class ui extends \cenozo\ui\ui
       $module->add_child( 'question' );
       $module->add_child( 'attribute' );
       $module->add_child( 'qnaire_consent_type' );
+      $module->add_child( 'stage' );
+      $module->add_child( 'deviation_type' );
       $module->add_choose( 'language' );
       $module->add_action( 'clone', '/{identifier}' );
       $module->add_action( 'get_respondent', '/{identifier}' );
@@ -106,9 +108,13 @@ class ui extends \cenozo\ui\ui
     $module = $this->get_module( 'response' );
     if( !is_null( $module ) )
     {
+      $module->add_child( 'response_stage' );
       $module->add_child( 'response_attribute' );
       $module->add_action( 'display', '/{identifier}' );
     }
+
+    $module = $this->get_module( 'stage' );
+    if( !is_null( $module ) ) $module->add_action( 'clone', '/{identifier}' );
 
     $module = $this->get_module( 'module' );
     if( !is_null( $module ) )

@@ -38,6 +38,11 @@ define( [ 'module' ].reduce( function( list, name ) {
         type: 'boolean',
         isIncluded: function( $state, model ) { return !model.isRole( 'interviewer' ); }
       },
+      stages: {
+        title: 'Use Stages',
+        type: 'boolean',
+        isIncluded: function( $state, model ) { return !model.isRole( 'interviewer' ); }
+      },
       repeat_detail: {
         title: 'Repeated',
         type: 'string',
@@ -98,6 +103,11 @@ define( [ 'module' ].reduce( function( list, name ) {
     },
     readonly: {
       title: 'Read Only',
+      type: 'boolean',
+      isExcluded: function( $state, model ) { return model.isRole( 'interviewer' ) ? true : 'add'; }
+    },
+    stages: {
+      title: 'Stages',
       type: 'boolean',
       isExcluded: function( $state, model ) { return model.isRole( 'interviewer' ) ? true : 'add'; }
     },
@@ -333,7 +343,7 @@ define( [ 'module' ].reduce( function( list, name ) {
           if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnaireMassRespondentFactory.instance();
 
           await $scope.model.onLoad();
-          
+
           CnSession.setBreadcrumbTrail( [ {
             title: 'Questionnaires',
             go: async function() { await $state.go( 'qnaire.list' ); }
@@ -392,14 +402,39 @@ define( [ 'module' ].reduce( function( list, name ) {
 
   /* ######################################################################################################## */
   cenozo.providers.directive( 'cnQnaireView', [
-    'CnQnaireModelFactory',
-    function( CnQnaireModelFactory ) {
+    'CnQnaireModelFactory', 'CnModalConfirmFactory',
+    function( CnQnaireModelFactory, CnModalConfirmFactory ) {
       return {
         templateUrl: module.getFileUrl( 'view.tpl.html' ),
         restrict: 'E',
         scope: { model: '=?' },
         controller: function( $scope ) {
           if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnaireModelFactory.root;
+
+          $scope.$on( 'cnRecordView ready', function( event, data ) {
+            var cnRecordViewScope = data;
+            cnRecordViewScope.basePatchFn = cnRecordViewScope.patch;
+
+            cnRecordViewScope.patch = async function( property ) {
+              var proceed = true;
+
+              // warn that stages/deveiation-types will be deleted when switching to non-stages mode
+              if( 'stages' == property && !$scope.model.viewModel.record.stages ) {
+                var response = await CnModalConfirmFactory.instance( {
+                  message:
+                    'Turning off stages mode will automatically delete all stages and deviation types. ' +
+                    'Are you sure you wish to proceed?'
+                } ).show();
+                if( !response ) {
+                  // undo the change
+                  $scope.model.viewModel.record.stages = true;
+                  proceed = false;
+                }
+              }
+
+              if( proceed ) await cnRecordViewScope.basePatchFn( property );
+            }
+          } );
         }
       };
     }
@@ -593,11 +628,12 @@ define( [ 'module' ].reduce( function( list, name ) {
           difference: null,
           differenceIsEmpty: false,
 
-          // only show the respondent list to respondents
+          // only show stage and deviation types in qnaires with stages and only show the respondent list to respondents
           getChildList: function() {
-            return this.parentModel.isRole( 'interviewer' ) ?
-              this.$$getChildList().filter( child => ['respondent'].includes( child.subject.snake ) ) :
-              this.$$getChildList();
+            return this.$$getChildList().filter( child =>
+              ( this.record.stages || !['stage', 'deviation_type' ].includes( child.subject.snake ) ) &&
+              ( !this.parentModel.isRole( 'interviewer' ) || 'respondent' == child.subject.snake )
+            );
           },
 
           onView: async function( force ) {
