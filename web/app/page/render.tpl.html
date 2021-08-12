@@ -69,6 +69,7 @@
               <li>Number/String/Text: the input box is focused</li>
               <li>Date: the date picker will show</li>
             </ul>
+          <li>Holding down the SHIFT key will allow selection of items 11 through 20</li>
           <li>When an input box has focus the enter key must be pressed to leave focus and re-activate hot-keys</li>
           <li>All hot-keys are deactivated when no question is focused, or when focus is in an input box</li>
           <li>Hot-keys are disabled when questionnaire is launched via a web-link (directly by the participant and not through Sabretooth, Beartooth or Cedar)</li>
@@ -116,7 +117,7 @@
                          ng-model="question.answer.yes"
                          ng-click="model.renderModel.setAnswer( question, question.answer.yes ? true : null )"
                          uib-btn-checkbox>
-                    {{ model.renderModel.getHotKey( question, true, true ) }} 
+                    {{ model.renderModel.getHotKey( question, true ) }} 
                     <i class="glyphicon" ng-class="question.answer.yes ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
                     {{ text( 'misc.yes' ) }}
                   </label>
@@ -126,7 +127,7 @@
                          ng-model="question.answer.no"
                          ng-click="model.renderModel.setAnswer( question, question.answer.no ? false : null )"
                          uib-btn-checkbox>
-                    {{ model.renderModel.getHotKey( question, false, true ) }} 
+                    {{ model.renderModel.getHotKey( question, false ) }} 
                     <i class="glyphicon" ng-class="question.answer.no ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
                     {{ text( 'misc.no' ) }}
                   </label>
@@ -147,7 +148,7 @@
                       ng-click="question.answer.optionList[option.id].selected ?
                         model.renderModel.addOption( question, option ) :
                         model.renderModel.removeOption( question, option )"
-                      ng-bind-html="model.renderModel.getHotKey( question, option.id, true ) + ' <i class=\'glyphicon ' + (
+                      ng-bind-html="model.renderModel.getHotKey( question, option.id ) + ' <i class=\'glyphicon ' + (
                         question.answer.optionList[option.id].selected ? 'glyphicon-check' : 'glyphicon-unchecked'
                       ) + '\'></i> ' + option.prompts[model.renderModel.currentLanguage] + (
                         option.popups[model.renderModel.currentLanguage] || option.minimum || option.maximum ? ' ⓘ' : ''
@@ -168,7 +169,7 @@
                       ng-class="{ 'color-red': true === question.incomplete }"
                       style="text-align: left; white-space: normal;"
                       ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal', 'font-weight': 'normal' }"
-                      ng-bind-html="model.renderModel.getHotKey( question, option.id, true ) +
+                      ng-bind-html="model.renderModel.getHotKey( question, option.id ) +
                         option.prompts[model.renderModel.currentLanguage] + (
                           option.popups[model.renderModel.currentLanguage] || option.minimum || option.maximum ? ' ⓘ' : ''
                         ) +
@@ -239,7 +240,7 @@
                   ng-attr-id="question{{ question.id }}"
                   cn-ignore-mouse-wheel
                   type="text"
-                  placeholder="{{ model.renderModel.getHotKey( question, null, true ) }}"
+                  placeholder="{{ model.renderModel.getHotKey( question, null ) }}"
                   class="form-control larger"
                   ng-class="{ 'color-red': true === question.incomplete }"
                   ng-model="question.answer.formattedValue"
@@ -250,7 +251,7 @@
                   ng-attr-id="question{{ question.id }}"
                   cn-ignore-mouse-wheel
                   type="number"
-                  placeholder="{{ model.renderModel.getHotKey( question, null, true ) }}"
+                  placeholder="{{ model.renderModel.getHotKey( question, null ) }}"
                   class="form-control larger"
                   ng-class="{ 'color-red': true === question.incomplete }"
                   ng-model="question.answer.value"
@@ -261,7 +262,7 @@
                   ng-attr-id="question{{ question.id }}"
                   cn-ignore-mouse-wheel
                   type="text"
-                  placeholder="{{ model.renderModel.getHotKey( question, null, true ) }}"
+                  placeholder="{{ model.renderModel.getHotKey( question, null ) }}"
                   class="form-control larger"
                   ng-class="{ 'color-red': true === question.incomplete }"
                   ng-model="question.answer.value"
@@ -270,7 +271,7 @@
                 </input>
                 <textarea ng-switch-when="text"
                   ng-attr-id="question{{ question.id }}"
-                  placeholder="{{ model.renderModel.getHotKey( question, null, true ) }}"
+                  placeholder="{{ model.renderModel.getHotKey( question, null ) }}"
                   class="form-control larger"
                   ng-class="{ 'color-red': true === question.incomplete }"
                   ng-model="question.answer.value"
@@ -290,7 +291,7 @@
                          ng-model="question.answer.dkna"
                          ng-click="model.renderModel.setAnswer( question, question.answer.dkna ? { dkna: true } : null )"
                          uib-btn-checkbox>
-                    {{ model.renderModel.getHotKey( question, 'dkna', true ) }} 
+                    {{ model.renderModel.getHotKey( question, 'dkna' ) }} 
                     <i class="glyphicon" ng-class="question.answer.dkna ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
                     {{ text( 'misc.dkna' ) }}
                   </label>
@@ -305,7 +306,7 @@
                          ng-model="question.answer.refuse"
                          ng-click="model.renderModel.setAnswer( question, question.answer.refuse ? { refuse: true } : null )"
                          uib-btn-checkbox>
-                    {{ model.renderModel.getHotKey( question, 'refuse', true ) }} 
+                    {{ model.renderModel.getHotKey( question, 'refuse' ) }} 
                     <i class="glyphicon" ng-class="question.answer.refuse ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
                     {{ text( model.renderModel.showHidden ? 'misc.refuse' : 'misc.preferNotToAnswer' ) }}
                   </label>

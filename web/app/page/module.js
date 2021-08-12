@@ -126,6 +126,21 @@ define( [ 'question' ].reduce( function( list, name ) {
             text: function( address ) { return $scope.model.renderModel.text( address ); }
           } );
 
+          // bind keydown (first unbind to prevent duplicates)
+          $document.unbind( 'keydown' );
+          $document.bind( 'keydown', async function( event ) {
+            // deactivate hot-keys when inside a number, text or textbox
+            if( !$scope.model.renderModel.showHidden || ['number','text','textarea'].includes( event.target.type ) ) return;
+
+            var action = null;
+            if( $scope.isComplete && !$scope.model.renderModel.working && !$scope.model.renderModel.hotKeyDisabled ) {
+              if( ['ShiftLeft', 'ShiftRight'].includes( event.code ) ) {
+                $scope.model.renderModel.upperDigitsActivated = true;
+                $scope.$apply();
+              }
+            }
+          } );
+
           // bind keyup (first unbind to prevent duplicates)
           $document.unbind( 'keyup' );
           $document.bind( 'keyup', async function( event ) {
@@ -134,38 +149,47 @@ define( [ 'question' ].reduce( function( list, name ) {
 
             var action = null;
             if( $scope.isComplete && !$scope.model.renderModel.working && !$scope.model.renderModel.hotKeyDisabled ) {
-              if( 'Minus' == event.code || 'NumpadSubtract' == event.code ) {
-                // proceed to the previous page when the minus key is pushed (keyboard or numpad)
-                if( null != $scope.model.viewModel.record.previous_id ) action = 'prevPage';
-              } else if( 'Equal' == event.code || 'NumpadAdd' == event.code ) {
-                // proceed to the next page when the plus key is pushed (keyboard "=" key or numpad)
-                if( angular.isUndefined( $scope.model.viewModel.record.next_id ) || null != $scope.model.viewModel.record.next_id )
-                  action = 'nextPage';
-              } else if( 'BracketLeft' == event.code ) {
-                // focus on the previous question when the open square bracket key is pushed (keyboard "[")
-                action = 'prevQuestion';
-              } else if( 'BracketRight' == event.code ) {
-                // focus on the next question when the close square bracket key is pushed (keyboard "]")
-                action = 'nextQuestion';
+              if( ['ShiftLeft', 'ShiftRight'].includes( event.code ) ) {
+                $scope.model.renderModel.upperDigitsActivated = false;
+                $scope.$apply();
               } else {
-                var match = event.code.match( /^Digit([0-9])$/ );
-                if( match ) action = match[1];
-              }
+                if( 'Minus' == event.code || 'NumpadSubtract' == event.code ) {
+                  // proceed to the previous page when the minus key is pushed (keyboard or numpad)
+                  if( null != $scope.model.viewModel.record.previous_id ) action = 'prevPage';
+                } else if( 'Equal' == event.code || 'NumpadAdd' == event.code ) {
+                  // proceed to the next page when the plus key is pushed (keyboard "=" key or numpad)
+                  if( angular.isUndefined( $scope.model.viewModel.record.next_id ) || null != $scope.model.viewModel.record.next_id )
+                    action = 'nextPage';
+                } else if( 'BracketLeft' == event.code ) {
+                  // focus on the previous question when the open square bracket key is pushed (keyboard "[")
+                  action = 'prevQuestion';
+                } else if( 'BracketRight' == event.code ) {
+                  // focus on the next question when the close square bracket key is pushed (keyboard "]")
+                  action = 'nextQuestion';
+                } else {
+                  var match = event.code.match( /^Digit([0-9])$/ );
+                  if( match ) {
+                    action = parseInt( match[1] );
+                    if( 0 == action ) action += 10; // zero comes after 1-9 on the keyboard
+                    if( event.shiftKey ) action += 10; // shift moves things up to the next set of numbers
+                  }
+                }
 
-              if( null != action ) {
-                event.stopPropagation();
-                if( ['prevPage', 'nextPage'].includes( action ) ) {
-                  // move to the prev or next page
-                  await Promise.all( $scope.model.renderModel.writePromiseList );
-                  await 'prevPage' == action ? $scope.model.renderModel.backup() : $scope.model.renderModel.proceed();
-                  $scope.$apply();
-                } else if( ['prevQuestion', 'nextQuestion'].includes( action ) ) {
-                  // move to the prev or next question
-                  $scope.model.renderModel.focusQuestion( 'prevQuestion' == action );
-                  $scope.$apply();
-                } else if( null != action ) {
-                  $scope.model.renderModel.onDigitHotKey( parseInt( action ) );
-                  $scope.$apply();
+                if( null != action ) {
+                  event.stopPropagation();
+                  if( ['prevPage', 'nextPage'].includes( action ) ) {
+                    // move to the prev or next page
+                    await Promise.all( $scope.model.renderModel.writePromiseList );
+                    await 'prevPage' == action ? $scope.model.renderModel.backup() : $scope.model.renderModel.proceed();
+                    $scope.$apply();
+                  } else if( ['prevQuestion', 'nextQuestion'].includes( action ) ) {
+                    // move to the prev or next question
+                    $scope.model.renderModel.focusQuestion( 'prevQuestion' == action );
+                    $scope.$apply();
+                  } else if( null != action ) {
+                    await $scope.model.renderModel.onDigitHotKey( action );
+                    $scope.$apply();
+                  }
                 }
               }
             }
@@ -267,6 +291,8 @@ define( [ 'question' ].reduce( function( list, name ) {
 
           text: function( address ) { return CnTranslationHelper.translate( address, this.currentLanguage ); },
 
+          upperDigitsActivated: false,
+
           getVisibleQuestionList: function() {
             return this.questionList.filter( question => self.evaluate( question.precondition ) );
           },
@@ -299,8 +325,7 @@ define( [ 'question' ].reduce( function( list, name ) {
             } ).show();
           },
 
-          getHotKey: function( question, item, display ) {
-            if( angular.isUndefined( display ) ) display = false;
+          getHotKey: function( question, item ) {
             var key = null;
 
             if( this.focusQuestionId == question.id ) {
@@ -334,12 +359,15 @@ define( [ 'question' ].reduce( function( list, name ) {
                 }
               }
 
-              // change 10 to 0 and don't allow any number above 10
-              key = 10 > key ? key : 10 == key ? 0 : null;
+              // if upper digits are activated then move down by 10
+              if( this.upperDigitsActivated ) key -= 10;
+
+              // change 10 to 0 and only allow numbers in [0,9]
+              key = 10 == key ? 0 : 1 <= key && key <= 9 ? key : null;
             }
 
-            if( display ) key = null == key ? '' : ( '[' + key + ']' );
-            return key;
+            // enclose with square brackets
+            return null == key ? '' : ( '[' + key + ']' );
           },
 
           onReady: async function() {
@@ -1142,7 +1170,6 @@ define( [ 'question' ].reduce( function( list, name ) {
           },
 
           onDigitHotKey: async function( digit ) {
-            if( 0 == digit ) digit = 10;
             var question = this.questionList.findByProperty( 'id', this.focusQuestionId );
             if( null == question ) return;
 
