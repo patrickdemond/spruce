@@ -24,6 +24,7 @@ class qnaire extends \cenozo\database\record
       if( $this->has_column_changed( 'base_language_id' ) ||
           $this->has_column_changed( 'name' ) ||
           $this->has_column_changed( 'debug' ) ||
+          $this->has_column_changed( 'stages' ) ||
           $this->has_column_changed( 'description' ) ||
           $this->has_column_changed( 'note' ) )
       {
@@ -180,11 +181,16 @@ class qnaire extends \cenozo\database\record
       }
     }
 
-    // replace all existing modules with those from the clone source qnaire
+    // remove any existing stages and modules
+    $delete_mod = lib::create( 'database\modifier' );
+    $delete_mod->where( 'qnaire_id', '=', $this->id );
+    static::db()->execute( sprintf( 'DELETE FROM stage %s', $delete_mod->get_sql() ) );
+
     $delete_mod = lib::create( 'database\modifier' );
     $delete_mod->where( 'qnaire_id', '=', $this->id );
     static::db()->execute( sprintf( 'DELETE FROM module %s', $delete_mod->get_sql() ) );
 
+    // clone all modules and stages from the source qnaire
     foreach( $db_source_qnaire->get_module_object_list() as $db_source_module )
     {
       $db_module = lib::create( 'database\module' );
@@ -194,16 +200,45 @@ class qnaire extends \cenozo\database\record
       $db_module->clone_from( $db_source_module );
     }
 
-    // copy all consent triggers
-    foreach( $db_source_qnaire->get_qnaire_consent_type_object_list() as $db_source_qnaire_consent_type )
+    // adding modules will create a default stage, so delete it again
+    $delete_mod = lib::create( 'database\modifier' );
+    $delete_mod->where( 'qnaire_id', '=', $this->id );
+    static::db()->execute( sprintf( 'DELETE FROM stage %s', $delete_mod->get_sql() ) );
+
+    foreach( $db_source_qnaire->get_stage_object_list() as $db_source_stage )
     {
-      $db_question = $this->get_question( $db_source_qnaire_consent_type->get_question()->name );
+      $db_stage = lib::create( 'database\stage' );
+      $db_stage->qnaire_id = $this->id;
+      $db_stage->rank = $db_source_stage->rank;
+      $db_stage->name = $db_source_stage->name;
+      $db_stage->clone_from( $db_source_stage );
+    }
+
+    // copy all deviation types
+    $deviation_sel = lib::create( 'database\select' );
+    $deviation_sel->add_column( 'type' );
+    $deviation_sel->add_column( 'name' );
+    $deviation_mod = lib::create( 'database\modifier' );
+    $deviation_mod->order( 'deviation_type.id' );
+    foreach( $db_source_qnaire->get_deviation_type_list( $deviation_sel, $deviation_mod ) as $db_source_deviation_type )
+    {
+      $db_deviation_type = lib::create( 'database\deviation_type' );
+      $db_deviation_type->qnaire_id = $this->id;
+      $db_deviation_type->type = $db_source_devaition_type->type;
+      $db_deviation_type->name = $db_source_devaition_type->name;
+      $db_deviation_type->save();
+    }
+
+    // copy all consent triggers
+    foreach( $db_source_qnaire->get_qnaire_consent_type_object_list() as $db_source_consent_type )
+    {
+      $db_question = $this->get_question( $db_source_consent_type->get_question()->name );
       $db_qnaire_consent_type = lib::create( 'database\qnaire_consent_type' );
       $db_qnaire_consent_type->qnaire_id = $this->id;
-      $db_qnaire_consent_type->consent_type_id = $db_source_qnaire_consent_type->consent_type_id;
+      $db_qnaire_consent_type->consent_type_id = $db_source_consent_type->consent_type_id;
       $db_qnaire_consent_type->question_id = $db_question->id;
-      $db_qnaire_consent_type->answer_value = $db_source_qnaire_consent_type->answer_value;
-      $db_qnaire_consent_type->accept = $db_source_qnaire_consent_type->accept;
+      $db_qnaire_consent_type->answer_value = $db_source_consent_type->answer_value;
+      $db_qnaire_consent_type->accept = $db_source_consent_type->accept;
       $db_qnaire_consent_type->save();
     }
 
@@ -271,6 +306,18 @@ class qnaire extends \cenozo\database\record
                  $old_name, $new_name, $old_name, $new_name, $old_name, $new_name
                )
              : sprintf( 'REPLACE( %%s.precondition, ":%s$", ":%s$" )', $old_name, $new_name );
+
+    // update all stages
+    $where_mod = lib::create( 'database\modifier' );
+    $where_mod->where( 'stage.precondition', 'RLIKE', $match );
+    $where_mod->where( 'stage.qnaire_id', '=', $this->id );
+
+    $sql = sprintf(
+      'UPDATE stage SET stage.precondition = %s %s',
+      sprintf( $replace, 'stage' ),
+      $where_mod->get_sql()
+    );
+    static::db()->execute( $sql );
 
     // update all modules
     $where_mod = lib::create( 'database\modifier' );
@@ -1445,11 +1492,13 @@ class qnaire extends \cenozo\database\record
 
     $language_class_name = lib::get_class_name( 'database\language' );
     $attribute_class_name = lib::get_class_name( 'database\attribute' );
+    $deviation_type_class_name = lib::get_class_name( 'database\deviation_type' );
     $reminder_description_class_name = lib::get_class_name( 'database\reminder_description' );
     $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
     $qnaire_consent_type_class_name = lib::get_class_name( 'database\qnaire_consent_type' );
     $qnaire_description_class_name = lib::get_class_name( 'database\qnaire_description' );
     $module_class_name = lib::get_class_name( 'database\module' );
+    $stage_class_name = lib::get_class_name( 'database\stage' );
 
     // NOTE: since we want to avoid duplicate unique keys caused by re-naming or re-ordering modules we use the following
     // offset and suffix values when setting rank and name, then after all changes have been made remove the offset/suffix
@@ -1687,6 +1736,61 @@ class qnaire extends \cenozo\database\record
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
         if( 0 < count( $diff_list ) ) $difference_list['reminder_list'] = $diff_list;
       }
+      else if( 'deviation_type_list' == $property )
+      {
+        // check every item in the patch object for additions and changes
+        $add_list = array();
+        foreach( $patch_object->deviation_type_list as $deviation_type )
+        {
+          $db_deviation_type = $deviation_type_class_name::get_unique_record(
+            array( 'qnaire_id', 'type', 'name' ),
+            array( $this->id, $deviation_type->type, $deviation_type->name )
+          );
+
+          if( is_null( $db_deviation_type ) )
+          {
+            if( $apply )
+            {
+              $db_deviation_type = lib::create( 'database\deviation_type' );
+              $db_deviation_type->qnaire_id = $this->id;
+              $db_deviation_type->type = $deviation_type->type;
+              $db_deviation_type->name = $deviation_type->name;
+              $db_deviation_type->save();
+            }
+            else $add_list[] = $deviation_type;
+          }
+        }
+
+        // check every item in this object for removals
+        $remove_list = array();
+        foreach( $this->get_deviation_type_object_list() as $db_deviation_type )
+        {
+          $found = false;
+          foreach( $patch_object->deviation_type_list as $deviation_type )
+          {
+            if( $db_deviation_type->type == $deviation_type->type && $db_deviation_type->name == $deviation_type->name )
+            {
+              $found = true;
+              break;
+            }
+          }
+
+          if( !$found )
+          {
+            if( $apply ) $db_deviation_type->delete();
+            else
+            {
+              $index = sprintf( '%s [%s]', $db_deviation_type->type, $db_deviation_type->name );
+              $remove_list[] = $index;
+            }
+          }
+        }
+
+        $diff_list = array();
+        if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
+        if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
+        if( 0 < count( $diff_list ) ) $difference_list['deviation_type_list'] = $diff_list;
+      }
       else if( 'attribute_list' == $property )
       {
         // check every item in the patch object for additions and changes
@@ -1923,6 +2027,111 @@ class qnaire extends \cenozo\database\record
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
         if( 0 < count( $diff_list ) ) $difference_list['module_list'] = $diff_list;
       }
+      else if( 'stage_list' == $property )
+      {
+        // check every item in the patch object for additions and changes
+        $add_list = array();
+        $change_list = array();
+        foreach( $patch_object->stage_list as $stage )
+        {
+          // match stage by name or rank
+          $db_stage = $stage_class_name::get_unique_record( array( 'qnaire_id', 'name' ), array( $this->id, $stage->name ) );
+          if( is_null( $db_stage ) )
+          {
+            // we may have renamed the stage, so see if it exists exactly the same under the same rank
+            $db_stage = $stage_class_name::get_unique_record( array( 'qnaire_id', 'rank' ), array( $this->id, $stage->rank ) );
+            if( !is_null( $db_stage ) )
+            {
+              // confirm that the name is the only thing that has changed
+              $properties = array_keys( get_object_vars( $db_stage->process_patch( $stage, $name_suffix, false ) ) );
+              if( 1 != count( $properties ) || 'name' != current( $properties ) ) $db_stage = NULL;
+            }
+          }
+
+          if( is_null( $db_stage ) )
+          {
+            if( $apply )
+            {
+              $db_stage = lib::create( 'database\stage' );
+              $db_stage->qnaire_id = $this->id;
+              $db_stage->rank = $stage->rank;
+              $db_stage->name = sprintf( '%s_%s', $stage->name, $name_suffix );
+              $db_stage->first_module_id = $module_class_name::get_unique_record(
+                array( 'qnaire_id', 'rank' ),
+                array( $this->id, $stage->first_module_rank )
+              )->id;
+              $db_stage->last_module_id = $module_class_name::get_unique_record(
+                array( 'qnaire_id', 'rank' ),
+                array( $this->id, $stage->last_module_rank )
+              )->id;
+              $db_stage->precondition = $stage->precondition;
+              $db_stage->save();
+            }
+            else $add_list[] = $stage;
+          }
+          else
+          {
+            // find and add all differences
+            $diff = array();
+            foreach( $stage as $property => $value )
+              if( !in_array( $property, [ 'first_module_rank', 'last_module_rank' ] ) &&
+                  $db_stage->$property != $stage->$property )
+                $diff[$property] = $stage->$property;
+            if( $db_stage->get_first_module()->rank != $stage->first_module_rank )
+              $diff['first_module_rank'] = $stage->first_module_rank;
+            if( $db_stage->get_last_module()->rank != $stage->last_module_rank )
+              $diff['last_module_rank'] = $stage->last_module_rank;
+
+            if( 0 < count( $diff ) )
+            {
+              if( $apply )
+              {
+                $db_stage->first_module_id = $module_class_name::get_unique_record(
+                  array( 'qnaire_id', 'rank' ),
+                  array( $this->id, $stage->first_module_rank )
+                )->id;
+                $db_stage->last_module_id = $module_class_name::get_unique_record(
+                  array( 'qnaire_id', 'rank' ),
+                  array( $this->id, $stage->last_module_rank )
+                )->id;
+                $db_stage->save();
+              }
+              else $change_list[$db_stage->name] = $diff;
+            }
+          }
+        }
+
+        // check every item in this object for removals
+        $remove_list = array();
+        $stage_mod = lib::create( 'database\modifier' );
+        $stage_mod->order( 'rank' );
+        foreach( $this->get_stage_object_list( $stage_mod ) as $db_stage )
+        {
+          $found = false;
+          foreach( $patch_object->stage_list as $stage )
+          {
+            // see if the stage exists in the patch or if we're already changing the stage
+            $name = $apply ? preg_replace( sprintf( '/_%s$/', $name_suffix ), '', $db_stage->name ) : $db_stage->name;
+            if( $name == $stage->name || in_array( $name, array_keys( $change_list ) ) )
+            {
+              $found = true;
+              break;
+            }
+          }
+
+          if( !$found )
+          {
+            if( $apply ) $db_stage->delete();
+            else $remove_list[] = $db_stage->name;
+          }
+        }
+
+        $diff_list = array();
+        if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
+        if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
+        if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
+        if( 0 < count( $diff_list ) ) $difference_list['stage_list'] = $diff_list;
+      }
       else if( 'qnaire_consent_type_list' == $property )
       {
         // get a list of all questions with new names
@@ -2092,6 +2301,20 @@ class qnaire extends \cenozo\database\record
       $this->readonly = false;
       $this->save();
 
+      // remove the name suffix from stages
+      $join_mod = lib::create( 'database\modifier' );
+      $join_mod->join( 'qnaire', 'stage.qnaire_id', 'qnaire.id' );
+      $where_mod = lib::create( 'database\modifier' );
+      $where_mod->where( 'qnaire.id', '=', $this->id );
+      $where_mod->where( 'stage.name', 'LIKE', '%_'.$name_suffix );
+      static::db()->execute( sprintf(
+        'UPDATE stage %s '.
+        'SET stage.name = REPLACE( stage.name, "_%s", "" ) %s',
+        $join_mod->get_sql(),
+        $name_suffix,
+        $where_mod->get_sql()
+      ) );
+
       // remove the name suffix from all qnaire parts
       $join_mod = lib::create( 'database\modifier' );
       $join_mod->join( 'qnaire', 'module.qnaire_id', 'qnaire.id' );
@@ -2178,9 +2401,11 @@ class qnaire extends \cenozo\database\record
       'note' => $this->note,
       'language_list' => array(),
       'attribute_list' => array(),
+      'deviation_type_list' => array(),
       'reminder_list' => array(),
       'qnaire_description_list' => array(),
       'module_list' => array(),
+      'stage_list' => array(),
       'qnaire_consent_type_list' => array()
     );
 
@@ -2193,6 +2418,11 @@ class qnaire extends \cenozo\database\record
     $attribute_sel->add_column( 'code' );
     $attribute_sel->add_column( 'note' );
     foreach( $this->get_attribute_list( $attribute_sel ) as $item ) $qnaire_data['attribute_list'][] = $item;
+
+    $deviation_type_sel = lib::create( 'database\select' );
+    $deviation_type_sel->add_column( 'type' );
+    $deviation_type_sel->add_column( 'name' );
+    foreach( $this->get_deviation_type_list( $deviation_type_sel ) as $item ) $qnaire_data['deviation_type_list'][] = $item;
 
     foreach( $this->get_reminder_object_list() as $db_reminder )
     {
@@ -2346,6 +2576,17 @@ class qnaire extends \cenozo\database\record
       $qnaire_data['module_list'][] = $module;
     }
 
+    $stage_sel = lib::create( 'database\select' );
+    $stage_sel->add_column( 'rank' );
+    $stage_sel->add_column( 'name' );
+    $stage_sel->add_table_column( 'first_module', 'rank', 'first_module_rank' );
+    $stage_sel->add_table_column( 'last_module', 'rank', 'last_module_rank' );
+    $stage_sel->add_column( 'precondition' );
+    $stage_mod = lib::create( 'database\modifier' );
+    $stage_mod->join( 'module', 'stage.first_module_id', 'first_module.id', '', 'first_module' );
+    $stage_mod->join( 'module', 'stage.last_module_id', 'last_module.id', '', 'last_module' );
+    foreach( $this->get_stage_list( $stage_sel, $stage_mod ) as $item ) $qnaire_data['stage_list'][] = $item;
+
     $qnaire_consent_type_sel = lib::create( 'database\select' );
     $qnaire_consent_type_sel->add_table_column( 'consent_type', 'name', 'consent_type_name' );
     $qnaire_consent_type_sel->add_table_column( 'question', 'name', 'question_name' );
@@ -2461,7 +2702,7 @@ class qnaire extends \cenozo\database\record
             }
             $contents .= "\n";
 
-            if( 0 < count( $question['question_option_list'] ) )
+            if( array_key_exists( 'question_option_list', $question ) && 0 < count( $question['question_option_list'] ) )
             {
               foreach( $question['question_option_list'] as $question_option )
               {
@@ -2520,6 +2761,7 @@ class qnaire extends \cenozo\database\record
   {
     $language_class_name = lib::get_class_name( 'database\language' );
     $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
+    $module_class_name = lib::get_class_name( 'database\module' );
 
     $default_page_max_time = lib::create( 'business\setting_manager' )->get_setting( 'general', 'default_page_max_time' );
 
@@ -2567,6 +2809,15 @@ class qnaire extends \cenozo\database\record
       $db_attribute->code = $attribute->code;
       $db_attribute->note = $attribute->note;
       $db_attribute->save();
+    }
+
+    foreach( $qnaire_object->deviation_type_list as $deviation_type )
+    {
+      $db_deviation_type = lib::create( 'database\deviation_type' );
+      $db_deviation_type->qnaire_id = $db_qnaire->id;
+      $db_deviation_type->type = $deviation_type->type;
+      $db_deviation_type->name = $deviation_type->name;
+      $db_deviation_type->save();
     }
 
     foreach( $qnaire_object->qnaire_description_list as $qnaire_description )
@@ -2668,6 +2919,24 @@ class qnaire extends \cenozo\database\record
           }
         }
       }
+    }
+
+    foreach( $qnaire_object->stage_list as $stage )
+    {
+      $db_stage = lib::create( 'database\stage' );
+      $db_stage->qnaire_id = $db_qnaire->id;
+      $db_stage->rank = $stage->rank;
+      $db_stage->name = $stage->name;
+      $db_stage->first_module_id = $module_class_name::get_unique_record(
+        array( 'qnaire_id', 'rank' ),
+        array( $db_qnaire->id, $stage->first_module_rank )
+      )->id;
+      $db_stage->last_module_id = $module_class_name::get_unique_record(
+        array( 'qnaire_id', 'rank' ),
+        array( $db_qnaire->id, $stage->last_module_rank )
+      )->id;
+      $db_stage->precondition = $stage->precondition;
+      $db_stage->save();
     }
 
     foreach( $qnaire_object->qnaire_consent_type_list as $qnaire_consent_type )

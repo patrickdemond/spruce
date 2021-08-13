@@ -22,7 +22,7 @@
       <div class="panel-body">
         <div ng-if="model.viewModel.differenceIsEmpty">No differences found.</div>
         <div ng-repeat="(property, child) in model.viewModel.difference" class="row">
-          <div ng-if="!['module_list','attribute_list','reminder_list','qnaire_consent_type_list'].includes( property )">
+          <div ng-if="!['stage_list','module_list','attribute_list','deviation_type_list','reminder_list','qnaire_consent_type_list'].includes( property )">
             <label class="col-sm-2 control-label">{{
               property | cnStrReplace:'qnaire':'' | cnStrReplace:'_':' ' | cnStrReplace:' list':'s' | cnUCWords
             }}:</label>
@@ -43,9 +43,17 @@
             <label class="container-fluid">Attribute List</label>
             <div class="container-fluid"><cn-qnaire-part-patch subject="attribute" model="child"></cn-qnaire-part-patch></div>
           </div>
+          <div ng-if="'deviation_type_list' == property">
+            <label class="container-fluid">Deviation Type List</label>
+            <div class="container-fluid"><cn-qnaire-part-patch subject="deviation_type" model="child"></cn-qnaire-part-patch></div>
+          </div>
           <div ng-if="'module_list' == property">
             <label class="container-fluid">Module List</label>
             <div class="container-fluid"><cn-qnaire-part-patch subject="module" model="child"></cn-qnaire-part-patch></div>
+          </div>
+          <div ng-if="'stage_list' == property">
+            <label class="container-fluid">Stage List</label>
+            <div class="container-fluid"><cn-qnaire-part-patch subject="stage" model="child"></cn-qnaire-part-patch></div>
           </div>
           <div ng-if="'qnaire_consent_type_list' == property">
             <label class="container-fluid">Consent Trigger List</label>
