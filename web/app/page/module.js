@@ -371,6 +371,8 @@ define( [ 'question' ].reduce( function( list, name ) {
           },
 
           onReady: async function() {
+            this.previewMode = 'respondent' != parentModel.getSubjectFromState();
+
             // we show hidden stuff when previewing (not a respondent) or when there is a state parameter asking for it
             this.showHidden = this.previewMode
                             ? true
@@ -530,9 +532,7 @@ define( [ 'question' ].reduce( function( list, name ) {
             } ).query();
             this.languageList = response.data;
 
-            if( null == this.currentLanguage )
-              this.currentLanguage = this.data.base_language;
-
+            if( null == this.currentLanguage ) this.currentLanguage = this.data.base_language;
           },
 
           // Used to maintain a semaphore of queries so that they are all executed in sequence without any bumping the queue
