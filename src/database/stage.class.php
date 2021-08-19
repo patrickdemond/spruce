@@ -22,6 +22,20 @@ class stage extends \cenozo\database\has_rank
   protected static $rank_parent = 'qnaire';
 
   /**
+   * Overview parent method
+   */
+  public function save()
+  {
+    $changing_name = !is_null( $this->id ) && $this->has_column_changed( 'name' );
+    $old_name = $this->get_passive_column_value( 'name' );
+
+    parent::save();
+
+    // update all preconditions if the stage's name is changing
+    if( $changing_name ) $this->get_qnaire()->update_name_in_preconditions( 'stage', $old_name, $this->name ); 
+  }
+
+  /**
    * Returns the first module, or NULL of none is set
    * @return database\module
    */

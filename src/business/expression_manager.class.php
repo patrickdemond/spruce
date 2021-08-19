@@ -138,6 +138,8 @@ class expression_manager extends \cenozo\singleton
    *   $NAME.empty()$ (true if question hasn't been answered, false if it has)
    *   $NAME.dkna()$ (true if a question's answer is don't know or no answer)
    *   $NAME.refuse()$ (true if a question is refused)
+   *   #NAME# (stage: true if the stage is either skipped or complete)
+   *   #NAME.status()# (gets a stage's current status)
    *   showhidden true if showing hidden elements (launched by phone) false if not (launched by web)
    *   null (when a question has no answer - it's skipped)
    *   true|false (boolean)
@@ -251,6 +253,12 @@ class expression_manager extends \cenozo\singleton
           else $compiled .= $this->process_question( $override_question_object );
           $process_char = false;
         }
+        else if( 'stage' == $this->active_term )
+        {
+          if( '#' != $char ) $this->term .= $char;
+          else $compiled .= $this->process_stage();
+          $process_char = false;
+        }
 
         if( $process_char ) $compiled .= $this->process_character( $char );
       }
@@ -274,6 +282,8 @@ class expression_manager extends \cenozo\singleton
         throw lib::create( 'exception\runtime', 'Expression has an unclosed attribute', __METHOD__ );
       else if( 'question' == $this->active_term )
         throw lib::create( 'exception\runtime', 'Expression has an unclosed question', __METHOD__ );
+      else if( 'stage' == $this->active_term )
+        throw lib::create( 'exception\runtime', 'Expression has an unclosed stage', __METHOD__ );
       else if( 'number' == $this->active_term ) $compiled .= $this->process_number();
       else if( 'constant' == $this->active_term ) $compiled .= $this->process_constant();
       else if( 'operator' == $this->active_term ) $compiled .= $this->process_operator();
@@ -668,6 +678,81 @@ class expression_manager extends \cenozo\singleton
   }
 
   /**
+   * Processes the current term as a stage
+   * @return string
+   */
+  private function process_stage()
+  {
+    $stage_class_name = lib::get_class_name( 'database\stage' );
+    $response_stage_class_name = lib::get_class_name( 'database\response_stage' );
+
+    if( !$this->db_qnaire->stages )
+    {
+      throw lib::create( 'exception\runtime',
+        sprintf( 'Expression references stage "%s" in qnaire without stages.', $this->term ),
+        __METHOD__
+      );
+    }
+
+    // figure out the stage
+    $db_stage = NULL;
+    $special_function = NULL;
+
+    // check for functions
+    if( preg_match( '/([^.]+)\.([^.]+)/', $this->term, $matches ) )
+    {
+      if( 3 != count( $matches ) )
+        throw lib::create( 'exception\runtime', sprintf( 'Invalid stage "%s"', $this->term ), __METHOD__ );
+
+      $db_stage = $stage_class_name::get_unique_record(
+        array( 'qnaire_id', 'name' ),
+        array( $this->db_qnaire->id, $matches[1] )
+      );
+      if( is_null( $db_stage ) )
+        throw lib::create( 'exception\runtime', sprintf( 'Invalid stage "%s"', $matches[1] ), __METHOD__ );
+
+      if( 'status()' == $matches[2] )
+      {
+        $special_function = substr( $matches[2], 0, -2 );
+      }
+      else throw lib::create( 'exception\runtime', sprintf( 'Invalid function "%s"', $matches[2] ), __METHOD__ );
+    }
+    else // stages are defined by name
+    {
+      $db_stage = $stage_class_name::get_unique_record(
+        array( 'qnaire_id', 'name' ),
+        array( $this->db_qnaire->id, $this->term )
+      );
+      if( is_null( $db_stage ) )
+        throw lib::create( 'exception\runtime', sprintf( 'Invalid stage "%s"', $this->term ), __METHOD__ );
+    }
+
+    // test that the working item is an operator
+    if( !is_null( $this->last_term ) && 'operator' != $this->last_term )
+      throw lib::create( 'exception\runtime', 'Stage found but expecting an operator', __METHOD__ );
+
+    // determine the last term
+    $this->last_term = is_null( $special_function ) ? 'boolean' : 'string';
+
+    $compiled = sprintf( '#%s#', $this->term );
+    if( !is_null( $this->db_response ) )
+    {
+      $db_response_stage = $response_stage_class_name::get_unique_record(
+        array( 'response_id', 'stage_id' ),
+        array( $this->db_response->id, $db_stage->id )
+      );
+
+      $compiled = 'status' == $special_function
+                ? sprintf( "'%s'", $db_response_stage->status )
+                : ( in_array( $db_response_stage->status, ['skipped', 'completed'] ) ? 'true' : 'false' );
+    }
+
+    $this->active_term = NULL;
+
+    return $compiled;
+  }
+
+  /**
    * Used by the compile() method one character at a time
    * @param string $char
    * @return string
@@ -695,11 +780,12 @@ class expression_manager extends \cenozo\singleton
     else if( ' ' == $char ) ; // ignore spaces
     else if( '@' == $char ) $this->active_term = 'attribute';
     else if( '$' == $char ) $this->active_term = 'question';
+    else if( '#' == $char ) $this->active_term = 'stage';
     else if( preg_match( '/[0-9.]/', $char ) ) $this->active_term = 'number';
     else if( preg_match( '/[a-z_]/', $char ) ) $this->active_term = 'constant';
     else if( preg_match( '/[-+*\/<>!=~&|?:]/', $char ) ) $this->active_term = 'operator';
 
-    $this->term = in_array( $char, ['(', ')', "'", '"', '`', ' ', '@', '$'] ) ? '' : $char;
+    $this->term = in_array( $char, ['(', ')', "'", '"', '`', ' ', '@', '$', '#'] ) ? '' : $char;
     return $compiled;
   }
 

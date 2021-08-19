@@ -295,17 +295,27 @@ class qnaire extends \cenozo\database\record
    */
   public function update_name_in_preconditions( $type, $old_name, $new_name )
   {
-    // The sql regex match depends on whether we're changing a question's name or an question option's name
+    // The sql regex match depends on what type of change we're making
     // Questions will all start with a $ and end with either a $ (for direct references), : (for options), or . (for functions)
-    $match = sprintf( 'question' == $type ? '\\$%s[$:.]' : ':%s\\$', $old_name );
+    // Stages will all start and end with a #
+    $match = '';
+    if( 'stage' == $type )
+    {
+      $match = sprintf( '#%s#', $old_name );
+      $replace = sprintf( 'REPLACE( %%s.precondition, "#%s#", "#%s#" )', $old_name, $new_name );
+    }
+    else
+    {
+      $match = sprintf( 'question' == $type ? '\\$%s[$:.]' : ':%s\\$', $old_name );
 
-    // The replacement syntax is also different for question or question-options
-    $replace = 'question' == $type
-             ? sprintf(
-                 'REPLACE( REPLACE( REPLACE( %%s.precondition, "$%s$", "$%s$" ), "$%s:", "$%s:" ), "$%s.", "$%s." )',
-                 $old_name, $new_name, $old_name, $new_name, $old_name, $new_name
-               )
-             : sprintf( 'REPLACE( %%s.precondition, ":%s$", ":%s$" )', $old_name, $new_name );
+      // The replacement syntax is also different for question or question-options
+      $replace = 'question' == $type
+               ? sprintf(
+                   'REPLACE( REPLACE( REPLACE( %%s.precondition, "$%s$", "$%s$" ), "$%s:", "$%s:" ), "$%s.", "$%s." )',
+                   $old_name, $new_name, $old_name, $new_name, $old_name, $new_name
+                 )
+               : sprintf( 'REPLACE( %%s.precondition, ":%s$", ":%s$" )', $old_name, $new_name );
+    }
 
     // update all stages
     $where_mod = lib::create( 'database\modifier' );

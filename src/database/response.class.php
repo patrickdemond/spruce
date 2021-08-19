@@ -297,6 +297,7 @@ class response extends \cenozo\database\has_rank
           {
             // we've moved past the last page in the stage, so mark it as complete
             $db_current_response_stage->status = 'completed';
+            $db_current_response_stage->page_id = NULL;
             $db_current_response_stage->save();
 
             // and go back to page selection
