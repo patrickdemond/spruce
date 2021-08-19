@@ -29,6 +29,10 @@ class module extends \cenozo\service\module
     $modifier->join( 'language', 'response.language_id', 'language.id' );
     $modifier->left_join( 'page', 'response.page_id', 'page.id' );
     $modifier->left_join( 'module', 'page.module_id', 'module.id' );
+    $join_mod = lib::create( 'database\modifier' );
+    $join_mod->where( 'response.id', '=', 'response_stage.response_id', false );
+    $join_mod->where( 'response_stage.status', '=', 'active' );
+    $modifier->join_modifier( 'response_stage', $join_mod, 'left' );
 
     if( $select->has_column( 'introductions' ) )
     {

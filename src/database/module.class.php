@@ -133,6 +133,31 @@ class module extends base_qnaire_part
   }
 
   /**
+   * Returns the stage that the module belongs to (if qnaire has stages)
+   * @return database\page
+   */
+  public function get_stage()
+  {
+    $db_stage = NULL;
+    $db_qnaire = $this->get_qnaire();
+    if( $db_qnaire->stages )
+    {
+      $modifier = lib::create( 'database\modifier' );
+      $modifier->order( 'rank' );
+      foreach( $db_qnaire->get_stage_object_list( $modifier ) as $db_test_stage )
+      {
+        if( $db_test_stage->get_first_module()->rank <= $this->rank && $this->rank <= $db_test_stage->get_last_module()->rank )
+        {
+          $db_stage = $db_test_stage;
+          break;
+        }
+      }
+    }
+
+    return $db_stage;
+  }
+
+  /**
    * Returns the first page in this module
    * @return database\page
    */

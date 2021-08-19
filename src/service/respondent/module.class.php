@@ -40,6 +40,14 @@ class module extends \cenozo\service\module
       }
     }
 
+    if( $select->has_table_columns( 'response_stage' ) )
+    {
+      $join_mod = lib::create( 'database\modifier' );
+      $join_mod->where( 'response.id', '=', 'response_stage.response_id', false );
+      $join_mod->where( 'response_stage.status', '=', 'active' );
+      $modifier->join_modifier( 'response_stage', $join_mod, 'left' );
+    }
+
     $db_respondent = $this->get_resource();
     if( is_null( $db_respondent ) )
     {

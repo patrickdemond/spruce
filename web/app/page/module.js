@@ -214,8 +214,10 @@ define( [ 'question' ].reduce( function( list, name ) {
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnPageRenderFactory', [
-    'CnHttpFactory', 'CnTranslationHelper', 'CnModalMessageFactory', 'CnModalDatetimeFactory', '$state', '$timeout', '$interval',
-    function( CnHttpFactory, CnTranslationHelper, CnModalMessageFactory, CnModalDatetimeFactory, $state, $timeout, $interval ) {
+    'CnHttpFactory', 'CnTranslationHelper', 'CnModalConfirmFactory', 'CnModalMessageFactory', 'CnModalDatetimeFactory',
+    '$state', '$timeout', '$interval',
+    function( CnHttpFactory, CnTranslationHelper, CnModalConfirmFactory, CnModalMessageFactory, CnModalDatetimeFactory,
+              $state, $timeout, $interval ) {
       var object = function( parentModel ) {
         var self = this;
 
@@ -261,13 +263,23 @@ define( [ 'question' ].reduce( function( list, name ) {
           progress: 0,
           previewMode: 'respondent' != parentModel.getSubjectFromState(),
           data: {
-            page_id: null,
+            response_id: null,
             qnaire_id: null,
             qnaire_name: null,
+            stage_id: null,
+            page_id: null,
+            stage_selection: null,
             base_language: null,
-            title: null,
+            stages: null,
+            closed: null,
+            submitted: null,
             uid: null,
+            introductions: null,
+            conclusions: null,
+            closes: null,
+            title: null,
           },
+          responseStageList: null,
           languageList: null,
           showHidden: false,
           focusQuestionId: null,
@@ -388,9 +400,14 @@ define( [ 'question' ].reduce( function( list, name ) {
                 path: 'respondent/token=' + $state.params.token + params,
                 data: { select: { column: [
                   'qnaire_id', 'introductions', 'conclusions', 'closes',
+                  { table: 'qnaire', column: 'stages' },
                   { table: 'qnaire', column: 'closed' },
                   { table: 'qnaire', column: 'name', alias: 'qnaire_name' },
+                  { table: 'response', column: 'id', alias: 'response_id' },
+                  { table: 'response_stage', column: 'id', alias: 'response_stage_id' },
+                  { table: 'response_stage', column: 'stage_id' },
                   { table: 'response', column: 'page_id' },
+                  { table: 'response', column: 'stage_selection' },
                   { table: 'response', column: 'submitted' },
                   { table: 'participant', column: 'uid' },
                   { table: 'language', column: 'code', alias: 'base_language' }
@@ -401,12 +418,56 @@ define( [ 'question' ].reduce( function( list, name ) {
               } ).get();
 
               this.data = response.data;
+
+              // get the stage list if there is one:
+              //   not ready: skip
+              //   ready: launch, skip
+              //   active: nothing (it will never show in the list)
+              //   paused: resume, skip, reset
+              //   skipped: launch
+              //   completed: re-open, reset
+              if( this.data.stages ) {
+                var response = await CnHttpFactory.instance( {
+                  path: ['response', this.data.response_id, 'response_stage'].join( '/' ),
+                  data: {
+                    select: { column: [
+                      'id', 'status',
+                      { table: 'stage', column: 'rank' },
+                      { table: 'stage', column: 'name' },
+                      { table: 'skip_deviation_type', column: 'name', alias: 'skip_name' },
+                      { table: 'order_deviation_type', column: 'name', alias: 'order_name' }
+                    ] },
+                    modifier: { order: 'stage.rank' }
+                  }
+                } ).query();
+
+                this.responseStageList = response.data;
+
+                // set each response stage's possible operations
+                this.responseStageList.forEach( function( responseStage ) {
+                  responseStage.operations = [];
+                  
+                  if( 'not ready' != responseStage.status ) {
+                    responseStage.operations.push( {
+                      name: 'launch',
+                      title: 'completed' == responseStage.status ? 'Re-Open' : 'paused' == responseStage.status ? 'Resume' : 'Launch'
+                    } );
+                  }
+
+                  if( ['paused', 'ready'].includes( responseStage.status ) ) {
+                    responseStage.operations.push( { name: 'skip', title: 'Skip' } );
+                  }
+
+                  if( 'ready' != responseStage.status ) {
+                    responseStage.operations.push( { name: 'reset', title: 'Reset' } );
+                  }
+                } );
+              }
+
               angular.extend( this.data, {
                 introductions: CnTranslationHelper.parseDescriptions( this.data.introductions, this.showHidden ),
                 conclusions: CnTranslationHelper.parseDescriptions( this.data.conclusions, this.showHidden ),
-                closes: CnTranslationHelper.parseDescriptions( this.data.closes, this.showHidden ),
-                title: null != this.data.page_id ?
-                  '' : this.data.submitted ? 'Conclusion' : 'Introduction'
+                closes: CnTranslationHelper.parseDescriptions( this.data.closes, this.showHidden )
               } );
             }
 
@@ -521,8 +582,7 @@ define( [ 'question' ].reduce( function( list, name ) {
                 .sort()
                 .filter( ( attribute, index, array ) => index === array.indexOf( attribute ) )
                 .map( attribute => ( { name: attribute, value: null } ) );
-
-            } else if( null == this.data.page_id ) {
+            } else if( !this.data.stage_selection && null == this.data.page_id ) {
               await this.reset();
             }
 
@@ -533,6 +593,12 @@ define( [ 'question' ].reduce( function( list, name ) {
             this.languageList = response.data;
 
             if( null == this.currentLanguage ) this.currentLanguage = this.data.base_language;
+
+            // finally, now that we know the language set the title
+            this.data.title = this.data.submitted ? 'Conclusion'
+                            : null != this.data.page_id ? ''
+                            : this.data.stage_selection ? 'Stage Selection'
+                            : 'Introduction';
           },
 
           // Used to maintain a semaphore of queries so that they are all executed in sequence without any bumping the queue
@@ -1094,6 +1160,36 @@ define( [ 'question' ].reduce( function( list, name ) {
               { identifier: this.parentModel.viewModel.record.getIdentifier() },
               { reload: true }
             );
+          },
+
+          runStageOperation: async function( responseStageId, operation ) {
+            // if no ID is provided then assume the currently active one
+            if( !responseStageId ) responseStageId = this.data.response_stage_id;
+
+            if( !['launch', 'pause', 'skip', 'reset'].includes( operation ) )
+              throw new Error( 'Tried to run invalid stage operation "' + operation + '"' );
+
+            var proceed = true;
+            if( ['skip', 'reset'].includes( operation ) ) {
+              var response = await CnModalConfirmFactory.instance( {
+                message:
+                  'Are you sure you wish to ' + operation + ' this stage? ' +
+                  'If you proceed all data collected during the stage will be deleted.'
+              } ).show();
+              proceed = response;
+            }
+
+            if( proceed ) {
+              try {
+                this.working = true;
+                await this.runQuery( async function() {
+                  await CnHttpFactory.instance( { path: 'response_stage/' + responseStageId + '?action=' + operation } ).patch();
+                  await self.parentModel.reloadState( true );
+                } );
+              } finally {
+                this.working = false;
+              }
+            }
           },
 
           proceed: async function() {

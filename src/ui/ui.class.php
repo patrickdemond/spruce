@@ -22,8 +22,7 @@ class ui extends \cenozo\ui\ui
     $session = lib::create( 'business\session' );
 
     // If we're loading the qnaire run then show a special interface if we're logged in as the qnaire user
-    $db_response = $session->get_response();
-    if( !is_null( $db_response ) )
+    if( !is_null( $session->get_response() ) )
     {
       $setting_manager = lib::create( 'business\setting_manager' );
       $qnaire_username = $setting_manager->get_setting( 'utility', 'qnaire_username' );
@@ -51,7 +50,7 @@ class ui extends \cenozo\ui\ui
         return ob_get_clean();
       }
     }
-    else if( array_key_exists( 'REDIRECT_URL', $_SERVER ) )
+    else if( !$session->get_qnaire_has_stages() && array_key_exists( 'REDIRECT_URL', $_SERVER ) )
     {
       $self_path = substr( $_SERVER['PHP_SELF'], 0, strrpos( $_SERVER['PHP_SELF'], '/' ) + 1 );
       $path = str_replace( $self_path, '', $_SERVER['REDIRECT_URL'] );

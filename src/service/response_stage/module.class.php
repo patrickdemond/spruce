@@ -22,6 +22,7 @@ class module extends \cenozo\service\module
 
     $modifier->join( 'response', 'response_stage.response_id', 'response.id' );
     $modifier->join( 'stage', 'response_stage.stage_id', 'stage.id' );
+    $modifier->left_join( 'page', 'response_stage.page_id', 'page.id' );
     $modifier->left_join(
       'deviation_type',
       'response_stage.skip_deviation_type_id',

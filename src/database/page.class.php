@@ -72,7 +72,14 @@ class page extends base_qnaire_part
     if( is_null( $db_previous_page ) )
     {
       $db_previous_module = $this->get_module()->get_previous();
-      if( !is_null( $db_previous_module ) ) $db_previous_page = $db_previous_module->get_last_page();
+      if( !is_null( $db_previous_module ) )
+      {
+        // don't cross over into another stage
+        $db_previous_page = $this->get_qnaire()->stages &&
+                            $db_previous_module->get_stage()->id != $this->get_module()->get_stage()->id
+                          ? NULL
+                          : $db_previous_module->get_last_page();
+      }
     }
 
     return $db_previous_page;
@@ -89,7 +96,14 @@ class page extends base_qnaire_part
     if( is_null( $db_next_page ) )
     {
       $db_next_module = $this->get_module()->get_next();
-      if( !is_null( $db_next_module ) ) $db_next_page = $db_next_module->get_first_page();
+      if( !is_null( $db_next_module ) )
+      {
+        // dont' cross over into another stage
+        $db_next_page = $this->get_qnaire()->stages &&
+                        $db_next_module->get_stage()->id != $this->get_module()->get_stage()->id
+                      ? NULL 
+                      : $db_next_module->get_first_page();
+      }
     }
 
     return $db_next_page;

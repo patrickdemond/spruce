@@ -43,6 +43,11 @@
 </div>
 <div class="btn-group" ng-class="{ 'dropup': 'bottom' == placement }">
   <button type="button"
+          ng-if="model.renderModel.data.stages"
+          ng-click="model.renderModel.runStageOperation( null, 'pause' )"
+          class="btn btn-default larger"
+          style="width: 12em;">Pause Stage</button>
+  <button type="button"
           ng-if="'page' == model.getSubjectFromState()"
           ng-click="model.renderModel.viewPage()"
           class="btn btn-default larger">

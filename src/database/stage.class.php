@@ -40,6 +40,51 @@ class stage extends \cenozo\database\has_rank
   }
 
   /**
+   * Extend parent method since stage and module do not have a regular 1 to N relationship
+   */
+  public function get_record_list( $record_type, $select = NULL, $modifier = NULL, $return_alternate = '', $distinct = false )
+  {
+    $return_value = NULL;
+
+    if( 'module' == $record_type )
+    {
+      $module_class_name = lib::get_class_name( 'database\module' );
+
+      if( !is_null( $select ) && !is_a( $select, lib::get_class_name( 'database\select' ) ) )
+        throw lib::create( 'exception\argument', 'select', $select, __METHOD__ );
+      if( !is_null( $modifier ) && !is_a( $modifier, lib::get_class_name( 'database\modifier' ) ) )
+        throw lib::create( 'exception\argument', 'modifier', $modifier, __METHOD__ );
+      if( !is_string( $return_alternate ) )
+        throw lib::create( 'exception\argument', 'return_alternate', $return_alternate, __METHOD__ );
+
+      if( is_null( $modifier ) ) $modifier = lib::create( 'database\modifier' );
+
+      $modifier->wrap_where();
+      $modifier->where( 'module.qnaire_id', '=', $this->qnaire_id );
+      $modifier->where( 'module.rank', '>=', $this->get_first_module()->rank );
+      $modifier->where( 'module.rank', '<=', $this->get_last_module()->rank );
+      $modifier->order( 'module.rank' );
+
+      if( 'count' == $return_alternate )
+      {
+        $return_value = $module_class_name::count( $modifier, $distinct );
+      }
+      else
+      {
+        $return_value = 'object' == $return_alternate
+                      ? $module_class_name::select_objects( $modifier )
+                      : $module_class_name::select( $select, $modifier );
+      }
+    }
+    else
+    {
+      $return_value = parent::get_record_list( $record_type, $select, $modifier, $return_alternate, $distinct );
+    }
+
+    return $return_value;
+  }
+
+  /**
    * Returns the prev stage
    * @return database\stage
    */

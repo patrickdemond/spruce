@@ -10,6 +10,12 @@
                 ng-options="lang.code as lang.name for lang in model.renderModel.languageList">
         </select>
       </div>
+      <div class="pull-right" style="margin-top: 3px; margin-right: 1em;">
+        <i class="glyphicon glyphicon-refresh glyph-hover btn-primary btn-header"
+           ng-click="model.renderModel.onReady()"
+           uib-tooltip="Click to refresh data"
+           tooltip-placement="left"></i>
+      </div>
       <button class="btn btn-info pull-right horizontal-spacer"
               ng-init="showHotKeyHint=false"
               ng-show="model.renderModel.showHidden && model.renderModel.data.page_id"
@@ -22,7 +28,39 @@
   </div>
   <div ng-if="!isComplete" class="loading spacer" style="height: 8em;" uib-tooltip="Loading&hellip;"></div>
   <div ng-if="isComplete">
-    <div ng-if="model.renderModel.data.closed || !model.renderModel.data.page_id">
+    <div ng-if="!model.renderModel.data.closed && model.renderModel.data.stage_selection">
+      <table class="table table-striped rounded">
+        <thead class="bg-info">
+          <tr>
+            <td>Rank</td>
+            <td>Stage</td>
+            <td>Status</td>
+            <td>Deviation</td>
+            <td></td>
+          </tr>
+        </thead>
+        <tbody>
+          <tr ng-repeat="responseStage in model.renderModel.responseStageList">
+            <td>{{ responseStage.rank }}</td>
+            <td>{{ responseStage.name }}</td>
+            <td>{{ responseStage.status }}</td>
+            <td>{{ responseStage.skip_name ? responseStage.skip_name :
+                   responseStage.order_name ? responseStage.order_name : '(none)' }}</td>
+            <td>
+              <div class="btn-group full-width">
+                <button type="button"
+                        ng-repeat="operation in responseStage.operations"
+                        ng-style="{ 'width': 3 == responseStage.operations.length ? '33%' : '50%' }"
+                        class="btn btn-default"
+                        ng-bind-html="operation.title"
+                        ng-click="model.renderModel.runStageOperation( responseStage.id, operation.name )"></button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div ng-if="model.renderModel.data.closed || ( !model.renderModel.data.page_id && !model.renderModel.data.stage_selection )">
       <div class="spacer" style="min-height: 8em;">
         <div class="container-fluid vertical-spacer">
           <span class="larger" ng-bind-html="

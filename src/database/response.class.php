@@ -189,18 +189,30 @@ class response extends \cenozo\database\has_rank
   }
 
   /**
-   * Moves the response to the next valid page
+   * Convenience method to return this response's active response-stage
+   * @return database\response_stage $db_response_stage
+   */
+  public function get_current_response_stage()
+  {
+    $modifier = lib::create( 'database\modifier' );
+    $modifier->where( 'status', '=', 'active' );
+    $response_stage_list = $this->get_response_stage_object_list( $modifier );
+    return 0 < count( $response_stage_list ) ? current( $response_stage_list ) : NULL;
+  }
+
+  /**
+   * Moves the response forward, either to the next page, conclusion or stage list
    * 
    * @access public
    */
-  public function move_to_next_page()
+  public function move_forward()
   {
     $answer_class_name = lib::get_class_name( 'database\answer' );
     $page_time_class_name = lib::get_class_name( 'database\page_time' );
 
     if( $this->submitted )
     {
-      log::warning( 'Tried to move submitted response to the next page.' );
+      log::warning( 'Tried to move submitted response forward.' );
       return;
     }
 
@@ -208,10 +220,18 @@ class response extends \cenozo\database\has_rank
     $db_next_page = NULL;
 
     if( is_null( $db_page ) )
-    { // the qnaire has never been started
-      $db_next_page = $this->get_qnaire()->get_first_module()->get_first_page();
-      $this->page_id = $db_next_page->id;
-      $this->start_datetime = util::get_datetime_object();
+    { // we're not currently viewing a page
+      if( $this->get_qnaire()->stages )
+      {
+        $this->stage_selection = true;
+      }
+      else
+      {
+        $db_next_page = $this->get_qnaire()->get_first_module()->get_first_page();
+        $this->page_id = $db_next_page->id;
+        $this->start_datetime = util::get_datetime_object();
+      }
+
       $this->save();
     }
     else // we've already started the qnaire
@@ -268,14 +288,34 @@ class response extends \cenozo\database\has_rank
         );
         $db_page_time->save();
 
+        $stages = $this->get_qnaire()->stages;
+        $db_current_response_stage = $stages ? $this->get_current_response_stage() : NULL;
         $db_next_page = $db_page->get_next_for_response( $this );
         if( is_null( $db_next_page ) )
         {
-          $this->page_id = NULL;
-          $this->submitted = true;
+          if( $stages )
+          {
+            // we've moved past the last page in the stage, so mark it as complete
+            $db_current_response_stage->status = 'completed';
+            $db_current_response_stage->save();
+
+            // and go back to page selection
+            $this->page_id = NULL;
+            $this->stage_selection = true;
+          }
+          else
+          {
+            $this->page_id = NULL;
+            $this->submitted = true;
+          }
         }
         else
         {
+          if( $stages )
+          {
+            $db_current_response_stage->page_id = $db_next_page->id;
+            $db_current_response_stage->save();
+          }
           $this->page_id = $db_next_page->id;
         }
         $this->save();
@@ -305,17 +345,17 @@ class response extends \cenozo\database\has_rank
   }
 
   /**
-   * Moves the response to the previous valid page
+   * Moves the response backward, either to the previous page or stage list
    * 
    * @access public
    */
-  public function move_to_previous_page()
+  public function move_backward()
   {
     $page_time_class_name = lib::get_class_name( 'database\page_time' );
 
     if( $this->submitted )
     {
-      log::warning( 'Tried to move submitted response to the previous page.' );
+      log::warning( 'Tried to move submitted response backward.' );
       return;
     }
 
@@ -338,6 +378,13 @@ class response extends \cenozo\database\has_rank
     $db_previous_page = $db_page->get_previous_for_response( $this );
     if( !is_null( $db_previous_page ) )
     {
+      if( $this->get_qnaire()->stages )
+      {
+        $db_current_response_stage = $this->get_current_response_stage();
+        $db_current_response_stage->page_id = $db_previous_page->id;
+        $db_current_response_stage->save();
+      }
+
       $this->page_id = $db_previous_page->id;
       $this->save();
 
