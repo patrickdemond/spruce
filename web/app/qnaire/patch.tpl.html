@@ -22,7 +22,10 @@
       <div class="panel-body">
         <div ng-if="model.viewModel.differenceIsEmpty">No differences found.</div>
         <div ng-repeat="(property, child) in model.viewModel.difference" class="row">
-          <div ng-if="!['stage_list','module_list','attribute_list','deviation_type_list','reminder_list','qnaire_consent_type_list'].includes( property )">
+          <div ng-if="![
+              'stage_list','module_list','attribute_list','deviation_type_list',
+              'reminder_list','qnaire_consent_type_list'
+            ].includes( property )">
             <label class="col-sm-2 control-label">{{
               property | cnStrReplace:'qnaire':'' | cnStrReplace:'_':' ' | cnStrReplace:' list':'s' | cnUCWords
             }}:</label>

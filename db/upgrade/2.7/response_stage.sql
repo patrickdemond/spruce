@@ -8,14 +8,12 @@ CREATE TABLE IF NOT EXISTS response_stage (
   stage_id INT UNSIGNED NOT NULL,
   page_id INT(10) UNSIGNED NULL DEFAULT NULL,
   status ENUM('not ready', 'ready', 'active', 'paused', 'skipped', 'completed') NOT NULL DEFAULT 'not ready',
-  skip_deviation_type_id INT UNSIGNED NULL DEFAULT NULL,
-  order_deviation_type_id INT UNSIGNED NULL DEFAULT NULL,
+  deviation_type_id INT UNSIGNED NULL DEFAULT NULL,
   comments TEXT NULL,
   PRIMARY KEY (id),
   INDEX fk_response_id (response_id ASC),
   INDEX fk_stage_id (stage_id ASC),
-  INDEX fk_skip_deviation_type_id (skip_deviation_type_id ASC),
-  INDEX fk_order_deviation_type_id (order_deviation_type_id ASC),
+  INDEX fk_deviation_type_id (deviation_type_id ASC),
   INDEX fk_page_id (page_id ASC),
   UNIQUE INDEX uq_response_id_stage_id (response_id ASC, stage_id ASC),
   CONSTRAINT fk_response_stage_response_id
@@ -28,13 +26,8 @@ CREATE TABLE IF NOT EXISTS response_stage (
     REFERENCES stage (id)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,
-  CONSTRAINT fk_response_stage_skip_deviation_type_id
-    FOREIGN KEY (skip_deviation_type_id)
-    REFERENCES deviation_type (id)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
-  CONSTRAINT fk_response_stage_order_deviation_type_id
-    FOREIGN KEY (order_deviation_type_id)
+  CONSTRAINT fk_response_stage_deviation_type_id
+    FOREIGN KEY (deviation_type_id)
     REFERENCES deviation_type (id)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION,

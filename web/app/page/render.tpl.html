@@ -41,16 +41,16 @@
         </thead>
         <tbody>
           <tr ng-repeat="responseStage in model.renderModel.responseStageList">
-            <td>{{ responseStage.rank }}</td>
-            <td>{{ responseStage.name }}</td>
-            <td>{{ responseStage.status }}</td>
-            <td>{{ responseStage.skip_name ? responseStage.skip_name :
-                   responseStage.order_name ? responseStage.order_name : '(none)' }}</td>
-            <td>
+            <td style="line-height: 2.5em">{{ responseStage.rank }}</td>
+            <td style="line-height: 2.5em">{{ responseStage.name }}</td>
+            <td style="line-height: 2.5em">{{ responseStage.status }}</td>
+            <td style="line-height: 2.5em">{{ responseStage.deviation ? responseStage.deviation : '(none)' }}</td>
+            <td style="line-height: 2.5em">
               <div class="btn-group full-width">
                 <button type="button"
                         ng-repeat="operation in responseStage.operations"
-                        ng-style="{ 'width': 3 == responseStage.operations.length ? '33%' : '50%' }"
+                        ng-style="{ 'width': 1 == responseStage.operations.length ? '100%' :
+                                             2 == responseStage.operations.length ? '50%' : '33%' }"
                         class="btn btn-default"
                         ng-bind-html="operation.title"
                         ng-click="model.renderModel.runStageOperation( responseStage.id, operation.name )"></button>

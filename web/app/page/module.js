@@ -12,14 +12,20 @@ define( [ 'question' ].reduce( function( list, name ) {
     column: 'module.id'
   };
 
-  module.addInput( '', 'average_time', { title: 'Average Time (seconds)', type: 'string', isConstant: true, isExcluded: 'add' } );
+  module.addInput( '', 'average_time', {
+    title: 'Average Time (seconds)',
+    type: 'string',
+    isConstant: true,
+    isExcluded: 'add'
+  } );
   module.addInput( '', 'max_time', {
     title: 'Max Time (seconds)',
     type: 'string',
     format: 'integer',
     isConstant: true,
-    help: 'Maximum page time is automatically calculated to exclude major outliers by setting its value to that of the outer fence ' +
-      '(3 times the interquartile width above the upper quartile).'
+    help:
+      'Maximum page time is automatically calculated to exclude major outliers by setting its value to that ' +
+      'of the outer fence (3 times the interquartile width above the upper quartile).'
   } );
   module.addInput( '', 'note', { title: 'Note', type: 'text' } );
   module.addInput( '', 'qnaire_id', { column: 'qnaire.id', isExcluded: true } );
@@ -158,7 +164,8 @@ define( [ 'question' ].reduce( function( list, name ) {
                   if( null != $scope.model.viewModel.record.previous_id ) action = 'prevPage';
                 } else if( 'Equal' == event.code || 'NumpadAdd' == event.code ) {
                   // proceed to the next page when the plus key is pushed (keyboard "=" key or numpad)
-                  if( angular.isUndefined( $scope.model.viewModel.record.next_id ) || null != $scope.model.viewModel.record.next_id )
+                  if( angular.isUndefined( $scope.model.viewModel.record.next_id ) ||
+                      null != $scope.model.viewModel.record.next_id )
                     action = 'nextPage';
                 } else if( 'BracketLeft' == event.code ) {
                   // focus on the previous question when the open square bracket key is pushed (keyboard "[")
@@ -200,7 +207,9 @@ define( [ 'question' ].reduce( function( list, name ) {
 
             CnSession.setBreadcrumbTrail( [ {
               title: $scope.model.renderModel.data.qnaire_name,
-              go: async function() { await $state.go( 'qnaire.view', { identifier: $scope.model.renderModel.data.qnaire_id } ); }
+              go: async function() {
+                await $state.go( 'qnaire.view', { identifier: $scope.model.renderModel.data.qnaire_id } );
+              }
             }, {
               title: $scope.model.renderModel.data.uid ? $scope.model.renderModel.data.uid : 'Preview'
             } ] );
@@ -214,10 +223,10 @@ define( [ 'question' ].reduce( function( list, name ) {
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnPageRenderFactory', [
-    'CnHttpFactory', 'CnTranslationHelper', 'CnModalConfirmFactory', 'CnModalMessageFactory', 'CnModalDatetimeFactory',
-    '$state', '$timeout', '$interval',
-    function( CnHttpFactory, CnTranslationHelper, CnModalConfirmFactory, CnModalMessageFactory, CnModalDatetimeFactory,
-              $state, $timeout, $interval ) {
+    'CnModalConfirmFactory', 'CnModalMessageFactory', 'CnModalDatetimeFactory', 'CnModalInputFactory',
+    'CnHttpFactory', 'CnTranslationHelper', '$state', '$timeout', '$interval',
+    function( CnModalConfirmFactory, CnModalMessageFactory, CnModalDatetimeFactory, CnModalInputFactory,
+              CnHttpFactory, CnTranslationHelper, $state, $timeout, $interval ) {
       var object = function( parentModel ) {
         var self = this;
 
@@ -225,7 +234,9 @@ define( [ 'question' ].reduce( function( list, name ) {
         function formatDate( date ) { var m = getDate( date ); return m ? m.format( 'dddd, MMMM Do YYYY' ) : null; }
         function isDkna( value ) { return angular.isObject( value ) && true === value.dkna; }
         function isRefuse( value ) { return angular.isObject( value ) && true === value.refuse; }
-        function isDknaOrRefuse( value ) { return angular.isObject( value ) && ( true === value.dkna || true === value.refuse ); }
+        function isDknaOrRefuse( value ) {
+          return angular.isObject( value ) && ( true === value.dkna || true === value.refuse );
+        }
 
         function getDate( date ) {
           if( 'now' == date ) date = moment().format( 'YYYY-MM-DD' );
@@ -280,6 +291,7 @@ define( [ 'question' ].reduce( function( list, name ) {
             title: null,
           },
           responseStageList: null,
+          deviationTypeList: null,
           languageList: null,
           showHidden: false,
           focusQuestionId: null,
@@ -324,15 +336,22 @@ define( [ 'question' ].reduce( function( list, name ) {
                 '<li>1) Navigation "-" and "+" hot-keys (keyboard or numpad) moves page backward and forward, respectively\n' +
                 '<li>2) Navigation "[" and "]" hot-keys moves focused question backward and forward, respectively\n' +
                 '<li>3) When page is first loaded, no question is focused\n' +
-                '<li>4) Focused question is highlighted in pale yellow and numeric options identified by a number in square brackets (e.g.: "[1]")\n' +
-                '<li>5) Numeric hot-keys "1" through "9" and "0" (numpad not included) will do the following based on the question type which is currently focused:\n' +
+                '<li>4) Focused question is highlighted in pale yellow and numeric options identified by a number in ' +
+                       'square brackets (e.g.: "[1]")\n' +
+                '<li>5) Numeric hot-keys "1" through "9" and "0" (numpad not included) will do the following based on ' +
+                       'the question type which is currently focused:\n' +
                 '<ul>' +
-                '<li>a) List: the option will be toggled (off to on, or on to off).  Note that when extra information is required by the selected option the input box will automatically be given focus.\n' +
+                '<li>a) List: the option will be toggled (off to on, or on to off). ' +
+                       'Note that when extra information is required by the selected option the input box will ' +
+                       'automatically be given focus.\n' +
                 '<li>b) Date: the date picker will show\n' +
-                '<li>c) Number/String/Text: the input box is focused.  Note that this only happens when [1] is selected, input boxes are not focused when the question is first selected using the "[" and "]" navigation hot-keys.\n' +
+                '<li>c) Number/String/Text: the input box is focused. ' +
+                       'Note that this only happens when [1] is selected, input boxes are not focused when the ' +
+                       'question is first selected using the "[" and "]" navigation hot-keys.\n' +
                 '</ul>' +
                 '<li>6) All hot-keys are deactivated when no question is focused, or when focus is in an input box\n' +
-                '<li>7) Hot-keys are disabled when questionnaire is launched via a web-link (directly by the participant and not through Sabretooth, Beartooth or Cedar)\n' +
+                '<li>7) Hot-keys are disabled when questionnaire is launched via a web-link ' +
+                       '(directly by the participant and not through Sabretooth, Beartooth or Cedar)\n' +
                 '</ul>'
             } ).show();
           },
@@ -393,6 +412,11 @@ define( [ 'question' ].reduce( function( list, name ) {
                             : false;
 
             if( !this.previewMode ) {
+              angular.extend( this, {
+                responseStageList: null,
+                deviationTypeList: null,
+              } );
+
               // check for the respondent using the token
               var params = '?assert_response=1';
               if( this.showHidden ) params += '&&show_hidden=1';
@@ -420,37 +444,45 @@ define( [ 'question' ].reduce( function( list, name ) {
               this.data = response.data;
 
               // get the stage list if there is one:
-              //   not ready: skip
+              //   not ready: nothing
               //   ready: launch, skip
               //   active: nothing (it will never show in the list)
               //   paused: resume, skip, reset
-              //   skipped: launch
+              //   skipped: reset
               //   completed: re-open, reset
               if( this.data.stages ) {
-                var response = await CnHttpFactory.instance( {
-                  path: ['response', this.data.response_id, 'response_stage'].join( '/' ),
-                  data: {
-                    select: { column: [
-                      'id', 'status',
-                      { table: 'stage', column: 'rank' },
-                      { table: 'stage', column: 'name' },
-                      { table: 'skip_deviation_type', column: 'name', alias: 'skip_name' },
-                      { table: 'order_deviation_type', column: 'name', alias: 'order_name' }
-                    ] },
-                    modifier: { order: 'stage.rank' }
-                  }
-                } ).query();
+                var [responseStageResponse, deviationTypeResponse] = await Promise.all( [
+                  CnHttpFactory.instance( {
+                    path: ['response', this.data.response_id, 'response_stage'].join( '/' ),
+                    data: {
+                      select: { column: [
+                        'id', 'status',
+                        { table: 'stage', column: 'rank' },
+                        { table: 'stage', column: 'name' },
+                        { table: 'deviation_type', column: 'name', alias: 'deviation' }
+                      ] },
+                      modifier: { order: 'stage.rank' }
+                    }
+                  } ).query(),
 
-                this.responseStageList = response.data;
+                  CnHttpFactory.instance( {
+                    path: ['qnaire', this.data.qnaire_id, 'deviation_type'].join( '/' )
+                  } ).query()
+                ] );
+
+                this.responseStageList = responseStageResponse.data;
+                if( 0 == this.responseStageList.length )
+                  throw new Error( 'Questionnaire has not stages, unable to proceed.' );
 
                 // set each response stage's possible operations
                 this.responseStageList.forEach( function( responseStage ) {
                   responseStage.operations = [];
-                  
-                  if( 'not ready' != responseStage.status ) {
+
+                  if( !['not ready', 'skipped' ].includes( responseStage.status ) ) {
                     responseStage.operations.push( {
                       name: 'launch',
-                      title: 'completed' == responseStage.status ? 'Re-Open' : 'paused' == responseStage.status ? 'Resume' : 'Launch'
+                      title: 'completed' == responseStage.status ? 'Re-Open' :
+                             'paused' == responseStage.status ? 'Resume' : 'Launch'
                     } );
                   }
 
@@ -458,10 +490,22 @@ define( [ 'question' ].reduce( function( list, name ) {
                     responseStage.operations.push( { name: 'skip', title: 'Skip' } );
                   }
 
-                  if( 'ready' != responseStage.status ) {
+                  if( !['not ready', 'ready'].includes( responseStage.status ) ) {
                     responseStage.operations.push( { name: 'reset', title: 'Reset' } );
                   }
                 } );
+
+                this.deviationTypeList = deviationTypeResponse.data;
+                if( 0 == this.deviationTypeList.length ) {
+                  throw new Error( 'Questionnaire has no deviation types, unable to proceed.' );
+                } else if( 0 == this.deviationTypeList.filter( deviationType => 'skip' == deviationType.type ) ) {
+                  throw new Error( 'Questionnaire has no skip deviation types, unable to proceed.' );
+                } else if( 0 == this.deviationTypeList.filter( deviationType => 'order' == deviationType.type ) ) {
+                  throw new Error( 'Questionnaire has no order deviation types, unable to proceed.' );
+                }
+
+                // enum lists use value, so set the value to the deviation type's ID
+                this.deviationTypeList.forEach( function( deviationType ) { deviationType.value = deviationType.id; } );
               }
 
               angular.extend( this.data, {
@@ -622,7 +666,8 @@ define( [ 'question' ].reduce( function( list, name ) {
           convertValueToModel: function( question ) {
             // get the full variable name
             question.variable_name = question.name + (
-              this.parentModel.viewModel.record.variable_suffix ? ( '_' + this.parentModel.viewModel.record.variable_suffix ) : ''
+              this.parentModel.viewModel.record.variable_suffix ?
+                ( '_' + this.parentModel.viewModel.record.variable_suffix ) : ''
             );
 
             if( 'boolean' == question.type ) {
@@ -812,7 +857,8 @@ define( [ 'question' ].reduce( function( list, name ) {
                 } else if( 'date' == matchedQuestion.type ) {
                   if( angular.isString( matchedQuestion.value ) ) compiled = matchedQuestion.value;
                 } else if( 'string' == matchedQuestion.type ) {
-                  if( angular.isString( matchedQuestion.value ) ) compiled = "'" + matchedQuestion.value.replace( /'/g, "\\'" ) + "'";
+                  if( angular.isString( matchedQuestion.value ) )
+                    compiled = "'" + matchedQuestion.value.replace( /'/g, "\\'" ) + "'";
                 } else if( 'list' == matchedQuestion.type ) {
                   // find the referenced option
                   var matchedOption = null;
@@ -835,7 +881,9 @@ define( [ 'question' ].reduce( function( list, name ) {
                           // make sure at least one of the answers isn't null
                           compiled = answer.value.some( v => v != null ) ? 'true' : 'false';
                         } else if( 'extra()' == fnName ) {
-                          compiled = 'number' == matchedOption.extra ? answer.value : '"' + answer.value.replace( '"', '\"' ) + '"';
+                          compiled = 'number' == matchedOption.extra
+                                   ? answer.value :
+                                   ( '"' + answer.value.replace( '"', '\"' ) + '"' );
                         } else {
                           compiled = null != answer.value ? 'true' : 'false';
                         }
@@ -851,7 +899,7 @@ define( [ 'question' ].reduce( function( list, name ) {
             if( isLimit ) return expression;
 
             // create a function which can be used to evaluate the compiled precondition without calling eval()
-            function evaluateExpression( precondition ) { return Function('"use strict"; return ' + precondition + ';')(); }
+            function evaluateExpression( precondition ) { return Function( '"use strict"; return ' + precondition + ';' )(); }
             return evaluateExpression( expression );
           },
 
@@ -947,7 +995,8 @@ define( [ 'question' ].reduce( function( list, name ) {
                     question.backupValue = angular.copy( question.value );
                     self.convertValueToModel( question );
 
-                    // now blank out answers to questions which are no longer visible (this is done automatically on the server side)
+                    // now blank out answers to questions which are no longer visible
+                    // (this is done automatically on the server side)
                     var visibleQuestionList = self.getVisibleQuestionList();
                     self.questionList.forEach( function( q ) {
                       if( null == visibleQuestionList.findByProperty( 'id', q.id ) ) {
@@ -1000,7 +1049,9 @@ define( [ 'question' ].reduce( function( list, name ) {
               if( angular.isArray( question.value ) ) value = question.value;
               value = value.filter( o => !self.optionListById[angular.isObject(o) ? o.id : o].exclusive );
               if( null == searchOptionList( value, option.id ) ) value.push( data );
-              value.sort( function(a,b) { return ( angular.isObject( a ) ? a.id : a ) - ( angular.isObject( b ) ? b.id : b ); } );
+              value.sort( function(a,b) {
+                return ( angular.isObject( a ) ? a.id : a ) - ( angular.isObject( b ) ? b.id : b );
+              } );
             }
 
             return value;
@@ -1146,7 +1197,8 @@ define( [ 'question' ].reduce( function( list, name ) {
                   value[optionIndex].value = '' !== answerValue ? answerValue : null;
 
                   if( 'date' == option.extra )
-                    question.answer.optionList[option.id].formattedValueList[valueIndex] = formatDate( value[optionIndex].value );
+                    question.answer.optionList[option.id].formattedValueList[valueIndex] =
+                      formatDate( value[optionIndex].value );
                 }
               }
 
@@ -1169,21 +1221,56 @@ define( [ 'question' ].reduce( function( list, name ) {
             if( !['launch', 'pause', 'skip', 'reset'].includes( operation ) )
               throw new Error( 'Tried to run invalid stage operation "' + operation + '"' );
 
+            var deviationTypeId = null;
             var proceed = true;
-            if( ['skip', 'reset'].includes( operation ) ) {
+            if( 'reset' == operation ) {
               var response = await CnModalConfirmFactory.instance( {
                 message:
-                  'Are you sure you wish to ' + operation + ' this stage? ' +
-                  'If you proceed all data collected during the stage will be deleted.'
+                  'Are you sure you wish to reset this stage?<br><br>' +
+                  '<b class="text-danger">Note that by proceeding all data collected during the stage will be deleted.</b>',
+                html: true
               } ).show();
               proceed = response;
+            } else if( ['skip', 'launch'].includes( operation ) ) {
+              // check if we have to ask for the reason for deviation
+              var deviation = null;
+              if( 'launch' == operation ) {
+                var responseStage = this.responseStageList.findByProperty( 'id', responseStageId );
+                if( this.responseStageList.filter( rs => rs.rank < responseStage.rank )
+                                          .some( rs => ['ready', 'paused'].includes( rs.status ) ) ) {
+                  deviation = 'order';
+                }
+              } else if( 'skip' == operation ) {
+                deviation = 'skip';
+              }
+
+              if( null != deviation ) {
+                var enumList = this.deviationTypeList.filter( dt => deviation == dt.type );
+                var response = await CnModalInputFactory.instance( {
+                  title: 'Stage ' + deviation.ucWords() + ' Deviation',
+                  message: 'launch' == deviation ?
+                    'Please select the reason the stage is being launched out of order.' :
+                    'Please select the reason the stage is being skipped.<br><br>' +
+                    '<b class="text-danger">Note that by proceeding all data collected during the stage will be deleted.</b>',
+                  html: true,
+                  format: 'enum',
+                  required: true,
+                  enumList: enumList,
+                  value: enumList[0].value
+                } ).show();
+
+                if( response ) deviationTypeId = response;
+                else proceed = false;
+              }
             }
 
             if( proceed ) {
               try {
                 this.working = true;
                 await this.runQuery( async function() {
-                  await CnHttpFactory.instance( { path: 'response_stage/' + responseStageId + '?action=' + operation } ).patch();
+                  var httpObj = { path: 'response_stage/' + responseStageId + '?action=' + operation };
+                  if( null != deviationTypeId ) httpObj.data = { deviation_type_id: deviationTypeId };
+                  await CnHttpFactory.instance( httpObj ).patch();
                   await self.parentModel.reloadState( true );
                 } );
               } finally {
@@ -1219,7 +1306,9 @@ define( [ 'question' ].reduce( function( list, name ) {
                 if( mayProceed ) {
                   // proceed to the respondent's next valid page
                   await this.runQuery( async function() {
-                    await CnHttpFactory.instance( { path: 'respondent/token=' + $state.params.token + '?action=proceed' } ).patch();
+                    await CnHttpFactory.instance( {
+                      path: 'respondent/token=' + $state.params.token + '?action=proceed'
+                    } ).patch();
                     await self.parentModel.reloadState( true );
                   } );
                 }
@@ -1241,7 +1330,9 @@ define( [ 'question' ].reduce( function( list, name ) {
                 // back up to the respondent's previous page
                 this.working = true;
                 await this.runQuery( async function() {
-                  await CnHttpFactory.instance( { path: 'respondent/token=' + $state.params.token + '?action=backup' } ).patch();
+                  await CnHttpFactory.instance( {
+                    path: 'respondent/token=' + $state.params.token + '?action=backup'
+                  } ).patch();
                   await self.parentModel.reloadState( true );
                 } );
               } finally {

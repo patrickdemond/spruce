@@ -44,6 +44,11 @@ class response_stage extends \cenozo\database\record
     $db_response->save();
 
     $this->status = 'active';
+    if( !is_null( $this->deviation_type_id ) )
+    {
+      // if we're launching then we're no longer skipping
+      if( 'skip' == $this->get_deviation_type()->name ) $this->deviation_type_id = NULL;
+    }
     $this->save();
   }
 
@@ -66,8 +71,9 @@ class response_stage extends \cenozo\database\record
    */
   public function skip()
   {
-    $this->reset();
+    $this->delete_answers();
     $this->status = 'skipped';
+    $this->page_id = NULL;
     $this->save();
   }
 
@@ -75,6 +81,19 @@ class response_stage extends \cenozo\database\record
    * Reset the stage (delete all answers)
    */
   public function reset()
+  {
+    // update the status (which will only work if it is already "not ready" or "ready"
+    $this->delete_answers();
+    $this->status = 'not ready';
+    $this->deviation_type_id = NULL;
+    $this->page_id = NULL;
+    $this->update_status();
+  }
+
+  /**
+   * Delete all answers belonging to the stage
+   */
+  public function delete_answers()
   {
     // delete all questions belonging to each module belonging to the stage
     $module_sel = lib::create( 'database\select' );
@@ -95,10 +114,5 @@ class response_stage extends \cenozo\database\record
       $sql = sprintf( 'DELETE FROM answer %s', $modifier->get_sql() );
       static::db()->execute( $sql );
     }
-
-    // update the status (which will only work if it is already "not ready" or "ready"
-    $this->status = 'not ready';
-    $this->page_id = NULL;
-    $this->update_status();
   }
 }
