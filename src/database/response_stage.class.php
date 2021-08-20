@@ -43,6 +43,7 @@ class response_stage extends \cenozo\database\record
     $db_response->page_id = $this->page_id;
     $db_response->save();
 
+    $this->user_id = lib::create( 'business\session' )->get_user()->id;
     $this->status = 'active';
     if( !is_null( $this->deviation_type_id ) )
     {
@@ -72,6 +73,7 @@ class response_stage extends \cenozo\database\record
   public function skip()
   {
     $this->delete_answers();
+    $this->user_id = lib::create( 'business\session' )->get_user()->id;
     $this->status = 'skipped';
     $this->page_id = NULL;
     $this->save();
@@ -84,6 +86,7 @@ class response_stage extends \cenozo\database\record
   {
     // update the status (which will only work if it is already "not ready" or "ready"
     $this->delete_answers();
+    $this->user_id = NULL;
     $this->status = 'not ready';
     $this->deviation_type_id = NULL;
     $this->page_id = NULL;
