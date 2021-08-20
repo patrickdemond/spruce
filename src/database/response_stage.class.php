@@ -103,6 +103,7 @@ class response_stage extends \cenozo\database\record
     $module_sel->add_column( 'id' );
     foreach( $this->get_stage()->get_module_list( $module_sel ) as $module )
     {
+      // remove answers
       $question_sel = lib::create( 'database\select' );
       $question_sel->from( 'question' );
       $question_sel->add_column( 'id' );
@@ -111,10 +112,24 @@ class response_stage extends \cenozo\database\record
       $question_mod->where( 'page.module_id', '=', $module['id'] );
       $sub_select_sql = sprintf( '( %s %s )', $question_sel->get_sql(), $question_mod->get_sql() );
 
-      $modifier = lib::create( 'database\modifier' );
-      $modifier->where( 'response_id', '=', $this->response_id );
-      $modifier->where( 'question_id', 'IN', $sub_select_sql, false );
-      $sql = sprintf( 'DELETE FROM answer %s', $modifier->get_sql() );
+      $answer_mod = lib::create( 'database\modifier' );
+      $answer_mod->where( 'response_id', '=', $this->response_id );
+      $answer_mod->where( 'question_id', 'IN', $sub_select_sql, false );
+      $sql = sprintf( 'DELETE FROM answer %s', $answer_mod->get_sql() );
+      static::db()->execute( $sql );
+
+      // remove page time
+      $page_sel = lib::create( 'database\select' );
+      $page_sel->from( 'page' );
+      $page_sel->add_column( 'id' );
+      $page_mod = lib::create( 'database\modifier' );
+      $page_mod->where( 'module_id', '=', $module['id'] );
+      $sub_select_sql = sprintf( '( %s %s )', $page_sel->get_sql(), $page_mod->get_sql() );
+
+      $page_time_mod = lib::create( 'database\modifier' );
+      $page_time_mod->where( 'response_id', '=', $this->response_id );
+      $page_time_mod->where( 'page_id', 'IN', $sub_select_sql, false );
+      $sql = sprintf( 'DELETE FROM page_time %s', $page_time_mod->get_sql() );
       static::db()->execute( $sql );
     }
   }
