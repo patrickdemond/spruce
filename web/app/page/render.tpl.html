@@ -10,7 +10,7 @@
                 ng-options="lang.code as lang.name for lang in model.renderModel.languageList">
         </select>
       </div>
-      <div class="pull-right" style="margin-top: 3px; margin-right: 1em;">
+      <div class="pull-right" style="margin-top: 3px; margin-right: 26px;;">
         <i class="glyphicon glyphicon-refresh glyph-hover btn-primary btn-header"
            ng-click="model.renderModel.onReady()"
            uib-tooltip="Click to refresh data"
@@ -32,8 +32,7 @@
       <table class="table table-striped rounded">
         <thead class="bg-info">
           <tr>
-            <td>Rank</td>
-            <td>Stage</td>
+            <td>Name</td>
             <td>Status</td>
             <td>Deviation</td>
             <td></td>
@@ -41,17 +40,16 @@
         </thead>
         <tbody>
           <tr ng-repeat="responseStage in model.renderModel.responseStageList">
-            <td style="line-height: 2.5em">{{ responseStage.rank }}</td>
-            <td style="line-height: 2.5em">{{ responseStage.name }}</td>
-            <td style="line-height: 2.5em">{{ responseStage.status }}</td>
-            <td style="line-height: 2.5em">{{ responseStage.deviation ? responseStage.deviation : '(none)' }}</td>
-            <td style="line-height: 2.5em">
+            <td style="line-height: 26px;">{{ responseStage.rank }}) {{ responseStage.name }}</td>
+            <td style="line-height: 26px;">{{ responseStage.status }}</td>
+            <td style="line-height: 26px;">{{ responseStage.deviation ? responseStage.deviation : '(none)' }}</td>
+            <td style="line-height: 26px;">
               <div class="btn-group full-width">
                 <button type="button"
                         ng-repeat="operation in responseStage.operations"
                         ng-style="{ 'width': 1 == responseStage.operations.length ? '100%' :
                                              2 == responseStage.operations.length ? '50%' : '33%' }"
-                        class="btn btn-default"
+                        class="btn btn-default btn-narrow btn-thin"
                         ng-bind-html="operation.title"
                         ng-click="model.renderModel.runStageOperation( responseStage.id, operation.name )"></button>
               </div>
