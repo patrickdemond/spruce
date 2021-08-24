@@ -62,10 +62,11 @@ class page extends base_qnaire_part
   }
 
   /**
-   * Returns the previous page (even if it is in a previous module)
+   * Returns the previous page (even if it is in a previous module, but not a previous stage unless $ignore_stages is true)
+   * @param boolean $ignore_stages Whether to ignore stage boundaries
    * @return database\page
    */
-  public function get_previous()
+  public function get_previous( $ignore_stages = false )
   {
     $db_previous_page = parent::get_previous();
 
@@ -75,7 +76,8 @@ class page extends base_qnaire_part
       if( !is_null( $db_previous_module ) )
       {
         // don't cross over into another stage
-        $db_previous_page = $this->get_qnaire()->stages &&
+        $db_previous_page = !$ignore_stages &&
+                            $this->get_qnaire()->stages &&
                             $db_previous_module->get_stage()->id != $this->get_module()->get_stage()->id
                           ? NULL
                           : $db_previous_module->get_last_page();
@@ -86,10 +88,11 @@ class page extends base_qnaire_part
   }
 
   /**
-   * Returns the next page (even if it is in a next module)
+   * Returns the next page (even if it is in a next module, but not a next stage unless $ignore_stages is true)
+   * @param boolean $ignore_stages Whether to ignore stage boundaries
    * @return database\page
    */
-  public function get_next()
+  public function get_next( $ignore_stages = false )
   {
     $db_next_page = parent::get_next();
 
@@ -99,7 +102,8 @@ class page extends base_qnaire_part
       if( !is_null( $db_next_module ) )
       {
         // dont' cross over into another stage
-        $db_next_page = $this->get_qnaire()->stages &&
+        $db_next_page = !$ignore_stages &&
+                        $this->get_qnaire()->stages &&
                         $db_next_module->get_stage()->id != $this->get_module()->get_stage()->id
                       ? NULL 
                       : $db_next_module->get_first_page();

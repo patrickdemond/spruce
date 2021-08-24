@@ -91,6 +91,29 @@ class module extends \pine\service\base_qnaire_part_module
     {
       $select->add_constant( $db_page->get_module()->get_qnaire()->get_number_of_pages(), 'qnaire_pages', 'integer' );
       $select->add_constant( $db_page->get_overall_rank(), 'qnaire_page', 'integer' );
+
+      // We need to determine whether we should not restrict the next page by stage
+      // This will depend on whether the qnaire is in respondent mode or not, which can be detected by checking
+      // to see if the resource path has "token=" in it
+      $ignore_stages = !preg_match( '/^token=([^;\/]+)/', $this->service->get_resource_value( 0 ) );
+
+      // Only bother if the qnaire uses stages
+      if( $ignore_stages && $db_page->get_qnaire()->stages )
+      {
+        // Only update the value if it's NULL (possibly because it's at the end of a stage but not the end of the qnaire)
+        if( $select->has_alias( 'previous_id' ) && is_null( $select->get_alias_column( 'previous_id' ) ) )
+        {
+          $db_previous_record = $db_page->get_previous( true ); // get the previous page by ignoring stages
+          $select->add_constant( is_null( $db_previous_record ) ? NULL : $db_previous_record->id, 'previous_id', 'integer' );
+        }
+
+        // Only update the value if it's NULL (possibly because it's at the end of a stage but not the end of the qnaire)
+        if( $select->has_alias( 'next_id' ) && is_null( $select->get_alias_column( 'next_id' ) ) )
+        {
+          $db_next_record = $db_page->get_next( true ); // get the next page by ignoring stages
+          $select->add_constant( is_null( $db_next_record ) ? NULL : $db_next_record->id, 'next_id', 'integer' );
+        }
+      }
     }
   }
 }
