@@ -558,11 +558,14 @@ define( [ 'question' ].reduce( function( list, name ) {
 
               // if in debug mode then get a list of all modules before and after the current
               if( this.parentModel.viewModel.record.debug ) {
+                var column = [ 'id', 'rank', 'name' ];
+                var modifier = { order: 'module.rank' };
+                if( this.data.stages ) modifier.where = { column: 'stage.id', operator: '=', value: this.data.stage_id };
                 var response = await CnHttpFactory.instance( {
                   path: ['qnaire', this.parentModel.viewModel.record.qnaire_id , 'module'].join( '/' ),
                   data: {
                     select: { column: [ 'id', 'rank', 'name' ] },
-                    module: { order: 'module.rank' }
+                    modifier: modifier
                   }
                 } ).query();
 
