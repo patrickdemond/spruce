@@ -25,8 +25,13 @@ define( function() {
       },
       status: {
         title: 'Status',
-        column: 'response_stage.status'
+        column: 'response_stage.status',
+        highlight: 'active'
       },
+      deviation_type: {
+        title: 'Devaition',
+        column: 'deviation_type.name'
+      }
     },
     defaultOrder: {
       column: 'stage.rank',
@@ -66,6 +71,7 @@ define( function() {
         var self = this;
         CnBaseModelFactory.construct( this, module );
         this.listModel = CnResponseStageListFactory.instance( this );
+        this.getViewEnabled = function() { return false; }
       };
 
       return {

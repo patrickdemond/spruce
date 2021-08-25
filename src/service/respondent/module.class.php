@@ -51,16 +51,12 @@ class module extends \cenozo\service\module
     $db_respondent = $this->get_resource();
     if( is_null( $db_respondent ) )
     {
-      // add the total time spent
       $this->add_count_column( 'response_count', 'response', $select, $modifier );
     }
     else
     {
       if( $select->has_column( 'sends_mail' ) )
-      {
         $select->add_constant( $db_respondent->get_qnaire()->sends_mail(), 'sends_mail', 'boolean' );
-      
-      }
 
       // include the participant first/last/uid as supplemental data
       $select->add_column(

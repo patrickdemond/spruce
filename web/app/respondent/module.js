@@ -55,7 +55,7 @@ define( [ 'page' ].reduce( function( list, name ) {
       isConstant: 'view'
     },
     token: {
-      title: 'Token',
+      title: 'Token (Interview ID)',
       type: 'string',
       isExcluded: 'add'
     },
@@ -74,8 +74,53 @@ define( [ 'page' ].reduce( function( list, name ) {
     sends_mail: {
       type: 'boolean',
       isExcluded: true
+    },
+    repeated: {
+      column: 'qnaire.repeated',
+      type: 'string',
+      isExcluded: true
+    },
+    stages: {
+      column: 'qnaire.stages',
+      type: 'boolean',
+      isExcluded: true
+    },
+    current_response_id: {
+      column: 'response.id',
+      type: 'string',
+      isExcluded: true
     }
   } );
+
+  module.addInputGroup( 'Response', {
+    qnaire_version: {
+      column: 'response.qnaire_version',
+      title: 'Questionnaire Version',
+      type: 'string',
+      isConstant: true,
+      isExcluded: function( $state, model ) { return null != model.viewModel.record.repeated; }
+    },
+    language_id: {
+      column: 'response.language_id',
+      title: 'Language',
+      type: 'enum',
+      isExcluded: function( $state, model ) { return null != model.viewModel.record.repeated; }
+    },
+    module: {
+      column: 'module.name',
+      title: 'Module',
+      type: 'string',
+      isConstant: true,
+      isExcluded: function( $state, model ) { return null != model.viewModel.record.repeated; }
+    },
+    page: {
+      column: 'page.name',
+      title: 'Page',
+      type: 'string',
+      isConstant: true,
+      isExcluded: function( $state, model ) { return null != model.viewModel.record.repeated; }
+    }
+  }, true );
 
   module.addExtraOperation( 'list', {
     title: 'Get Respondents',
@@ -101,6 +146,14 @@ define( [ 'page' ].reduce( function( list, name ) {
       await $state.go( 'qnaire.mass_respondent', { identifier: $state.params.identifier } );
     },
     isIncluded: function( $state, model ) { return !model.isDetached(); }
+  } );
+
+  module.addExtraOperation( 'view', {
+    title: 'Display',
+    operation: async function( $state, model ) {
+      await $state.go( 'response.display', { identifier: model.viewModel.record.current_response_id } );
+    },
+    isIncluded: function( $state, model ) { return null == model.viewModel.record.repeated; }
   } );
 
   module.addExtraOperation( 'view', {
@@ -213,13 +266,37 @@ define( [ 'page' ].reduce( function( list, name ) {
     'CnBaseViewFactory', 'CnHttpFactory',
     function( CnBaseViewFactory, CnHttpFactory ) {
       var object = function( parentModel, root ) {
-        CnBaseViewFactory.construct( this, parentModel, root, 'response' );
+        CnBaseViewFactory.construct( this, parentModel, root );
 
         angular.extend( this, {
-          // only show the respondent list to respondents
+          onView: async function( force ) {
+            this.defaultTab = null;
+            await this.$$onView( force );
+            this.defaultTab = this.record.repeated ? 'response'
+                            : this.record.stages ? 'response_stage'
+                            : this.record.sends_mail ? 'respondent_mail'
+                            : 'response_attribute';
+            if( !this.tab ) this.tab = this.defaultTab;
+          },
+
           getChildList: function() {
             var self = this;
-            return this.$$getChildList().filter( child => 'response' == child.subject.snake || self.record.sends_mail );
+            var list = this.$$getChildList().filter(
+              child => (
+                // show the response list if the qnaire is answered more than once
+                'response' == child.subject.snake && null != self.record.repeated
+              ) || (
+                // show mail list if the qnaire sends mail
+                'respondent_mail' == child.subject.snake && self.record.sends_mail
+              ) || (
+                // show stage list if the qnaire has stages and the qnaire is only answered once
+                'response_stage' == child.subject.snake && self.record.stages && null == self.record.repeated
+              ) || (
+                // show attribute list if the qnaire is only answered once
+                'response_attribute' == child.subject.snake && null == self.record.repeated
+              )
+            );
+            return list;
           },
 
           resendMail: function() {
@@ -248,6 +325,28 @@ define( [ 'page' ].reduce( function( list, name ) {
         angular.extend( this, {
           isDetached: function() { return CnSession.setting.detached; },
           workInProgress: false,
+          getMetadata: async function() {
+            var self = this;
+            await this.$$getMetadata();
+
+            var response = await CnHttpFactory.instance( {
+              path: 'language',
+              data: {
+                select: { column: [ 'id', 'name' ] },
+                modifier: {
+                  where: { column: 'active', operator: '=', value: true },
+                  order: 'name',
+                  limit: 1000
+                }
+              }
+            } ).query();
+            this.metadata.columnList.language_id = { enumList: [] };
+            response.data.forEach( function( item ) {
+              self.metadata.columnList.language_id.enumList.push( {
+                value: item.id, name: item.name
+              } );
+            } );
+          },
           getRespondents: async function() {
             var modal = CnModalMessageFactory.instance( {
               title: 'Communicating with Remote Server',
