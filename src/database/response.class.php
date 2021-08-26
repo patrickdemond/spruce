@@ -397,8 +397,8 @@ class response extends \cenozo\database\has_rank
 
       if( is_null( $db_previous_page_time ) ) {
         $db_previous_page_time = lib::create( 'database\page_time' );
-        $db_previous_page_tinme->response_id = $this->id;
-        $db_previous_page_tinme->page_id = $db_previous_page->id;
+        $db_previous_page_time->response_id = $this->id;
+        $db_previous_page_time->page_id = $db_previous_page->id;
       }
 
       $microtime = microtime();
