@@ -31,6 +31,19 @@ define( function() {
       deviation_type: {
         title: 'Devaition',
         column: 'deviation_type.name'
+      },
+      start_datetime: {
+        title: 'Start Date & Time',
+        type: 'datetimesecond'
+      },
+      end_datetime: {
+        title: 'End Date & Time',
+        type: 'datetimesecond'
+      },
+      comments: {
+        title: 'Comments',
+        type: 'text',
+        limit: null
       }
     },
     defaultOrder: {

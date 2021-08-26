@@ -223,9 +223,9 @@ define( [ 'question' ].reduce( function( list, name ) {
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnPageRenderFactory', [
-    'CnModalConfirmFactory', 'CnModalMessageFactory', 'CnModalDatetimeFactory', 'CnModalInputFactory',
+    'CnModalConfirmFactory', 'CnModalMessageFactory', 'CnModalDatetimeFactory', 'CnModalInputFactory', 'CnModalTextFactory',
     'CnHttpFactory', 'CnTranslationHelper', '$state', '$timeout', '$interval',
-    function( CnModalConfirmFactory, CnModalMessageFactory, CnModalDatetimeFactory, CnModalInputFactory,
+    function( CnModalConfirmFactory, CnModalMessageFactory, CnModalDatetimeFactory, CnModalInputFactory, CnModalTextFactory,
               CnHttpFactory, CnTranslationHelper, $state, $timeout, $interval ) {
       var object = function( parentModel ) {
         var self = this;
@@ -456,7 +456,7 @@ define( [ 'question' ].reduce( function( list, name ) {
                     path: ['response', this.data.response_id, 'response_stage'].join( '/' ),
                     data: {
                       select: { column: [
-                        'id', 'status',
+                        'id', 'status', 'start_datetime', 'end_datetime', 'comments',
                         { table: 'stage', column: 'rank' },
                         { table: 'stage', column: 'name' },
                         { table: 'deviation_type', column: 'name', alias: 'deviation' }
@@ -526,8 +526,13 @@ define( [ 'question' ].reduce( function( list, name ) {
                 uid: this.parentModel.viewModel.record.uid
               } );
 
+              console.log( this.parentModel.viewModel.record );
               this.progress = Math.round(
-                100 * this.parentModel.viewModel.record.qnaire_page / this.parentModel.viewModel.record.qnaire_pages
+                100 * (
+                  angular.isDefined( this.parentModel.viewModel.record.stage_pages )
+                    ? this.parentModel.viewModel.record.stage_page / this.parentModel.viewModel.record.stage_pages
+                    : this.parentModel.viewModel.record.qnaire_page / this.parentModel.viewModel.record.qnaire_pages
+                )
               );
 
               this.reset();
@@ -1215,6 +1220,33 @@ define( [ 'question' ].reduce( function( list, name ) {
               { identifier: this.parentModel.viewModel.record.getIdentifier() },
               { reload: true }
             );
+          },
+
+          showStageComments: async function( responseStageId ) {
+            // if no ID is provided then assume the currently active one
+            if( !responseStageId ) responseStageId = this.data.response_stage_id;
+            var responseStage = this.responseStageList.findByProperty( 'id', responseStageId );
+            var response = await CnModalTextFactory.instance( {
+              title: responseStage.name + ' Comments',
+              message: 'Please provide any relevant comments about this stage:',
+              text: responseStage.comments,
+              size: 'lg'
+            } ).show();
+
+            if( false !== response ) {
+              try {
+                this.working = true;
+                await this.runQuery( async function() {
+                  await CnHttpFactory.instance( {
+                    path: 'response_stage/' + responseStageId,
+                    data: { comments: response }
+                  } ).patch();
+                  responseStage.comments = response;
+                } );
+              } finally {
+                this.working = false;
+              }
+            }
           },
 
           runStageOperation: async function( responseStageId, operation ) {

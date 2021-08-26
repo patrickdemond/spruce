@@ -34,7 +34,10 @@
           <tr>
             <td>Name</td>
             <td>Status</td>
+            <td>Start</td>
+            <td>End</td>
             <td>Deviation</td>
+            <td></td>
             <td></td>
           </tr>
         </thead>
@@ -42,7 +45,16 @@
           <tr ng-repeat="responseStage in model.renderModel.responseStageList">
             <td style="line-height: 26px;">{{ responseStage.rank }}) {{ responseStage.name }}</td>
             <td style="line-height: 26px;">{{ responseStage.status }}</td>
+            <td style="line-height: 26px;">{{ responseStage.start_datetime | cnDatetime: 'timesecond' }}</td>
+            <td style="line-height: 26px;">{{ responseStage.end_datetime | cnDatetime: 'timesecond' }}</td>
             <td style="line-height: 26px;">{{ responseStage.deviation ? responseStage.deviation : '(none)' }}</td>
+            <td style="line-height: 26px;">
+              <button type="button"
+                      class="btn btn-default btn-narrow btn-thin full-width"
+                      ng-click="model.renderModel.showStageComments( responseStage.id )"
+                      ng-bind-html="'Comments' + ( responseStage.comments ? ' <i class=\'glyphicon glyphicon-ok\'></i>' : '' )">
+              </button>
+            </td>
             <td style="line-height: 26px;">
               <div class="btn-group full-width">
                 <button type="button"

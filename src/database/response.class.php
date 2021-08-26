@@ -289,20 +289,14 @@ class response extends \cenozo\database\has_rank
         $db_page_time->save();
 
         $stages = $this->get_qnaire()->stages;
-        $db_current_response_stage = $stages ? $this->get_current_response_stage() : NULL;
         $db_next_page = $db_page->get_next_for_response( $this );
         if( is_null( $db_next_page ) )
         {
           if( $stages )
           {
             // we've moved past the last page in the stage, so mark it as complete
-            $db_current_response_stage->status = 'completed';
-            $db_current_response_stage->page_id = NULL;
-            $db_current_response_stage->save();
-
-            // and go back to page selection
-            $this->page_id = NULL;
-            $this->stage_selection = true;
+            $db_current_response_stage = $this->get_current_response_stage();
+            $db_current_response_stage->complete();
           }
           else
           {
@@ -314,6 +308,7 @@ class response extends \cenozo\database\has_rank
         {
           if( $stages )
           {
+            $db_current_response_stage = $this->get_current_response_stage();
             $db_current_response_stage->page_id = $db_next_page->id;
             $db_current_response_stage->save();
           }

@@ -35,9 +35,15 @@ class response_stage extends \cenozo\database\record
     {
       $db_module = $this->get_stage()->get_first_module();
       $this->page_id = $db_module->get_first_page()->id;
+
+      // if we're re-launching the stage then remove the end datetime
+      if( 'completed' == $this->status ) $this->end_datetime = NULL;
+      // otherwise we're launching for the first time so set the start datetime
+      else $this->start_datetime = util::get_datetime_object();
+
       $this->save();
     }
-    
+
     $db_response = $this->get_response();
     $db_response->stage_selection = false;
     $db_response->page_id = $this->page_id;
@@ -76,6 +82,7 @@ class response_stage extends \cenozo\database\record
     $this->user_id = lib::create( 'business\session' )->get_user()->id;
     $this->status = 'skipped';
     $this->page_id = NULL;
+    $this->start_datetime = NULL;
     $this->save();
   }
 
@@ -90,13 +97,32 @@ class response_stage extends \cenozo\database\record
     $this->status = 'not ready';
     $this->deviation_type_id = NULL;
     $this->page_id = NULL;
+    $this->start_datetime = NULL;
     $this->update_status();
+  }
+
+  /**
+   * Marks the stage as complete (should only be called when all questions have been answered)
+   */
+  public function complete()
+  {
+    // go back to page selection
+    $db_response = $this->get_response();
+    $db_response->page_id = NULL;
+    $db_response->stage_selection = true;
+    $db_response->save();
+
+    // we've moved past the last page in the stage, so mark it as complete
+    $this->status = 'completed';
+    $this->page_id = NULL;
+    $this->end_datetime = util::get_datetime_object();
+    $this->save();
   }
 
   /**
    * Delete all answers belonging to the stage
    */
-  public function delete_answers()
+  private function delete_answers()
   {
     // delete all questions belonging to each module belonging to the stage
     $module_sel = lib::create( 'database\select' );

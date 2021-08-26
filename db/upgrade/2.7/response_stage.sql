@@ -24,6 +24,8 @@ CREATE PROCEDURE patch_response_stage()
         "user_id INT(10) UNSIGNED NULL DEFAULT NULL, ",
         "status ENUM('not ready', 'ready', 'active', 'paused', 'skipped', 'completed') NOT NULL DEFAULT 'not ready', ",
         "deviation_type_id INT UNSIGNED NULL DEFAULT NULL, ",
+        "start_datetime DATETIME NULL DEFAULT NULL, ",
+        "end_datetime DATETIME NULL DEFAULT NULL, ",
         "comments TEXT NULL, ",
         "PRIMARY KEY (id), ",
         "INDEX fk_response_id (response_id ASC), ",

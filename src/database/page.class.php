@@ -273,6 +273,31 @@ class page extends base_qnaire_part
   }
 
   /**
+   * Returns the rank of this page within its stage (NULL if the page's qnaire doesn't use stages)
+   * @return integer
+   */
+  public function get_stage_rank()
+  {
+    $db_module = $this->get_module();
+
+    if( !$db_module->get_qnaire()->stages )
+    {
+      log::warning( 'Tried to get a page\'s rank within its stage but the qnaire doesn\'t use stages.' );
+      return NULL;
+    }
+
+    $select = lib::create( 'database\select' );
+    $select->from( 'page' );
+    $select->add_constant( 'COUNT(*)', 'total', 'integer', false );
+    $modifier = lib::create( 'database\modifier' );
+    $modifier->join( 'module', 'page.module_id', 'module.id' );
+    $modifier->where( 'module.qnaire_id', '=', $db_module->qnaire_id );
+    $modifier->where( 'module.rank', '<', $db_module->rank );
+    $modifier->where( 'module.rank', '>=', $db_module->get_stage()->get_first_module()->rank );
+    return static::db()->get_one( sprintf( '%s %s', $select->get_sql(), $modifier->get_sql() ) ) + $this->rank;
+  }
+
+  /**
    * Returns the first question belonging to this page
    * @return database\question
    */

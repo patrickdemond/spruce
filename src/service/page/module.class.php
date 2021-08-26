@@ -89,8 +89,17 @@ class module extends \pine\service\base_qnaire_part_module
     $db_page = $this->get_resource();
     if( !is_null( $db_page ) )
     {
-      $select->add_constant( $db_page->get_module()->get_qnaire()->get_number_of_pages(), 'qnaire_pages', 'integer' );
+      $db_module = $db_page->get_module();
+      $db_qnaire = $db_module->get_qnaire();
+      $select->add_constant( $db_qnaire->get_number_of_pages(), 'qnaire_pages', 'integer' );
       $select->add_constant( $db_page->get_overall_rank(), 'qnaire_page', 'integer' );
+
+      if( $db_qnaire->stages )
+      {
+        $db_stage = $db_module->get_stage();
+        $select->add_constant( $db_stage->get_number_of_pages(), 'stage_pages', 'integer' );
+        $select->add_constant( $db_page->get_stage_rank(), 'stage_page', 'integer' );
+      }
 
       // We need to determine whether we should not restrict the next page by stage
       // This will depend on whether the qnaire is in respondent mode or not, which can be detected by checking

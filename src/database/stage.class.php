@@ -54,6 +54,23 @@ class stage extends \cenozo\database\has_rank
   }
 
   /**
+   * Returns the total number of pages in the stage
+   * @return integer
+   */
+  public function get_number_of_pages()
+  {
+    $select = lib::create( 'database\select' );
+    $select->from( 'page' );
+    $select->add_constant( 'COUNT(*)', 'total', 'integer', false );
+    $modifier = lib::create( 'database\modifier' );
+    $modifier->join( 'module', 'page.module_id', 'module.id' );
+    $modifier->where( 'module.qnaire_id', '=', $this->qnaire_id );
+    $modifier->where( 'module.rank', '>=', $this->get_first_module()->rank );
+    $modifier->where( 'module.rank', '<=', $this->get_last_module()->rank );
+    return static::db()->get_one( sprintf( '%s %s', $select->get_sql(), $modifier->get_sql() ) );
+  }
+
+  /**
    * Extend parent method since stage and module do not have a regular 1 to N relationship
    */
   public function get_record_list( $record_type, $select = NULL, $modifier = NULL, $return_alternate = '', $distinct = false )
