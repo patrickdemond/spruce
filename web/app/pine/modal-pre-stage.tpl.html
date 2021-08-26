@@ -1,0 +1,67 @@
+<form ng-submit="ok()" novalidate name="form" class="noselect">
+  <div class="modal-header bg-primary">
+    <h4 class="modal-title">{{ model.title }}</h4>
+  </div>
+  <div class="modal-body">
+    <div class="row container-fluid">
+      <div class="form-group first-form-group" ng-class="{ 'has-feedback has-error': form.token.$dirty && form.token.$invalid }">
+        <label for="token" class="control-label col-sm-3">Token (Interview ID):</label>
+        <div class="col-sm-9">
+          <div class="input-group" ng-class="{ 'has-feedback has-error': form.token.$dirty && form.token.$invalid }">
+            <input id="token"
+                   name="token"
+                   ng-model="model.token"
+                   cn-change="checkToken()"
+                   class="form-control"
+                   required></input>
+            <span ng-if="form.token.$invalid && form.token.$dirty">
+              <span class="help-block" ng-if="form.token.$error.required">Cannot be blank</span>
+              <span class="help-block" ng-if="!form.token.$error.required && form.token.$error.mismatch">
+                The token you have provided is for the wrong interview
+              </span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row container-fluid vertical-spacer" ng-if="null != model.deviationTypeList">
+      <div class="form-group"
+           ng-class="{ 'has-feedback has-error': form.deviationTypeId.$dirty && form.deviationTypeId.$invalid }">
+        <label for="deviationTypeId" class="control-label col-sm-3">Reason for Deviation:</label>
+        <div class="col-sm-9">
+          <div class="input-group"
+               ng-class="{ 'has-feedback has-error': form.deviationTypeId.$dirty && form.deviationTypeId.$invalid }">
+            <select id="deviationTypeId"
+                    name="deviationTypeId"
+                    ng-options="item.value as item.name for item in model.deviationTypeList"
+                    ng-model="model.deviationTypeId"
+                    class="form-control"
+                    required></select>
+            <span ng-if="form.deviationTypeId.$invalid && form.deviationTypeId.$dirty">
+              <span class="help-block" ng-if="form.deviationTypeId.$error.required">Cannot be blank</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row container-fluid vertical-spacer">
+      <div class="form-group">
+        <label for="comments" class="control-label col-sm-3">Comments:</label>
+        <div class="col-sm-9">
+          <div class="input-group">
+            <textarea id="comments"
+                      name="comments"
+                      ng-model="model.comments"
+                      class="form-control note"
+                      style="height: 12em;"
+                      cn-elastic></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer bg-info">
+    <button type="button" class="btn btn-default" ng-click="cancel()">Cancel</button>
+    <button type="submit" class="btn btn-primary">OK</button>
+  </div>
+</form>

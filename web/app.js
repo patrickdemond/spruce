@@ -1005,3 +1005,67 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
     return { instance: function( type ) { return new object( type ); } };
   }
 ] );
+
+/* ######################################################################################################## */
+cenozo.service( 'CnModalPreStageFactory', [
+  '$uibModal', '$window',
+  function( $uibModal, $window ) {
+    var object = function( params ) {
+      angular.extend( this, { 
+        title: '',
+        deviationTypeList: null,
+        validToken: null,
+        token: null,
+        deviationTypeId: undefined,
+        comments: null
+      } );
+      angular.extend( this, params );
+      if( null != this.deviationTypeList ) this.deviationTypeList.unshift( { value: undefined, name: '(Select one)' } ); 
+
+      angular.extend( this, {
+        show: function() {
+          var self = this;
+          return $uibModal.open( {
+            backdrop: 'static',
+            keyboard: !this.block,
+            size: 'lg',
+            modalFade: true,
+            templateUrl: cenozoApp.getFileUrl( 'pine', 'modal-pre-stage.tpl.html' ),
+            controller: [ '$scope', '$uibModalInstance', function( $scope, $uibModalInstance ) {
+              $scope.model = self;
+              $scope.checkToken = function() {
+                if( $scope.model.validToken == $scope.model.token ) {
+                  // the token is valid
+                  $scope.form.token.$invalid = false;
+                  $scope.form.token.$error.mismatch = false;
+                } else {
+                  if( $scope.model.token ) {
+                    $scope.form.token.$error.mismatch = true;
+                    $scope.form.token.$invalid = true;
+                  } else {
+                    $scope.form.token.$error.mismatch = false;
+                  }
+                }
+              },
+              $scope.ok = function() {
+                if( !$scope.form.$valid ) {
+                  // dirty all relevant inputs so we can find the problem
+                  $scope.form.token.$dirty = true;
+                  if( null != $scope.model.deviationTypeList ) $scope.form.deviationTypeId.$dirty = true;
+                } else {
+                  var response = { comments: $scope.model.comments };
+                  if( null != $scope.model.deviationTypeList ) response.deviation_type_id = $scope.model.deviationTypeId;
+                  $uibModalInstance.close( response );
+                }
+              },
+              $scope.cancel = function() { $uibModalInstance.close( null ); }
+            } ]
+          } ).result;
+        }
+      } );
+    };
+
+    return { instance: function( params ) { return new object( angular.isUndefined( params ) ? {} : params ); } };
+  }
+] );
+

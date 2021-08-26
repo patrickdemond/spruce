@@ -223,9 +223,11 @@ define( [ 'question' ].reduce( function( list, name ) {
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnPageRenderFactory', [
-    'CnModalConfirmFactory', 'CnModalMessageFactory', 'CnModalDatetimeFactory', 'CnModalInputFactory', 'CnModalTextFactory',
+    'CnModalConfirmFactory', 'CnModalMessageFactory', 'CnModalDatetimeFactory',
+    'CnModalInputFactory', 'CnModalTextFactory', 'CnModalPreStageFactory',
     'CnHttpFactory', 'CnTranslationHelper', '$state', '$timeout', '$interval',
-    function( CnModalConfirmFactory, CnModalMessageFactory, CnModalDatetimeFactory, CnModalInputFactory, CnModalTextFactory,
+    function( CnModalConfirmFactory, CnModalMessageFactory, CnModalDatetimeFactory,
+              CnModalInputFactory, CnModalTextFactory, CnModalPreStageFactory,
               CnHttpFactory, CnTranslationHelper, $state, $timeout, $interval ) {
       var object = function( parentModel ) {
         var self = this;
@@ -526,7 +528,6 @@ define( [ 'question' ].reduce( function( list, name ) {
                 uid: this.parentModel.viewModel.record.uid
               } );
 
-              console.log( this.parentModel.viewModel.record );
               this.progress = Math.round(
                 100 * (
                   angular.isDefined( this.parentModel.viewModel.record.stage_pages )
@@ -1256,7 +1257,7 @@ define( [ 'question' ].reduce( function( list, name ) {
             if( !['launch', 'pause', 'skip', 'reset'].includes( operation ) )
               throw new Error( 'Tried to run invalid stage operation "' + operation + '"' );
 
-            var deviationTypeId = null;
+            var patchData = null;
             var proceed = true;
             if( 'reset' == operation ) {
               var response = await CnModalConfirmFactory.instance( {
@@ -1268,9 +1269,10 @@ define( [ 'question' ].reduce( function( list, name ) {
               proceed = response;
             } else if( ['skip', 'launch'].includes( operation ) ) {
               // check if we have to ask for the reason for deviation
+              proceed = false;
+              var responseStage = this.responseStageList.findByProperty( 'id', responseStageId );
               var deviation = null;
               if( 'launch' == operation ) {
-                var responseStage = this.responseStageList.findByProperty( 'id', responseStageId );
                 if( this.responseStageList.filter( rs => rs.rank < responseStage.rank )
                                           .some( rs => ['ready', 'paused'].includes( rs.status ) ) ) {
                   deviation = 'order';
@@ -1279,23 +1281,17 @@ define( [ 'question' ].reduce( function( list, name ) {
                 deviation = 'skip';
               }
 
-              if( null != deviation ) {
-                var enumList = this.deviationTypeList.filter( dt => deviation == dt.type );
-                var response = await CnModalInputFactory.instance( {
-                  title: 'Stage ' + deviation.ucWords() + ' Deviation',
-                  message: 'launch' == deviation ?
-                    'Please select the reason the stage is being launched out of order.' :
-                    'Please select the reason the stage is being skipped.<br><br>' +
-                    '<b class="text-danger">Note that by proceeding all data collected during the stage will be deleted.</b>',
-                  html: true,
-                  format: 'enum',
-                  required: true,
-                  enumList: enumList,
-                  value: enumList[0].value
-                } ).show();
+              // now show the pre-stage dialog
+              var response = await CnModalPreStageFactory.instance( {
+                title: responseStage.name + ': ' + operation.ucWords(),
+                deviationTypeList: deviation ? this.deviationTypeList.filter( dt => deviation == dt.type ) : null,
+                validToken: $state.params.token,
+                comments: responseStage.comments
+              } ).show();
 
-                if( response ) deviationTypeId = response;
-                else proceed = false;
+              if( null != response ) {
+                patchData = response;
+                proceed = true;
               }
             }
 
@@ -1304,7 +1300,7 @@ define( [ 'question' ].reduce( function( list, name ) {
                 this.working = true;
                 await this.runQuery( async function() {
                   var httpObj = { path: 'response_stage/' + responseStageId + '?action=' + operation };
-                  if( null != deviationTypeId ) httpObj.data = { deviation_type_id: deviationTypeId };
+                  if( null != patchData ) httpObj.data = patchData;
                   await CnHttpFactory.instance( httpObj ).patch();
                   await self.parentModel.reloadState( true );
                 } );

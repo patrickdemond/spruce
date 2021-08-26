@@ -98,6 +98,7 @@ class response_stage extends \cenozo\database\record
     $this->deviation_type_id = NULL;
     $this->page_id = NULL;
     $this->start_datetime = NULL;
+    $this->comments = NULL;
     $this->update_status();
   }
 
