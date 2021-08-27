@@ -107,6 +107,10 @@ define( function() {
       type: 'datetime',
       isConstant: true
     },
+    comments: {
+      title: 'Comments',
+      type: 'text'
+    },
     page_id: { isExcluded: true },
     qnaire_id: { column: 'qnaire.id', isExcluded: true },
     lang: { column: 'language.code', isExcluded: true },

@@ -119,7 +119,13 @@ define( [ 'page' ].reduce( function( list, name ) {
       type: 'string',
       isConstant: true,
       isExcluded: function( $state, model ) { return null != model.viewModel.record.repeated; }
-    }
+    },
+    comments: {
+      column: 'response.comments',
+      title: 'Comments',
+      type: 'text',
+      isExcluded: function( $state, model ) { return null != model.viewModel.record.repeated; }
+    },
   }, true );
 
   module.addExtraOperation( 'list', {

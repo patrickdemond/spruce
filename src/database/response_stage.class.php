@@ -54,7 +54,11 @@ class response_stage extends \cenozo\database\record
     if( !is_null( $this->deviation_type_id ) )
     {
       // if we're launching then we're no longer skipping
-      if( 'skip' == $this->get_deviation_type()->name ) $this->deviation_type_id = NULL;
+      if( 'skip' == $this->get_deviation_type()->name )
+      {
+        $this->deviation_type_id = NULL;
+        $this->deviation_comments = NULL;
+      }
     }
     $this->save();
   }
@@ -96,6 +100,7 @@ class response_stage extends \cenozo\database\record
     $this->user_id = NULL;
     $this->status = 'not ready';
     $this->deviation_type_id = NULL;
+    $this->deviation_comments = NULL;
     $this->page_id = NULL;
     $this->start_datetime = NULL;
     $this->comments = NULL;

@@ -15,7 +15,7 @@ CREATE PROCEDURE patch_response()
       ALTER TABLE response ADD COLUMN qnaire_version VARCHAR(45) NULL DEFAULT NULL AFTER rank;
     END IF;
 
-    SELECT "Adding new qnaire_version column to response table" AS "";
+    SELECT "Adding new stage_selection column to response table" AS "";
 
     SELECT COUNT(*) INTO @test
     FROM information_schema.COLUMNS
@@ -25,6 +25,18 @@ CREATE PROCEDURE patch_response()
 
     IF @test = 0 THEN
       ALTER TABLE response ADD COLUMN stage_selection TINYINT(1) NOT NULL DEFAULT 0 AFTER page_id;
+    END IF;
+
+    SELECT "Adding new comments column to response table" AS "";
+
+    SELECT COUNT(*) INTO @test
+    FROM information_schema.COLUMNS
+    WHERE table_schema = DATABASE()
+    AND table_name = "response"
+    AND column_name = "comments";
+
+    IF @test = 0 THEN
+      ALTER TABLE response ADD COLUMN comments TEXT NULL DEFAULT NULL;
     END IF;
 
   END //

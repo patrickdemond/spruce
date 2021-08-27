@@ -40,6 +40,20 @@
             <span ng-if="form.deviationTypeId.$invalid && form.deviationTypeId.$dirty">
               <span class="help-block" ng-if="form.deviationTypeId.$error.required">Cannot be blank</span>
             </span>
+            <span ng-if="showDeviationComments()"
+               ng-class="{ 'has-feedback has-error': form.deviationComments.$dirty && form.deviationComments.$invalid }">
+              <textarea id="deviationComments"
+                        name="deviationComments"
+                        ng-model="model.deviationComments"
+                        class="form-control note"
+                        style="min-height: 6em;"
+                        placeholder="Please provide details about the deviation"
+                        required
+                        cn-elastic></textarea>
+              <span ng-if="form.deviationComments.$invalid && form.deviationComments.$dirty">
+                <span class="help-block" ng-if="form.deviationComments.$error.required">Cannot be blank</span>
+              </span>
+            </span>
           </div>
         </div>
       </div>
@@ -53,7 +67,7 @@
                       name="comments"
                       ng-model="model.comments"
                       class="form-control note"
-                      style="height: 12em;"
+                      style="min-height: 12em;"
                       cn-elastic></textarea>
           </div>
         </div>

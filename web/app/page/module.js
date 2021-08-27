@@ -276,9 +276,13 @@ define( [ 'question' ].reduce( function( list, name ) {
           progress: 0,
           previewMode: 'respondent' != parentModel.getSubjectFromState(),
           data: {
+            token: null,
             response_id: null,
             qnaire_id: null,
             qnaire_name: null,
+            start_datetime: null,
+            end_datetime: null,
+            comments: null,
             stage_id: null,
             page_id: null,
             stage_selection: null,
@@ -425,7 +429,9 @@ define( [ 'question' ].reduce( function( list, name ) {
               var response = await CnHttpFactory.instance( {
                 path: 'respondent/token=' + $state.params.token + params,
                 data: { select: { column: [
-                  'qnaire_id', 'introductions', 'conclusions', 'closes',
+                  'token', 'qnaire_id', 'start_datetime', 'end_datetime', 'introductions', 'conclusions', 'closes',
+                  { table: 'participant', column: 'first_name' },
+                  { table: 'participant', column: 'last_name' },
                   { table: 'qnaire', column: 'stages' },
                   { table: 'qnaire', column: 'closed' },
                   { table: 'qnaire', column: 'name', alias: 'qnaire_name' },
@@ -435,6 +441,7 @@ define( [ 'question' ].reduce( function( list, name ) {
                   { table: 'response', column: 'page_id' },
                   { table: 'response', column: 'stage_selection' },
                   { table: 'response', column: 'submitted' },
+                  { table: 'response', column: 'comments' },
                   { table: 'participant', column: 'uid' },
                   { table: 'language', column: 'code', alias: 'base_language' }
                 ] } },
@@ -458,7 +465,7 @@ define( [ 'question' ].reduce( function( list, name ) {
                     path: ['response', this.data.response_id, 'response_stage'].join( '/' ),
                     data: {
                       select: { column: [
-                        'id', 'status', 'start_datetime', 'end_datetime', 'comments',
+                        'id', 'status', 'start_datetime', 'end_datetime', 'deviation_type_id', 'deviation_comments', 'comments',
                         { table: 'stage', column: 'rank' },
                         { table: 'stage', column: 'name' },
                         { table: 'deviation_type', column: 'name', alias: 'deviation' }
@@ -650,7 +657,7 @@ define( [ 'question' ].reduce( function( list, name ) {
             // finally, now that we know the language set the title
             this.data.title = this.data.submitted ? 'Conclusion'
                             : null != this.data.page_id ? ''
-                            : this.data.stage_selection ? 'Stage Selection'
+                            : this.data.stage_selection ? 'Interview ' + $state.params.token
                             : 'Introduction';
           },
 
@@ -1223,6 +1230,20 @@ define( [ 'question' ].reduce( function( list, name ) {
             );
           },
 
+          setResponseComments: async function() {
+            try {
+              this.working = true;
+              await this.runQuery( async function() {
+                await CnHttpFactory.instance( {
+                  path: 'response/' + self.data.response_id,
+                  data: { comments: self.data.comments }
+                } ).patch();
+              } );
+            } finally {
+              this.working = false;
+            }
+          },
+
           showStageComments: async function( responseStageId ) {
             // if no ID is provided then assume the currently active one
             if( !responseStageId ) responseStageId = this.data.response_stage_id;
@@ -1286,6 +1307,8 @@ define( [ 'question' ].reduce( function( list, name ) {
                 title: responseStage.name + ': ' + operation.ucWords(),
                 deviationTypeList: deviation ? this.deviationTypeList.filter( dt => deviation == dt.type ) : null,
                 validToken: $state.params.token,
+                deviationTypeId: responseStage.deviation_type_id,
+                deviationComments: responseStage.deviation_comments,
                 comments: responseStage.comments
               } ).show();
 
@@ -1300,7 +1323,13 @@ define( [ 'question' ].reduce( function( list, name ) {
                 this.working = true;
                 await this.runQuery( async function() {
                   var httpObj = { path: 'response_stage/' + responseStageId + '?action=' + operation };
-                  if( null != patchData ) httpObj.data = patchData;
+                  if( null != patchData ) {
+                    httpObj.data = patchData;
+                    // update the client with any changes
+                    angular.extend( responseStage, patchData );
+                  }
+
+                  // update the server with any changes
                   await CnHttpFactory.instance( httpObj ).patch();
                   await self.parentModel.reloadState( true );
                 } );

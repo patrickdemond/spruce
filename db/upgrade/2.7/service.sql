@@ -8,6 +8,7 @@ INSERT IGNORE INTO service ( subject, method, resource, restricted ) VALUES
 ( 'deviation_type', 'GET', 1, 1 ),
 ( 'deviation_type', 'PATCH', 1, 1 ),
 ( 'deviation_type', 'POST', 0, 1 ),
+( 'response', 'PATCH', 1, 1 ),
 ( 'response_stage', 'GET', 0, 1 ),
 ( 'response_stage', 'GET', 1, 1 ),
 ( 'response_stage', 'PATCH', 1, 1 ),

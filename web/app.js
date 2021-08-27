@@ -484,7 +484,7 @@ cenozo.directive( 'cnQnaireNavigator', [
             { reload: true }
           );
         }
-        
+
         angular.extend( $scope, {
           loading: true,
           subject: $state.current.name.split( '.' )[0],
@@ -1011,16 +1011,25 @@ cenozo.service( 'CnModalPreStageFactory', [
   '$uibModal', '$window',
   function( $uibModal, $window ) {
     var object = function( params ) {
-      angular.extend( this, { 
+      angular.extend( this, {
         title: '',
         deviationTypeList: null,
         validToken: null,
         token: null,
-        deviationTypeId: undefined,
+        deviationTypeId: null,
+        deviationComments: null,
         comments: null
       } );
       angular.extend( this, params );
-      if( null != this.deviationTypeList ) this.deviationTypeList.unshift( { value: undefined, name: '(Select one)' } ); 
+
+      if( null != this.deviationTypeList ) {
+        // add the unselected option to the deviation type list
+        this.deviationTypeList.unshift( { value: null, name: '(Select one)' } );
+
+        // if the current deviation type isn't in the list then it's from a different type (order vs skip) so don't use it
+        if( this.deviationTypeId && null == this.deviationTypeList.findByProperty( 'id', this.deviationTypeId ) )
+          this.deviationTypeId = null;
+      }
 
       angular.extend( this, {
         show: function() {
@@ -1033,6 +1042,13 @@ cenozo.service( 'CnModalPreStageFactory', [
             templateUrl: cenozoApp.getFileUrl( 'pine', 'modal-pre-stage.tpl.html' ),
             controller: [ '$scope', '$uibModalInstance', function( $scope, $uibModalInstance ) {
               $scope.model = self;
+
+              $scope.showDeviationComments = function() {
+                if( !$scope.model.deviationTypeId ) return false;
+                var deviationType = $scope.model.deviationTypeList.findByProperty( 'id', $scope.model.deviationTypeId );
+                return null != deviationType && 'other' == deviationType.name.toLowerCase();
+              },
+
               $scope.checkToken = function() {
                 if( $scope.model.validToken == $scope.model.token ) {
                   // the token is valid
@@ -1047,17 +1063,23 @@ cenozo.service( 'CnModalPreStageFactory', [
                   }
                 }
               },
+
               $scope.ok = function() {
                 if( !$scope.form.$valid ) {
                   // dirty all relevant inputs so we can find the problem
                   $scope.form.token.$dirty = true;
                   if( null != $scope.model.deviationTypeList ) $scope.form.deviationTypeId.$dirty = true;
+                  if( $scope.showDeviationComments() ) $scope.form.deviationComments.$dirty = true;
                 } else {
                   var response = { comments: $scope.model.comments };
-                  if( null != $scope.model.deviationTypeList ) response.deviation_type_id = $scope.model.deviationTypeId;
+                  if( null != $scope.model.deviationTypeList ) {
+                    response.deviation_type_id = $scope.model.deviationTypeId;
+                    response.deviation_comments = $scope.showDeviationComments() ? $scope.model.deviationComments : null;
+                  }
                   $uibModalInstance.close( response );
                 }
               },
+
               $scope.cancel = function() { $uibModalInstance.close( null ); }
             } ]
           } ).result;
