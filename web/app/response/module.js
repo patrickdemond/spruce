@@ -31,6 +31,10 @@ define( function() {
         title: 'Submitted',
         type: 'boolean'
       },
+      checked_in: {
+        title: 'Checked In',
+        type: 'boolean'
+      },
       module: {
         column: 'module.name',
         title: 'Module'
@@ -82,6 +86,11 @@ define( function() {
     },
     submitted: {
       title: 'Submitted',
+      type: 'boolean',
+      isConstant: true
+    },
+    checked_in: {
+      title: 'Checked In',
       type: 'boolean',
       isConstant: true
     },

@@ -1,4 +1,4 @@
-define( [ 'question' ].reduce( function( list, name ) {
+define( [ 'participant', 'question' ].reduce( function( list, name ) {
   return list.concat( cenozoApp.module( name ).getRequiredFiles() );
 }, [] ), function() {
   'use strict';
@@ -129,7 +129,25 @@ define( [ 'question' ].reduce( function( list, name ) {
           if( angular.isUndefined( $scope.model ) ) $scope.model = CnPageModelFactory.root;
           angular.extend( $scope, {
             isComplete: false,
-            text: function( address ) { return $scope.model.renderModel.text( address ); }
+            text: function( address ) { return $scope.model.renderModel.text( address ); },
+            patch: async function( property ) {
+              var participantModel = $scope.model.renderModel.participantModel;
+              if( participantModel.getEditEnabled() ) {
+                var element = cenozo.getFormElement( property );
+                var valid = participantModel.testFormat( property, participantModel.viewModel.record[property] );
+
+                if( element ) {
+                  element.$error.format = !valid;
+                  cenozo.updateFormElement( element, true );
+                }
+
+                if( valid ) {
+                  var data = {};
+                  data[property] = participantModel.viewModel.record[property];
+                  await participantModel.viewModel.onPatch( data );
+                }
+              }
+            }
           } );
 
           // bind keydown (first unbind to prevent duplicates)
@@ -225,10 +243,10 @@ define( [ 'question' ].reduce( function( list, name ) {
   cenozo.providers.factory( 'CnPageRenderFactory', [
     'CnModalConfirmFactory', 'CnModalMessageFactory', 'CnModalDatetimeFactory',
     'CnModalInputFactory', 'CnModalTextFactory', 'CnModalPreStageFactory',
-    'CnHttpFactory', 'CnTranslationHelper', '$state', '$timeout', '$interval',
+    'CnParticipantModelFactory', 'CnHttpFactory', 'CnTranslationHelper', '$state', '$timeout', '$interval',
     function( CnModalConfirmFactory, CnModalMessageFactory, CnModalDatetimeFactory,
               CnModalInputFactory, CnModalTextFactory, CnModalPreStageFactory,
-              CnHttpFactory, CnTranslationHelper, $state, $timeout, $interval ) {
+              CnParticipantModelFactory, CnHttpFactory, CnTranslationHelper, $state, $timeout, $interval ) {
       var object = function( parentModel ) {
         var self = this;
 
@@ -270,6 +288,7 @@ define( [ 'question' ].reduce( function( list, name ) {
 
         angular.extend( this, {
           parentModel: parentModel,
+          participantModel: CnParticipantModelFactory.root,
           prevModuleList: [],
           nextModuleList: [],
           working: false,
@@ -283,6 +302,7 @@ define( [ 'question' ].reduce( function( list, name ) {
             start_datetime: null,
             end_datetime: null,
             comments: null,
+            checked_in: null,
             stage_id: null,
             page_id: null,
             stage_selection: null,
@@ -436,12 +456,13 @@ define( [ 'question' ].reduce( function( list, name ) {
                   { table: 'qnaire', column: 'closed' },
                   { table: 'qnaire', column: 'name', alias: 'qnaire_name' },
                   { table: 'response', column: 'id', alias: 'response_id' },
-                  { table: 'response_stage', column: 'id', alias: 'response_stage_id' },
-                  { table: 'response_stage', column: 'stage_id' },
+                  { table: 'response', column: 'checked_in' },
                   { table: 'response', column: 'page_id' },
                   { table: 'response', column: 'stage_selection' },
                   { table: 'response', column: 'submitted' },
                   { table: 'response', column: 'comments' },
+                  { table: 'response_stage', column: 'id', alias: 'response_stage_id' },
+                  { table: 'response_stage', column: 'stage_id' },
                   { table: 'participant', column: 'uid' },
                   { table: 'language', column: 'code', alias: 'base_language' }
                 ] } },
@@ -460,7 +481,7 @@ define( [ 'question' ].reduce( function( list, name ) {
               //   skipped: reset
               //   completed: re-open, reset
               if( this.data.stages ) {
-                var [responseStageResponse, deviationTypeResponse] = await Promise.all( [
+                var [responseStageResponse, deviationTypeResponse, participantResponse] = await Promise.all( [
                   CnHttpFactory.instance( {
                     path: ['response', this.data.response_id, 'response_stage'].join( '/' ),
                     data: {
@@ -476,7 +497,9 @@ define( [ 'question' ].reduce( function( list, name ) {
 
                   CnHttpFactory.instance( {
                     path: ['qnaire', this.data.qnaire_id, 'deviation_type'].join( '/' )
-                  } ).query()
+                  } ).query(),
+
+                  this.participantModel.viewModel.onView( true )
                 ] );
 
                 this.responseStageList = responseStageResponse.data;

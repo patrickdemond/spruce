@@ -24,16 +24,30 @@ define( [ 'page' ].reduce( function( list, name ) {
       token: {
         title: 'Token'
       },
+      language: {
+        column: 'language.name',
+        title: 'Language',
+        type: 'string',
+        isIncluded: function( $state, model ) { return false; }
+      },
       response_count: {
-        title: 'Responses'
+        title: 'Responses',
+        isIncluded: function( $state, model ) { return false; }
+      },
+      checked_in: {
+        column: 'response.checked_in',
+        title: 'Checked In',
+        type: 'boolean',
+        isConstant: true,
+        isIncluded: function( $state, model ) { return false; }
       },
       start_datetime: {
         title: 'Start Date',
-        type: 'date'
+        type: 'datetime'
       },
       end_datetime: {
         title: 'End Date',
-        type: 'date'
+        type: 'datetime'
       }
     },
     defaultOrder: {
@@ -104,6 +118,13 @@ define( [ 'page' ].reduce( function( list, name ) {
       column: 'response.language_id',
       title: 'Language',
       type: 'enum',
+      isExcluded: function( $state, model ) { return null != model.viewModel.record.repeated; }
+    },
+    checked_in: {
+      column: 'response.checked_in',
+      title: 'Checked In',
+      type: 'boolean',
+      isConstant: true,
       isExcluded: function( $state, model ) { return null != model.viewModel.record.repeated; }
     },
     module: {

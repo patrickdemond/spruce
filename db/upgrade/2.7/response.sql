@@ -27,6 +27,18 @@ CREATE PROCEDURE patch_response()
       ALTER TABLE response ADD COLUMN stage_selection TINYINT(1) NOT NULL DEFAULT 0 AFTER page_id;
     END IF;
 
+    SELECT "Adding new checked_in column to response table" AS "";
+
+    SELECT COUNT(*) INTO @test
+    FROM information_schema.COLUMNS
+    WHERE table_schema = DATABASE()
+    AND table_name = "response"
+    AND column_name = "checked_in";
+
+    IF @test = 0 THEN
+      ALTER TABLE response ADD COLUMN checked_in TINYINT(1) NOT NULL DEFAULT 0 AFTER stage_selection;
+    END IF;
+
     SELECT "Adding new comments column to response table" AS "";
 
     SELECT COUNT(*) INTO @test

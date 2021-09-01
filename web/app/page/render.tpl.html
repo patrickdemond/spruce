@@ -28,98 +28,271 @@
   </div>
   <div ng-if="!isComplete" class="loading spacer" style="height: 8em;" uib-tooltip="Loading&hellip;"></div>
   <div ng-if="isComplete">
-    <div ng-if="!model.renderModel.data.closed && model.renderModel.data.stage_selection"
-         style="padding-top: 1em; padding-bottom: 1em">
-      <div class="container-fluid">
-        <div class="form-body well allow-select">
-          <div class="row">
-            <div class="col-sm-5">
-              <div class="row">
-                <label for="name" class="control-label col-sm-4">Name:</label>
-                <div id="name" class="form-text col-sm-8">
-                  {{ model.renderModel.data.first_name }} {{ model.renderModel.data.last_name }}
-                </div>
-              </div>
-              <div class="row">
-                <label for="start_datetime" class="control-label col-sm-4">Start Date &amp; Time:</label>
-                <div id="start_datetime" class="form-text col-sm-8">
-                  {{ model.renderModel.data.start_datetime | cnDatetime: 'datetime' }}
-                </div>
-              </div>
-              <div class="row">
-                <label for="end_datetime" class="control-label col-sm-4">End Date &amp; Time:</label>
-                <div id="end_datetime" class="form-text col-sm-8">
-                  {{ model.renderModel.data.end_datetime | cnDatetime: 'datetime' }}
-                </div>
-              </div>
-              <div class="row">
-                <label for="status" class="control-label col-sm-4">Status:</label>
-                <div id="status" class="form-text col-sm-8">
-                  {{ null == model.renderModel.data.start_datetime ? 'New' :
-                     null == model.renderModel.data.end_datetime ? 'In Progress' : 'Completed' }}
-                </div>
-              </div>
+    <div ng-if="!model.renderModel.data.closed && model.renderModel.data.stage_selection">
+      <div ng-if="!model.renderModel.data.checked_in" style="padding-top: 1em; padding-bottom: 1em">
+        <div class="container-fluid">
+          <h4>Participant Details</h4>
+          <div class="form-horizontal">
+            <cn-view-input
+              model="model.renderModel.participantModel"
+              input="{
+                key: 'honorific',
+                title: 'Honorific',
+                type: 'string',
+                help: 'English examples: Mr. Mrs. Miss Ms. Dr. Prof. Br. Sr. Fr. Rev. Pr. ' +
+                      'French examples: M. Mme Dr Dre Prof. F. Sr P. Révérend Pasteur Pasteure Me'
+              }">
+            </cn-view-input>
+            <cn-view-input
+              model="model.renderModel.participantModel"
+              input="{
+                key: 'first_name',
+                title: 'First Name',
+                type: 'string'
+              }">
+            </cn-view-input>
+            <cn-view-input
+              model="model.renderModel.participantModel"
+              input="{
+                key: 'other_name',
+                title: 'Other/Nickname',
+                type: 'string'
+              }">
+            </cn-view-input>
+            <cn-view-input
+              model="model.renderModel.participantModel"
+              input="{
+                key: 'last_name',
+                title: 'Last Name',
+                type: 'string'
+              }">
+            </cn-view-input>
+            <cn-view-input
+              model="model.renderModel.participantModel"
+              input="{
+                key: 'date_of_birth',
+                title: 'Date of Birth',
+                type: 'dob',
+                isConstant: true,
+                max: 'now'
+              }">
+            </cn-view-input>
+            <cn-view-input
+              model="model.renderModel.participantModel"
+              input="{
+                key: 'sex',
+                title: 'Sex at Birth',
+                type: 'enum',
+                isConstant: true,
+                enumList: [{value:'male',name:'male'}, {value:'female',name:'female'}]
+              }">
+            </cn-view-input>
+            <cn-view-input
+              model="model.renderModel.participantModel"
+              input="{
+                key: 'current_sex',
+                title: 'Current Sex',
+                type: 'enum',
+                enumList: [{value:'male',name:'male'}, {value:'female',name:'female'}]
+              }">
+            </cn-view-input>
+            <cn-view-input
+              model="model.renderModel.participantModel"
+              input="{
+                key: 'email',
+                title: 'Email',
+                type: 'string',
+                format: 'email',
+                help: 'Must be in the format &quot;account@domain.name&quot;.'
+              }">
+            </cn-view-input>
+          </div>
+          <h4>Consent Details</h4>
+          <div class="form-horizontal">
+            <div class="form-group">
             </div>
-            <div class="col-sm-7">
-              <div class="row">
-                <div class="col-sm-12">
-                  <label for="comments" class="control-label">Comments:</label>
-                  <textarea id="comments"
-                            name="comments"
-                            class="form-control"
-                            style="min-height: 5.8em;"
-                            ng-model="model.renderModel.data.comments"
-                            cn-change="model.renderModel.setResponseComments()"
-                            cn-elastic></textarea>
+          </div>
+        </div>
+      </div>
+      <div ng-if="model.renderModel.data.checked_in" style="padding-top: 1em; padding-bottom: 1em">
+        <div class="container-fluid">
+          <div class="form-body well allow-select">
+            <div class="row">
+              <div class="col-sm-5">
+                <div class="row">
+                  <label for="name" class="control-label col-sm-4">Name:</label>
+                  <div id="name" class="form-text col-sm-8">
+                    {{ model.renderModel.data.first_name }} {{ model.renderModel.data.last_name }}
+                  </div>
+                </div>
+                <div class="row">
+                  <label for="start_datetime" class="control-label col-sm-4">Start Date &amp; Time:</label>
+                  <div id="start_datetime" class="form-text col-sm-8">
+                    {{ model.renderModel.data.start_datetime | cnDatetime: 'datetime' }}
+                  </div>
+                </div>
+                <div class="row">
+                  <label for="end_datetime" class="control-label col-sm-4">End Date &amp; Time:</label>
+                  <div id="end_datetime" class="form-text col-sm-8">
+                    {{ model.renderModel.data.end_datetime | cnDatetime: 'datetime' }}
+                  </div>
+                </div>
+                <div class="row">
+                  <label for="status" class="control-label col-sm-4">Status:</label>
+                  <div id="status" class="form-text col-sm-8">
+                    {{ null == model.renderModel.data.start_datetime ? 'New' :
+                       null == model.renderModel.data.end_datetime ? 'In Progress' : 'Completed' }}
+                  </div>
+                </div>
+              </div>
+              <div class="col-sm-7">
+          <cn-view-input
+            model="model.renderModel.participantModel"
+            input="{
+              key: 'first_name',
+              title: 'First Name',
+              type: 'string'
+            }">
+          </cn-view-input>
+          <h4>Consent Details</h4>
+        </div>
+      </div>
+      <div ng-if="model.renderModel.data.checked_in" style="padding-top: 1em; padding-bottom: 1em">
+        <div class="container-fluid">
+          <div class="form-body well allow-select">
+            <div class="row">
+              <div class="col-sm-5">
+                <div class="row">
+                  <label for="name" class="control-label col-sm-4">Name:</label>
+                  <div id="name" class="form-text col-sm-8">
+                    {{ model.renderModel.data.first_name }} {{ model.renderModel.data.last_name }}
+                  </div>
+                </div>
+                <div class="row">
+                  <label for="start_datetime" class="control-label col-sm-4">Start Date &amp; Time:</label>
+                  <div id="start_datetime" class="form-text col-sm-8">
+                    {{ model.renderModel.data.start_datetime | cnDatetime: 'datetime' }}
+                  </div>
+                </div>
+                <div class="row">
+                  <label for="end_datetime" class="control-label col-sm-4">End Date &amp; Time:</label>
+                  <div id="end_datetime" class="form-text col-sm-8">
+                    {{ model.renderModel.data.end_datetime | cnDatetime: 'datetime' }}
+                  </div>
+                </div>
+                <div class="row">
+                  <label for="status" class="control-label col-sm-4">Status:</label>
+                  <div id="status" class="form-text col-sm-8">
+                    {{ null == model.renderModel.data.start_datetime ? 'New' :
+                       null == model.renderModel.data.end_datetime ? 'In Progress' : 'Completed' }}
+                  </div>
+                </div>
+              </div>
+              <div class="col-sm-7">
+          <cn-view-input
+            model="model.renderModel.participantModel"
+            input="{
+              key: 'first_name',
+              title: 'First Name',
+              type: 'string'
+            }">
+          </cn-view-input>
+          <h4>Consent Details</h4>
+        </div>
+      </div>
+      <div ng-if="model.renderModel.data.checked_in" style="padding-top: 1em; padding-bottom: 1em">
+        <div class="container-fluid">
+          <div class="form-body well allow-select">
+            <div class="row">
+              <div class="col-sm-5">
+                <div class="row">
+                  <label for="name" class="control-label col-sm-4">Name:</label>
+                  <div id="name" class="form-text col-sm-8">
+                    {{ model.renderModel.data.first_name }} {{ model.renderModel.data.last_name }}
+                  </div>
+                </div>
+                <div class="row">
+                  <label for="start_datetime" class="control-label col-sm-4">Start Date &amp; Time:</label>
+                  <div id="start_datetime" class="form-text col-sm-8">
+                    {{ model.renderModel.data.start_datetime | cnDatetime: 'datetime' }}
+                  </div>
+                </div>
+                <div class="row">
+                  <label for="end_datetime" class="control-label col-sm-4">End Date &amp; Time:</label>
+                  <div id="end_datetime" class="form-text col-sm-8">
+                    {{ model.renderModel.data.end_datetime | cnDatetime: 'datetime' }}
+                  </div>
+                </div>
+                <div class="row">
+                  <label for="status" class="control-label col-sm-4">Status:</label>
+                  <div id="status" class="form-text col-sm-8">
+                    {{ null == model.renderModel.data.start_datetime ? 'New' :
+                       null == model.renderModel.data.end_datetime ? 'In Progress' : 'Completed' }}
+                  </div>
+                </div>
+              </div>
+              <div class="col-sm-7">
+                <div class="row">
+                  <div class="col-sm-12">
+                    <label for="comments" class="control-label">Comments:</label>
+                    <textarea id="comments"
+                              name="comments"
+                              class="form-control"
+                              style="min-height: 5.8em;"
+                              ng-model="model.renderModel.data.comments"
+                              cn-change="model.renderModel.setResponseComments()"
+                              cn-elastic></textarea>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-      <div class="container-fluid">
-        <div class="row">
-          <div class="col-sm-12">
-            <table class="table table-striped rounded">
-              <thead class="bg-info">
-                <tr>
-                  <td>Name</td>
-                  <td>Status</td>
-                  <td>Start</td>
-                  <td>End</td>
-                  <td>Deviation</td>
-                  <td></td>
-                  <td></td>
-                </tr>
-              </thead>
-              <tbody>
-                <tr ng-repeat="responseStage in model.renderModel.responseStageList">
-                  <td style="line-height: 26px;">{{ responseStage.rank }}) {{ responseStage.name }}</td>
-                  <td style="line-height: 26px;">{{ responseStage.status }}</td>
-                  <td style="line-height: 26px;">{{ responseStage.start_datetime | cnDatetime: 'timesecond' }}</td>
-                  <td style="line-height: 26px;">{{ responseStage.end_datetime | cnDatetime: 'timesecond' }}</td>
-                  <td style="line-height: 26px;">{{ responseStage.deviation ? responseStage.deviation : '(none)' }}</td>
-                  <td style="line-height: 26px;">
-                    <button type="button"
-                            class="btn btn-default btn-narrow btn-thin full-width"
-                            ng-click="model.renderModel.showStageComments( responseStage.id )"
-                            ng-bind-html="'Comments' + ( responseStage.comments ? ' <i class=\'glyphicon glyphicon-ok\'></i>' : '' )">
-                    </button>
-                  </td>
-                  <td style="line-height: 26px;">
-                    <div class="btn-group full-width">
+        <div class="container-fluid">
+          <div class="row">
+            <div class="col-sm-12">
+              <table class="table table-striped rounded">
+                <thead class="bg-info">
+                  <tr>
+                    <td>Name</td>
+                    <td>Status</td>
+                    <td>Start</td>
+                    <td>End</td>
+                    <td>Deviation</td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr ng-repeat="responseStage in model.renderModel.responseStageList">
+                    <td style="line-height: 26px;">{{ responseStage.rank }}) {{ responseStage.name }}</td>
+                    <td style="line-height: 26px;">{{ responseStage.status }}</td>
+                    <td style="line-height: 26px;">{{ responseStage.start_datetime | cnDatetime: 'timesecond' }}</td>
+                    <td style="line-height: 26px;">{{ responseStage.end_datetime | cnDatetime: 'timesecond' }}</td>
+                    <td style="line-height: 26px;">{{ responseStage.deviation ? responseStage.deviation : '(none)' }}</td>
+                    <td style="line-height: 26px;">
                       <button type="button"
-                              ng-repeat="operation in responseStage.operations"
-                              ng-style="{ 'width': 1 == responseStage.operations.length ? '100%' :
-                                                   2 == responseStage.operations.length ? '50%' : '33%' }"
-                              class="btn btn-default btn-narrow btn-thin"
-                              ng-bind-html="operation.title"
-                              ng-click="model.renderModel.runStageOperation( responseStage.id, operation.name )"></button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                              class="btn btn-default btn-narrow btn-thin full-width"
+                              ng-click="model.renderModel.showStageComments( responseStage.id )"
+                              ng-bind-html="'Comments' +
+                                ( responseStage.comments ? ' <i class=\'glyphicon glyphicon-ok\'></i>' : '' )">
+                      </button>
+                    </td>
+                    <td style="line-height: 26px;">
+                      <div class="btn-group full-width">
+                        <button type="button"
+                                ng-repeat="operation in responseStage.operations"
+                                ng-style="{ 'width': 1 == responseStage.operations.length ? '100%' :
+                                                     2 == responseStage.operations.length ? '50%' : '33%' }"
+                                class="btn btn-default btn-narrow btn-thin"
+                                ng-bind-html="operation.title"
+                                ng-click="model.renderModel.runStageOperation( responseStage.id, operation.name )"></button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
