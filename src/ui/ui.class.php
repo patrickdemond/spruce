@@ -82,7 +82,8 @@ class ui extends \cenozo\ui\ui
       $module->add_child( 'module' );
       $module->add_child( 'question' );
       $module->add_child( 'attribute' );
-      $module->add_child( 'qnaire_consent_type' );
+      $module->add_child( 'qnaire_consent_type_confirm' );
+      $module->add_child( 'qnaire_consent_type_trigger' );
       $module->add_child( 'stage' );
       $module->add_child( 'deviation_type' );
       $module->add_choose( 'language' );
@@ -142,7 +143,7 @@ class ui extends \cenozo\ui\ui
     {
       $module->add_child( 'question_description' );
       $module->add_child( 'question_option' );
-      $module->add_child( 'qnaire_consent_type' );
+      $module->add_child( 'qnaire_consent_type_trigger' );
       $module->add_action( 'clone', '/{identifier}' );
     }
 

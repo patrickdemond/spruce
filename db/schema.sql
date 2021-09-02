@@ -3126,9 +3126,35 @@ DEFAULT CHARACTER SET = utf8mb4;
 
 
 -- -----------------------------------------------------
--- Table `pine`.`qnaire_consent_type`
+-- Table `pine`.`qnaire_consent_type_confirm`
 -- -----------------------------------------------------
-CREATE TABLE IF NOT EXISTS `pine`.`qnaire_consent_type` (
+CREATE TABLE IF NOT EXISTS `pine`.`qnaire_consent_type_confirm` (
+  `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `update_timestamp` TIMESTAMP NOT NULL,
+  `create_timestamp` TIMESTAMP NOT NULL,
+  `qnaire_id` INT(10) UNSIGNED NOT NULL,
+  `consent_type_id` INT(10) UNSIGNED NOT NULL,
+  PRIMARY KEY (`id`),
+  INDEX `fk_qnaire_id` (`qnaire_id` ASC),
+  INDEX `fk_consent_type_id` (`consent_type_id` ASC),
+  UNIQUE INDEX `uq_qnaire_id_consent_type_id` (`qnaire_id` ASC, `consent_type_id` ASC),
+  CONSTRAINT `fk_qnaire_consent_type_confirm_qnaire_id`
+    FOREIGN KEY (`qnaire_id`)
+    REFERENCES `pine`.`qnaire` (`id`)
+    ON DELETE CASCADE
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_qnaire_consent_type_confirm_consent_type_id`
+    FOREIGN KEY (`consent_type_id`)
+    REFERENCES `cenozo`.`consent_type` (`id`)
+    ON DELETE CASCADE
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Table `pine`.`qnaire_consent_type_trigger`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `pine`.`qnaire_consent_type_trigger` (
   `id` INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
   `update_timestamp` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP() ON UPDATE CURRENT_TIMESTAMP(),
   `create_timestamp` TIMESTAMP NOT NULL DEFAULT '0000-00-00 00:00:00',
@@ -3142,17 +3168,17 @@ CREATE TABLE IF NOT EXISTS `pine`.`qnaire_consent_type` (
   INDEX `fk_qnaire_id` (`qnaire_id` ASC),
   INDEX `fk_consent_type_id` (`consent_type_id` ASC),
   INDEX `fk_question_id` (`question_id` ASC),
-  CONSTRAINT `fk_qnaire_consent_type_consent_type_id`
+  CONSTRAINT `fk_qnaire_consent_type_trigger_consent_type_id`
     FOREIGN KEY (`consent_type_id`)
     REFERENCES `cenozo`.`consent_type` (`id`)
     ON DELETE CASCADE
     ON UPDATE NO ACTION,
-  CONSTRAINT `fk_qnaire_consent_type_qnaire_id`
+  CONSTRAINT `fk_qnaire_consent_type_trigger_qnaire_id`
     FOREIGN KEY (`qnaire_id`)
     REFERENCES `pine`.`qnaire` (`id`)
     ON DELETE CASCADE
     ON UPDATE NO ACTION,
-  CONSTRAINT `fk_qnaire_consent_type_question_id`
+  CONSTRAINT `fk_qnaire_consent_type_trigger_question_id`
     FOREIGN KEY (`question_id`)
     REFERENCES `pine`.`question` (`id`)
     ON DELETE CASCADE

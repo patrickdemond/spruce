@@ -87,11 +87,14 @@ class session extends \cenozo\business\session
         {
           $respondent_class_name = lib::get_class_name( 'database\respondent' );
           $db_respondent = $respondent_class_name::get_unique_record( 'token', $matches[1] );
-          $this->qnaire_has_stages = $db_respondent->get_qnaire()->stages;
+          if( !is_null( $db_respondent ) )
+          {
+            $this->qnaire_has_stages = $db_respondent->get_qnaire()->stages;
 
-          // do not allow auto-login of qnaire with stages
-          if( !$this->qnaire_has_stages )
-            $this->db_response = is_null( $db_respondent ) ? NULL : $db_respondent->get_current_response( true );
+            // do not allow auto-login of qnaire with stages
+            if( !$this->qnaire_has_stages )
+              $this->db_response = is_null( $db_respondent ) ? NULL : $db_respondent->get_current_response( true );
+          }
         }
       }
     }

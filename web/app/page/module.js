@@ -297,6 +297,7 @@ define( [ 'participant', 'question' ].reduce( function( list, name ) {
           data: {
             token: null,
             response_id: null,
+            participant_id: null,
             qnaire_id: null,
             qnaire_name: null,
             start_datetime: null,
@@ -317,11 +318,18 @@ define( [ 'participant', 'question' ].reduce( function( list, name ) {
             title: null,
           },
           responseStageList: null,
+          consentList: null,
+          consentEnumList: [
+            { value: null, name: '(empty)', disabled: true },
+            { value: true, name: 'Yes', disabled: false },
+            { value: false, name: 'No', disabled: false }
+          ],
           deviationTypeList: null,
           languageList: null,
           showHidden: false,
           focusQuestionId: null,
           hotKeyDisabled: false,
+          upperDigitsActivated: false,
           activeAttributeList: [],
           questionList: [],
           optionListById: {},
@@ -339,9 +347,36 @@ define( [ 'participant', 'question' ].reduce( function( list, name ) {
             } );
           },
 
-          text: function( address ) { return CnTranslationHelper.translate( address, this.currentLanguage ); },
+          setConsent: async function( consent ) {
+            if( null == consent.consent_id ) {
+              await CnHttpFactory.instance( {
+                path: 'consent',
+                data: {
+                  participant_id: this.data.participant_id,
+                  consent_type_id: consent.consent_type_id,
+                  accept: consent.accept,
+                  written: false,
+                  datetime: moment().format(),
+                  note: 'Added by Pine during "' + this.data.qnaire_name + '" interview with token "' + $state.params.token + '".'
+                }
+              } ).post();
+            } else {
+              await CnHttpFactory.instance( {
+                path: 'consent/' + consent.consent_id,
+                data: { accept: consent.accept }
+              } ).patch();
+            }
+          },
 
-          upperDigitsActivated: false,
+          setCheckIn: async function( checkedIn ) {
+            await CnHttpFactory.instance( {
+              path: 'response/' + this.data.response_id,
+              data: { checked_in: checkedIn }
+            } ).patch();
+            await self.parentModel.reloadState( true );
+          },
+
+          text: function( address ) { return CnTranslationHelper.translate( address, this.currentLanguage ); },
 
           getVisibleQuestionList: function() {
             return this.questionList.filter( question => self.evaluate( question.precondition ) );
@@ -440,6 +475,7 @@ define( [ 'participant', 'question' ].reduce( function( list, name ) {
             if( !this.previewMode ) {
               angular.extend( this, {
                 responseStageList: null,
+                consentList: null,
                 deviationTypeList: null,
               } );
 
@@ -449,7 +485,7 @@ define( [ 'participant', 'question' ].reduce( function( list, name ) {
               var response = await CnHttpFactory.instance( {
                 path: 'respondent/token=' + $state.params.token + params,
                 data: { select: { column: [
-                  'token', 'qnaire_id', 'start_datetime', 'end_datetime', 'introductions', 'conclusions', 'closes',
+                  'token', 'participant_id', 'qnaire_id', 'start_datetime', 'end_datetime', 'introductions', 'conclusions', 'closes',
                   { table: 'participant', column: 'first_name' },
                   { table: 'participant', column: 'last_name' },
                   { table: 'qnaire', column: 'stages' },
@@ -481,7 +517,7 @@ define( [ 'participant', 'question' ].reduce( function( list, name ) {
               //   skipped: reset
               //   completed: re-open, reset
               if( this.data.stages ) {
-                var [responseStageResponse, deviationTypeResponse, participantResponse] = await Promise.all( [
+                var [responseStageResponse, consentResponse, deviationTypeResponse, participantResponse] = await Promise.all( [
                   CnHttpFactory.instance( {
                     path: ['response', this.data.response_id, 'response_stage'].join( '/' ),
                     data: {
@@ -492,6 +528,20 @@ define( [ 'participant', 'question' ].reduce( function( list, name ) {
                         { table: 'deviation_type', column: 'name', alias: 'deviation' }
                       ] },
                       modifier: { order: 'stage.rank' }
+                    }
+                  } ).query(),
+
+                  CnHttpFactory.instance( {
+                    path: ['respondent', 'token=' + $state.params.token, 'consent'].join( '/' ),
+                    data: {
+                      select: {
+                        column: [
+                          { table: 'consent', column: 'id', alias: 'consent_id' },
+                          { table: 'consent', column: 'accept' },
+                          { table: 'consent_type', column: 'id', alias: 'consent_type_id' },
+                          { table: 'consent_type', column: 'name', alias: 'consent_type' }
+                        ]
+                      }
                     }
                   } ).query(),
 
@@ -526,6 +576,8 @@ define( [ 'participant', 'question' ].reduce( function( list, name ) {
                     responseStage.operations.push( { name: 'reset', title: 'Reset' } );
                   }
                 } );
+
+                this.consentList = consentResponse.data;
 
                 this.deviationTypeList = deviationTypeResponse.data;
                 if( 0 == this.deviationTypeList.length ) {
@@ -680,7 +732,9 @@ define( [ 'participant', 'question' ].reduce( function( list, name ) {
             // finally, now that we know the language set the title
             this.data.title = this.data.submitted ? 'Conclusion'
                             : null != this.data.page_id ? ''
-                            : this.data.stage_selection ? 'Interview ' + $state.params.token
+                            : this.data.stage_selection ? (
+                              ['Interview', $state.params.token, this.data.checked_in ? 'Stage Selection' : 'Check-In'].join( ' ' )
+                            )
                             : 'Introduction';
           },
 

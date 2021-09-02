@@ -1,7 +1,7 @@
 define( function() {
   'use strict';
 
-  try { var module = cenozoApp.module( 'qnaire_consent_type', true ); } catch( err ) { console.warn( err ); return; }
+  try { var module = cenozoApp.module( 'qnaire_consent_type_trigger', true ); } catch( err ) { console.warn( err ); return; }
   angular.extend( module, {
     identifier: {
       parent: {
@@ -67,52 +67,52 @@ define( function() {
   } );
 
   /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnQnaireConsentTypeAdd', [
-    'CnQnaireConsentTypeModelFactory',
-    function( CnQnaireConsentTypeModelFactory ) {
+  cenozo.providers.directive( 'cnQnaireConsentTypeTriggerAdd', [
+    'CnQnaireConsentTypeTriggerModelFactory',
+    function( CnQnaireConsentTypeTriggerModelFactory ) {
       return {
         templateUrl: module.getFileUrl( 'add.tpl.html' ),
         restrict: 'E',
         scope: { model: '=?' },
         controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnaireConsentTypeModelFactory.root;
+          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnaireConsentTypeTriggerModelFactory.root;
         }
       };
     }
   ] );
 
   /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnQnaireConsentTypeList', [
-    'CnQnaireConsentTypeModelFactory',
-    function( CnQnaireConsentTypeModelFactory ) {
+  cenozo.providers.directive( 'cnQnaireConsentTypeTriggerList', [
+    'CnQnaireConsentTypeTriggerModelFactory',
+    function( CnQnaireConsentTypeTriggerModelFactory ) {
       return {
         templateUrl: module.getFileUrl( 'list.tpl.html' ),
         restrict: 'E',
         scope: { model: '=?' },
         controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnaireConsentTypeModelFactory.root;
+          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnaireConsentTypeTriggerModelFactory.root;
         }
       };
     }
   ] );
 
   /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnQnaireConsentTypeView', [
-    'CnQnaireConsentTypeModelFactory',
-    function( CnQnaireConsentTypeModelFactory ) {
+  cenozo.providers.directive( 'cnQnaireConsentTypeTriggerView', [
+    'CnQnaireConsentTypeTriggerModelFactory',
+    function( CnQnaireConsentTypeTriggerModelFactory ) {
       return {
         templateUrl: module.getFileUrl( 'view.tpl.html' ),
         restrict: 'E',
         scope: { model: '=?' },
         controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnaireConsentTypeModelFactory.root;
+          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnaireConsentTypeTriggerModelFactory.root;
         }
       };
     }
   ] );
 
   /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnQnaireConsentTypeAddFactory', [
+  cenozo.providers.factory( 'CnQnaireConsentTypeTriggerAddFactory', [
     'CnBaseAddFactory',
     function( CnBaseAddFactory ) {
       var object = function( parentModel ) {
@@ -132,7 +132,7 @@ define( function() {
   ] );
 
   /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnQnaireConsentTypeListFactory', [
+  cenozo.providers.factory( 'CnQnaireConsentTypeTriggerListFactory', [
     'CnBaseListFactory',
     function( CnBaseListFactory ) {
       var object = function( parentModel ) { CnBaseListFactory.construct( this, parentModel ); };
@@ -141,7 +141,7 @@ define( function() {
   ] );
 
   /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnQnaireConsentTypeViewFactory', [
+  cenozo.providers.factory( 'CnQnaireConsentTypeTriggerViewFactory', [
     'CnBaseViewFactory',
     function( CnBaseViewFactory ) {
       var object = function( parentModel, root ) {
@@ -160,16 +160,18 @@ define( function() {
   ] );
 
   /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnQnaireConsentTypeModelFactory', [
-    'CnBaseModelFactory', 'CnQnaireConsentTypeAddFactory', 'CnQnaireConsentTypeListFactory', 'CnQnaireConsentTypeViewFactory',
+  cenozo.providers.factory( 'CnQnaireConsentTypeTriggerModelFactory', [
+    'CnBaseModelFactory',
+    'CnQnaireConsentTypeTriggerAddFactory', 'CnQnaireConsentTypeTriggerListFactory', 'CnQnaireConsentTypeTriggerViewFactory',
     'CnHttpFactory',
-    function( CnBaseModelFactory, CnQnaireConsentTypeAddFactory, CnQnaireConsentTypeListFactory, CnQnaireConsentTypeViewFactory,
+    function( CnBaseModelFactory,
+              CnQnaireConsentTypeTriggerAddFactory, CnQnaireConsentTypeTriggerListFactory, CnQnaireConsentTypeTriggerViewFactory,
               CnHttpFactory ) {
       var object = function( root ) {
         CnBaseModelFactory.construct( this, module );
-        this.addModel = CnQnaireConsentTypeAddFactory.instance( this );
-        this.listModel = CnQnaireConsentTypeListFactory.instance( this );
-        this.viewModel = CnQnaireConsentTypeViewFactory.instance( this, root );
+        this.addModel = CnQnaireConsentTypeTriggerAddFactory.instance( this );
+        this.listModel = CnQnaireConsentTypeTriggerListFactory.instance( this );
+        this.viewModel = CnQnaireConsentTypeTriggerViewFactory.instance( this, root );
 
         // extend getMetadata
         this.getMetadata = async function() {

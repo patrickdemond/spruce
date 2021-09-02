@@ -631,7 +631,7 @@ define( [ 'module' ].reduce( function( list, name ) {
           // only show stage and deviation types in qnaires with stages and only show the respondent list to respondents
           getChildList: function() {
             return this.$$getChildList().filter( child =>
-              ( this.record.stages || !['stage', 'deviation_type' ].includes( child.subject.snake ) ) &&
+              ( this.record.stages || !['stage', 'deviation_type', 'qnaire_consent_type_confirm' ].includes( child.subject.snake ) ) &&
               ( !this.parentModel.isRole( 'interviewer' ) || 'respondent' == child.subject.snake )
             );
           },

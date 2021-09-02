@@ -5,7 +5,7 @@
  * @author Patrick Emond <emondpd@mcmaster.ca>
  */
 
-namespace pine\service\question\qnaire_consent_type;
+namespace pine\service\question\qnaire_consent_type_trigger;
 use cenozo\lib, cenozo\log, pine\util;
 
 /**

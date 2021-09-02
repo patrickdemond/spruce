@@ -5,7 +5,7 @@
  * @author Patrick Emond <emondpd@mcmaster.ca>
  */
 
-namespace pine\service\qnaire_consent_type;
+namespace pine\service\qnaire_consent_type_trigger;
 use cenozo\lib, cenozo\log, pine\util;
 
 /**
@@ -20,12 +20,12 @@ class module extends \cenozo\service\module
   {
     parent::prepare_read( $select, $modifier );
 
-    $modifier->join( 'qnaire', 'qnaire_consent_type.qnaire_id', 'qnaire.id' );
-    $modifier->join( 'consent_type', 'qnaire_consent_type.consent_type_id', 'consent_type.id' );
-    $modifier->join( 'question', 'qnaire_consent_type.question_id', 'question.id' );
+    $modifier->join( 'qnaire', 'qnaire_consent_type_trigger.qnaire_id', 'qnaire.id' );
+    $modifier->join( 'consent_type', 'qnaire_consent_type_trigger.consent_type_id', 'consent_type.id' );
+    $modifier->join( 'question', 'qnaire_consent_type_trigger.question_id', 'question.id' );
 
-    $db_qnaire_consent_type = $this->get_resource();
-    if( !is_null( $db_qnaire_consent_type ) )
+    $db_qnaire_consent_type_trigger = $this->get_resource();
+    if( !is_null( $db_qnaire_consent_type_trigger ) )
     {
       // include the question name and type as supplemental data
       $select->add_column(
