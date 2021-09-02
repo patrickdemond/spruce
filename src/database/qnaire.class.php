@@ -72,6 +72,26 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
+   * Returns the qnaire's last module
+   * @return database\module
+   */
+  public function get_last_module()
+  {
+    // check the primary key value
+    if( is_null( $this->id ) )
+    {
+      log::warning( 'Tried to get first module of qnaire with no primary key.' );
+      return NULL;
+    }
+
+    $module_class_name = lib::get_class_name( 'database\module' );
+    return $module_class_name::get_unique_record(
+      array( 'qnaire_id', 'rank' ),
+      array( $this->id, $this->get_module_count() )
+    );
+  }
+
+  /**
    * Returns a question belonging to the qnaire by name
    * @param string $name The question's name
    * @return database\question

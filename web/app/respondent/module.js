@@ -104,10 +104,17 @@ define( [ 'page' ].reduce( function( list, name ) {
   } );
 
   module.addExtraOperation( 'view', {
+    title: 'Reopen',
+    operation: async function( $state, model ) { await model.viewModel.reopen(); },
+    isIncluded: function( $state, model ) { return null != model.viewModel.record.end_datetime; }
+  } );
+
+  module.addExtraOperation( 'view', {
     title: 'Launch',
     operation: async function( $state, model ) {
       await $state.go( 'respondent.run', { token: model.viewModel.record.token } );
-    }
+    },
+    isIncluded: function( $state, model ) { return null == model.viewModel.record.end_datetime; }
   } );
 
   module.addExtraOperation( 'view', {
@@ -222,8 +229,15 @@ define( [ 'page' ].reduce( function( list, name ) {
             return this.$$getChildList().filter( child => 'response' == child.subject.snake || self.record.sends_mail );
           },
 
-          resendMail: function() {
-            return CnHttpFactory.instance( {
+          reopen: async function() {
+            await CnHttpFactory.instance( {
+              path: this.parentModel.getServiceResourcePath() + '?action=reopen'
+            } ).patch();
+            this.parentModel.reloadState( true );
+          },
+
+          resendMail: async function() {
+            await CnHttpFactory.instance( {
               path: this.parentModel.getServiceResourcePath() + '?action=resend_mail'
             } ).patch();
           }
