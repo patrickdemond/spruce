@@ -37,6 +37,10 @@ class patch extends \cenozo\service\patch
     {
       $db_respondent = $this->get_leaf_record();
 
+      if( 'reopen' == $action )
+      {
+        $db_respondent->reopen();
+      }
       if( 'resend_mail' == $action )
       {
         $db_respondent->send_all_mail();

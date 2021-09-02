@@ -119,6 +119,39 @@ class respondent extends \cenozo\database\record
   }
 
   /**
+   * Reopens the respondent's last response
+   */
+  public function reopen()
+  {
+    $script_class_name = lib::get_class_name( 'database\script' );
+    $event_class_name = lib::get_class_name( 'database\event' );
+
+    $db_response = $this->get_current_response();
+    $db_response->page_id = $this->get_qnaire()->get_last_module()->get_last_page()->id;
+    $db_response->submitted = false;
+    $db_response->save();
+
+    $this->end_datetime = NULL;
+    $this->save();
+
+    // now remove the finished event, if there is one
+    $db_script = $script_class_name::get_unique_record( 'pine_qnaire_id', $this->qnaire_id );
+    if( !is_null( $db_script ) && !is_null( $db_script->finished_event_type_id ) )
+    {
+      $event_mod = lib::create( 'database\modifier' );
+      $event_mod->where( 'event_type_id', '=', $db_script->finished_event_type_id );
+      $event_mod->order_desc( 'datetime' );
+      $event_mod->limit( 1 );
+      $event_list = $this->get_participant()->get_event_object_list( $event_mod );
+      if( 0 < count( $event_list ) )
+      {
+        $db_event = current( $event_list );
+        $db_event->delete();
+      }
+    }
+  }
+
+  /**
    * Sends all unsent invitations and reminders for this respondent
    */
   public function send_all_mail()
