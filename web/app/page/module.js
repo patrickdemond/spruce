@@ -296,6 +296,7 @@ define( [ 'participant', 'question' ].reduce( function( list, name ) {
           previewMode: 'respondent' != parentModel.getSubjectFromState(),
           data: {
             token: null,
+            scanned_token: null,
             response_id: null,
             participant_id: null,
             qnaire_id: null,
@@ -369,11 +370,29 @@ define( [ 'participant', 'question' ].reduce( function( list, name ) {
           },
 
           setCheckIn: async function( checkedIn ) {
+            // update the token if we've changed it
+            var updatedToken = null;
+            if( checkedIn && this.data.token != this.data.scanned_token ) {
+              await CnHttpFactory.instance( {
+                path: 'respondent/token=' + $state.params.token,
+                data: { token: this.data.scanned_token }
+              } ).patch();
+              updatedToken = this.data.scanned_token;
+            }
+
+            // mark the response as checked in
             await CnHttpFactory.instance( {
               path: 'response/' + this.data.response_id,
               data: { checked_in: checkedIn }
             } ).patch();
-            await self.parentModel.reloadState( true );
+
+            if( null == updatedToken ) {
+              // the token hasn't changed so just reload the state
+              await this.parentModel.reloadState( true );
+            } else {
+              // the token has changed so we have to change the URL
+              await $state.go( 'respondent.run', { token: updatedToken } );
+            }
           },
 
           text: function( address ) { return CnTranslationHelper.translate( address, this.currentLanguage ); },
@@ -508,6 +527,11 @@ define( [ 'participant', 'question' ].reduce( function( list, name ) {
               } ).get();
 
               this.data = response.data;
+
+              // set the scanned token only if the token is non-generic
+              this.data.scanned_token = null == this.data.token.match( /^[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}$/ )
+                                      ? this.data.token
+                                      : null;
 
               // get the stage list if there is one:
               //   not ready: nothing

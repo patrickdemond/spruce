@@ -125,6 +125,38 @@
               </div>
             </div>
           </div>
+          <h4>Interview Details</h4>
+          <div class="form-horizontal">
+            <div class="form-group">
+              <label for="token" class="control-label col-sm-3">Token (Interview ID)</label>
+              <div class="row col-sm-9">
+                <div class="input-group">
+                  <input
+                    id="token"
+                    type="text"
+                    placeholder="(Scan the interview barcode here)"
+                    class="form-control"
+                    ng-model="model.renderModel.data.scanned_token"
+                    ng-readonly="model.renderModel.data.token == model.renderModel.data.scanned_token"
+                    autocomplete="off">
+                  </input>
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="token" class="control-label col-sm-3">Token (Interview ID)</label>
+              <div class="row col-sm-9">
+                <div class="input-group">
+                  <textarea id="comments"
+                            class="form-control"
+                            style="min-height: 8.1em;"
+                            ng-model="model.renderModel.data.comments"
+                            cn-change="model.renderModel.setResponseComments()"
+                            cn-elastic></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <div ng-if="model.renderModel.data.checked_in" style="padding-top: 1em; padding-bottom: 1em">
@@ -533,6 +565,7 @@
          ng-if="!model.renderModel.data.closed && model.renderModel.data.stage_selection && !model.renderModel.data.checked_in">
       <button type="button"
               class="btn btn-primary"
+              ng-disabled="null == model.renderModel.data.scanned_token"
               ng-click="model.renderModel.setCheckIn( true )">
         Proceed
       </button>
