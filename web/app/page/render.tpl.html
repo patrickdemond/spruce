@@ -34,78 +34,16 @@
           <h4>Participant Details</h4>
           <div class="form-horizontal">
             <cn-view-input
+              ng-repeat="input in model.renderModel.participantInputList"
               model="model.renderModel.participantModel"
-              input="{
-                key: 'honorific',
-                title: 'Honorific',
-                type: 'string',
-                help: 'English examples: Mr. Mrs. Miss Ms. Dr. Prof. Br. Sr. Fr. Rev. Pr. ' +
-                      'French examples: M. Mme Dr Dre Prof. F. Sr P. Révérend Pasteur Pasteure Me'
-              }">
-            </cn-view-input>
+              input="input"></cn-view-input>
+          </div>
+          <h4>Primary Address Details</h4>
+          <div class="form-horizontal">
             <cn-view-input
-              model="model.renderModel.participantModel"
-              input="{
-                key: 'first_name',
-                title: 'First Name',
-                type: 'string'
-              }">
-            </cn-view-input>
-            <cn-view-input
-              model="model.renderModel.participantModel"
-              input="{
-                key: 'other_name',
-                title: 'Other/Nickname',
-                type: 'string'
-              }">
-            </cn-view-input>
-            <cn-view-input
-              model="model.renderModel.participantModel"
-              input="{
-                key: 'last_name',
-                title: 'Last Name',
-                type: 'string'
-              }">
-            </cn-view-input>
-            <cn-view-input
-              model="model.renderModel.participantModel"
-              input="{
-                key: 'date_of_birth',
-                title: 'Date of Birth',
-                type: 'dob',
-                isConstant: true,
-                max: 'now'
-              }">
-            </cn-view-input>
-            <cn-view-input
-              model="model.renderModel.participantModel"
-              input="{
-                key: 'sex',
-                title: 'Sex at Birth',
-                type: 'enum',
-                isConstant: true,
-                enumList: [{value:'male',name:'male'}, {value:'female',name:'female'}]
-              }">
-            </cn-view-input>
-            <cn-view-input
-              model="model.renderModel.participantModel"
-              input="{
-                key: 'current_sex',
-                title: 'Current Sex',
-                type: 'enum',
-                enumList: [{value:'male',name:'male'}, {value:'female',name:'female'}]
-              }">
-            </cn-view-input>
-            <cn-view-input
-              model="model.renderModel.participantModel"
-              input="{
-                key: 'email',
-                title: 'Email',
-                type: 'string',
-                format: 'email',
-                help: 'Must be in the format &quot;account@domain.name&quot;.'
-              }">
-            </cn-view-input>
+              ng-repeat="input in model.renderModel.addressInputList"
+              model="model.renderModel.addressModel"
+              input="input"></cn-view-input>
           </div>
           <h4>Consent Details</h4>
           <div class="form-horizontal">

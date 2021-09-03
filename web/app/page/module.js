@@ -1,4 +1,4 @@
-define( [ 'participant', 'question' ].reduce( function( list, name ) {
+define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) {
   return list.concat( cenozoApp.module( name ).getRequiredFiles() );
 }, [] ), function() {
   'use strict';
@@ -131,10 +131,13 @@ define( [ 'participant', 'question' ].reduce( function( list, name ) {
             isComplete: false,
             text: function( address ) { return $scope.model.renderModel.text( address ); },
             patch: async function( property ) {
-              var participantModel = $scope.model.renderModel.participantModel;
-              if( participantModel.getEditEnabled() ) {
+              var model = ['address1', 'address2', 'city', 'region_id', 'postcode'].includes( property )
+                        ? $scope.model.renderModel.addressModel
+                        : $scope.model.renderModel.participantModel;
+
+              if( model.getEditEnabled() ) {
                 var element = cenozo.getFormElement( property );
-                var valid = participantModel.testFormat( property, participantModel.viewModel.record[property] );
+                var valid = model.testFormat( property, model.viewModel.record[property] );
 
                 if( element ) {
                   element.$error.format = !valid;
@@ -143,8 +146,8 @@ define( [ 'participant', 'question' ].reduce( function( list, name ) {
 
                 if( valid ) {
                   var data = {};
-                  data[property] = participantModel.viewModel.record[property];
-                  await participantModel.viewModel.onPatch( data );
+                  data[property] = model.viewModel.record[property];
+                  await model.viewModel.onPatch( data );
                 }
               }
             }
@@ -243,10 +246,12 @@ define( [ 'participant', 'question' ].reduce( function( list, name ) {
   cenozo.providers.factory( 'CnPageRenderFactory', [
     'CnModalConfirmFactory', 'CnModalMessageFactory', 'CnModalDatetimeFactory',
     'CnModalInputFactory', 'CnModalTextFactory', 'CnModalPreStageFactory',
-    'CnParticipantModelFactory', 'CnHttpFactory', 'CnTranslationHelper', '$state', '$timeout', '$interval',
+    'CnParticipantModelFactory', 'CnAddressModelFactory', 'CnHttpFactory', 'CnTranslationHelper',
+    '$state', '$timeout', '$interval',
     function( CnModalConfirmFactory, CnModalMessageFactory, CnModalDatetimeFactory,
               CnModalInputFactory, CnModalTextFactory, CnModalPreStageFactory,
-              CnParticipantModelFactory, CnHttpFactory, CnTranslationHelper, $state, $timeout, $interval ) {
+              CnParticipantModelFactory, CnAddressModelFactory, CnHttpFactory, CnTranslationHelper,
+              $state, $timeout, $interval ) {
       var object = function( parentModel ) {
         var self = this;
 
@@ -289,6 +294,7 @@ define( [ 'participant', 'question' ].reduce( function( list, name ) {
         angular.extend( this, {
           parentModel: parentModel,
           participantModel: CnParticipantModelFactory.root,
+          addressModel: CnAddressModelFactory.root,
           prevModuleList: [],
           nextModuleList: [],
           working: false,
@@ -299,6 +305,7 @@ define( [ 'participant', 'question' ].reduce( function( list, name ) {
             scanned_token: null,
             response_id: null,
             participant_id: null,
+            address_id: null,
             qnaire_id: null,
             qnaire_name: null,
             start_datetime: null,
@@ -541,7 +548,11 @@ define( [ 'participant', 'question' ].reduce( function( list, name ) {
               //   skipped: reset
               //   completed: re-open, reset
               if( this.data.stages ) {
-                var [responseStageResponse, consentResponse, deviationTypeResponse, participantResponse] = await Promise.all( [
+                var [responseStageResponse,
+                     consentResponse,
+                     deviationTypeResponse,
+                     participantResponse,
+                     addressResponse] = await Promise.all( [
                   CnHttpFactory.instance( {
                     path: ['response', this.data.response_id, 'response_stage'].join( '/' ),
                     data: {
@@ -573,7 +584,9 @@ define( [ 'participant', 'question' ].reduce( function( list, name ) {
                     path: ['qnaire', this.data.qnaire_id, 'deviation_type'].join( '/' )
                   } ).query(),
 
-                  this.participantModel.viewModel.onView( true )
+                  this.participantModel.viewModel.onView( true ),
+
+                  this.addressModel.viewModel.onView( true )
                 ] );
 
                 this.responseStageList = responseStageResponse.data;
@@ -614,6 +627,74 @@ define( [ 'participant', 'question' ].reduce( function( list, name ) {
 
                 // enum lists use value, so set the value to the deviation type's ID
                 this.deviationTypeList.forEach( function( deviationType ) { deviationType.value = deviationType.id; } );
+
+                this.participantInputList = [ {
+                  key: 'honorific',
+                  title: 'Honorific',
+                  type: 'string',
+                  help: 'English examples: Mr. Mrs. Miss Ms. Dr. Prof. Br. Sr. Fr. Rev. Pr. ' +
+                        'French examples: M. Mme Dr Dre Prof. F. Sr P. Révérend Pasteur Pasteure Me'
+                }, {
+                  key: 'first_name',
+                  title: 'First Name',
+                  type: 'string'
+                }, {
+                  key: 'other_name',
+                  title: 'Other/Nickname',
+                  type: 'string'
+                }, {
+                  key: 'last_name',
+                  title: 'Last Name',
+                  type: 'string'
+                }, {
+                  key: 'date_of_birth',
+                  title: 'Date of Birth',
+                  type: 'dob',
+                  isConstant: true,
+                  max: 'now'
+                }, {
+                  key: 'sex',
+                  title: 'Sex at Birth',
+                  type: 'enum',
+                  isConstant: true,
+                  enumList: [{value:'male',name:'male'}, {value:'female',name:'female'}]
+                }, {
+                  key: 'current_sex',
+                  title: 'Current Sex',
+                  type: 'enum',
+                  enumList: [{value:'male',name:'male'}, {value:'female',name:'female'}]
+                }, {
+                  key: 'email',
+                  title: 'Email',
+                  type: 'string',
+                  format: 'email',
+                  help: 'Must be in the format &quot;account@domain.name&quot;.'
+                } ];
+
+                this.addressInputList = [ {
+                  key: 'address1',
+                  title: 'Address Line 1',
+                  type: 'string'
+                }, {
+                  key: 'address2',
+                  title: 'Address Line 2',
+                  type: 'string'
+                }, {
+                  key: 'city',
+                  title: 'City',
+                  type: 'string'
+                }, {
+                  key: 'region_id',
+                  title: 'Region',
+                  type: 'enum',
+                  isConstant: true,
+                  enumList: this.addressModel.metadata.columnList.region_id.enumList,
+                  help: 'The region cannot be changed directly, instead it is automatically updated based on the postcode.'
+                }, {
+                  key: 'postcode',
+                  title: 'Postcode',
+                  type: 'string'
+                } ];
               }
 
               angular.extend( this.data, {

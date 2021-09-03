@@ -11,8 +11,9 @@ define( [ cenozoApp.module( 'participant' ).getFileUrl( 'module.js' ) ], functio
       // get the participant details based on a response token
       angular.extend( $delegate.root, {
         getServiceResourcePath: function( resource ) {
+          var token = $delegate.root.getQueryParameter( 'token', true );
           return 'respondent' == $delegate.root.getSubjectFromState() && 'run' == $delegate.root.getActionFromState() ?
-            'participant/uid=A123881' : $delegate.root.$$getServiceResourcePath( resource );
+            'participant/token=' + token : $delegate.root.$$getServiceResourcePath( resource );
         },
 
         getServiceData: function( type, columnRestrictLists ) {
@@ -22,6 +23,7 @@ define( [ cenozoApp.module( 'participant' ).getFileUrl( 'module.js' ) ], functio
               $delegate.root.$$getServiceData( type, columnRestrictLists );
         },
 
+        // ignore the base model's additions to getMetadata as it requires additional data that we don't need
         getMetadata: async function() { await this.$$getMetadata(); }
       } );
 

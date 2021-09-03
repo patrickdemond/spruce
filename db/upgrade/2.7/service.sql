@@ -2,6 +2,8 @@ SELECT "Adding new services" AS "";
 
 INSERT IGNORE INTO service ( subject, method, resource, restricted ) VALUES
 
+( 'address', 'GET', 0, 1 ),
+( 'address', 'PATCH', 1, 1 ),
 ( 'consent', 'GET', 0, 1 ),
 ( 'consent', 'PATCH', 1, 1 ),
 ( 'consent', 'POST', 0, 1 ),
