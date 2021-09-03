@@ -574,7 +574,8 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
                           { table: 'consent', column: 'id', alias: 'consent_id' },
                           { table: 'consent', column: 'accept' },
                           { table: 'consent_type', column: 'id', alias: 'consent_type_id' },
-                          { table: 'consent_type', column: 'name', alias: 'consent_type' }
+                          { table: 'consent_type', column: 'name', alias: 'consent_type' },
+                          { table: 'role_has_consent_type', column: 'consent_type_id', alias: 'access' }
                         ]
                       }
                     }
@@ -616,6 +617,9 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
 
                 this.consentList = consentResponse.data;
 
+                // convert the access column (it will be null if the role doesn't have access)
+                this.consentList.forEach( consent => consent.access = null != consent.access );
+
                 this.deviationTypeList = deviationTypeResponse.data;
                 if( 0 == this.deviationTypeList.length ) {
                   throw new Error( 'Questionnaire has no deviation types, unable to proceed.' );
@@ -628,6 +632,7 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
                 // enum lists use value, so set the value to the deviation type's ID
                 this.deviationTypeList.forEach( function( deviationType ) { deviationType.value = deviationType.id; } );
 
+                // setup the participant and address input lists
                 this.participantInputList = [ {
                   key: 'honorific',
                   title: 'Honorific',
@@ -657,12 +662,12 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
                   title: 'Sex at Birth',
                   type: 'enum',
                   isConstant: true,
-                  enumList: [{value:'male',name:'male'}, {value:'female',name:'female'}]
+                  enumList: this.participantModel.metadata.columnList.sex.enumList
                 }, {
                   key: 'current_sex',
                   title: 'Current Sex',
                   type: 'enum',
-                  enumList: [{value:'male',name:'male'}, {value:'female',name:'female'}]
+                  enumList: this.participantModel.metadata.columnList.current_sex.enumList
                 }, {
                   key: 'email',
                   title: 'Email',
@@ -697,6 +702,7 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
                 } ];
               }
 
+              // parse the intro, conclusion and close descriptions
               angular.extend( this.data, {
                 introductions: CnTranslationHelper.parseDescriptions( this.data.introductions, this.showHidden ),
                 conclusions: CnTranslationHelper.parseDescriptions( this.data.conclusions, this.showHidden ),

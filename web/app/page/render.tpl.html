@@ -56,7 +56,8 @@
                   <select ng-attr-id="consent_type_{{ consent.consent_type_id }}"
                           ng-model="consent.accept"
                           ng-change="model.renderModel.setConsent( consent )"
-                          ng-options="item.value as item.name disable when item.disabled for item in model.renderModel.consentEnumList"
+                          ng-options="item.value as item.name for item in model.renderModel.consentEnumList"
+                          ng-disabled="!consent.access"
                           class="form-control">
                   </select>
                 </div>
