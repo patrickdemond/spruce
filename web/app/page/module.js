@@ -546,6 +546,7 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
               //   active: nothing (it will never show in the list)
               //   paused: resume, skip, reset
               //   skipped: reset
+              //   parent skipped: nothing
               //   completed: re-open, reset
               if( this.data.stages ) {
                 var [responseStageResponse,
@@ -598,7 +599,7 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
                 this.responseStageList.forEach( function( responseStage ) {
                   responseStage.operations = [];
 
-                  if( !['not ready', 'skipped' ].includes( responseStage.status ) ) {
+                  if( !['not ready', 'parent skipped', 'skipped' ].includes( responseStage.status ) ) {
                     responseStage.operations.push( {
                       name: 'launch',
                       title: 'completed' == responseStage.status ? 'Re-Open' :
@@ -610,7 +611,7 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
                     responseStage.operations.push( { name: 'skip', title: 'Skip' } );
                   }
 
-                  if( !['not ready', 'ready'].includes( responseStage.status ) ) {
+                  if( !['not ready', 'parent skipped', 'ready'].includes( responseStage.status ) ) {
                     responseStage.operations.push( { name: 'reset', title: 'Reset' } );
                   }
                 } );

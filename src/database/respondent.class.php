@@ -126,8 +126,58 @@ class respondent extends \cenozo\database\record
     $script_class_name = lib::get_class_name( 'database\script' );
     $event_class_name = lib::get_class_name( 'database\event' );
 
+    $db_qnaire = $this->get_qnaire();
     $db_response = $this->get_current_response();
-    $db_response->page_id = $this->get_qnaire()->get_last_module()->get_last_page()->id;
+    $expression_manager = lib::create( 'business\expression_manager', $db_response );
+
+    // determine the last valid page to set the response back on to
+    if( $db_qnaire->stages )
+    {
+      // get the last complete stage
+      $response_stage_mod = lib::create( 'database\modifier' );
+      $response_stage_mod->join( 'stage', 'response_stage.stage_id', 'stage.id' );
+      $response_stage_mod->where( 'status', '=', 'completed' );
+      $response_stage_mod->order_desc( 'stage.rank' );
+      $response_stage_mod->limit( 1 );
+      $response_stage_list = $db_response->get_response_stage_object_list();
+     
+      if( 0 < count( $response_stage_list ) )
+      {
+        // if there is a completed stage then re-launch it then immediately pause it
+        $db_response_stage = current( $response_stage_list );
+        $db_response_stage->launch();
+        $db_response_stage->pause();
+      }
+      else
+      {
+        // if there are no completed stages then reset the first stage
+        $response_stage_mod = lib::create( 'database\modifier' );
+        $response_stage_mod->join( 'stage', 'response_stage.stage_id', 'stage.id' );
+        $response_stage_mod->order( 'stage.rank' );
+        $response_stage_mod->limit( 1 );
+        $response_stage_list = $db_response->get_response_stage_object_list();
+        $db_response_stage = current( $response_stage_list );
+        $db_response_stage->reset();
+      }
+    }
+    else
+    {
+      // find the last valid page
+      $db_module = $db_qnaire->get_last_module();
+      $db_page = $db_module->get_last_page();
+      if( !$expression_manager->evaluate( $db_module->precondition ) )
+      {
+        do { $db_module = $db_module->get_previous(); }
+        while( !is_null( $db_module ) && !$expression_manager->evaluate( $db_module->precondition ) );
+        $db_page = is_null( $db_module ) ? NULL : $db_module->get_last_page();
+      }
+
+      if( !is_null( $db_page ) && !$expression_manager->evaluate( $db_page->precondition ) )
+        $db_page = $db_page->get_previous_for_response( $db_response );
+
+      $db_response->page_id = $db_page->id;
+    }
+
     $db_response->submitted = false;
     $db_response->save();
 

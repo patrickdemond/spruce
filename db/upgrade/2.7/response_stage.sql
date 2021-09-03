@@ -22,7 +22,7 @@ CREATE PROCEDURE patch_response_stage()
         "stage_id INT UNSIGNED NOT NULL, ",
         "page_id INT(10) UNSIGNED NULL DEFAULT NULL, ",
         "user_id INT(10) UNSIGNED NULL DEFAULT NULL, ",
-        "status ENUM('not ready', 'ready', 'active', 'paused', 'skipped', 'completed') NOT NULL DEFAULT 'not ready', ",
+        "status ENUM('not ready', 'ready', 'active', 'paused', 'skipped', 'parent skipped', 'completed') NOT NULL DEFAULT 'not ready', ",
         "deviation_type_id INT UNSIGNED NULL DEFAULT NULL, ",
         "deviation_comments TEXT NULL DEFAULT NULL, ",
         "start_datetime DATETIME NULL DEFAULT NULL, ",

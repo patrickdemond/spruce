@@ -56,7 +56,7 @@
                   <select ng-attr-id="consent_type_{{ consent.consent_type_id }}"
                           ng-model="consent.accept"
                           ng-change="model.renderModel.setConsent( consent )"
-                          ng-options="item.value as item.name for item in model.renderModel.consentEnumList"
+                          ng-options="item.value as item.name disable when item.disabled for item in model.renderModel.consentEnumList"
                           ng-disabled="!consent.access"
                           class="form-control">
                   </select>
@@ -131,6 +131,7 @@
                 <div class="vertical-spacer">
                   <button type="button"
                           class="btn btn-default btn-thin full-width"
+                          ng-disabled="null != model.renderModel.data.end_datetime"
                           ng-click="model.renderModel.setCheckIn( false )">
                     Re-open Check-In
                   </button>
@@ -146,6 +147,7 @@
                               style="min-height: 8.1em;"
                               ng-model="model.renderModel.data.comments"
                               cn-change="model.renderModel.setResponseComments()"
+                              ng-disabled="null != model.renderModel.data.end_datetime"
                               cn-elastic></textarea>
                   </div>
                 </div>
@@ -164,8 +166,8 @@
                     <td>Start</td>
                     <td>End</td>
                     <td>Deviation</td>
-                    <td></td>
-                    <td></td>
+                    <td ng-if="null == model.renderModel.data.end_datetime"></td>
+                    <td ng-if="null == model.renderModel.data.end_datetime"></td>
                   </tr>
                 </thead>
                 <tbody>
@@ -175,15 +177,16 @@
                     <td style="line-height: 26px;">{{ responseStage.start_datetime | cnDatetime: 'timesecond' }}</td>
                     <td style="line-height: 26px;">{{ responseStage.end_datetime | cnDatetime: 'timesecond' }}</td>
                     <td style="line-height: 26px;">{{ responseStage.deviation ? responseStage.deviation : '(none)' }}</td>
-                    <td style="line-height: 26px;">
+                    <td ng-if="null == model.renderModel.data.end_datetime" style="line-height: 26px;">
                       <button type="button"
                               class="btn btn-default btn-narrow btn-thin full-width"
+                              ng-if="!['not ready', 'skipped', 'parent skipped'].includes( responseStage.status )"
                               ng-click="model.renderModel.showStageComments( responseStage.id )"
                               ng-bind-html="'Comments' +
                                 ( responseStage.comments ? ' <i class=\'glyphicon glyphicon-ok\'></i>' : '' )">
                       </button>
                     </td>
-                    <td style="line-height: 26px;">
+                    <td ng-if="null == model.renderModel.data.end_datetime" style="line-height: 26px;">
                       <div class="btn-group full-width">
                         <button type="button"
                                 ng-repeat="operation in responseStage.operations"

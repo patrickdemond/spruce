@@ -292,13 +292,20 @@ class response extends \cenozo\database\has_rank
         $db_next_page = $db_page->get_next_for_response( $this );
         if( is_null( $db_next_page ) )
         {
+          $submitted = true;
           if( $stages )
           {
             // we've moved past the last page in the stage, so mark it as complete
             $db_current_response_stage = $this->get_current_response_stage();
             $db_current_response_stage->complete();
+
+            // don't submit this response if there is an unfinished stage
+            $response_stage_mod = lib::create( 'database\modifier' );
+            $response_stage_mod->where( 'status', 'IN', array( 'not ready', 'ready', 'active', 'paused' ) );
+            if( 0 < $this->get_response_stage_count( $response_stage_mod ) ) $submitted = false;
           }
-          else
+
+          if( $submitted )
           {
             $this->page_id = NULL;
             $this->submitted = true;

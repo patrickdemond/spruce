@@ -18,10 +18,49 @@ class response_stage extends \cenozo\database\record
    */
   public function update_status()
   {
-    if( in_array( $this->status, ['not ready', 'ready'] ) )
+    $stage_class_name = lib::get_class_name( 'database\stage' );
+
+    if( in_array( $this->status, ['not ready', 'parent skipped', 'ready'] ) )
     {
-      $expression_manager = lib::create( 'business\expression_manager', $this->get_response() );
-      $this->status = $expression_manager->evaluate( $this->get_stage()->precondition ) ? 'ready' : 'not ready';
+      $db_response = $this->get_response();
+      $db_stage = $this->get_stage();
+
+      $expression_manager = lib::create( 'business\expression_manager', $db_response );
+      $this->status = $expression_manager->evaluate( $db_stage->precondition ) ? 'ready' : 'not ready';
+
+      // skip stages which are dependent on a parent stage which has been skipped
+      if( 'not ready' == $this->status )
+      {
+        $matches = array();
+        if( preg_match_all( '/#[^#]+#/', $db_stage->precondition, $matches ) )
+        {
+          foreach( $matches[0] as $match )
+          {
+            $parent_stage_name = preg_replace( '/\.status\(\)$/', '', trim( $match, '#' ) );
+            $db_parent_stage = $stage_class_name::get_unique_record(
+              array( 'qnaire_id', 'name' ),
+              array( $db_stage->qnaire_id, $parent_stage_name )
+            );
+            if( !is_null( $db_parent_stage ) )
+            {
+              $db_parent_response_stage = static::get_unique_record(
+                array( 'response_id', 'stage_id' ),
+                array( $db_response->id, $db_parent_stage->id )
+              );
+
+              if( !is_null( $db_parent_response_stage ) )
+              {
+                if( 'skipped' == $db_parent_response_stage->status )
+                {
+                  $this->status = 'parent skipped';
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+
       $this->save();
     }
   }
