@@ -41,7 +41,7 @@ class patch extends \cenozo\service\patch
       {
         $db_respondent->reopen();
       }
-      if( 'resend_mail' == $action )
+      else if( 'resend_mail' == $action )
       {
         $db_respondent->send_all_mail();
       }
