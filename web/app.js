@@ -94,7 +94,7 @@ cenozoApp.initQnairePartModule = function( module, type ) {
     name: {
       title: 'Name',
       type: 'string',
-      regex: 'question_option' == type ? '^[a-zA-Z0-9_]*$' : '^[a-zA-Z_][a-zA-Z0-9_]*$'
+      regex: 'module' == type ? '' : 'question_option' == type ? '^[a-zA-Z0-9_]*$' : '^[a-zA-Z_][a-zA-Z0-9_]*$'
     },
     precondition: {
       title: 'Precondition',
