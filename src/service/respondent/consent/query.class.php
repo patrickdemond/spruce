@@ -43,7 +43,7 @@ class query extends \cenozo\service\query
   private function get_modifier()
   {
     $modifier = clone $this->modifier;
-
+    
     $modifier->join( 'qnaire', 'respondent.qnaire_id', 'qnaire.id' );
     $modifier->join( 'qnaire_consent_type_confirm', 'qnaire.id', 'qnaire_consent_type_confirm.qnaire_id' );
     $modifier->join( 'consent_type', 'qnaire_consent_type_confirm.consent_type_id', 'consent_type.id' );

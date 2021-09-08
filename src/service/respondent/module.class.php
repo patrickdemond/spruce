@@ -29,10 +29,10 @@ class module extends \cenozo\service\module
         $select->has_table_columns( 'page' ) )
     {
       $modifier->join( 'respondent_current_response', 'respondent.id', 'respondent_current_response.respondent_id' );
-      $modifier->join( 'response', 'respondent_current_response.response_id', 'response.id' );
+      $modifier->left_join( 'response', 'respondent_current_response.response_id', 'response.id' );
 
       if( $select->has_table_columns( 'language' ) )
-        $modifier->join( 'language', 'response.language_id', 'language.id' );
+        $modifier->left_join( 'language', 'response.language_id', 'language.id' );
       if( $select->has_table_columns( 'page' ) || $select->has_table_columns( 'module' ) )
       {
         $modifier->left_join( 'page', 'response.page_id', 'page.id' );

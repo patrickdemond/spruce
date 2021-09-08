@@ -25,11 +25,19 @@ class query extends \cenozo\service\query
    */
   protected function get_record_count()
   {
-    // count all response_attributes belonging to the current response
-    $response_attribute_class_name = lib::get_class_name( 'database\response_attribute' );
-    $modifier = clone $this->modifier;
-    $modifier->where( 'response_id', '=', $this->get_parent_record()->get_current_response()->id );
-    return $response_attribute_class_name::count( $modifier );
+    $db_current_response = $this->get_parent_record()->get_current_response();
+
+    $count = 0;
+    if( !is_null( $db_current_response ) )
+    {
+      // count all response_attributes belonging to the current response
+      $response_attribute_class_name = lib::get_class_name( 'database\response_attribute' );
+      $modifier = clone $this->modifier;
+      $modifier->where( 'response_id', '=', $this->get_parent_record()->get_current_response()->id );
+      $count = $response_attribute_class_name::count( $modifier );
+    }
+
+    return $count;
   }
 
   /**
@@ -37,10 +45,18 @@ class query extends \cenozo\service\query
    */
   protected function get_record_list()
   {
-    // list all response_attributes belonging to the current response
-    $response_attribute_class_name = lib::get_class_name( 'database\response_attribute' );
-    $modifier = clone $this->modifier;
-    $modifier->where( 'response_id', '=', $this->get_parent_record()->get_current_response()->id );
-    return $response_attribute_class_name::select( $this->select, $modifier );
+    $db_current_response = $this->get_parent_record()->get_current_response();
+
+    $list = array();
+    if( !is_null( $db_current_response ) )
+    {
+      // list all response_attributes belonging to the current response
+      $response_attribute_class_name = lib::get_class_name( 'database\response_attribute' );
+      $modifier = clone $this->modifier;
+      $modifier->where( 'response_id', '=', $this->get_parent_record()->get_current_response()->id );
+      $list = $response_attribute_class_name::select( $this->select, $modifier );
+    }
+
+    return $list;
   }
 }

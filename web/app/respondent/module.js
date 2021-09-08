@@ -112,40 +112,64 @@ define( [ 'page' ].reduce( function( list, name ) {
       title: 'Questionnaire Version',
       type: 'string',
       isConstant: true,
-      isExcluded: function( $state, model ) { return null != model.viewModel.record.repeated; }
+      isExcluded: function( $state, model ) {
+        return 'view' != model.getActionFromState() ||
+               null != model.viewModel.record.repeated ||
+               null == model.viewModel.record.current_response_id;
+      }
     },
     language_id: {
       column: 'response.language_id',
       title: 'Language',
       type: 'enum',
-      isExcluded: function( $state, model ) { return null != model.viewModel.record.repeated; }
+      isExcluded: function( $state, model ) {
+        return 'view' != model.getActionFromState() ||
+               null != model.viewModel.record.repeated ||
+               null == model.viewModel.record.current_response_id;
+      }
     },
     checked_in: {
       column: 'response.checked_in',
       title: 'Checked In',
       type: 'boolean',
       isConstant: true,
-      isExcluded: function( $state, model ) { return null != model.viewModel.record.repeated; }
+      isExcluded: function( $state, model ) {
+        return 'view' != model.getActionFromState() ||
+               null != model.viewModel.record.repeated ||
+               null == model.viewModel.record.current_response_id;
+      }
     },
     module: {
       column: 'module.name',
       title: 'Module',
       type: 'string',
       isConstant: true,
-      isExcluded: function( $state, model ) { return null != model.viewModel.record.repeated; }
+      isExcluded: function( $state, model ) {
+        return 'view' != model.getActionFromState() ||
+               null != model.viewModel.record.repeated ||
+               null == model.viewModel.record.current_response_id;
+      }
     },
     page: {
       column: 'page.name',
       title: 'Page',
       type: 'string',
       isConstant: true,
-      isExcluded: function( $state, model ) { return null != model.viewModel.record.repeated; }
+      isExcluded: function( $state, model ) {
+        return 'view' != model.getActionFromState() ||
+               null != model.viewModel.record.repeated ||
+               null == model.viewModel.record.current_response_id;
+      }
     },
     comments: {
       column: 'response.comments',
       title: 'Comments',
       type: 'text',
-      isExcluded: function( $state, model ) { return null != model.viewModel.record.repeated; }
+      isExcluded: function( $state, model ) {
+        return 'view' != model.getActionFromState() ||
+               null != model.viewModel.record.repeated ||
+               null == model.viewModel.record.current_response_id;
+      }
     },
   }, true );
 

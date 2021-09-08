@@ -27,6 +27,45 @@ CREATE PROCEDURE patch_role_has_service()
     EXECUTE statement;
     DEALLOCATE PREPARE statement;
 
+    -- interviewer
+    SET @sql = CONCAT(
+      "INSERT IGNORE INTO role_has_service( role_id, service_id ) ",
+      "SELECT role.id, service.id ",
+      "FROM ", @cenozo, ".role, service ",
+      "WHERE role.name = 'interviewer' ",
+      "AND service.subject IN( 'address', 'consent', 'participant' ) ",
+      "AND service.restricted = 1"
+    );
+    PREPARE statement FROM @sql;
+    EXECUTE statement;
+    DEALLOCATE PREPARE statement;
+
+    SET @sql = CONCAT(
+      "INSERT IGNORE INTO role_has_service( role_id, service_id ) ",
+      "SELECT role.id, service.id ",
+      "FROM ", @cenozo, ".role, service ",
+      "WHERE role.name = 'interviewer' ",
+      "AND service.subject IN( 'deviation_type' ) ",
+      "AND service.method = 'GET' ",
+      "AND service.restricted = 1"
+    );
+    PREPARE statement FROM @sql;
+    EXECUTE statement;
+    DEALLOCATE PREPARE statement;
+
+    SET @sql = CONCAT(
+      "INSERT IGNORE INTO role_has_service( role_id, service_id ) ",
+      "SELECT role.id, service.id ",
+      "FROM ", @cenozo, ".role, service ",
+      "WHERE role.name = 'interviewer' ",
+      "AND service.subject = 'response' ",
+      "AND service.method = 'PATCH' ",
+      "AND service.restricted = 1"
+    );
+    PREPARE statement FROM @sql;
+    EXECUTE statement;
+    DEALLOCATE PREPARE statement;
+
   END //
 DELIMITER ;
 

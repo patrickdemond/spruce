@@ -249,7 +249,17 @@ class qnaire extends \cenozo\database\record
       $db_deviation_type->save();
     }
 
-    // copy all consent triggers
+    // copy all consent confirms
+    foreach( $db_source_qnaire->get_qnaire_consent_type_confirm_object_list() as $db_source_consent_type )
+    {
+      $db_question = $this->get_question( $db_source_consent_type->get_question()->name );
+      $db_qnaire_consent_type_confirm = lib::create( 'database\qnaire_consent_type_confirm' );
+      $db_qnaire_consent_type_confirm->qnaire_id = $this->id;
+      $db_qnaire_consent_type_confirm->consent_type_id = $db_source_consent_type->consent_type_id;
+      $db_qnaire_consent_type_confirm->save();
+    }
+
+    // copy all consent confirms
     foreach( $db_source_qnaire->get_qnaire_consent_type_trigger_object_list() as $db_source_consent_type )
     {
       $db_question = $this->get_question( $db_source_consent_type->get_question()->name );
@@ -1525,6 +1535,7 @@ class qnaire extends \cenozo\database\record
     $deviation_type_class_name = lib::get_class_name( 'database\deviation_type' );
     $reminder_description_class_name = lib::get_class_name( 'database\reminder_description' );
     $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
+    $qnaire_consent_type_confirm_class_name = lib::get_class_name( 'database\qnaire_consent_type_confirm' );
     $qnaire_consent_type_trigger_class_name = lib::get_class_name( 'database\qnaire_consent_type_trigger' );
     $qnaire_description_class_name = lib::get_class_name( 'database\qnaire_description' );
     $module_class_name = lib::get_class_name( 'database\module' );
@@ -2086,15 +2097,8 @@ class qnaire extends \cenozo\database\record
               $db_stage->qnaire_id = $this->id;
               $db_stage->rank = $stage->rank;
               $db_stage->name = sprintf( '%s_%s', $stage->name, $name_suffix );
-              $db_stage->first_module_id = $module_class_name::get_unique_record(
-                array( 'qnaire_id', 'rank' ),
-                array( $this->id, $stage->first_module_rank )
-              )->id;
-              $db_stage->last_module_id = $module_class_name::get_unique_record(
-                array( 'qnaire_id', 'rank' ),
-                array( $this->id, $stage->last_module_rank )
-              )->id;
               $db_stage->precondition = $stage->precondition;
+              $db_stage->process_patch( $stage, $name_suffix, $apply );
               $db_stage->save();
             }
             else $add_list[] = $stage;
@@ -2102,31 +2106,10 @@ class qnaire extends \cenozo\database\record
           else
           {
             // find and add all differences
-            $diff = array();
-            foreach( $stage as $property => $value )
-              if( !in_array( $property, [ 'first_module_rank', 'last_module_rank' ] ) &&
-                  $db_stage->$property != $stage->$property )
-                $diff[$property] = $stage->$property;
-            if( $db_stage->get_first_module()->rank != $stage->first_module_rank )
-              $diff['first_module_rank'] = $stage->first_module_rank;
-            if( $db_stage->get_last_module()->rank != $stage->last_module_rank )
-              $diff['last_module_rank'] = $stage->last_module_rank;
-
-            if( 0 < count( $diff ) )
+            $diff = $db_stage->process_patch( $stage, $name_suffix, $apply );
+            if( !is_null( $diff ) )
             {
-              if( $apply )
-              {
-                $db_stage->first_module_id = $module_class_name::get_unique_record(
-                  array( 'qnaire_id', 'rank' ),
-                  array( $this->id, $stage->first_module_rank )
-                )->id;
-                $db_stage->last_module_id = $module_class_name::get_unique_record(
-                  array( 'qnaire_id', 'rank' ),
-                  array( $this->id, $stage->last_module_rank )
-                )->id;
-                $db_stage->save();
-              }
-              else $change_list[$db_stage->name] = $diff;
+              if( !$apply ) $change_list[$db_stage->name] = $diff;
             }
           }
         }
@@ -2161,6 +2144,93 @@ class qnaire extends \cenozo\database\record
         if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
         if( 0 < count( $diff_list ) ) $difference_list['stage_list'] = $diff_list;
+      }
+      else if( 'qnaire_consent_type_confirm_list' == $property )
+      {
+        // check every item in the patch object for additions and changes
+        $add_list = array();
+        $change_list = array();
+        foreach( $patch_object->qnaire_consent_type_confirm_list as $qnaire_consent_type_confirm )
+        {
+          $db_consent_type = $consent_type_class_name::get_unique_record( 'name', $qnaire_consent_type_confirm->consent_type_name );
+
+          if( is_null( $db_consent_type ) )
+          {
+            if( !$apply )
+            {
+              $error = new \stdClass();
+              $error->WARNING = sprintf(
+                'Consent Confirm for "%s" will be ignore since the consent type does not exist.',
+                $qnaire_consent_type_confirm->consent_type_name
+              );
+              $add_list[] = $error;
+            }
+          }
+          else
+          {
+            $db_qnaire_consent_type_confirm = $qnaire_consent_type_confirm_class_name::get_unique_record(
+              array( 'qnaire_id', 'consent_type_id' ),
+              array( $this->id, $db_consent_type->id )
+            );
+
+            if( is_null( $db_qnaire_consent_type_confirm ) )
+            {
+              if( $apply )
+              {
+                $db_qnaire_consent_type_confirm = lib::create( 'database\qnaire_consent_type_confirm' );
+                $db_qnaire_consent_type_confirm->qnaire_id = $this->id;
+                $db_qnaire_consent_type_confirm->consent_type_id = $db_consent_type->id;
+                $db_qnaire_consent_type_confirm->save();
+              }
+              else $add_list[] = $qnaire_consent_type_confirm;
+            }
+            else
+            {
+              // find and add all differences
+              $diff = array();
+              foreach( $qnaire_consent_type_confirm as $property => $value )
+                if( 'consent_type_name' == $property &&
+                    $db_qnaire_consent_type_confirm->$property != $qnaire_consent_type_confirm->$property )
+                  $diff[$property] = $qnaire_consent_type_confirm->$property;
+
+              if( 0 < count( $diff ) )
+              {
+                if( $apply ) $db_qnaire_consent_type_confirm->save();
+                else $change_list[$qnaire_consent_type_confirm->consent_type_name] = $diff;
+              }
+            }
+          }
+        }
+
+        // check every item in this object for removals
+        $remove_list = array();
+        foreach( $this->get_qnaire_consent_type_confirm_object_list() as $db_qnaire_consent_type_confirm )
+        {
+          $consent_type_name = $db_qnaire_consent_type_confirm->get_consent_type()->name;
+
+          $found = false;
+          foreach( $patch_object->qnaire_consent_type_confirm_list as $qnaire_consent_type_confirm )
+          {
+            // see if the qnaire_consent_type_confirm exists
+            if( $consent_type_name == $qnaire_consent_type_confirm->consent_type_name )
+            {
+              $found = true;
+              break;
+            }
+          }
+
+          if( !$found )
+          {
+            if( $apply ) $db_qnaire_consent_type_confirm->delete();
+            else $remove_list[] = $consent_type_name;
+          }
+        }
+
+        $diff_list = array();
+        if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
+        if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
+        if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
+        if( 0 < count( $diff_list ) ) $difference_list['qnaire_consent_type_confirm_list'] = $diff_list;
       }
       else if( 'qnaire_consent_type_trigger_list' == $property )
       {
@@ -2221,9 +2291,9 @@ class qnaire extends \cenozo\database\record
               $db_question = $this->get_question( sprintf( '%s_%s', $qnaire_consent_type_trigger->question_name, $name_suffix ) );
 
             $db_qnaire_consent_type_trigger = $qnaire_consent_type_trigger_class_name::get_unique_record(
-                                        array( 'qnaire_id', 'consent_type_id', 'question_id', 'accept' ),
-                                        array( $this->id, $db_consent_type->id, $db_question->id, $qnaire_consent_type_trigger->accept )
-                                      );
+              array( 'qnaire_id', 'consent_type_id', 'question_id', 'accept' ),
+              array( $this->id, $db_consent_type->id, $db_question->id, $qnaire_consent_type_trigger->accept )
+            );
 
             if( is_null( $db_qnaire_consent_type_trigger ) )
             {
@@ -2421,6 +2491,7 @@ class qnaire extends \cenozo\database\record
       'variable_suffix' => $this->variable_suffix,
       'debug' => $this->debug,
       'readonly' => $this->readonly,
+      'stages' => $this->stages,
       'repeated' => $this->repeated,
       'repeat_offset' => $this->repeat_offset,
       'max_responses' => $this->max_responses,
@@ -2436,6 +2507,7 @@ class qnaire extends \cenozo\database\record
       'qnaire_description_list' => array(),
       'module_list' => array(),
       'stage_list' => array(),
+      'qnaire_consent_type_confirm_list' => array(),
       'qnaire_consent_type_trigger_list' => array()
     );
 
@@ -2617,15 +2689,22 @@ class qnaire extends \cenozo\database\record
     $stage_mod->join( 'module', 'stage.last_module_id', 'last_module.id', '', 'last_module' );
     foreach( $this->get_stage_list( $stage_sel, $stage_mod ) as $item ) $qnaire_data['stage_list'][] = $item;
 
-    $qnaire_consent_type_trigger_sel = lib::create( 'database\select' );
-    $qnaire_consent_type_trigger_sel->add_table_column( 'consent_type', 'name', 'consent_type_name' );
-    $qnaire_consent_type_trigger_sel->add_table_column( 'question', 'name', 'question_name' );
-    $qnaire_consent_type_trigger_sel->add_column( 'answer_value' );
-    $qnaire_consent_type_trigger_sel->add_column( 'accept' );
-    $qnaire_consent_type_trigger_mod = lib::create( 'database\modifier' );
-    $qnaire_consent_type_trigger_mod->join( 'consent_type', 'qnaire_consent_type_trigger.consent_type_id', 'consent_type.id' );
-    $qnaire_consent_type_trigger_mod->join( 'question', 'qnaire_consent_type_trigger.question_id', 'question.id' );
-    foreach( $this->get_qnaire_consent_type_trigger_list( $qnaire_consent_type_trigger_sel, $qnaire_consent_type_trigger_mod ) as $item )
+    $qnaire_confirm_sel = lib::create( 'database\select' );
+    $qnaire_confirm_sel->add_table_column( 'consent_type', 'name', 'consent_type_name' );
+    $qnaire_confirm_mod = lib::create( 'database\modifier' );
+    $qnaire_confirm_mod->join( 'consent_type', 'qnaire_consent_type_confirm.consent_type_id', 'consent_type.id' );
+    foreach( $this->get_qnaire_consent_type_confirm_list( $qnaire_confirm_sel, $qnaire_confirm_mod ) as $item )
+      $qnaire_data['qnaire_consent_type_confirm_list'][] = $item;
+
+    $qnaire_trigger_sel = lib::create( 'database\select' );
+    $qnaire_trigger_sel->add_table_column( 'consent_type', 'name', 'consent_type_name' );
+    $qnaire_trigger_sel->add_table_column( 'question', 'name', 'question_name' );
+    $qnaire_trigger_sel->add_column( 'answer_value' );
+    $qnaire_trigger_sel->add_column( 'accept' );
+    $qnaire_trigger_mod = lib::create( 'database\modifier' );
+    $qnaire_trigger_mod->join( 'consent_type', 'qnaire_consent_type_trigger.consent_type_id', 'consent_type.id' );
+    $qnaire_trigger_mod->join( 'question', 'qnaire_consent_type_trigger.question_id', 'question.id' );
+    foreach( $this->get_qnaire_consent_type_trigger_list( $qnaire_trigger_sel, $qnaire_trigger_mod ) as $item )
       $qnaire_data['qnaire_consent_type_trigger_list'][] = $item;
 
     if( 'export' == $type )
@@ -2967,6 +3046,26 @@ class qnaire extends \cenozo\database\record
       )->id;
       $db_stage->precondition = $stage->precondition;
       $db_stage->save();
+    }
+
+    foreach( $qnaire_object->qnaire_consent_type_confirm_list as $qnaire_consent_type_confirm )
+    {
+      $db_consent_type = $consent_type_class_name::get_unique_record( 'name', $qnaire_consent_type_confirm->consent_type_name );
+      if( is_null( $db_consent_type ) )
+      {
+        throw lib::create( 'exception\notice',
+          sprintf(
+            'Unable to import questionnaire since it has a consent confirm for consent type "%s" which does not exist.',
+            $qnaire_consent_type_confirm->consent_type_name
+          ),
+          __METHOD__
+        );
+      }
+
+      $db_qnaire_consent_type_confirm = lib::create( 'database\qnaire_consent_type_confirm' );
+      $db_qnaire_consent_type_confirm->qnaire_id = $db_qnaire->id;
+      $db_qnaire_consent_type_confirm->consent_type_id = $db_consent_type->id;
+      $db_qnaire_consent_type_confirm->save();
     }
 
     foreach( $qnaire_object->qnaire_consent_type_trigger_list as $qnaire_consent_type_trigger )

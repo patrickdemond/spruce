@@ -156,4 +156,57 @@ class stage extends \cenozo\database\has_rank
 
     $this->save();
   }
+
+  /**
+   * Applies a patch file to the stage and returns an object containing all elements which are affected by the patch
+   * @param stdObject $patch_object An object containing all (nested) parameters to change
+   * @param string $name_suffix A temporary string used to prevent name collisions
+   * @param boolean $apply Whether to apply or evaluate the patch
+   */
+  public function process_patch( $patch_object, $name_suffix, $apply = false )
+  {
+    $module_class_name = lib::get_class_name( 'database\module' );
+    $difference_list = array();
+
+    foreach( $patch_object as $property => $value )
+    {
+      $different = false;
+      if( in_array( $property, ['first_module_rank', 'last_module_rank'] ) )
+      {
+        $db_module = 'first_module_rank' == $property ? $this->get_first_module() : $this->get_last_module();
+        $different = is_null( $db_module ) || $patch_object->$property != $db_module->rank;
+      }
+      else $different = $patch_object->$property != $this->$property;
+
+      if( $different )
+      {
+        if( $apply )
+        {
+          if( in_array( $property, ['first_module_rank', 'last_module_rank'] ) )
+          {
+            $column_name = str_replace( '_rank', '_id', $property );
+            $this->$column_name = $module_class_name::get_unique_record(
+              array( 'qnaire_id', 'rank' ),
+              array( $this->qnaire_id, $patch_object->$property )
+            )->id;
+          }
+          else
+          {
+            $this->$property = 'name' == $property
+                             ? sprintf( '%s_%s', $patch_object->$property, $name_suffix )
+                             : $patch_object->$property;
+          }
+        }
+        else $difference_list[$property] = $patch_object->$property;
+      }
+    }
+
+    if( $apply )
+    {
+      $this->save();
+      return null;
+    }
+    else return 0 == count( $difference_list ) ? NULL : (object)$difference_list;
+  }
 }
+

@@ -10,6 +10,7 @@ SOURCE question.sql
 SOURCE question_option.sql
 SOURCE qnaire.sql
 SOURCE response.sql
+SOURCE respondent.sql
 SOURCE service.sql
 SOURCE role_has_service.sql
 SOURCE qnaire_consent_type_confirm.sql
