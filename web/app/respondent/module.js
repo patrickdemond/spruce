@@ -28,18 +28,15 @@ define( [ 'page' ].reduce( function( list, name ) {
         column: 'language.name',
         title: 'Language',
         type: 'string',
-        isIncluded: function( $state, model ) { return false; }
+        isIncluded: function( $state, model ) { return false; } // this is changed by the qnaire module
       },
       response_count: {
         title: 'Responses',
-        isIncluded: function( $state, model ) { return false; }
+        isIncluded: function( $state, model ) { return false; } // this is changed by the qnaire module
       },
-      checked_in: {
-        column: 'response.checked_in',
-        title: 'Checked In',
-        type: 'boolean',
-        isConstant: true,
-        isIncluded: function( $state, model ) { return false; }
+      status: {
+        title: 'Status',
+        type: 'string'
       },
       start_datetime: {
         title: 'Start Date',
@@ -72,6 +69,12 @@ define( [ 'page' ].reduce( function( list, name ) {
       title: 'Token (Interview ID)',
       type: 'string',
       isExcluded: 'add'
+    },
+    exported: {
+      title: 'Exported',
+      type: 'boolean',
+      isConstant: function( $state, model ) { return null == model.viewModel.record.end_datetime; },
+      isExcluded: function( $state, model ) { return 'view' != model.getActionFromState() || !model.isDetached(); }
     },
     start_datetime: {
       title: 'Start Date & Time',
@@ -388,8 +391,10 @@ define( [ 'page' ].reduce( function( list, name ) {
         this.viewModel = CnRespondentViewFactory.instance( this, root );
 
         angular.extend( this, {
-          isDetached: function() { return CnSession.setting.detached; },
           workInProgress: false,
+
+          isDetached: function() { return CnSession.setting.detached; },
+
           getMetadata: async function() {
             var self = this;
             await this.$$getMetadata();
@@ -412,6 +417,7 @@ define( [ 'page' ].reduce( function( list, name ) {
               } );
             } );
           },
+
           getRespondents: async function() {
             var modal = CnModalMessageFactory.instance( {
               title: 'Communicating with Remote Server',
@@ -431,6 +437,7 @@ define( [ 'page' ].reduce( function( list, name ) {
               this.workInProgress = false;
             }
           },
+
           export: async function() {
             var modal = CnModalMessageFactory.instance( {
               title: 'Communicating with Remote Server',

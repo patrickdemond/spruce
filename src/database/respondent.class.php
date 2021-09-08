@@ -27,6 +27,9 @@ class respondent extends \cenozo\database\record
       if( is_null( $this->start_datetime ) ) $this->start_datetime = util::get_datetime_object();
     }
 
+    // if the end_datetime is empty then the respondent must be marked as not exported
+    if( is_null( $this->end_datetime ) && $this->exported ) $this->exported = false;
+
     parent::save();
 
     // schedule invitation and reminder emails if the qnaire requires it

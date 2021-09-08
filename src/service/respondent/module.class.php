@@ -18,19 +18,34 @@ class module extends \cenozo\service\module
    */
   public function prepare_read( $select, $modifier )
   {
+    $detached = lib::create( 'business\setting_manager' )->get_setting( 'general', 'detached' );
+
     parent::prepare_read( $select, $modifier );
 
     $modifier->join( 'qnaire', 'respondent.qnaire_id', 'qnaire.id' );
     $modifier->join( 'participant', 'respondent.participant_id', 'participant.id' );
 
-    if( $select->has_table_columns( 'response' ) ||
-        $select->has_table_columns( 'language' ) ||
+    $modifier->join( 'respondent_current_response', 'respondent.id', 'respondent_current_response.respondent_id' );
+    $modifier->left_join( 'response', 'respondent_current_response.response_id', 'response.id' );
+
+    if( $select->has_column( 'status' ) )
+    {
+      $column_value = 
+        'IF( respondent.end_datetime IS NOT NULL, "Completed", '.
+        'IF( response.id IS NULL, "Not Started", '.
+        'IF( response.page_id IS NOT NULL, "Active", '.
+        'IF( !response.checked_in, "Checking In", "Stage Selection" ) ) ) )';
+
+      // add the export status if the application is detached
+      if( $detached ) $column_value = sprintf( 'IF( respondent.exported, "Exported", %s )', $column_value );
+
+      $select->add_column( $column_value, 'status', false );
+    }
+
+    if( $select->has_table_columns( 'language' ) ||
         $select->has_table_columns( 'module' ) ||
         $select->has_table_columns( 'page' ) )
     {
-      $modifier->join( 'respondent_current_response', 'respondent.id', 'respondent_current_response.respondent_id' );
-      $modifier->left_join( 'response', 'respondent_current_response.response_id', 'response.id' );
-
       if( $select->has_table_columns( 'language' ) )
         $modifier->left_join( 'language', 'response.language_id', 'language.id' );
       if( $select->has_table_columns( 'page' ) || $select->has_table_columns( 'module' ) )

@@ -1,3 +1,27 @@
+DROP PROCEDURE IF EXISTS patch_respondent;
+DELIMITER //
+CREATE PROCEDURE patch_respondent()
+  BEGIN
+
+    SELECT "Adding new exported column to respondent table" AS "";
+
+    SELECT COUNT(*) INTO @test
+    FROM information_schema.COLUMNS
+    WHERE table_schema = DATABASE()
+    AND table_name = "respondent"
+    AND column_name = "exported";
+
+    IF @test = 0 THEN
+      ALTER TABLE respondent ADD COLUMN exported TINYINT(1) NOT NULL DEFAULT 0 AFTER token;
+    END IF;
+
+  END //
+DELIMITER ;
+
+CALL patch_respondent();
+DROP PROCEDURE IF EXISTS patch_respondent;
+
+
 SELECT "Adding new trigger to respondent table" AS "";
 
 DELIMITER $$

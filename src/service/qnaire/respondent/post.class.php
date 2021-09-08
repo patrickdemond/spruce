@@ -93,7 +93,7 @@ class post extends \cenozo\service\post
     {
       $db_qnaire = $this->get_parent_record();
       $db_qnaire->sync_with_parent();
-      $db_qnaire->export_response_data();
+      $db_qnaire->export_respondent_data();
       $db_qnaire->send_respondents_to_beartooth();
     }
     else

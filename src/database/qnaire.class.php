@@ -709,18 +709,20 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
-   * Sends response data to a parent instance of Pine
+   * Sends ready-to-export respondent data to a parent instance of Pine
    */
-  public function export_response_data()
+  public function export_respondent_data()
   {
     if( is_null( PARENT_INSTANCE_URL ) ) return;
 
     // encode all respondent and response data into an array
-    $respondent_list = array();
+    $export_data = array();
     $respondent_mod = lib::create( 'database\modifier' );
+    $respondent_mod->where( 'exported', '=', false );
     $respondent_mod->where( 'end_datetime', '!=', NULL );
     $respondent_mod->order( 'id' );
-    foreach( $this->get_respondent_object_list( $respondent_mod ) as $db_respondent )
+    $respondent_list = $this->get_respondent_object_list( $respondent_mod );
+    foreach( $respondent_list as $db_respondent )
     {
       $respondent = array(
         'uid' => $db_respondent->get_participant()->uid,
@@ -761,59 +763,71 @@ class qnaire extends \cenozo\database\record
         $respondent['response_list'][] = $response;
       }
 
-      $respondent_list[] = $respondent;
+      $export_data[] = $respondent;
     }
 
-    $url = sprintf( '%s/api/qnaire/name=%s/respondent?operation=import', PARENT_INSTANCE_URL, util::full_urlencode( $this->name ) );
-    $curl = curl_init();
-    curl_setopt( $curl, CURLOPT_URL, $url );
-    curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
-    curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
-    curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, 5 );
-    curl_setopt( $curl, CURLOPT_POST, true );
-    curl_setopt( $curl, CURLOPT_POSTFIELDS, util::json_encode( $respondent_list ) );
-    curl_setopt(
-      $curl,
-      CURLOPT_HTTPHEADER,
-      array(
-        sprintf(
-          'Authorization: Basic %s',
-          base64_encode( sprintf( '%s:%s', $this->beartooth_username, $this->beartooth_password ) )
-        ),
-        'Content-Type: application/json'
-      )
-    );
+    if( 0 < count( $export_data ) )
+    {
+      $url = sprintf( '%s/api/qnaire/name=%s/respondent?operation=import', PARENT_INSTANCE_URL, util::full_urlencode( $this->name ) );
+      $curl = curl_init();
+      curl_setopt( $curl, CURLOPT_URL, $url );
+      curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
+      curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+      curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, 5 );
+      curl_setopt( $curl, CURLOPT_POST, true );
+      curl_setopt( $curl, CURLOPT_POSTFIELDS, util::json_encode( $export_data ) );
+      curl_setopt(
+        $curl,
+        CURLOPT_HTTPHEADER,
+        array(
+          sprintf(
+            'Authorization: Basic %s',
+            base64_encode( sprintf( '%s:%s', $this->beartooth_username, $this->beartooth_password ) )
+          ),
+          'Content-Type: application/json'
+        )
+      );
 
-    $response = curl_exec( $curl );
-    if( curl_errno( $curl ) )
-    {
-      throw lib::create( 'exception\runtime',
-        sprintf( 'Got error code %s when synchronizing qnaire with parent instance.  Message: %s',
-                 curl_errno( $curl ),
-                 curl_error( $curl ) ),
-        __METHOD__
-      );
-    }
+      $response = curl_exec( $curl );
+      if( curl_errno( $curl ) )
+      {
+        throw lib::create( 'exception\runtime',
+          sprintf( 'Got error code %s when synchronizing qnaire with parent instance.  Message: %s',
+                   curl_errno( $curl ),
+                   curl_error( $curl ) ),
+          __METHOD__
+        );
+      }
 
-    $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
-    if( 401 == $code )
-    {
-      throw lib::create( 'exception\notice',
-        'Unable to synchronize questionnaire, invalid Beartooth username and/or password.',
-        __METHOD__
-      );
-    }
-    else if( 404 == $code )
-    {
-      // ignore missing qnaires, it just means the parent doesn't have it
-      log::info( sprintf( 'Questionnaire "%s" was not found in the parent instance, can\'t synchronize.', $this->name ) );
-    }
-    else if( 300 <= $code )
-    {
-      throw lib::create( 'exception\runtime',
-        sprintf( 'Got error code %s when synchronizing qnaire with parent instance.', $code ),
-        __METHOD__
-      );
+      $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
+      if( 401 == $code )
+      {
+        throw lib::create( 'exception\notice',
+          'Unable to synchronize questionnaire, invalid Beartooth username and/or password.',
+          __METHOD__
+        );
+      }
+      else if( 404 == $code )
+      {
+        // ignore missing qnaires, it just means the parent doesn't have it
+        log::info( sprintf( 'Questionnaire "%s" was not found in the parent instance, can\'t synchronize.', $this->name ) );
+      }
+      else if( 300 <= $code )
+      {
+        throw lib::create( 'exception\runtime',
+          sprintf( 'Got error code %s when synchronizing qnaire with parent instance.', $code ),
+          __METHOD__
+        );
+      }
+      else
+      {
+        // mark the respondents as exported
+        foreach( $respondent_list as $db_respondent )
+        {
+          $db_respondent->exported = true;
+          $db_respondent->save();
+        }
+      }
     }
   }
 
@@ -1059,6 +1073,7 @@ class qnaire extends \cenozo\database\record
     $respondent_sel->add_column( 'end_datetime' );
     $respondent_mod = lib::create( 'database\modifier' );
     $respondent_mod->join( 'participant', 'respondent.participant_id', 'participant.id' );
+    $respondent_mod->where( 'exported', '=', false );
     $respondent_mod->where( 'end_datetime', '!=', NULL );
     foreach( $this->get_respondent_list( $respondent_sel, $respondent_mod ) as $respondent )
     {
