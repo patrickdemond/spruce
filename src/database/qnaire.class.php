@@ -718,6 +718,7 @@ class qnaire extends \cenozo\database\record
     // encode all respondent and response data into an array
     $respondent_list = array();
     $respondent_mod = lib::create( 'database\modifier' );
+    $respondent_mod->where( 'end_datetime', '!=', NULL );
     $respondent_mod->order( 'id' );
     foreach( $this->get_respondent_object_list( $respondent_mod ) as $db_respondent )
     {

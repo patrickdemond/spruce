@@ -69,6 +69,9 @@ class response extends \cenozo\database\has_rank
       $this->rank = is_null( $db_current_response ) ? 1 : $db_current_response->rank + 1;
     }
 
+    // if the cheked in then make sure the start datetime is set
+    if( $this->checked_in && !$this->start_datetime ) $this->start_datetime = util::get_datetime_object();
+
     parent::save();
 
     // create the response's attributes

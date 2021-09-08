@@ -28,7 +28,34 @@
   </div>
   <div ng-if="!isComplete" class="loading spacer" style="height: 8em;" uib-tooltip="Loading&hellip;"></div>
   <div ng-if="isComplete">
-    <div ng-if="!model.renderModel.data.closed && model.renderModel.data.stages">
+
+    <!-- INTRO/CONCLUSION/CLOSED -->
+    <div ng-if="model.renderModel.data.closed || ( !model.renderModel.data.stages && !model.renderModel.data.page_id )">
+      <div class="spacer" style="min-height: 8em;">
+        <div class="container-fluid vertical-spacer">
+          <span class="larger" ng-bind-html="
+            model.renderModel.data.closed ? model.renderModel.data.closes[model.renderModel.currentLanguage] :
+            model.renderModel.data.submitted ? model.renderModel.data.conclusions[model.renderModel.currentLanguage] :
+                             model.renderModel.data.introductions[model.renderModel.currentLanguage]">
+          </span>
+        </div>
+      </div>
+      <div class="form-footer text-right rounded-bottom bg-info">
+        <button type="button"
+                ng-if="!model.renderModel.data.closed && !model.renderModel.data.submitted"
+                ng-disabled="model.renderModel.working || !isComplete"
+                ng-click="model.renderModel.proceed()"
+                class="btn btn-success larger"
+                style="width: 12em;">
+          {{ text( 'misc.begin' ) }}
+        </button>
+      </div>
+    </div>
+
+    <!-- QNAIRES WITH STAGES ONLY -->
+    <div ng-if="!model.renderModel.data.closed && model.renderModel.data.stages && !model.renderModel.data.page_id">
+      
+      <!-- CHECK IN -->
       <div ng-if="!model.renderModel.data.checked_in" style="padding-top: 1em; padding-bottom: 1em">
         <div class="container-fluid">
           <h4>Participant Details</h4>
@@ -97,7 +124,18 @@
             </div>
           </div>
         </div>
+        <div class="form-footer text-right rounded-bottom bg-info"
+             ng-if="!model.renderModel.data.closed && model.renderModel.data.stages && !model.renderModel.data.checked_in">
+          <button type="button"
+                  class="btn btn-primary"
+                  ng-disabled="null == model.renderModel.data.scanned_token"
+                  ng-click="model.renderModel.setCheckIn( true )">
+            Proceed
+          </button>
+        </div>
       </div>
+      
+      <!-- STAGE SELECTION -->
       <div ng-if="model.renderModel.data.checked_in" style="padding-top: 1em; padding-bottom: 1em">
         <div class="container-fluid">
           <div class="form-body well allow-select">
@@ -205,27 +243,8 @@
         </div>
       </div>
     </div>
-    <div ng-if="model.renderModel.data.closed || ( !model.renderModel.data.page_id && !model.renderModel.data.stages )">
-      <div class="spacer" style="min-height: 8em;">
-        <div class="container-fluid vertical-spacer">
-          <span class="larger" ng-bind-html="
-            model.renderModel.data.closed ? model.renderModel.data.closes[model.renderModel.currentLanguage] :
-            model.renderModel.data.submitted ? model.renderModel.data.conclusions[model.renderModel.currentLanguage] :
-                             model.renderModel.data.introductions[model.renderModel.currentLanguage]">
-          </span>
-        </div>
-      </div>
-      <div class="form-footer text-right rounded-bottom bg-info">
-        <button type="button"
-                ng-if="!model.renderModel.data.closed && !model.renderModel.data.submitted"
-                ng-disabled="model.renderModel.working || !isComplete"
-                ng-click="model.renderModel.proceed()"
-                class="btn btn-success larger"
-                style="width: 12em;">
-          {{ text( 'misc.begin' ) }}
-        </button>
-      </div>
-    </div>
+
+    <!-- ACTIVE PAGE -->
     <div ng-if="!model.renderModel.data.closed && model.renderModel.data.page_id">
       <div ng-if="model.viewModel.record.debug" class="form-footer text-right bg-info">
         <cn-page-navigator model="model" is-complete="isComplete" text="text"></cn-page-navigator>
@@ -502,15 +521,6 @@
           <cn-page-navigator model="model" is-complete="isComplete" text="text" placement="bottom"></cn-page-navigator>
         </div>
       </fieldset></form>
-    </div>
-    <div class="form-footer text-right rounded-bottom bg-info"
-         ng-if="!model.renderModel.data.closed && model.renderModel.data.stages && !model.renderModel.data.checked_in">
-      <button type="button"
-              class="btn btn-primary"
-              ng-disabled="null == model.renderModel.data.scanned_token"
-              ng-click="model.renderModel.setCheckIn( true )">
-        Proceed
-      </button>
     </div>
   </div>
 </div>
