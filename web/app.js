@@ -671,7 +671,11 @@ cenozo.service( 'CnTranslationHelper', [
           equalOrLess: { en: 'equal to or less than', fr: 'égale ou inférieure à' },
           between: { en: 'between', fr: 'comprise entre' },
           and: { en: 'and', fr: 'et' },
-          qnaireClosed: { en: 'Questionnaire Closed', fr: 'Période de réponse terminée' }
+          qnaireClosed: { en: 'Questionnaire Closed', fr: 'Période de réponse terminée' },
+          mustCompleteAll: {
+            en: 'You must complete all questions before you can proceed.',
+            fr: 'Vous devez répondre à toutes les questions avant de continuer.'
+          }
         }
       },
       // used by services below to convert a list of descriptions into an object
