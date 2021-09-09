@@ -293,6 +293,10 @@ define( [ 'question' ].reduce( function( list, name ) {
 
           upperDigitsActivated: false,
 
+          checkForIncompleteQuestions: function() {
+            return this.getVisibleQuestionList().some( question => question.incomplete );
+          },
+
           getVisibleQuestionList: function() {
             return this.questionList.filter( question => self.evaluate( question.precondition ) );
           },
