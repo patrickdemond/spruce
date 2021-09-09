@@ -716,7 +716,7 @@ class qnaire extends \cenozo\database\record
     if( is_null( PARENT_INSTANCE_URL ) ) return;
 
     // encode all respondent and response data into an array
-    $export_data = array();
+    $data = array( 'participant' => array(), 'respondent' => array() );
     $respondent_mod = lib::create( 'database\modifier' );
     $respondent_mod->where( 'exported', '=', false );
     $respondent_mod->where( 'end_datetime', '!=', NULL );
@@ -724,18 +724,69 @@ class qnaire extends \cenozo\database\record
     $respondent_list = $this->get_respondent_object_list( $respondent_mod );
     foreach( $respondent_list as $db_respondent )
     {
+      $db_participant = $db_respondent->get_participant();
+      $db_address = $db_participant->get_primary_address();
+
+      $participant = array(
+        'uid' => $db_participant->uid,
+        'participant' => array(
+          'honorific' => $db_participant->honorific,
+          'first_name' => $db_participant->first_name,
+          'other_name' => $db_participant->other_name,
+          'last_name' => $db_participant->last_name,
+          'current_sex' => $db_participant->current_sex,
+          'email' => $db_participant->email
+        ),
+        'address' => array(
+          'address1' => $db_address->address1,
+          'address2' => $db_address->address2,
+          'city' => $db_address->city,
+          'postcode' => $db_address->postcode
+        ),
+        'interview' => array(
+          'datetime' => $db_respondent->end_datetime->format( 'c' )
+        )
+      );
+
+      // add any consent confirm records
+      $consent_list = array();
+      $consent_sel = lib::create( 'database\select' );
+      $consent_sel->add_table_column( 'consent_type', 'name' );
+      $consent_sel->add_table_column( 'consent', 'accept' );
+      $consent_sel->add_table_column( 'consent', 'datetime' );
+      $consent_mod = lib::create( 'database\modifier' );
+      $consent_mod->join( 'consent_type', 'qnaire_consent_type_confirm.consent_type_id', 'consent_type.id' );
+      $join_mod = lib::create( 'database\modifier' );
+      $join_mod->where( 'consent_type.id', '=', 'participant_last_consent.consent_type_id', false );
+      $join_mod->where( 'participant_last_consent.participant_id', '=', $db_participant->id );
+      $consent_mod->join_modifier( 'participant_last_consent', $join_mod );
+      $consent_mod->join( 'consent', 'participant_last_consent.consent_id', 'consent.id' );
+      foreach( $this->get_qnaire_consent_type_confirm_list( $consent_sel, $consent_mod ) as $consent )
+      {
+        $consent_list[] = array(
+          'name' => $consent['name'],
+          'accept' => $consent['accept'],
+          'datetime' => $consent['datetime']
+        );
+      }
+      if( 0 < count( $consent_list ) ) $participant['consent_list'] = $consent_list;
+
       $respondent = array(
-        'uid' => $db_respondent->get_participant()->uid,
+        'uid' => $db_participant->uid,
         'token' => $db_respondent->token,
         'start_datetime' => $db_respondent->start_datetime->format( 'c' ),
         'end_datetime' => $db_respondent->end_datetime->format( 'c' ),
         'response_list' => array()
       );
 
+      // add all responses belonging to the respondent
+      $comment_list = array();
       $response_mod = lib::create( 'database\modifier' );
       $response_mod->order( 'rank' );
       foreach( $db_respondent->get_response_object_list( $response_mod ) as $db_response )
       {
+        if( !is_null( $db_response->comments ) ) $comment_list[] = $db_response->comments;
+
         $db_page = $db_response->get_page();
         $db_module = is_null( $db_page ) ? NULL : $db_page->get_module();
         $response = array(
@@ -763,11 +814,16 @@ class qnaire extends \cenozo\database\record
         $respondent['response_list'][] = $response;
       }
 
-      $export_data[] = $respondent;
+      if( 0 < count( $comment_list ) ) $participant['interview']['comment_list'] = $comment_list;
+
+      $data['participant'][] = $participant;
+      $data['respondent'][] = $respondent;
     }
 
-    if( 0 < count( $export_data ) )
+    $result = array();
+    if( 0 < count( $data['respondent'] ) )
     {
+      // First export the data to the master pine application
       $url = sprintf( '%s/api/qnaire/name=%s/respondent?operation=import', PARENT_INSTANCE_URL, util::full_urlencode( $this->name ) );
       $curl = curl_init();
       curl_setopt( $curl, CURLOPT_URL, $url );
@@ -775,7 +831,7 @@ class qnaire extends \cenozo\database\record
       curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
       curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, 5 );
       curl_setopt( $curl, CURLOPT_POST, true );
-      curl_setopt( $curl, CURLOPT_POSTFIELDS, util::json_encode( $export_data ) );
+      curl_setopt( $curl, CURLOPT_POSTFIELDS, util::json_encode( $data['respondent'] ) );
       curl_setopt(
         $curl,
         CURLOPT_HTTPHEADER,
@@ -792,7 +848,7 @@ class qnaire extends \cenozo\database\record
       if( curl_errno( $curl ) )
       {
         throw lib::create( 'exception\runtime',
-          sprintf( 'Got error code %s when synchronizing qnaire with parent instance.  Message: %s',
+          sprintf( 'Got error code %s when exporting respondent data to parent instance.  Message: %s',
                    curl_errno( $curl ),
                    curl_error( $curl ) ),
           __METHOD__
@@ -803,19 +859,21 @@ class qnaire extends \cenozo\database\record
       if( 401 == $code )
       {
         throw lib::create( 'exception\notice',
-          'Unable to synchronize questionnaire, invalid Beartooth username and/or password.',
+          'Unable to export respondent data to parent instance, invalid username and/or password.',
           __METHOD__
         );
       }
       else if( 404 == $code )
       {
-        // ignore missing qnaires, it just means the parent doesn't have it
-        log::info( sprintf( 'Questionnaire "%s" was not found in the parent instance, can\'t synchronize.', $this->name ) );
+        throw lib::create( 'exception\notice',
+          sprintf( 'Unable to export respondent data, questionnaire "%s" was not found in parent instance.', $this->name ),
+          __METHOD__
+        );
       }
       else if( 300 <= $code )
       {
         throw lib::create( 'exception\runtime',
-          sprintf( 'Got error code %s when synchronizing qnaire with parent instance.', $code ),
+          sprintf( 'Got error code %s when exporting respondent data to parent instance.', $code ),
           __METHOD__
         );
       }
@@ -828,7 +886,60 @@ class qnaire extends \cenozo\database\record
           $db_respondent->save();
         }
       }
+
+      // Now export the participant's details to beartooth
+      $url = sprintf( '%s/api/pine', $this->beartooth_url );
+      $curl = curl_init();
+      curl_setopt( $curl, CURLOPT_URL, $url );
+      curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
+      curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+      curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, 5 );
+      curl_setopt( $curl, CURLOPT_POST, true );
+      curl_setopt( $curl, CURLOPT_POSTFIELDS, util::json_encode( $data['participant'] ) );
+      curl_setopt(
+        $curl,
+        CURLOPT_HTTPHEADER,
+        array(
+          sprintf(
+            'Authorization: Basic %s',
+            base64_encode( sprintf( '%s:%s', $this->beartooth_username, $this->beartooth_password ) )
+          ),
+          'Content-Type: application/json'
+        )
+      );
+
+      $response = curl_exec( $curl );
+      if( curl_errno( $curl ) )
+      {
+        throw lib::create( 'exception\runtime',
+          sprintf( 'Got error code %s when sending participant data to Beartooth.  Message: %s',
+                   curl_errno( $curl ),
+                   curl_error( $curl ) ),
+          __METHOD__
+        );
+      }
+
+      $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
+      if( 401 == $code )
+      {
+        throw lib::create( 'exception\notice',
+          'Unable to export participant data, invalid Beartooth username and/or password.',
+          __METHOD__
+        );
+      }
+      else if( 300 <= $code )
+      {
+        throw lib::create( 'exception\runtime',
+          sprintf( 'Got response code %s when getting exporting participant data to Beartooth.', $code ),
+          __METHOD__
+        );
+      }
+
+      // return a list of all exported UIDs
+      foreach( $data['participant'] as $participant ) $result[] = $participant['uid'];
     }
+
+    return $result;
   }
 
   /**
@@ -1049,89 +1160,6 @@ class qnaire extends \cenozo\database\record
         $db_respondent->qnaire_id = $this->id;
         $db_respondent->participant_id = $db_participant->id;
         $db_respondent->save();
-      }
-    }
-  }
-
-  /** 
-   * Updates beartooth with respondents' complete status
-   */
-  public function send_respondents_to_beartooth()
-  {
-    if( is_null( $this->beartooth_url ) || is_null( $this->beartooth_username ) || is_null( $this->beartooth_password ) )
-    {
-      throw lib::create( 'expression\runtime',
-        'Tried to send respondents to Beartooth without a URL, username and password.',
-        __METHOD__
-      );
-    }
-
-    // get a list of all completed respondents
-    $respondent_list = array();
-    $respondent_sel = lib::create( 'database\select' );
-    $respondent_sel->add_table_column( 'participant', 'uid' );
-    $respondent_sel->add_column( 'end_datetime' );
-    $respondent_mod = lib::create( 'database\modifier' );
-    $respondent_mod->join( 'participant', 'respondent.participant_id', 'participant.id' );
-    $respondent_mod->where( 'exported', '=', false );
-    $respondent_mod->where( 'end_datetime', '!=', NULL );
-    foreach( $this->get_respondent_list( $respondent_sel, $respondent_mod ) as $respondent )
-    {
-      $respondent_list[] = array(
-        'uid' => $respondent['uid'],
-        'object' => array(
-          'end_datetime' => $respondent['end_datetime']
-        )
-      );
-    }
-
-    if( 0 < count( $respondent_list ) )
-    {
-      $url = sprintf( '%s/api/pine', $this->beartooth_url );
-      $curl = curl_init();
-      curl_setopt( $curl, CURLOPT_URL, $url );
-      curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
-      curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
-      curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, 5 );
-      curl_setopt( $curl, CURLOPT_POST, true );
-      curl_setopt( $curl, CURLOPT_POSTFIELDS, util::json_encode( $respondent_list ) );
-      curl_setopt(
-        $curl,
-        CURLOPT_HTTPHEADER,
-        array(
-          sprintf(
-            'Authorization: Basic %s',
-            base64_encode( sprintf( '%s:%s', $this->beartooth_username, $this->beartooth_password ) )
-          ),
-          'Content-Type: application/json'
-        )
-      );
-
-      $response = curl_exec( $curl );
-      if( curl_errno( $curl ) )
-      {
-        throw lib::create( 'exception\runtime',
-          sprintf( 'Got error code %s when getting appointment list from Beartooth.  Message: %s',
-                   curl_errno( $curl ),
-                   curl_error( $curl ) ),
-          __METHOD__
-        );
-      }
-
-      $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
-      if( 401 == $code )
-      {
-        throw lib::create( 'exception\notice',
-          'Unable to get appointment list, invalid Beartooth username and/or password.',
-          __METHOD__
-        );
-      }
-      else if( 300 <= $code )
-      {
-        throw lib::create( 'exception\runtime',
-          sprintf( 'Got response code %s when getting appointment list from Beartooth.', $code ),
-          __METHOD__
-        );
       }
     }
   }

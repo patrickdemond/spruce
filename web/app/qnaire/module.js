@@ -652,9 +652,6 @@ define( [ 'module' ].reduce( function( list, name ) {
             respondentModule.columnList.response_count.isIncluded = function( $state, model ) {
               return self.record.repeated;
             };
-            respondentModule.columnList.checked_in.isIncluded = function( $state, model ) {
-              return !self.record.repeated && self.record.stages;
-            };
           },
 
           onPatch: async function( data ) {

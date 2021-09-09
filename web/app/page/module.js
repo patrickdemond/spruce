@@ -537,7 +537,6 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
                 }
               } ).get();
 
-              console.log( response.data );
               this.data = response.data;
 
               // set the scanned token only if the token is non-generic

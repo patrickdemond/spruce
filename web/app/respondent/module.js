@@ -187,8 +187,8 @@ define( [ 'page' ].reduce( function( list, name ) {
 
   module.addExtraOperation( 'list', {
     title: 'Export Data',
-    operation: function( $state, model ) {
-      model.export();
+    operation: async function( $state, model ) {
+      await model.export();
     },
     isIncluded: function( $state, model ) { return model.isDetached() },
     isDisabled: function( $state, model ) { return model.workInProgress; }
@@ -448,9 +448,17 @@ define( [ 'page' ].reduce( function( list, name ) {
 
             try {
               this.workInProgress = true;
-              await CnHttpFactory.instance( {
+              var response = await CnHttpFactory.instance( {
                 path: 'qnaire/' + $state.params.identifier + '/respondent?operation=export'
               } ).post();
+              
+              CnModalMessageFactory.instance( {
+                title: 'Export Complete',
+                message: 0 < response.data.length
+                  ? 'The following respondents have been exported:\n\n' + response.data.join( ', ' )
+                  : 'No respondents have been exported.'
+              } ).show();
+
               await this.listModel.onList( true );
             } finally {
               modal.close();
