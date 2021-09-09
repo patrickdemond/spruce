@@ -516,6 +516,9 @@
               </div>
             </div>
           </div>
+          <h4 class="text-center text-danger" ng-if="model.renderModel.checkForIncompleteQuestions()">
+            <strong>You must complete all questions before you can proceed.</strong>
+          </h4>
         </div>
         <div class="form-footer text-right rounded-bottom bg-info">
           <cn-page-navigator model="model" is-complete="isComplete" text="text" placement="bottom"></cn-page-navigator>

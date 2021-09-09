@@ -404,6 +404,10 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
 
           text: function( address ) { return CnTranslationHelper.translate( address, this.currentLanguage ); },
 
+          checkForIncompleteQuestions: function() {
+            return this.getVisibleQuestionList().some( question => question.incomplete );
+          },
+
           getVisibleQuestionList: function() {
             return this.questionList.filter( question => self.evaluate( question.precondition ) );
           },

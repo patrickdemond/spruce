@@ -55,7 +55,7 @@
   </button>
   <button type="button"
           ng-if="'respondent' == model.getSubjectFromState()"
-          ng-disabled="!isComplete || model.renderModel.working"
+          ng-disabled="!isComplete || model.renderModel.working || model.renderModel.checkForIncompleteQuestions()"
           ng-click="model.renderModel.proceed()"
           class="btn larger"
           ng-class="null != model.viewModel.record.next_id ? 'btn-default' : 'btn-success'"
