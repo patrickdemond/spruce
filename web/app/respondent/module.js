@@ -186,7 +186,7 @@ define( [ 'page' ].reduce( function( list, name ) {
   } );
 
   module.addExtraOperation( 'list', {
-    title: 'Export Data',
+    title: 'Export Completed',
     operation: async function( $state, model ) {
       await model.export();
     },
@@ -200,6 +200,17 @@ define( [ 'page' ].reduce( function( list, name ) {
       await $state.go( 'qnaire.mass_respondent', { identifier: $state.params.identifier } );
     },
     isIncluded: function( $state, model ) { return !model.isDetached(); }
+  } );
+
+  module.addExtraOperation( 'view', {
+    title: 'Export',
+    operation: async function( $state, model ) {
+      await model.export( model.getIdentifierFromRecord( model.viewModel.record ) );
+    },
+    isIncluded: function( $state, model ) {
+      return model.isDetached() && null != model.viewModel.record.end_datetime && !model.viewModel.record.exported;
+    },
+    isDisabled: function( $state, model ) { return model.workInProgress; }
   } );
 
   module.addExtraOperation( 'view', {
@@ -429,7 +440,7 @@ define( [ 'page' ].reduce( function( list, name ) {
             try {
               this.workInProgress = true;
               await CnHttpFactory.instance( {
-                path: 'qnaire/' + $state.params.identifier + '/respondent?operation=get_respondents'
+                path: 'qnaire/' + $state.params.identifier + '/respondent?action=get_respondents'
               } ).post();
               await this.listModel.onList( true );
             } finally {
@@ -438,28 +449,37 @@ define( [ 'page' ].reduce( function( list, name ) {
             }
           },
 
-          export: async function() {
+          export: async function( respondentId ) {
             var modal = CnModalMessageFactory.instance( {
               title: 'Communicating with Remote Server',
-              message: 'Please wait while the questionnaire responses are exported.',
+              message: 'Please wait while the questionnaire data is exported.',
               block: true
             } );
             modal.show();
 
             try {
               this.workInProgress = true;
-              var response = await CnHttpFactory.instance( {
-                path: 'qnaire/' + $state.params.identifier + '/respondent?operation=export'
-              } ).post();
-              
+              var http = CnHttpFactory.instance( {
+                path: angular.isDefined( respondentId )
+                  ? 'respondent/' + respondentId + '?action=export'
+                  : 'qnaire/' + $state.params.identifier + '/respondent?action=export'
+              } );
+              var response = angular.isDefined( respondentId ) ? await http.patch() : await http.post();
+
               CnModalMessageFactory.instance( {
                 title: 'Export Complete',
-                message: 0 < response.data.length
+                message: angular.isDefined( respondentId )
+                  ? 'The respondent has been exported.'
+                  : 0 < response.data.length
                   ? 'The following respondents have been exported:\n\n' + response.data.join( ', ' )
                   : 'No respondents have been exported.'
               } ).show();
 
-              await this.listModel.onList( true );
+              if( angular.isDefined( respondentId ) ) {
+                await this.viewModel.onView( true );
+              } else {
+                await this.listModel.onList( true );
+              }
             } finally {
               modal.close();
               this.workInProgress = false;

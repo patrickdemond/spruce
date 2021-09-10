@@ -79,6 +79,12 @@ class patch extends \cenozo\service\patch
           if( !is_null( $db_script ) )
             $db_script->add_finished_event( $db_respondent->get_participant(), $db_respondent->end_datetime );
         }
+        else if( 'export' == $action )
+        {
+          $db_qnaire = $db_respondent->get_qnaire();
+          $db_qnaire->sync_with_parent();
+          $db_qnaire->export_respondent_data( $db_respondent );
+        }
         else if( 'proceed' == $action ) $db_response->move_forward();
         else if( 'backup' == $action ) $db_response->move_backward();
         else if( 'jump' == $action )

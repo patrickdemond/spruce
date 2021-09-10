@@ -20,10 +20,10 @@ class post extends \cenozo\service\post
   {
     parent::validate();
 
-    $operation = $this->get_argument( 'operation', NULL );
-    if( !is_null( $operation ) )
+    $action = $this->get_argument( 'action', NULL );
+    if( !is_null( $action ) )
     {
-      if( 'import' != $operation )
+      if( 'import' != $action )
       {
         // make sure the qnaire has beartooth credentials
         $db_qnaire = $this->get_parent_record();
@@ -60,7 +60,7 @@ class post extends \cenozo\service\post
    */
   protected function setup()
   {
-    if( is_null( $this->get_argument( 'operation', NULL ) ) )
+    if( is_null( $this->get_argument( 'action', NULL ) ) )
     {
       parent::setup();
 
@@ -77,19 +77,19 @@ class post extends \cenozo\service\post
    */
   protected function execute()
   {
-    $operation = $this->get_argument( 'operation', NULL );
-    if( 'get_respondents' == $operation )
+    $action = $this->get_argument( 'action', NULL );
+    if( 'get_respondents' == $action )
     {
       $db_qnaire = $this->get_parent_record();
       $db_qnaire->sync_with_parent();
       $db_qnaire->get_respondents_from_beartooth();
     }
-    else if( 'import' == $operation )
+    else if( 'import' == $action )
     {
       $db_qnaire = $this->get_parent_record();
       $db_qnaire->import_response_data( $this->get_file_as_object() );
     }
-    else if( 'export' == $operation )
+    else if( 'export' == $action )
     {
       $db_qnaire = $this->get_parent_record();
       $db_qnaire->sync_with_parent();

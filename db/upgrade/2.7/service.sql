@@ -9,8 +9,8 @@ INSERT IGNORE INTO service ( subject, method, resource, restricted ) VALUES
 ( 'consent', 'POST', 0, 1 ),
 ( 'debug', 'POST', 0, 0 ),
 ( 'deviation_type', 'DELETE', 1, 1 ),
-( 'deviation_type', 'GET', 0, 1 ),
-( 'deviation_type', 'GET', 1, 1 ),
+( 'deviation_type', 'GET', 0, 0 ),
+( 'deviation_type', 'GET', 1, 0 ),
 ( 'deviation_type', 'PATCH', 1, 1 ),
 ( 'deviation_type', 'POST', 0, 1 ),
 ( 'participant', 'PATCH', 1, 1 ),
@@ -29,6 +29,7 @@ INSERT IGNORE INTO service ( subject, method, resource, restricted ) VALUES
 ( 'stage', 'PATCH', 1, 1 ),
 ( 'stage', 'POST', 0, 1 );
 
-SELECT "Renaming some services" AS "";
+SELECT "Modifying some services" AS "";
 
 UPDATE service SET subject = "qnaire_consent_type_trigger" WHERE subject = "qnaire_consent_type";
+UPDATE service SET restricted = 0 WHERE subject = "consent_type" AND method = "GET";

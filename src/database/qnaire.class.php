@@ -536,6 +536,10 @@ class qnaire extends \cenozo\database\record
     {
       return 'Unable to connect to Beartooth server, invalid username and/or password.';
     }
+    else if( 306 == $code )
+    {
+      return sprintf( "Beartooth responded with the following notice\n\n\"%s\"", util::json_decode($response ) );
+    }
     else if( 300 <= $code )
     {
       return sprintf( 'Got response code %s when connecting to Beartooth server.', $code );
@@ -580,6 +584,10 @@ class qnaire extends \cenozo\database\record
     {
       return sprintf( 'The questionnaire "%s" does not exist on the parent Pine server.', $this->name );
     }
+    else if( 306 == $code )
+    {
+      return sprintf( "Parent Pine instance responded with the following notice\n\n\"%s\"", util::json_decode($response ) );
+    }
     else if( 300 <= $code )
     {
       return sprintf( 'Got error code %s when connecting to parent Pine server.', $code );
@@ -589,12 +597,78 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
-   * Synchronizes this qnaire with the qnaire belonging to the parent instance
+   * Synchronizes the consent types and qnaire with the qnaire belonging to the parent instance
    */
   public function sync_with_parent()
   {
     if( is_null( PARENT_INSTANCE_URL ) ) return;
 
+    $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
+
+    // update the consent type list
+    $url = sprintf( '%s/api/consent_type', PARENT_INSTANCE_URL );
+    $curl = curl_init();
+    curl_setopt( $curl, CURLOPT_URL, $url );
+    curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
+    curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+    curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, 5 );
+    curl_setopt(
+      $curl,
+      CURLOPT_HTTPHEADER,
+      array( sprintf(
+        'Authorization: Basic %s',
+        base64_encode( sprintf( '%s:%s', $this->beartooth_username, $this->beartooth_password ) )
+      ) )
+    );
+
+    $response = curl_exec( $curl );
+    if( curl_errno( $curl ) )
+    {
+      throw lib::create( 'exception\runtime',
+        sprintf( 'Got error code %s when synchronizing consent types with parent instance.  Message: %s',
+                 curl_errno( $curl ),
+                 curl_error( $curl ) ),
+        __METHOD__
+      );
+    }
+
+    $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
+    if( 401 == $code )
+    {
+      throw lib::create( 'exception\notice',
+        'Unable to synchronize, invalid Beartooth username and/or password.',
+        __METHOD__
+      );
+    }
+    else if( 306 == $code )
+    {
+      throw lib::create( 'exception\notice',
+        sprintf( "Parent Pine instance responded with the following notice\n\n\"%s\"", util::json_decode($response ) ),
+        __METHOD__
+      );
+    }
+    else if( 300 <= $code )
+    {
+      throw lib::create( 'exception\runtime',
+        sprintf( 'Got error code %s when synchronizing consent types with parent instance.', $code ),
+        __METHOD__
+      );
+    }
+    else
+    {
+      foreach( util::json_decode( $response ) as $consent_type )
+      {
+        // see if the consent type exists and create it if it doesn't
+        $db_consent_type = $consent_type_class_name::get_unique_record( 'name', $consent_type->name );
+        if( is_null( $db_consent_type ) ) $db_consent_type = lib::create( 'database\consent_type' );
+
+        $db_consent_type->name = $consent_type->name;
+        $db_consent_type->description = $consent_type->description;
+        $db_consent_type->save();
+      }
+    }
+
+    // update the qnaire
     $url = sprintf(
       '%s/api/qnaire/name=%s?select={"column":["version"]}',
       PARENT_INSTANCE_URL,
@@ -629,7 +703,7 @@ class qnaire extends \cenozo\database\record
     if( 401 == $code )
     {
       throw lib::create( 'exception\notice',
-        'Unable to synchronize questionnaire, invalid Beartooth username and/or password.',
+        'Unable to synchronize, invalid Beartooth username and/or password.',
         __METHOD__
       );
     }
@@ -637,6 +711,13 @@ class qnaire extends \cenozo\database\record
     {
       // ignore missing qnaires, it just means the parent doesn't have it
       log::info( sprintf( 'Questionnaire "%s" was not found in the parent instance, can\'t synchronize.', $this->name ) );
+    }
+    else if( 306 == $code )
+    {
+      throw lib::create( 'exception\notice',
+        sprintf( "Parent Pine instance responded with the following notice\n\n\"%s\"", util::json_decode($response ) ),
+        __METHOD__
+      );
     }
     else if( 300 <= $code )
     {
@@ -686,7 +767,14 @@ class qnaire extends \cenozo\database\record
         }
 
         $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
-        if( 300 <= $code )
+        if( 306 == $code )
+        {
+          throw lib::create( 'exception\notice',
+            sprintf( "Parent Pine instance responded with the following notice\n\n\"%s\"", util::json_decode($response ) ),
+            __METHOD__
+          );
+        }
+        else if( 300 <= $code )
         {
           throw lib::create( 'exception\runtime',
             sprintf( 'Got error code %s when synchronizing qnaire with parent instance (export).', $code ),
@@ -710,18 +798,32 @@ class qnaire extends \cenozo\database\record
 
   /**
    * Sends ready-to-export respondent data to a parent instance of Pine
+   * @param database\respondent $db_specific_respondent If provided then only that respondent will be exported
    */
-  public function export_respondent_data()
+  public function export_respondent_data( $db_specific_respondent = NULL )
   {
     if( is_null( PARENT_INSTANCE_URL ) ) return;
 
     // encode all respondent and response data into an array
     $data = array( 'participant' => array(), 'respondent' => array() );
-    $respondent_mod = lib::create( 'database\modifier' );
-    $respondent_mod->where( 'exported', '=', false );
-    $respondent_mod->where( 'end_datetime', '!=', NULL );
-    $respondent_mod->order( 'id' );
-    $respondent_list = $this->get_respondent_object_list( $respondent_mod );
+
+    // if no respondent is provided then export all completed and un-exported respondents
+    $respondent_list = array();
+    if( is_null( $db_specific_respondent ) )
+    {
+      $respondent_mod = lib::create( 'database\modifier' );
+      $respondent_mod->where( 'exported', '=', false );
+      $respondent_mod->where( 'end_datetime', '!=', NULL );
+      $respondent_mod->order( 'id' );
+      $respondent_list = $this->get_respondent_object_list( $respondent_mod );
+    }
+    else
+    {
+      // make sure the respondent is completed and un-exported
+      if( !is_null( $db_specific_respondent->end_datetime ) && !$db_specific_respondent->exported )
+        $respondent_list[] = $db_specific_respondent;
+    }
+
     foreach( $respondent_list as $db_respondent )
     {
       $db_participant = $db_respondent->get_participant();
@@ -748,6 +850,29 @@ class qnaire extends \cenozo\database\record
         )
       );
 
+      // add any consent trigger records
+      $consent_list = array();
+      $consent_sel = lib::create( 'database\select' );
+      $consent_sel->add_table_column( 'consent_type', 'name' );
+      $consent_sel->add_table_column( 'consent', 'accept' );
+      $consent_sel->add_table_column( 'consent', 'datetime' );
+      $consent_mod = lib::create( 'database\modifier' );
+      $consent_mod->join( 'consent_type', 'qnaire_consent_type_trigger.consent_type_id', 'consent_type.id' );
+      $join_mod = lib::create( 'database\modifier' );
+      $join_mod->where( 'consent_type.id', '=', 'participant_last_consent.consent_type_id', false );
+      $join_mod->where( 'participant_last_consent.participant_id', '=', $db_participant->id );
+      $consent_mod->join_modifier( 'participant_last_consent', $join_mod );
+      $consent_mod->join( 'consent', 'participant_last_consent.consent_id', 'consent.id' );
+      foreach( $this->get_qnaire_consent_type_trigger_list( $consent_sel, $consent_mod ) as $consent )
+      {
+        $consent_list[] = array(
+          'name' => $consent['name'],
+          'accept' => $consent['accept'],
+          'datetime' => $consent['datetime'],
+          'type' => 'trigger'
+        );
+      }
+
       // add any consent confirm records
       $consent_list = array();
       $consent_sel = lib::create( 'database\select' );
@@ -763,12 +888,28 @@ class qnaire extends \cenozo\database\record
       $consent_mod->join( 'consent', 'participant_last_consent.consent_id', 'consent.id' );
       foreach( $this->get_qnaire_consent_type_confirm_list( $consent_sel, $consent_mod ) as $consent )
       {
-        $consent_list[] = array(
-          'name' => $consent['name'],
-          'accept' => $consent['accept'],
-          'datetime' => $consent['datetime']
-        );
+        // ignore if the consent already exists from a trigger
+        $found = false;
+        foreach( $consent_list as $c )
+        {
+          if( $consent['name'] == $c['name'] )
+          {
+            $found = true;
+            break;
+          }
+        }
+
+        if( !$found )
+        {
+          $consent_list[] = array(
+            'name' => $consent['name'],
+            'accept' => $consent['accept'],
+            'datetime' => $consent['datetime'],
+            'type' => 'confirm'
+          );
+        }
       }
+
       if( 0 < count( $consent_list ) ) $participant['consent_list'] = $consent_list;
 
       $respondent = array(
@@ -802,13 +943,35 @@ class qnaire extends \cenozo\database\record
           'answer_list' => array()
         );
 
-        foreach( $db_response->get_answer_object_list() as $db_answer )
+        $answer_sel = lib::create( 'database\select' );
+        $answer_sel->add_table_column( 'question', 'name', 'question' );
+        $answer_sel->add_table_column( 'language', 'code', 'language' );
+        $answer_sel->add_column( 'value' );
+        $answer_mod = lib::create( 'database\modifier' );
+        $answer_mod->join( 'question', 'answer.question_id', 'question.id' );
+        $answer_mod->join( 'language', 'answer.language_id', 'language.id' );
+        $response['answer_list'] = $db_response->get_answer_list( $answer_sel, $answer_mod );
+
+        if( $this->stages )
         {
-          $response['answer_list'][] = array(
-            'question' => $db_answer->get_question()->name,
-            'language' => $db_answer->get_language()->code,
-            'value' => $db_answer->value
-          );
+          $response['stage_list'] = array();
+
+          $response_stage_sel = lib::create( 'database\select' );
+          $response_stage_sel->add_table_column( 'stage', 'rank', 'stage' );
+          $response_stage_sel->add_table_column( 'user', 'name', 'user' );
+          $response_stage_sel->add_table_column( 'deviation_type', 'type', 'deviation_type' );
+          $response_stage_sel->add_table_column( 'deviation_type', 'name', 'deviation_name' );
+          $response_stage_sel->add_column( 'status' );
+          $response_stage_sel->add_column( 'deviation_comments' );
+          $response_stage_sel->add_column( 'start_datetime' );
+          $response_stage_sel->add_column( 'end_datetime' );
+          $response_stage_sel->add_column( 'comments' );
+          $response_stage_mod = lib::create( 'database\modifier' );
+          $response_stage_mod->join( 'stage', 'response_stage.stage_id', 'stage.id' );
+          $response_stage_mod->join( 'user', 'response_stage.user_id', 'user.id' );
+          $response_stage_mod->left_join( 'deviation_type', 'response_stage.deviation_type_id', 'deviation_type.id' );
+          $response_stage_mod->order( 'stage.rank' );
+          $response['stage_list'] = $db_response->get_response_stage_list( $response_stage_sel, $response_stage_mod );
         }
 
         $respondent['response_list'][] = $response;
@@ -824,7 +987,7 @@ class qnaire extends \cenozo\database\record
     if( 0 < count( $data['respondent'] ) )
     {
       // First export the data to the master pine application
-      $url = sprintf( '%s/api/qnaire/name=%s/respondent?operation=import', PARENT_INSTANCE_URL, util::full_urlencode( $this->name ) );
+      $url = sprintf( '%s/api/qnaire/name=%s/respondent?action=import', PARENT_INSTANCE_URL, util::full_urlencode( $this->name ) );
       $curl = curl_init();
       curl_setopt( $curl, CURLOPT_URL, $url );
       curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
@@ -870,6 +1033,13 @@ class qnaire extends \cenozo\database\record
           __METHOD__
         );
       }
+      else if( 306 == $code )
+      {
+        throw lib::create( 'exception\notice',
+          sprintf( "Parent Pine instance responded with the following notice\n\n\"%s\"", util::json_decode($response ) ),
+          __METHOD__
+        );
+      }
       else if( 300 <= $code )
       {
         throw lib::create( 'exception\runtime',
@@ -886,7 +1056,10 @@ class qnaire extends \cenozo\database\record
           $db_respondent->save();
         }
       }
+    }
 
+    if( 0 < count( $data['participant'] ) )
+    {
       // Now export the participant's details to beartooth
       $url = sprintf( '%s/api/pine', $this->beartooth_url );
       $curl = curl_init();
@@ -927,6 +1100,13 @@ class qnaire extends \cenozo\database\record
           __METHOD__
         );
       }
+      else if( 306 == $code )
+      {
+        throw lib::create( 'exception\notice',
+          sprintf( "Beartooth responded with the following notice\n\n\"%s\"", util::json_decode($response ) ),
+          __METHOD__
+        );
+      }
       else if( 300 <= $code )
       {
         throw lib::create( 'exception\runtime',
@@ -955,6 +1135,11 @@ class qnaire extends \cenozo\database\record
     $module_class_name = lib::get_class_name( 'database\module' );
     $page_class_name = lib::get_class_name( 'database\page' );
     $answer_class_name = lib::get_class_name( 'database\answer' );
+    $stage_class_name = lib::get_class_name( 'database\stage' );
+    $user_class_name = lib::get_class_name( 'database\user' );
+    $response_stage_class_name = lib::get_class_name( 'database\response_stage' );
+    $deviation_type_class_name = lib::get_class_name( 'database\deviation_type' );
+    $db_current_user = lib::create( 'business\session' )->get_user();
 
     foreach( $respondent_list as $respondent )
     {
@@ -1044,6 +1229,41 @@ class qnaire extends \cenozo\database\record
             $db_answer->value = $answer->value;
             $db_answer->save();
           }
+
+          if( $this->stages )
+          {
+            foreach( $response->stage_list as $stage )
+            {
+              $db_stage = $stage_class_name::get_unique_record(
+                array( 'qnaire_id', 'rank' ),
+                array( $this->id, $stage->stage )
+              );
+
+              $db_response_stage = $response_stage_class_name::get_unique_record(
+                array( 'response_id', 'stage_id' ),
+                array( $db_response->id, $db_stage->id )
+              );
+
+              $db_user = $user_class_name::get_unique_record( 'name', $stage->user );
+              if( is_null( $db_user ) ) $db_user = $db_current_user;
+
+              $db_deviation_type = NULL;
+              if( !is_null( $stage->deviation_type ) ) $db_deviation_type = 
+              $deviation_type_class_name::get_unique_record(
+                array( 'qnaire_id', 'type', 'name' ),
+                array( $this->id, $stage->deviation_type, $stage->deviation_name )
+              );
+
+              $db_response_stage->user_id = $db_user->id;
+              $db_response_stage->status = $stage->status;
+              $db_response_stage->deviation_type_id = is_null( $db_deviation_type ) ? NULL : $db_deviation_type->id;
+              $db_response_stage->deviation_comments = $stage->deviation_comments;
+              $db_response_stage->start_datetime = $stage->start_datetime;
+              $db_response_stage->end_datetime = $stage->end_datetime;
+              $db_response_stage->comments = $stage->comments;
+              $db_response_stage->save();
+            }
+          }
         }
       }
     }
@@ -1101,6 +1321,13 @@ class qnaire extends \cenozo\database\record
     {
       throw lib::create( 'exception\notice',
         'Unable to get appointment list, invalid Beartooth username and/or password.',
+        __METHOD__
+      );
+    }
+    else if( 306 == $code )
+    {
+      throw lib::create( 'exception\notice',
+        sprintf( "Beartooth responded with the following notice\n\n\"%s\"", util::json_decode($response ) ),
         __METHOD__
       );
     }
@@ -2191,9 +2418,8 @@ class qnaire extends \cenozo\database\record
       }
       else if( 'qnaire_consent_type_confirm_list' == $property )
       {
-        // check every item in the patch object for additions and changes
+        // check every item in the patch object for additions
         $add_list = array();
-        $change_list = array();
         foreach( $patch_object->qnaire_consent_type_confirm_list as $qnaire_consent_type_confirm )
         {
           $db_consent_type = $consent_type_class_name::get_unique_record( 'name', $qnaire_consent_type_confirm->consent_type_name );
@@ -2227,21 +2453,6 @@ class qnaire extends \cenozo\database\record
                 $db_qnaire_consent_type_confirm->save();
               }
               else $add_list[] = $qnaire_consent_type_confirm;
-            }
-            else
-            {
-              // find and add all differences
-              $diff = array();
-              foreach( $qnaire_consent_type_confirm as $property => $value )
-                if( 'consent_type_name' == $property &&
-                    $db_qnaire_consent_type_confirm->$property != $qnaire_consent_type_confirm->$property )
-                  $diff[$property] = $qnaire_consent_type_confirm->$property;
-
-              if( 0 < count( $diff ) )
-              {
-                if( $apply ) $db_qnaire_consent_type_confirm->save();
-                else $change_list[$qnaire_consent_type_confirm->consent_type_name] = $diff;
-              }
             }
           }
         }

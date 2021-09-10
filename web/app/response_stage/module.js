@@ -28,8 +28,12 @@ define( function() {
         column: 'response_stage.status',
         highlight: 'active'
       },
+      user: {
+        title: 'User',
+        column: 'user.name'
+      },
       deviation_type: {
-        title: 'Devaition',
+        title: 'Deviation',
         column: 'deviation_type.name'
       },
       start_datetime: {
