@@ -172,6 +172,7 @@ class ui extends \cenozo\ui\ui
 
     if( 'interviewer' == $db_role->name )
     {
+      $this->remove_listitem( 'Consent Types' );
       $this->remove_listitem( 'Questionnaires' );
       $this->remove_listitem( 'Users' );
     }

@@ -199,6 +199,7 @@ define( [ 'module' ].reduce( function( list, name ) {
   module.addExtraOperation( 'view', {
     title: 'Preview',
     isDisabled: function( $state, model ) { return !model.viewModel.record.first_page_id; },
+    isIncluded: function( $state, model ) { return !model.isRole( 'interviewer' ); },
     operation: async function( $state, model ) {
       await $state.go(
         'page.render',

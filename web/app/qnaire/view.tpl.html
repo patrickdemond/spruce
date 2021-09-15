@@ -1,4 +1,4 @@
-<cn-qnaire-navigator></cn-qnaire-navigator>
+<cn-qnaire-navigator ng-if="model.isRole( 'administrator' )"></cn-qnaire-navigator>
 <cn-record-view model="model"></cn-record-view>
 <cn-list-selector model="model"></cn-list-selector>
 <div ng-show="null === model.viewModel.tab || child.subject.snake == model.viewModel.tab"
