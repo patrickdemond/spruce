@@ -201,6 +201,21 @@ class qnaire extends \cenozo\database\record
       }
     }
 
+    // copy all devices
+    $device_sel = lib::create( 'database\select' );
+    $device_sel->add_column( 'type' );
+    $device_sel->add_column( 'name' );
+    $device_mod = lib::create( 'database\modifier' );
+    $device_mod->order( 'device.id' );
+    foreach( $db_source_qnaire->get_device_list( $device_sel, $device_mod ) as $db_source_device )
+    {
+      $db_device = lib::create( 'database\device' );
+      $db_device->qnaire_id = $this->id;
+      $db_device->name = $db_source_device->name;
+      $db_device->url = $db_source_device->url;
+      $db_device->save();
+    }
+
     // remove any existing stages and modules
     $delete_mod = lib::create( 'database\modifier' );
     $delete_mod->where( 'qnaire_id', '=', $this->id );
@@ -244,8 +259,8 @@ class qnaire extends \cenozo\database\record
     {
       $db_deviation_type = lib::create( 'database\deviation_type' );
       $db_deviation_type->qnaire_id = $this->id;
-      $db_deviation_type->type = $db_source_devaition_type->type;
-      $db_deviation_type->name = $db_source_devaition_type->name;
+      $db_deviation_type->type = $db_source_deviation_type->type;
+      $db_deviation_type->name = $db_source_deviation_type->name;
       $db_deviation_type->save();
     }
 
@@ -1248,8 +1263,7 @@ class qnaire extends \cenozo\database\record
               if( is_null( $db_user ) ) $db_user = $db_current_user;
 
               $db_deviation_type = NULL;
-              if( !is_null( $stage->deviation_type ) ) $db_deviation_type = 
-              $deviation_type_class_name::get_unique_record(
+              if( !is_null( $stage->deviation_type ) ) $db_deviation_type = $deviation_type_class_name::get_unique_record(
                 array( 'qnaire_id', 'type', 'name' ),
                 array( $this->id, $stage->deviation_type, $stage->deviation_name )
               );
@@ -1500,12 +1514,14 @@ class qnaire extends \cenozo\database\record
             // if it exists then add the qnaire's variable suffix to the question name
             if( !is_null( $this->variable_suffix ) ) $column_name = sprintf( '%s_%s', $column_name, $this->variable_suffix );
 
+            $db_device = $db_question->get_device();
             $column_list[$column_name] = array(
               'module_name' => $db_module->name,
               'page_name' => $db_page->name,
               'question_name' => $db_question->name,
               'question_id' => $db_question->id,
               'type' => $db_question->type,
+              'device' => is_null( $db_device ) ? NULL : $db_device->name,
               'minimum' => $db_question->minimum,
               'maximum' => $db_question->maximum,
               'module_precondition' => $db_module->precondition,
@@ -1811,6 +1827,7 @@ class qnaire extends \cenozo\database\record
     $qnaire_description_class_name = lib::get_class_name( 'database\qnaire_description' );
     $module_class_name = lib::get_class_name( 'database\module' );
     $stage_class_name = lib::get_class_name( 'database\stage' );
+    $device_class_name = lib::get_class_name( 'database\device' );
 
     // NOTE: since we want to avoid duplicate unique keys caused by re-naming or re-ordering modules we use the following
     // offset and suffix values when setting rank and name, then after all changes have been made remove the offset/suffix
@@ -2047,6 +2064,57 @@ class qnaire extends \cenozo\database\record
         if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
         if( 0 < count( $diff_list ) ) $difference_list['reminder_list'] = $diff_list;
+      }
+      else if( 'device_list' == $property )
+      {
+        // check every item in the patch object for additions and changes
+        $add_list = array();
+        foreach( $patch_object->device_list as $device )
+        {
+          $db_device = $device_class_name::get_unique_record(
+            array( 'qnaire_id', 'name' ),
+            array( $this->id, $device->name )
+          );
+
+          if( is_null( $db_device ) )
+          {
+            if( $apply )
+            {
+              $db_device = lib::create( 'database\device' );
+              $db_device->qnaire_id = $this->id;
+              $db_device->name = $device->name;
+              $db_device->url = $device->url;
+              $db_device->save();
+            }
+            else $add_list[] = $device;
+          }
+        }
+
+        // check every item in this object for removals
+        $remove_list = array();
+        foreach( $this->get_device_object_list() as $db_device )
+        {
+          $found = false;
+          foreach( $patch_object->device_list as $device )
+          {
+            if( $db_device->name == $device->name )
+            {
+              $found = true;
+              break;
+            }
+          }
+
+          if( !$found )
+          {
+            if( $apply ) $db_device->delete();
+            else $remove_list[] = $db_device->name;
+          }
+        }
+
+        $diff_list = array();
+        if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
+        if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
+        if( 0 < count( $diff_list ) ) $difference_list['device_list'] = $diff_list;
       }
       else if( 'deviation_type_list' == $property )
       {
@@ -2757,14 +2825,19 @@ class qnaire extends \cenozo\database\record
       'note' => $this->note,
       'language_list' => array(),
       'attribute_list' => array(),
-      'deviation_type_list' => array(),
       'reminder_list' => array(),
       'qnaire_description_list' => array(),
       'module_list' => array(),
-      'stage_list' => array(),
       'qnaire_consent_type_confirm_list' => array(),
       'qnaire_consent_type_trigger_list' => array()
     );
+
+    if( $this->stages )
+    {
+      $qnaire_data['device_list'] = array();
+      $qnaire_data['deviation_type_list'] = array();
+      $qnaire_data['stage_list'] = array();
+    }
 
     $language_sel = lib::create( 'database\select' );
     $language_sel->add_column( 'code' );
@@ -2776,10 +2849,18 @@ class qnaire extends \cenozo\database\record
     $attribute_sel->add_column( 'note' );
     foreach( $this->get_attribute_list( $attribute_sel ) as $item ) $qnaire_data['attribute_list'][] = $item;
 
-    $deviation_type_sel = lib::create( 'database\select' );
-    $deviation_type_sel->add_column( 'type' );
-    $deviation_type_sel->add_column( 'name' );
-    foreach( $this->get_deviation_type_list( $deviation_type_sel ) as $item ) $qnaire_data['deviation_type_list'][] = $item;
+    if( $this->stages )
+    {
+      $device_sel = lib::create( 'database\select' );
+      $device_sel->add_column( 'name' );
+      $device_sel->add_column( 'url' );
+      foreach( $this->get_device_list( $device_sel ) as $item ) $qnaire_data['device_list'][] = $item;
+
+      $deviation_type_sel = lib::create( 'database\select' );
+      $deviation_type_sel->add_column( 'type' );
+      $deviation_type_sel->add_column( 'name' );
+      foreach( $this->get_deviation_type_list( $deviation_type_sel ) as $item ) $qnaire_data['deviation_type_list'][] = $item;
+    }
 
     foreach( $this->get_reminder_object_list() as $db_reminder )
     {
@@ -2866,6 +2947,7 @@ class qnaire extends \cenozo\database\record
         $question_mod->order( 'question.rank' );
         foreach( $db_page->get_question_object_list( $question_mod ) as $db_question )
         {
+          $db_device = $db_question->get_device();
           $question = array(
             'rank' => $db_question->rank,
             'name' => $db_question->name,
@@ -2873,6 +2955,7 @@ class qnaire extends \cenozo\database\record
             'mandatory' => $db_question->mandatory,
             'dkna_allowed' => $db_question->dkna_allowed,
             'refuse_allowed' => $db_question->refuse_allowed,
+            'device_name' => is_null( $db_device ) ? NULL : $db_device->name,
             'minimum' => $db_question->minimum,
             'maximum' => $db_question->maximum,
             'default_answer' => $db_question->default_answer,
@@ -2933,16 +3016,19 @@ class qnaire extends \cenozo\database\record
       $qnaire_data['module_list'][] = $module;
     }
 
-    $stage_sel = lib::create( 'database\select' );
-    $stage_sel->add_column( 'rank' );
-    $stage_sel->add_column( 'name' );
-    $stage_sel->add_table_column( 'first_module', 'rank', 'first_module_rank' );
-    $stage_sel->add_table_column( 'last_module', 'rank', 'last_module_rank' );
-    $stage_sel->add_column( 'precondition' );
-    $stage_mod = lib::create( 'database\modifier' );
-    $stage_mod->join( 'module', 'stage.first_module_id', 'first_module.id', '', 'first_module' );
-    $stage_mod->join( 'module', 'stage.last_module_id', 'last_module.id', '', 'last_module' );
-    foreach( $this->get_stage_list( $stage_sel, $stage_mod ) as $item ) $qnaire_data['stage_list'][] = $item;
+    if( $this->stages )
+    {
+      $stage_sel = lib::create( 'database\select' );
+      $stage_sel->add_column( 'rank' );
+      $stage_sel->add_column( 'name' );
+      $stage_sel->add_table_column( 'first_module', 'rank', 'first_module_rank' );
+      $stage_sel->add_table_column( 'last_module', 'rank', 'last_module_rank' );
+      $stage_sel->add_column( 'precondition' );
+      $stage_mod = lib::create( 'database\modifier' );
+      $stage_mod->join( 'module', 'stage.first_module_id', 'first_module.id', '', 'first_module' );
+      $stage_mod->join( 'module', 'stage.last_module_id', 'last_module.id', '', 'last_module' );
+      foreach( $this->get_stage_list( $stage_sel, $stage_mod ) as $item ) $qnaire_data['stage_list'][] = $item;
+    }
 
     $qnaire_confirm_sel = lib::create( 'database\select' );
     $qnaire_confirm_sel->add_table_column( 'consent_type', 'name', 'consent_type_name' );
@@ -3074,7 +3160,9 @@ class qnaire extends \cenozo\database\record
                   "OPTION #%d, %s%s:\n",
                   $question_option['rank'],
                   $question_option['name'],
-                  is_null( $question_option['precondition'] ? '' : sprintf( ' (precondition: %s)', $question_option['precondition'] ) )
+                  is_null(
+                    $question_option['precondition'] ? '' : sprintf( ' (precondition: %s)', $question_option['precondition'] )
+                  )
                 );
 
                 $description = array( 'prompt' => array(), 'popup' => array() );
@@ -3135,6 +3223,7 @@ class qnaire extends \cenozo\database\record
     $db_qnaire->version = property_exists( $qnaire_object, 'version' ) ? $qnaire_object->version : NULL;
     $db_qnaire->variable_suffix = $qnaire_object->variable_suffix;
     $db_qnaire->debug = $qnaire_object->debug;
+    $db_qnaire->stages = $qnaire_object->stages;
     $db_qnaire->repeated = $qnaire_object->repeated;
     $db_qnaire->repeat_offset = $qnaire_object->repeat_offset;
     $db_qnaire->max_responses = $qnaire_object->max_responses;
@@ -3175,13 +3264,25 @@ class qnaire extends \cenozo\database\record
       $db_attribute->save();
     }
 
-    foreach( $qnaire_object->deviation_type_list as $deviation_type )
+    if( $db_qnaire->stages )
     {
-      $db_deviation_type = lib::create( 'database\deviation_type' );
-      $db_deviation_type->qnaire_id = $db_qnaire->id;
-      $db_deviation_type->type = $deviation_type->type;
-      $db_deviation_type->name = $deviation_type->name;
-      $db_deviation_type->save();
+      foreach( $qnaire_object->device_list as $device )
+      {
+        $db_device = lib::create( 'database\device' );
+        $db_device->qnaire_id = $db_qnaire->id;
+        $db_device->name = $device->name;
+        $db_device->url = $device->url;
+        $db_device->save();
+      }
+
+      foreach( $qnaire_object->deviation_type_list as $deviation_type )
+      {
+        $db_deviation_type = lib::create( 'database\deviation_type' );
+        $db_deviation_type->qnaire_id = $db_qnaire->id;
+        $db_deviation_type->type = $deviation_type->type;
+        $db_deviation_type->name = $deviation_type->name;
+        $db_deviation_type->save();
+      }
     }
 
     foreach( $qnaire_object->qnaire_description_list as $qnaire_description )
@@ -3232,6 +3333,13 @@ class qnaire extends \cenozo\database\record
 
         foreach( $page_object->question_list as $question_object )
         {
+          $db_device = is_null( $question_object->device_name )
+                     ? NULL
+                     : $device_class_name::get_unique_record(
+                         array( 'qnaire_id', 'name' ),
+                         array( $db_qnaire->id, $question_object->device_name )
+                       );
+
           $db_question = lib::create( 'database\question' );
           $db_question->page_id = $db_page->id;
           $db_question->rank = $question_object->rank;
@@ -3240,6 +3348,7 @@ class qnaire extends \cenozo\database\record
           $db_question->mandatory = $question_object->mandatory;
           $db_question->dkna_allowed = $question_object->dkna_allowed;
           $db_question->refuse_allowed = $question_object->refuse_allowed;
+          if( !is_null( $db_device ) ) $db_question->device_id = $db_device->id;
           $db_question->minimum = $question_object->minimum;
           $db_question->maximum = $question_object->maximum;
           $db_question->default_answer = $question_object->default_answer;
@@ -3285,22 +3394,25 @@ class qnaire extends \cenozo\database\record
       }
     }
 
-    foreach( $qnaire_object->stage_list as $stage )
+    if( $db_qnaire->stages )
     {
-      $db_stage = lib::create( 'database\stage' );
-      $db_stage->qnaire_id = $db_qnaire->id;
-      $db_stage->rank = $stage->rank;
-      $db_stage->name = $stage->name;
-      $db_stage->first_module_id = $module_class_name::get_unique_record(
-        array( 'qnaire_id', 'rank' ),
-        array( $db_qnaire->id, $stage->first_module_rank )
-      )->id;
-      $db_stage->last_module_id = $module_class_name::get_unique_record(
-        array( 'qnaire_id', 'rank' ),
-        array( $db_qnaire->id, $stage->last_module_rank )
-      )->id;
-      $db_stage->precondition = $stage->precondition;
-      $db_stage->save();
+      foreach( $qnaire_object->stage_list as $stage )
+      {
+        $db_stage = lib::create( 'database\stage' );
+        $db_stage->qnaire_id = $db_qnaire->id;
+        $db_stage->rank = $stage->rank;
+        $db_stage->name = $stage->name;
+        $db_stage->first_module_id = $module_class_name::get_unique_record(
+          array( 'qnaire_id', 'rank' ),
+          array( $db_qnaire->id, $stage->first_module_rank )
+        )->id;
+        $db_stage->last_module_id = $module_class_name::get_unique_record(
+          array( 'qnaire_id', 'rank' ),
+          array( $db_qnaire->id, $stage->last_module_rank )
+        )->id;
+        $db_stage->precondition = $stage->precondition;
+        $db_stage->save();
+      }
     }
 
     foreach( $qnaire_object->qnaire_consent_type_confirm_list as $qnaire_consent_type_confirm )

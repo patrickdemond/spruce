@@ -136,7 +136,6 @@ class juniper_manager extends \cenozo\base_object
         __METHOD__ );
     }
 
-    log::debug( $response );
     return json_decode( $response );
   }
   /**

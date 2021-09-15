@@ -155,6 +155,7 @@ abstract class base_qnaire_part extends \cenozo\database\has_rank
     else $child_subject = NULL;
 
     $language_class_name = lib::get_class_name( 'database\language' );
+    $device_class_name = lib::get_class_name( 'database\device' );
     $description_name = sprintf( 'database\%s_description', $subject );
     $description_class_name = lib::get_class_name( $description_name );
     $child_name = sprintf( 'database\%s', $child_subject );
@@ -335,6 +336,22 @@ abstract class base_qnaire_part extends \cenozo\database\has_rank
         if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
         if( 0 < count( $diff_list ) ) $difference_list[$child_list_name] = $diff_list;
+      }
+      else if( 'device_name' == $property )
+      {
+        // questions may link to a device
+        if( is_null( $patch_object->device_name ) )
+        {
+          $this->device_id = NULL;
+        }
+        else
+        {
+          $db_device = $device_class_name::get_unique_record(
+            array( 'qnaire_id', 'name' ),
+            array( $this->get_qnaire()->id, $patch_object->device_name )
+          );
+          $this->device_id = $db_device->id;
+        }
       }
       else
       {

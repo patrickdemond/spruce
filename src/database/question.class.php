@@ -85,7 +85,23 @@ class question extends base_qnaire_part
    */
   public function clone_from( $db_source_question )
   {
+    $device_class_name = lib::get_class_name( 'database\device' );
+
     parent::clone_from( $db_source_question );
+
+    // If there is a device then find the equivalent from the parent qnaire
+    // Note that the parent clone_from() method will copy the source question's device_id so if this question is part
+    // of a different qnaire then we have to find the device by the same name belonging to this question's qnaire.
+    $db_qnaire = $this->get_qnaire();
+    if( !is_null( $this->device_id ) && $db_source_question->get_qnaire()->id != $db_qnaire->id )
+    {
+      $db_device = $device_class_name::get_unique_record(
+        array( 'qnaire_id', 'name' ),
+        array( $db_qnaire->id, $db_source_question->get_device()->name )
+      );
+      $this->device_id = $db_device->id;
+      $this->save();
+    }
 
     // replace all existing question options with those from the clone source
     $modifier = lib::create( 'database\modifier' );
