@@ -85,6 +85,7 @@ class ui extends \cenozo\ui\ui
       $module->add_child( 'qnaire_consent_type_confirm' );
       $module->add_child( 'qnaire_consent_type_trigger' );
       $module->add_child( 'stage' );
+      $module->add_child( 'device' );
       $module->add_child( 'deviation_type' );
       $module->add_choose( 'language' );
       $module->add_action( 'clone', '/{identifier}' );

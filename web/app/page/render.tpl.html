@@ -310,7 +310,7 @@
               </div>
               <div class="horizontal-spacer"
                    ng-class="{ 'has-error': true === question.incomplete }"
-                   ng-if="'comment' != question"
+                   ng-if="'comment' != question.type"
                    ng-switch="question.type">
                 <div ng-switch-when="boolean">
                   <label class="btn btn-default full-width larger"
@@ -333,6 +333,16 @@
                     <i class="glyphicon" ng-class="question.answer.no ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
                     {{ text( 'misc.no' ) }}
                   </label>
+                </div>
+                <div ng-switch-when="device">
+                  <h4 ng-if="null == question.device_id" class="text-danger text-center">
+                    Warning: Device question is not associated with a device!
+                  </h4>
+                  <button ng-if="null != question.device_id" class="btn btn-default larger full-width"
+                          ng-disabled="model.renderModel.working"
+                          ng-click="model.renderModel.launchDevice( question )">
+                    Launch {{ question.device }} Device
+                  </button>
                 </div>
                 <div ng-switch-when="list"
                      class="row row-no-gutters"
@@ -481,7 +491,7 @@
                   cn-elastic>
                 </textarea>
                 <div class="btn-group full-width"
-                     ng-if="'comment' != question.type && ( question.dkna_allowed || question.refuse_allowed )">
+                     ng-if="!['comment', 'device'].includes( question.type ) && ( question.dkna_allowed || question.refuse_allowed )">
                   <label class="btn btn-default larger"
                          ng-if="question.dkna_allowed"
                          ng-class="{

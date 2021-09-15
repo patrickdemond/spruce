@@ -38,8 +38,21 @@ define( [ 'question_option' ].reduce( function( list, name ) {
   module.columnList.precondition.isIncluded = function( $state, model ) { return 'qnaire' != model.getSubjectFromState(); };
 
   module.addInput( '', 'type', { title: 'Type', type: 'enum' } );
-  module.addInput( '', 'dkna_allowed', { title: 'Allow DKNA', type: 'boolean' } );
-  module.addInput( '', 'refuse_allowed', { title: 'Allow Refuse', type: 'boolean' } );
+  module.addInput( '', 'dkna_allowed', {
+    title: 'Allow DKNA',
+    type: 'boolean',
+    isExcluded: function( $state, model ) { return ['comment', 'device'].includes( model.viewModel.record.type ) ? true : 'add'; }
+  } );
+  module.addInput( '', 'refuse_allowed', {
+    title: 'Allow Refuse',
+    type: 'boolean',
+    isExcluded: function( $state, model ) { return ['comment', 'device'].includes( model.viewModel.record.type ) ? true : 'add'; }
+  } );
+  module.addInput( '', 'device_id', {
+    title: 'Device',
+    type: 'enum',
+    isExcluded: function( $state, model ) { return 'device' != model.viewModel.record.type ? true : 'add'; }
+  } );
   module.addInput( '', 'minimum', {
     title: 'Minimum',
     type: 'string',
@@ -57,6 +70,7 @@ define( [ 'question_option' ].reduce( function( list, name ) {
   module.addInput( '', 'note', { title: 'Note', type: 'text' } );
   module.addInput( '', 'parent_name', { column: 'page.name', isExcluded: true } );
   module.addInput( '', 'question_option_count', { isExcluded: true } );
+  module.addInput( '', 'qnaire_id', { column: 'qnaire.id', isExcluded: true } );
 
   /* ######################################################################################################## */
   cenozo.providers.directive( 'cnQuestionClone', [
@@ -117,6 +131,11 @@ define( [ 'question_option' ].reduce( function( list, name ) {
             return object.$$getChildList().filter( child => 'list' == object.record.type || 'question_option' != child.subject.snake );
           },
 
+          onView: async function( force ) {
+            await this.$$onView( force );
+            await this.parentModel.updateDeviceList();
+          },
+
           onPatch: async function( data ) {
             var proceed = true;
 
@@ -124,6 +143,11 @@ define( [ 'question_option' ].reduce( function( list, name ) {
             var removingOptions = angular.isDefined( data.type ) &&
                                 'list' != object.record.type &&
                                 0 < object.record.question_option_count;
+
+            // see if we're changing from 
+            var noLongerDeviceType = angular.isDefined( data.type ) &&
+                                     'device'
+
 
             // warn if changing name will cause automatic change to preconditions
             if( angular.isDefined( data.name ) ) {
@@ -174,6 +198,10 @@ define( [ 'question_option' ].reduce( function( list, name ) {
                 object.record.type = object.backupRecord.type;
                 proceed = false;
               }
+            } else if( angular.isDefined( data.type ) && !['device', 'date', 'number'].includes( object.record.type ) ) {
+              if( object.record.device_id ) object.record.device_id = '';
+              if( null != object.record.minimum ) object.record.minimum = null;
+              if( null != object.record.maximum ) object.record.maximum = null;
             }
 
             if( proceed ) {
@@ -196,8 +224,8 @@ define( [ 'question_option' ].reduce( function( list, name ) {
 
   // extend the base model factory created by caling initQnairePartModule()
   cenozo.providers.decorator( 'CnQuestionModelFactory', [
-    '$delegate',
-    function( $delegate ) {
+    '$delegate', 'CnHttpFactory',
+    function( $delegate, CnHttpFactory ) {
       function extendModelObject( object ) {
         angular.extend( object, {
           getAddEnabled: function() {
@@ -207,6 +235,22 @@ define( [ 'question_option' ].reduce( function( list, name ) {
           getDeleteEnabled: function() {
             // don't allow the add button while viewing the qnaire
             return !object.viewModel.record.readonly && 'qnaire' != object.getSubjectFromState() && object.$$getDeleteEnabled();
+          },
+          // special function to update the device list
+          updateDeviceList: async function() {
+            var response = await CnHttpFactory.instance( {
+              path: [ 'qnaire', this.viewModel.record.qnaire_id, 'device' ].join( '/' ),
+              data: {
+                select: { column: ['id', 'name'] },
+                modifier: { order: 'name' }
+              }
+            } ).query();
+
+            this.metadata.columnList.device_id.enumList = [];
+            var self = this;
+            response.data.forEach( function( item ) {
+              self.metadata.columnList.device_id.enumList.push( { value: item.id, name: item.name } );
+            } );
           }
         } );
         return object;

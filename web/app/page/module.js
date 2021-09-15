@@ -417,7 +417,7 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
           },
 
           getFocusableQuestionList: function() {
-            return this.getVisibleQuestionList().filter( question => 'comment' != question.type );
+            return this.getVisibleQuestionList().filter( question => !['comment', 'device'].includes( question.type ) );
           },
 
           openHotkeyHint: async function() {
@@ -739,8 +739,8 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
                 path: this.parentModel.getServiceResourceBasePath() + '/question',
                 data: {
                   select: { column: [
-                    'id', 'rank', 'name', 'type', 'mandatory', 'dkna_allowed', 'refuse_allowed',
-                    'minimum', 'maximum', 'precondition', 'prompts', 'popups'
+                    'id', 'rank', 'name', 'type', 'mandatory', 'dkna_allowed', 'refuse_allowed', 'minimum', 'maximum',
+                    'precondition', 'prompts', 'popups', 'device_id', { table: 'device', column: 'name', alias: 'device' }
                   ] },
                   modifier: { order: 'question.rank' }
                 }
@@ -925,8 +925,8 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
 
           // Returns true if complete, false if not and the option ID if an option's extra data is missing
           questionIsComplete: function( question ) {
-            // comment questions are always complete
-            if( 'comment' == question.type ) return true;
+            // comment and device questions are always complete
+            if( ['comment', 'device'].includes( question.type ) ) return true;
 
             // hidden questions are always complete
             if( !this.evaluate( question.precondition ) ) return true;
@@ -1121,6 +1121,22 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
                     '?action=set_language&code=' + self.currentLanguage
                 } ).patch();
               } );
+            }
+          },
+
+          launchDevice: async function( question ) {
+            try {
+              this.working = true;
+              var modal = CnModalMessageFactory.instance( {
+                title: 'Please Wait',
+                message: 'Please wait while communicating with the ' + question.device + ' device service.',
+                block: true
+              } );
+              modal.show();
+              await CnHttpFactory.instance( { path: 'question/' + question.id + '?action=launch_device' } ).get();
+            } finally {
+              modal.close();
+              this.working = false;
             }
           },
 

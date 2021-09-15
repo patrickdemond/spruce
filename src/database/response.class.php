@@ -244,7 +244,7 @@ class response extends \cenozo\database\has_rank
 
       $object_list = array();
       $question_mod = lib::create( 'database\modifier' );
-      $question_mod->where( 'type', '!=', 'comment' ); // comments don't have answers
+      $question_mod->where( 'type', 'NOT IN', ['comment', 'device'] ); // comments and devices don't have answers
       foreach( $db_page->get_question_object_list( $question_mod ) as $db_question )
       {
         $db_answer = $answer_class_name::get_unique_record(
@@ -559,12 +559,14 @@ class response extends \cenozo\database\has_rank
       $modifier->where( 'exclusive', '=', false );
       $question_name = substr( $match, 1, -1 );
       $db_question = $db_qnaire->get_question( $question_name );
-      if( is_null( $db_question ) || 'comment' == $db_question->type )
+      if( is_null( $db_question ) || in_array( $db_question->type, ['comment', 'device'] ) )
       {
         $warning = sprintf(
           'Invalid question "%s" found while compiling description: %s',
           $question_name,
-          is_null( $db_question ) ?  'question doesn\'t exist' : 'question type "comment" does not have a value'
+          is_null( $db_question )
+            ? 'question doesn\'t exist'
+            : sprintf( 'question type "%s" does not have a value', $db_question->type )
         );
 
         $description = str_replace( $match, $db_qnaire->debug ? '<b><i>WARNING: '.$warning.'</i></b>' : '', $description );

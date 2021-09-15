@@ -127,8 +127,8 @@ class answer extends \cenozo\database\record
     $expression_manager = lib::create( 'business\expression_manager', $this->get_response() );
     $value = util::json_decode( $this->value );
     
-    // comment questions are always complete
-    if( 'comment' == $db_question->type ) return true;
+    // comment and device questions are always complete
+    if( in_array( $db_question->type, ['comment', 'device'] ) ) return true;
 
     // hidden questions are always complete
     if( !$expression_manager->evaluate( $db_question->precondition ) ) return true;

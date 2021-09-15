@@ -27,6 +27,7 @@ class module extends \pine\service\base_qnaire_part_module
     $modifier->join( 'page', 'question.page_id', 'page.id' );
     $modifier->join( 'module', 'page.module_id', 'module.id' );
     $modifier->join( 'qnaire', 'module.qnaire_id', 'qnaire.id' );
+    $modifier->left_join( 'device', 'question.device_id', 'device.id' );
 
     $db_question = $this->get_resource();
     if( !is_null( $db_question ) )

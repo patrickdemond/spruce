@@ -66,7 +66,7 @@ class get extends \cenozo\service\get
       $question_sel->add_column( 'type' );
       $question_sel->add_column( 'default_answer' );
       $question_mod = lib::create( 'database\modifier' );
-      $question_mod->where( 'type', '!=', 'comment' ); // comments don't have answers
+      $question_mod->where( 'type', 'NOT IN', ['comment', 'device'] ); // comment and device questions don't have answers
       foreach( $db_page->get_question_list( $question_sel, $question_mod ) as $question )
       {
         if( is_null( $answer_class_name::get_unique_record(

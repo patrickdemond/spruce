@@ -1,0 +1,155 @@
+<?php
+/**
+ * juniper_manager.class.php
+ * 
+ * @author Patrick Emond <emondpd@mcmaster.ca>
+ */
+
+namespace pine\business;
+use cenozo\lib, cenozo\log, pine\util;
+
+/**
+ * Manages communication with Juniper services for communication with medical devices
+ */
+class juniper_manager extends \cenozo\base_object
+{
+  /**
+   * Constructor.
+   * 
+   * @param database\device|string $db_device
+   * @access protected
+   */
+  public function __construct( $db_device )
+  {
+    if( is_string( $db_device ) )
+    {
+      $device_class_name = lib::get_class_name( 'database\device' );
+      $db_device = $device_class_name::get_unique_record( 'name', $db_device );
+    }
+
+    $this->db_device = $db_device;
+  }
+
+  /**
+   * Determines whether the device exists and is online
+   * @return boolean
+   * @access public
+   */
+  public function is_online()
+  {
+    $is_online = false;
+    if( !is_null( $this->db_device ) )
+    {
+      try
+      {
+        // call the base of the URL to test if Juniper is online, if there is no exception
+        $response = $this->send( preg_replace( '#/.*#', '', $this->db_device->url ) );
+        $is_online = 'Juniper is online' == $response;
+      }
+      catch ( \cenozo\exception\runtime $e )
+      {
+        // ignore errors
+      }
+    }
+
+    return $is_online;
+  }
+
+  /**
+   * Attempts to launch a device by sending a POST request to the juniper service
+   * 
+   * @return varies
+   * @access public
+   */
+  public function launch()
+  {
+    $data = new \stdClass;
+    return $this->send( $this->db_device->url, 'POST', $data );
+  }
+
+  /**
+   * Sends curl requests
+   * 
+   * @param string $api_path The internal cenozo path (not including base url)
+   * @return varies
+   * @access public
+   */
+  private function send( $api_path, $method = 'GET', $data = NULL )
+  {
+    //if( !$this->exists() ) return NULL;
+
+    $util_class_name = lib::get_class_name( 'util' );
+    $setting_manager = lib::create( 'business\setting_manager' );
+    $user = $setting_manager->get_setting( 'utility', 'username' );
+    $pass = $setting_manager->get_setting( 'utility', 'password' );
+    $header_list = array( sprintf( 'Authorization: Basic %s', base64_encode( sprintf( '%s:%s', $user, $pass ) ) ) );
+
+    $code = 0;
+
+    // prepare cURL request
+    $url = $api_path; //sprintf( '%s/api/%s', $this->db_device->url, $api_path );
+
+    // set URL and other appropriate options
+    $curl = curl_init();
+    curl_setopt( $curl, CURLOPT_URL, $url );
+    curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
+    curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+    curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, $this->timeout );
+
+    if( 'POST' == $method )
+    {
+      curl_setopt( $curl, CURLOPT_POST, true );
+    }
+    else if( 'PATCH' == $method )
+    {
+      curl_setopt( $curl, CURLOPT_CUSTOMREQUEST, 'PATCH' );
+    }
+
+    if( !is_null( $data ) )
+    {
+      $header_list[] = 'Content-Type: device/json';
+      curl_setopt( $curl, CURLOPT_POSTFIELDS, $util_class_name::json_encode( $data ) );
+    }
+
+    curl_setopt( $curl, CURLOPT_HTTPHEADER, $header_list );
+
+    $response = curl_exec( $curl );
+    if( curl_errno( $curl ) )
+    {
+      throw lib::create( 'exception\runtime',
+        sprintf( 'Got error code %s when trying %s request to %s.  Message: %s',
+                 curl_errno( $curl ),
+                 $method,
+                 $this->db_device->name,
+                 curl_error( $curl ) ),
+        __METHOD__ );
+    }
+    
+    $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
+    if( 300 <= $code )
+    {
+      throw lib::create( 'exception\runtime',
+        sprintf( 'Got response code %s when trying %s request to %s.',
+                 $code,
+                 $method,
+                 $this->db_device->name ),
+        __METHOD__ );
+    }
+
+    log::debug( $response );
+    return json_decode( $response );
+  }
+  /**
+   * The device to connect to
+   * @var database\device
+   * @access protected
+   */
+  protected $db_device = NULL;
+
+  /**
+   * The number of seconds to wait before giving up on connecting to the device
+   * @var integer
+   * @access protected
+   */
+  protected $timeout = 5;
+}
