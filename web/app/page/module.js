@@ -420,33 +420,6 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
             return this.getVisibleQuestionList().filter( question => !['comment', 'device'].includes( question.type ) );
           },
 
-          openHotkeyHint: async function() {
-            await CnModalMessageFactory.instance( {
-              title: 'Hot-key Hints',
-              message: '<ul>' +
-                '<li>1) Navigation "-" and "+" hot-keys (keyboard or numpad) moves page backward and forward, respectively\n' +
-                '<li>2) Navigation "[" and "]" hot-keys moves focused question backward and forward, respectively\n' +
-                '<li>3) When page is first loaded, no question is focused\n' +
-                '<li>4) Focused question is highlighted in pale yellow and numeric options identified by a number in ' +
-                       'square brackets (e.g.: "[1]")\n' +
-                '<li>5) Numeric hot-keys "1" through "9" and "0" (numpad not included) will do the following based on ' +
-                       'the question type which is currently focused:\n' +
-                '<ul>' +
-                '<li>a) List: the option will be toggled (off to on, or on to off). ' +
-                       'Note that when extra information is required by the selected option the input box will ' +
-                       'automatically be given focus.\n' +
-                '<li>b) Date: the date picker will show\n' +
-                '<li>c) Number/String/Text: the input box is focused. ' +
-                       'Note that this only happens when [1] is selected, input boxes are not focused when the ' +
-                       'question is first selected using the "[" and "]" navigation hot-keys.\n' +
-                '</ul>' +
-                '<li>6) All hot-keys are deactivated when no question is focused, or when focus is in an input box\n' +
-                '<li>7) Hot-keys are disabled when questionnaire is launched via a web-link ' +
-                       '(directly by the participant and not through Sabretooth, Beartooth or Cedar)\n' +
-                '</ul>'
-            } ).show();
-          },
-
           getHotKey: function( question, item ) {
             var key = null;
 
