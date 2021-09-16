@@ -285,7 +285,9 @@
                      'text-danger': true === question.incomplete
                    }"
                    ng-bind-html="(
-                     question.popups[model.renderModel.currentLanguage] || question.minimum || question.maximum ? '<sup>ⓘ</sup> ' : ''
+                     question.popups[model.renderModel.currentLanguage] || question.minimum || question.maximum
+                       ? '<b class=\'invert\'>ⓘ</b> '
+                       : ''
                    ) + question.prompts[model.renderModel.currentLanguage]"
                    uib-tooltip-html="question.popups[model.renderModel.currentLanguage] + (
                      ( question.minimum || question.maximum ? ' [' : '' ) +
@@ -349,9 +351,11 @@
                         model.renderModel.removeOption( question, option )"
                       ng-bind-html="model.renderModel.getHotKey( question, option.id ) + ' <i class=\'glyphicon ' + (
                         question.answer.optionList[option.id].selected ? 'glyphicon-check' : 'glyphicon-unchecked'
-                      ) + '\'></i> ' + option.prompts[model.renderModel.currentLanguage] + (
-                        option.popups[model.renderModel.currentLanguage] || option.minimum || option.maximum ? ' ⓘ' : ''
-                      )"
+                      ) + '\'></i> ' + (
+                        option.popups[model.renderModel.currentLanguage] || option.minimum || option.maximum
+                          ?  '<b class=\'invert\'>ⓘ</b> '
+                          : ''
+                      ) + option.prompts[model.renderModel.currentLanguage]"
                       uib-tooltip-html="option.popups[model.renderModel.currentLanguage] + (
                         ( option.minimum || option.maximum ? ' [' : '' ) +
                         ( option.minimum ? 'Min: '+ model.renderModel.evaluateLimit( option.minimum ) : '' ) +
@@ -368,11 +372,12 @@
                       ng-class="{ 'color-red': true === question.incomplete }"
                       style="text-align: left; white-space: normal;"
                       ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal', 'font-weight': 'normal' }"
-                      ng-bind-html="model.renderModel.getHotKey( question, option.id ) +
-                        option.prompts[model.renderModel.currentLanguage] + (
-                          option.popups[model.renderModel.currentLanguage] || option.minimum || option.maximum ? ' ⓘ' : ''
-                        ) +
-                        ' <i class=\'glyphicon glyphicon-plus\'></i>'"
+                      ng-bind-html="model.renderModel.getHotKey( question, option.id ) + ' ' + (
+                          option.popups[model.renderModel.currentLanguage] || option.minimum || option.maximum
+                            ? '<b class=\'invert\'>ⓘ</b> '
+                            : ''
+                        ) + option.prompts[model.renderModel.currentLanguage] +
+                        '<i class=\'glyphicon glyphicon-plus\'></i>'"
                       uib-tooltip-html="option.popups[model.renderModel.currentLanguage] + (
                         ( option.minimum || option.maximum ? ' [' : '' ) +
                         ( option.minimum ? 'Min: '+ model.renderModel.evaluateLimit( option.minimum ) : '' ) +
