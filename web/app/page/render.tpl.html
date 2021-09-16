@@ -14,6 +14,7 @@
               ng-init="showHotKeyHint=false"
               ng-show="model.renderModel.showHidden && model.renderModel.data.page_id"
               ng-click="showHotKeyHint = !showHotKeyHint"
+              ng-bind-html="text( showHotKeyHint ? 'hotKey.hide' : 'hotKey.show' )"
               style="margin-top: -5px;">
         {{ showHotKeyHint ? 'Hide' : 'Show' }} Hot-key Hints
         <i class="glyphicon" ng-class="showHotKeyHint ? 'glyphicon-chevron-up' : 'glyphicon-chevron-down'"></i>
@@ -58,22 +59,8 @@
       <div class="container-fluid bg-warning"
            ng-if="model.renderModel.showHidden"
            ng-show="showHotKeyHint">
-        <h3>Hot-key Hints</h3>
-        <ul>
-          <li>Navigation "-" and "+" hot-keys (keyboard or numpad) moves page backward and forward, respectively</li>
-          <li>Navigation "[" and "]" hot-keys moves focused question backward and forward, respectively (When page is first loaded, no question is focused)</li>
-          <li>Focused question is highlighted in pale yellow and numeric options identified by a number in square brackets (e.g.: "[1]")</li>
-          <li>Numeric hot-keys "1" through "9" and "0" (numpad not included) will do the following based on the question type which is currently focused:</li>
-            <ul>
-              <li>List: the option will be toggled (off to on, or on to off) - if extra details are required then the input box will automatically be given focus</li>
-              <li>Number/String/Text: the input box is focused</li>
-              <li>Date: the date picker will show</li>
-            </ul>
-          <li>Holding down the SHIFT key will allow selection of items 11 through 20</li>
-          <li>When an input box has focus the enter key must be pressed to leave focus and re-activate hot-keys</li>
-          <li>All hot-keys are deactivated when no question is focused, or when focus is in an input box</li>
-          <li>Hot-keys are disabled when questionnaire is launched via a web-link (directly by the participant and not through Sabretooth, Beartooth or Cedar)</li>
-        </ul>
+        <h3 ng-bind-html="text( 'hotKey.title' )"></h3>
+        <ul ng-bind-html="text( 'hotKey.body' )"></ul>
       </div>
       <form name="form" novalidate><fieldset ng-disabled="model.renderModel.working">
         <div class="spacer">
