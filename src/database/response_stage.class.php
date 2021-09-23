@@ -127,6 +127,9 @@ class response_stage extends \cenozo\database\record
     $this->page_id = NULL;
     $this->start_datetime = NULL;
     $this->save();
+
+    // now update the response's status in case this results in ending the interview
+    $this->get_response()->update_status();
   }
 
   /**

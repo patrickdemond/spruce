@@ -204,6 +204,23 @@ class response extends \cenozo\database\has_rank
   }
 
   /**
+   * Updates the status of the response (this is only used by stage-based qnaires
+   */
+  public function update_status()
+  {
+    // update the status of all response stages
+    foreach( $this->get_response_stage_object_list() as $db_response_stage ) $db_response_stage->update_status();
+
+    // update the submitted status if there are no incomplete stages left
+    if( !$this->has_unfinished_stages() )
+    {
+      $this->page_id = NULL;
+      $this->submitted = true;
+      $this->save();
+    }
+  }
+
+  /**
    * Moves the response forward, either to the next page, conclusion or stage list
    * 
    * @access public
@@ -303,9 +320,7 @@ class response extends \cenozo\database\has_rank
             $db_current_response_stage->complete();
 
             // don't submit this response if there is an unfinished stage
-            $response_stage_mod = lib::create( 'database\modifier' );
-            $response_stage_mod->where( 'status', 'IN', array( 'not ready', 'ready', 'active', 'paused' ) );
-            if( 0 < $this->get_response_stage_count( $response_stage_mod ) ) $submitted = false;
+            $submitted = !$this->has_unfinished_stages();
           }
 
           if( $submitted )
@@ -411,6 +426,23 @@ class response extends \cenozo\database\has_rank
       $db_previous_page_time->microtime = substr( $microtime, 0, strpos( $microtime, ' ' ) );
       $db_previous_page_time->save();
     }
+  }
+
+  /**
+   * Determine if any stage is left unfinished
+   * @return boolean
+   */
+  public function has_unfinished_stages()
+  {
+    if( !$this->get_respondent()->get_qnaire()->stages )
+    {
+      log::warning( 'Tried to test if response with no stages has any unfinished stages.' );
+      return false;
+    }
+
+    $response_stage_mod = lib::create( 'database\modifier' );
+    $response_stage_mod->where( 'status', 'IN', array( 'not ready', 'ready', 'active', 'paused' ) );
+    return 0 < $this->get_response_stage_count( $response_stage_mod );
   }
 
   /**

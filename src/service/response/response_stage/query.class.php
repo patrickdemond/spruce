@@ -17,8 +17,7 @@ class query extends \cenozo\service\query
   {
     parent::prepare();
 
-    // update the status of all response stages before we respond with a list
-    foreach( $this->get_parent_record()->get_response_stage_object_list() as $db_response_stage )
-      $db_response_stage->update_status();
+    // update the status of the response before we respond with a list
+    $this->get_parent_record()->update_status();
   }
 }
