@@ -3214,6 +3214,7 @@ class qnaire extends \cenozo\database\record
     $language_class_name = lib::get_class_name( 'database\language' );
     $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
     $module_class_name = lib::get_class_name( 'database\module' );
+    $device_class_name = lib::get_class_name( 'database\device' );
 
     $default_page_max_time = lib::create( 'business\setting_manager' )->get_setting( 'general', 'default_page_max_time' );
 
