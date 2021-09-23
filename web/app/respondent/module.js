@@ -73,8 +73,10 @@ define( [ 'page' ].reduce( function( list, name ) {
     exported: {
       title: 'Exported',
       type: 'boolean',
-      isConstant: function( $state, model ) { return null == model.viewModel.record.end_datetime; },
-      isExcluded: function( $state, model ) { return 'view' != model.getActionFromState() || !model.isDetached(); }
+      isConstant: function( $state, model ) {
+        return null == model.viewModel.record.end_datetime || !model.viewModel.record.exported;
+      },
+      isExcluded: function( $state, model ) { return model.isDetached() ? 'add' : true; }
     },
     start_datetime: {
       title: 'Start Date & Time',
