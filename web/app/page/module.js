@@ -760,8 +760,6 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
               var activeAttributeList = [];
               var promiseList = this.questionList.reduce( function( list, question, questionIndex ) {
                 question.incomplete = false;
-                question.prompts = CnTranslationHelper.parseDescriptions( question.prompts );
-                question.popups = CnTranslationHelper.parseDescriptions( question.popups );
                 question.value = angular.fromJson( question.value );
                 question.backupValue = angular.copy( question.value );
                 activeAttributeList = activeAttributeList.concat( getAttributeNames( question.precondition ) );
@@ -794,12 +792,19 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
                   list.push( getOptionsFn() );
                 }
 
+
                 return list;
               }, [] );
 
               await Promise.all( promiseList );
 
-              this.questionList.forEach( question => self.convertValueToModel( question ) );
+              this.questionList.forEach( function( question ) {
+                question.rawPrompts = question.prompts;
+                question.prompts = CnTranslationHelper.parseDescriptions( self.evaluateDescription( question.rawPrompts ) );
+                question.rawPopups = question.popups;
+                question.popups = CnTranslationHelper.parseDescriptions( self.evaluateDescription( question.rawPopups ) );
+                self.convertValueToModel( question );
+              } );
 
               // sort active attribute and make a unique list
               this.activeAttributeList = activeAttributeList
@@ -952,21 +957,26 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
             return true;
           },
 
-          evaluateLimit: function( limit ) { return this.evaluate( limit, true ); },
-          evaluate: function( expression, isLimit ) {
-            if( angular.isUndefined( isLimit ) ) isLimit = false;
+          evaluateDescription: function( description ) { return this.evaluate( description, 'description' ); },
+          evaluateLimit: function( limit ) { return this.evaluate( limit, 'limit' ); },
+
+          /**
+           * Type can be one of 'precondition', 'limit', or 'description' (default is precondition)
+           */
+          evaluate: function( expression, type ) {
+            if( angular.isUndefined( type ) ) type = 'precondition';
 
             // handle empty expressions
-            if( null == expression ) return isLimit ? null : true;
+            if( null == expression ) return 'precondition' == type ? true : 'limit' == type ? null : '';
 
-            if( isLimit ) {
+            if( 'limit' == type ) {
               expression = expression.replace( /\bcurrent_year\b/, moment().format( 'YYYY' ) );
               expression = expression.replace( /\bcurrent_month\b/, moment().format( 'MM' ) );
               expression = expression.replace( /\bcurrent_day\b/, moment().format( 'DD' ) );
             }
 
-            // non-limit boolean expressions are already evaluated
-            if( !isLimit && true == expression || false == expression ) return expression;
+            // preconditions which are boolean expressions are already evaluated
+            if( 'precondition' == type && true == expression || false == expression ) return expression;
 
             // replace any attributes
             if( this.previewMode ) {
@@ -991,8 +1001,8 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
                 expression = expression.replace( re, value );
               } );
 
-              // replace any remaining expressions with null
-              expression = expression.replace( /@[^@]+@/g, isLimit ? null : 'null' );
+              // replace any remaining expressions
+              expression = expression.replace( /@[^@]+@/g, 'precondition' == type ? 'null' : 'limit' == type ? null : '' );
             }
 
             // everything else needs to be evaluated
@@ -1044,12 +1054,14 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
                 } else if( 'list' == matchedQuestion.type ) {
                   // find the referenced option
                   var matchedOption = null;
-                  matchedQuestion.optionList.some( function( o ) {
-                    if( optionName == o.name.toLowerCase() ) {
-                      matchedOption = o;
-                      return true;
-                    }
-                  } );
+                  if( angular.isArray( matchedQuestion.optionList ) ) {
+                    matchedQuestion.optionList.some( function( o ) {
+                      if( optionName == o.name.toLowerCase() ) {
+                        matchedOption = o;
+                        return true;
+                      }
+                    } );
+                  }
 
                   if( null != matchedOption && angular.isArray( matchedQuestion.value ) ) {
                     if( null == matchedOption.extra ) {
@@ -1059,7 +1071,13 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
                       if( !angular.isObject( answer ) ) {
                         compiled = 'extra()' == fnName ? 'null' : 'false';
                       } else {
-                        if( matchedOption.multiple_answers ) {
+                        if( 'extra()' == fnName ) {
+                          // if the answer is an array join all non-null values together into a comma-separated list
+                          var value = angular.isArray( answer.value )
+                                    ? answer.value.filter( a => null != a ).join( ', ' )
+                                    : answer.value;
+                          compiled = 'number' == matchedOption.extra ? value : '"' + value.replace( '"', '\"' ) + '"';
+                        } else if( matchedOption.multiple_answers ) {
                           // make sure at least one of the answers isn't null
                           compiled = answer.value.some( v => v != null ) ? 'true' : 'false';
                         } else if( 'extra()' == fnName ) {
@@ -1078,7 +1096,7 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
               expression = expression.replace( match, compiled );
             } );
 
-            if( isLimit ) return expression;
+            if( 'precondition' != type ) return expression;
 
             // create a function which can be used to evaluate the compiled precondition without calling eval()
             function evaluateExpression( precondition ) { return Function( '"use strict"; return ' + precondition + ';' )(); }
@@ -1197,6 +1215,10 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
                     // (this is done automatically on the server side)
                     var visibleQuestionList = self.getVisibleQuestionList();
                     self.questionList.forEach( function( q ) {
+                      // re-evaluate descriptions as they may have changed based on the new answer
+                      q.prompts = CnTranslationHelper.parseDescriptions( self.evaluateDescription( q.rawPrompts ) );
+                      q.popups = CnTranslationHelper.parseDescriptions( self.evaluateDescription( q.rawPopups ) );
+
                       if( null == visibleQuestionList.findByProperty( 'id', q.id ) ) {
                         // q isn't visible so set its value to null if it isn't already
                         if( null != q.value ) {
