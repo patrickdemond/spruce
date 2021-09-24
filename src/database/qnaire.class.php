@@ -619,9 +619,15 @@ class qnaire extends \cenozo\database\record
     if( is_null( PARENT_INSTANCE_URL ) ) return;
 
     $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
+    $role_class_name = lib::get_class_name( 'database\role' );
 
     // update the consent type list
-    $url = sprintf( '%s/api/consent_type', PARENT_INSTANCE_URL );
+    $select = lib::create( 'database\select' );
+    $select->add_column( 'name' );
+    $select->add_column( 'description' );
+    $select->add_column( 'role_list' );
+
+    $url = sprintf( '%s/api/consent_type?select={"column":["name","description","role_list"]}', PARENT_INSTANCE_URL );
     $curl = curl_init();
     curl_setopt( $curl, CURLOPT_URL, $url );
     curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
@@ -680,6 +686,14 @@ class qnaire extends \cenozo\database\record
         $db_consent_type->name = $consent_type->name;
         $db_consent_type->description = $consent_type->description;
         $db_consent_type->save();
+
+        // replace all role access
+        $db_consent_type->remove_role( NULL );
+        foreach( preg_split( '/, */', $consent_type->role_list ) as $role )
+        {
+          $db_role = $role_class_name::get_unique_record( 'name', $role );
+          if( !is_null( $db_role ) ) $db_consent_type->add_role( $db_role->id );
+        }
       }
     }
 
@@ -1293,6 +1307,7 @@ class qnaire extends \cenozo\database\record
     $cohort_class_name = lib::get_class_name( 'database\cohort' );
     $language_class_name = lib::get_class_name( 'database\language' );
     $region_class_name = lib::get_class_name( 'database\region' );
+    $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
 
     if( is_null( $this->beartooth_url ) || is_null( $this->beartooth_username ) || is_null( $this->beartooth_password ) )
     {
@@ -1355,38 +1370,90 @@ class qnaire extends \cenozo\database\record
 
     foreach( util::json_decode( $response ) as $participant )
     {
-      // see whether the participant already exists
+      // update the participant record
       $db_participant = $participant_class_name::get_unique_record( 'uid', $participant->uid );
       if( is_null( $db_participant ) )
       {
-        $db_cohort = $cohort_class_name::get_unique_record( 'name', $participant->cohort );
-        $db_language = $language_class_name::get_unique_record( 'code', $participant->language );
-        $db_region = $region_class_name::get_unique_record( 'name', $participant->province );
-
-        // create the participant record
         $db_participant = lib::create( 'database\participant' );
         $db_participant->uid = $participant->uid;
-        $db_participant->cohort_id = $db_cohort->id;
-        $db_participant->language_id = $db_language->id;
-        $db_participant->honorific = $participant->honorific;
-        $db_participant->first_name = $participant->first_name;
-        $db_participant->last_name = $participant->last_name;
-        $db_participant->sex = $participant->gender;
-        $db_participant->current_sex = $participant->gender;
-        $db_participant->email = $participant->email;
-        $db_participant->other_name = $participant->otherName;
-        $db_participant->date_of_birth = $participant->dob;
-        $db_participant->save();
+      }
 
-        // create the address record
+      $db_participant->cohort_id = $cohort_class_name::get_unique_record( 'name', $participant->cohort )->id;
+      $db_participant->language_id = $language_class_name::get_unique_record( 'code', $participant->language )->id;
+      $db_participant->honorific = $participant->honorific;
+      $db_participant->first_name = $participant->first_name;
+      $db_participant->other_name = $participant->other_name;
+      $db_participant->last_name = $participant->last_name;
+      $db_participant->sex = $participant->sex;
+      $db_participant->current_sex = $participant->current_sex;
+      $db_participant->email = $participant->email;
+      if( $participant->date_of_birth ) $db_participant->date_of_birth = $participant->date_of_birth;
+      $db_participant->save();
+
+      // update the address record
+      $db_address = $db_participant->get_primary_address();
+      if( is_null( $db_address ) )
+      {
         $db_address = lib::create( 'database\address' );
         $db_address->participant_id = $db_participant->id;
         $db_address->rank = 1;
-        $db_address->address1 = $participant->street;
-        $db_address->city = $participant->city;
-        $db_address->region_id = $db_region->id;
-        $db_address->postcode = $participant->postcode;
-        $db_address->save();
+      }
+
+      $db_address->address1 = $participant->address1;
+      $db_address->address2 = $participant->address2;
+      $db_address->city = $participant->city;
+      $db_address->region_id = $region_class_name::get_unique_record( 'name', $participant->region )->id;
+      $db_address->postcode = $participant->postcode;
+      $db_address->save();
+
+      // create consent records
+      foreach( explode( ';', $participant->consent_list ) as $consent_entry )
+      {
+        // entries have the format: consent_type_name$accept$datetime, convert to an associative array
+        $consent_data = explode( '$', $consent_entry );
+        $consent = array( 'consent_type' => $consent_data[0] );
+        if( array_key_exists( 1, $consent_data ) ) $consent['accept'] = $consent_data[1];
+        if( array_key_exists( 2, $consent_data ) ) $consent['datetime'] = $consent_data[2];
+
+        $db_consent_type = $consent_type_class_name::get_unique_record( 'name', $consent['consent_type'] );
+
+        if( !array_key_exists( 'accept', $consent ) )
+        {
+          // no additional data means no consent record (remove any which may exist)
+          $consent_mod = lib::create( 'database\modifier' );
+          $consent_mod->where( 'participant_id', '=', $db_participant->id );
+          $consent_mod->where( 'consent_type_id', '=', $db_consent_type->id );
+          static::db()->execute( sprintf( 'DELETE FROM consent %s', $consent_mod->get_sql() ) );
+        }
+        else
+        {
+          $consent_mod = lib::create( 'database\modifier' );
+          $consent_mod->where( 'consent_type_id', '=', $db_consent_type->id );
+          $consent_mod->where( 'datetime', '=', $consent['datetime'] );
+
+          $consent_list = $db_participant->get_consent_object_list( $consent_mod );
+
+          if( 0 < count( $consent_list ) )
+          { // the consent record already exists, just make sure its accept value is correct
+            foreach( $consent_list as $db_consent )
+            {
+              if( $consent['accept'] != $db_consent->accept )
+              {
+                $db_consent->accept = $consent['accept'];
+                $db_consent->save();
+              }
+            }
+          }
+          else // there is no consent record for that datetime, so create one
+          {
+            $db_consent = lib::create( 'database\consent' );
+            $db_consent->participant_id = $db_participant->id;
+            $db_consent->consent_type_id = $db_consent_type->id;
+            $db_consent->accept = $consent['accept'];
+            $db_consent->datetime = $consent['datetime'];
+            $db_consent->save();
+          }
+        }
       }
 
       // add the participant's respondent file

@@ -70,13 +70,10 @@ define( [ 'page' ].reduce( function( list, name ) {
       type: 'string',
       isExcluded: 'add'
     },
-    exported: {
-      title: 'Exported',
-      type: 'boolean',
-      isConstant: function( $state, model ) {
-        return null == model.viewModel.record.end_datetime || !model.viewModel.record.exported;
-      },
-      isExcluded: function( $state, model ) { return model.isDetached() ? 'add' : true; }
+    status: {
+      title: 'Status',
+      type: 'string',
+      isConstant: true
     },
     start_datetime: {
       title: 'Start Date & Time',
@@ -210,7 +207,18 @@ define( [ 'page' ].reduce( function( list, name ) {
       await model.export( model.getIdentifierFromRecord( model.viewModel.record ) );
     },
     isIncluded: function( $state, model ) {
-      return model.isDetached() && null != model.viewModel.record.end_datetime && !model.viewModel.record.exported;
+      return model.isDetached() && null != model.viewModel.record.end_datetime && 'Exported' != model.viewModel.record.status;
+    },
+    isDisabled: function( $state, model ) { return model.workInProgress; }
+  } );
+
+  module.addExtraOperation( 'view', {
+    title: 'Re-Export',
+    operation: async function( $state, model ) {
+      await model.export( model.getIdentifierFromRecord( model.viewModel.record ) );
+    },
+    isIncluded: function( $state, model ) {
+      return model.isDetached() && model.isRole( 'administrator' ) && 'Exported' == model.viewModel.record.status;
     },
     isDisabled: function( $state, model ) { return model.workInProgress; }
   } );

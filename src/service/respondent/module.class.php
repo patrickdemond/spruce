@@ -33,8 +33,9 @@ class module extends \cenozo\service\module
       $column_value = 
         'IF( respondent.end_datetime IS NOT NULL, "Completed", '.
         'IF( response.id IS NULL, "Not Started", '.
-        'IF( response.page_id IS NOT NULL, "Active", '.
-        'IF( !response.checked_in, "Checking In", "Stage Selection" ) ) ) )';
+        'IF( response.page_id IS NOT NULL, "In Progress", '.
+        'IF( NOT qnaire.stages, "Introduction", '.
+        'IF( NOT response.checked_in, "Checking In", "Stage Selection" ) ) ) ) )';
 
       // add the export status if the application is detached
       if( $detached ) $column_value = sprintf( 'IF( respondent.exported, "Exported", %s )', $column_value );

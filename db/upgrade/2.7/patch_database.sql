@@ -2,6 +2,7 @@
 
 SET AUTOCOMMIT=0;
 
+SOURCE application_type_has_role.sql
 SOURCE stage.sql
 SOURCE deviation_type.sql
 SOURCE response_stage.sql
