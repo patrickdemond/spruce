@@ -3,16 +3,16 @@ DELIMITER //
 CREATE PROCEDURE patch_respondent()
   BEGIN
 
-    SELECT "Adding new exported column to respondent table" AS "";
+    SELECT "Adding new export_datetime column to respondent table" AS "";
 
     SELECT COUNT(*) INTO @test
     FROM information_schema.COLUMNS
     WHERE table_schema = DATABASE()
     AND table_name = "respondent"
-    AND column_name = "exported";
+    AND column_name = "export_datetime";
 
     IF @test = 0 THEN
-      ALTER TABLE respondent ADD COLUMN exported TINYINT(1) NOT NULL DEFAULT 0 AFTER token;
+      ALTER TABLE respondent ADD COLUMN export_datetime DATETIME NULL DEFAULT NULL;
     END IF;
 
   END //

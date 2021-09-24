@@ -13,7 +13,7 @@ global $SETTINGS;
 $SETTINGS['general']['application_name'] = 'pine';
 $SETTINGS['general']['instance_name'] = $SETTINGS['general']['application_name'];
 $SETTINGS['general']['version'] = '2.7';
-$SETTINGS['general']['build'] = '1d09c61';
+$SETTINGS['general']['build'] = '7f418fa';
 
 // the default maximum number of seconds that a page should take to complete
 $SETTINGS['general']['default_page_max_time'] = 60;
@@ -36,5 +36,8 @@ $SETTINGS['utility']['qnaire_username'] = 'pine';
 // the location of qnaire export files
 $SETTINGS['path']['QNAIRE_EXPORT'] = str_replace( 'settings.ini.php', 'doc/qnaire_export', __FILE__ );
 
-// the location of qnaire export files
+// the location of qnaire print files
 $SETTINGS['path']['QNAIRE_PRINT'] = str_replace( 'settings.ini.php', 'doc/qnaire_print', __FILE__ );
+
+// the number of days after which exported respondents are purged (used by detached instances only)
+$SETTINGS['general']['purge_delay'] = 7;

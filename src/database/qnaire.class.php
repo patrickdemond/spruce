@@ -841,7 +841,7 @@ class qnaire extends \cenozo\database\record
     if( is_null( $db_specific_respondent ) )
     {
       $respondent_mod = lib::create( 'database\modifier' );
-      $respondent_mod->where( 'exported', '=', false );
+      $respondent_mod->where( 'export_datetime', '=', NULL );
       $respondent_mod->where( 'end_datetime', '!=', NULL );
       $respondent_mod->order( 'id' );
       $respondent_list = $this->get_respondent_object_list( $respondent_mod );
@@ -849,7 +849,7 @@ class qnaire extends \cenozo\database\record
     else
     {
       // make sure the respondent is completed and un-exported
-      if( !is_null( $db_specific_respondent->end_datetime ) && !$db_specific_respondent->exported )
+      if( !is_null( $db_specific_respondent->end_datetime ) && is_null( $db_specific_respondent->export_datetime ) )
         $respondent_list[] = $db_specific_respondent;
     }
 
@@ -1081,7 +1081,7 @@ class qnaire extends \cenozo\database\record
         // mark the respondents as exported
         foreach( $respondent_list as $db_respondent )
         {
-          $db_respondent->exported = true;
+          $db_respondent->export_datetime = util::get_datetime_object();
           $db_respondent->save();
         }
       }
@@ -1295,6 +1295,29 @@ class qnaire extends \cenozo\database\record
         }
       }
     }
+  }
+
+  /**
+   * Deletes all respondents which have been exported for longer than the purge delay
+   * (Note: this does nothing if not in detached mode)
+   */
+  public function delete_purged_respondents()
+  {
+    $setting_manager = lib::create( 'business\setting_manager' );
+    if( !$setting_manager->get_setting( 'general', 'detached' ) )
+    {
+      log::warning( 'Tried to purge respondents from an undetached instance of Pine.' );
+      return;
+    }
+
+    $respondent_mod = lib::create( 'database\modifier' );
+    $respondent_mod->where(
+      sprintf( 'export_datetime + INTERVAL %d DAY', $setting_manager->get_setting( 'general', 'purge_delay' ) ),
+      '<=',
+      'UTC_TIMESTAMP()',
+      false
+    );
+    foreach( $this->get_respondent_object_list( $respondent_mod ) as $db_respondent ) $db_respondent->delete();
   }
 
   /**

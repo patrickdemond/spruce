@@ -38,7 +38,7 @@ class module extends \cenozo\service\module
         'IF( NOT response.checked_in, "Checking In", "Stage Selection" ) ) ) ) )';
 
       // add the export status if the application is detached
-      if( $detached ) $column_value = sprintf( 'IF( respondent.exported, "Exported", %s )', $column_value );
+      if( $detached ) $column_value = sprintf( 'IF( respondent.export_datetime IS NOT NULL, "Exported", %s )', $column_value );
 
       $select->add_column( $column_value, 'status', false );
     }

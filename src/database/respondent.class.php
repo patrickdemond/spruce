@@ -28,7 +28,7 @@ class respondent extends \cenozo\database\record
     }
 
     // if the end_datetime is empty then the respondent must be marked as not exported
-    if( is_null( $this->end_datetime ) && $this->exported ) $this->exported = false;
+    if( is_null( $this->end_datetime ) && !is_null( $this->export_datetime ) ) $this->export_datetime = NULL;
 
     parent::save();
 
