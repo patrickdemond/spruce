@@ -234,7 +234,7 @@ define( [ 'question' ].reduce( function( list, name ) {
           // scan the precondition for active attributes (also include the showhidden constant)
           var list = [];
           if( angular.isString( precondition ) ) {
-            var matches = precondition.match( /@[^@]+@|\bshowhidden\b/g );
+            var matches = precondition.match( /@[^@ ]+@|\bshowhidden\b/g );
             if( null != matches && 0 < matches.length ) list = matches.map( m => m.replace( /@/g, '' ) );
           }
           return list;
@@ -693,11 +693,11 @@ define( [ 'question' ].reduce( function( list, name ) {
               } );
 
               // replace any remaining expressions
-              expression = expression.replace( /@[^@]+@/g, 'precondition' == type ? 'null' : 'limit' == type ? null : '' );
+              expression = expression.replace( /@[^@ ]+@/g, 'precondition' == type ? 'null' : 'limit' == type ? null : '' );
             }
 
             // everything else needs to be evaluated
-            var matches = expression.match( /\$[^$]+\$/g );
+            var matches = expression.match( /\$[^$ ]+\$/g );
             if( null != matches ) matches.forEach( function( match ) {
               var parts = match.slice( 1, -1 ).toLowerCase().split( '.' );
               var fnName = 1 < parts.length ? parts[1] : null;
