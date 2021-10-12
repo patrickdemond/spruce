@@ -18,11 +18,6 @@ define( [ 'module' ].reduce( function( list, name ) {
       version: {
         title: 'Version'
       },
-      base_language_id: {
-        title: 'Base Language',
-        column: 'base_language.name',
-        isIncluded: function( $state, model ) { return !model.isRole( 'interviewer' ); }
-      },
       closed: {
         title: 'Closed',
         type: 'boolean',
@@ -42,6 +37,10 @@ define( [ 'module' ].reduce( function( list, name ) {
         title: 'Use Stages',
         type: 'boolean',
         isIncluded: function( $state, model ) { return !model.isRole( 'interviewer' ); }
+      },
+      total_pages: {
+        title: 'Pages',
+        type: 'string'
       },
       repeat_detail: {
         title: 'Repeated',
@@ -110,6 +109,13 @@ define( [ 'module' ].reduce( function( list, name ) {
       title: 'Stages',
       type: 'boolean',
       isExcluded: function( $state, model ) { return model.isRole( 'interviewer' ) ? true : 'add'; }
+    },
+    total_pages: {
+      title: 'Total Number of Pages',
+      type: 'string',
+      format: 'integer',
+      isConstant: true,
+      isExcluded: function( $state, model ) { return 'add'; }
     },
     closed: {
       title: 'Closed',
@@ -653,6 +659,9 @@ define( [ 'module' ].reduce( function( list, name ) {
             };
             respondentModule.columnList.response_count.isIncluded = function( $state, model ) {
               return self.record.repeated;
+            };
+            respondentModule.columnList.page_progress.isIncluded = function( $state, model ) {
+              return !self.record.repeated;
             };
           },
 

@@ -35,6 +35,9 @@ define( function() {
         title: 'Checked In',
         type: 'boolean'
       },
+      page_progress: {
+        title: 'Progress'
+      },
       module: {
         column: 'module.name',
         title: 'Module'
@@ -92,6 +95,11 @@ define( function() {
     checked_in: {
       title: 'Checked In',
       type: 'boolean',
+      isConstant: true
+    },
+    page_progress: {
+      title: 'Page Progress',
+      type: 'string',
       isConstant: true
     },
     module: {

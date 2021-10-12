@@ -38,6 +38,10 @@ define( [ 'page' ].reduce( function( list, name ) {
         title: 'Status',
         type: 'string'
       },
+      page_progress: {
+        title: 'Progress',
+        isIncluded: function( $state, model ) { return false; } // this is changed by the qnaire module
+      },
       start_datetime: {
         title: 'Start Date',
         type: 'datetime'
@@ -130,6 +134,16 @@ define( [ 'page' ].reduce( function( list, name ) {
                null == model.viewModel.record.current_response_id;
       }
     },
+    page_progress: {
+      title: 'Page Progress',
+      type: 'string',
+      isConstant: true,
+      isExcluded: function( $state, model ) {
+        return 'view' != model.getActionFromState() ||
+               null != model.viewModel.record.repeated ||
+               null == model.viewModel.record.current_response_id;
+      }
+    },
     checked_in: {
       column: 'response.checked_in',
       title: 'Checked In',
@@ -138,7 +152,8 @@ define( [ 'page' ].reduce( function( list, name ) {
       isExcluded: function( $state, model ) {
         return 'view' != model.getActionFromState() ||
                null != model.viewModel.record.repeated ||
-               null == model.viewModel.record.current_response_id;
+               null == model.viewModel.record.current_response_id ||
+               false == model.viewModel.record.stages;
       }
     },
     module: {

@@ -43,6 +43,22 @@ class module extends \cenozo\service\module
       $select->add_column( $column_value, 'status', false );
     }
 
+    if( $select->has_column( 'page_progress' ) )
+    {
+      $select->add_column(
+        'CONCAT( '.
+          'IF( '.
+            'response.submitted, '.
+            'qnaire.total_pages, '.
+            'IF( response.page_id IS NULL, 0, response.current_page_rank ) '.
+          '), '.
+          '" of ", qnaire.total_pages '.
+        ')',
+        'page_progress',
+        false
+      );
+    }
+
     if( $select->has_table_columns( 'language' ) ||
         $select->has_table_columns( 'module' ) ||
         $select->has_table_columns( 'page' ) )

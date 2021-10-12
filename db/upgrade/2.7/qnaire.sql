@@ -27,6 +27,30 @@ CREATE PROCEDURE patch_qnaire()
       ALTER TABLE qnaire ADD COLUMN stages TINYINT(1) NOT NULL DEFAULT 0 AFTER readonly;
     END IF;
 
+    SELECT "Adding new total_pages column to qnaire table" AS "";
+
+    SELECT COUNT(*) INTO @test
+    FROM information_schema.COLUMNS
+    WHERE table_schema = DATABASE()
+    AND table_name = "qnaire"
+    AND column_name = "total_pages";
+
+    IF @test = 0 THEN
+      ALTER TABLE qnaire ADD COLUMN total_pages INT UNSIGNED NOT NULL DEFAULT 0 AFTER stages;
+
+      -- fill in the new column
+      CREATE TEMPORARY TABLE qnaire_pages
+      SELECT qnaire.id, IF( page.id IS NULL, 0, COUNT(*) ) AS total
+      FROM qnaire
+      LEFT JOIN module ON qnaire.id = module.qnaire_id
+      LEFT JOIN page ON module.id = page.module_id
+      GROUP BY qnaire.id;
+
+      UPDATE qnaire
+      JOIN qnaire_pages USING( id )
+      SET qnaire.total_pages = qnaire_pages.total;
+    END IF;
+
   END //
 DELIMITER ;
 

@@ -91,7 +91,6 @@ class module extends \pine\service\base_qnaire_part_module
     {
       $db_module = $db_page->get_module();
       $db_qnaire = $db_module->get_qnaire();
-      $select->add_constant( $db_qnaire->get_number_of_pages(), 'qnaire_pages', 'integer' );
       $select->add_constant( $db_page->get_overall_rank(), 'qnaire_page', 'integer' );
 
       if( $db_qnaire->stages )

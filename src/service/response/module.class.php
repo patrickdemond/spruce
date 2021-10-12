@@ -34,6 +34,22 @@ class module extends \cenozo\service\module
     $join_mod->where( 'response_stage.status', '=', 'active' );
     $modifier->join_modifier( 'response_stage', $join_mod, 'left' );
 
+    if( $select->has_column( 'page_progress' ) )
+    {
+      $select->add_column(
+        'CONCAT( '.
+          'IF( '.
+            'response.submitted, '.
+            'qnaire.total_pages, '.
+            'IF( response.page_id IS NULL, 0, response.current_page_rank ) '.
+          '), '.
+          '" of ", qnaire.total_pages '.
+        ')',
+        'page_progress',
+        false
+      );
+    }
+
     if( $select->has_column( 'introductions' ) )
     {
       // join to the introductions

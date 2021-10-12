@@ -30,6 +30,7 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
   module.addInput( '', 'note', { title: 'Note', type: 'text' } );
   module.addInput( '', 'qnaire_id', { column: 'qnaire.id', isExcluded: true } );
   module.addInput( '', 'qnaire_name', { column: 'qnaire.name', isExcluded: true } );
+  module.addInput( '', 'total_pages', { column: 'qnaire.total_pages', isExcluded: true } );
   module.addInput( '', 'variable_suffix', { column: 'qnaire.variable_suffix', isExcluded: true } );
   module.addInput( '', 'debug', { column: 'qnaire.debug', isExcluded: true } );
   module.addInput( '', 'base_language', { column: 'base_language.code', isExcluded: true } );
@@ -703,7 +704,7 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
                 100 * (
                   angular.isDefined( this.parentModel.viewModel.record.stage_pages )
                     ? this.parentModel.viewModel.record.stage_page / this.parentModel.viewModel.record.stage_pages
-                    : this.parentModel.viewModel.record.qnaire_page / this.parentModel.viewModel.record.qnaire_pages
+                    : this.parentModel.viewModel.record.qnaire_page / this.parentModel.viewModel.record.total_pages
                 )
               );
 

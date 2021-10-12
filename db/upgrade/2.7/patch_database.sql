@@ -17,6 +17,7 @@ SOURCE role_has_service.sql
 SOURCE qnaire_consent_type_confirm.sql
 SOURCE qnaire_consent_type_trigger.sql
 SOURCE device.sql
+SOURCE page.sql
 
 SOURCE update_version_number.sql
 
