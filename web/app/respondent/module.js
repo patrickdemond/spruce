@@ -77,7 +77,8 @@ define( [ 'page' ].reduce( function( list, name ) {
     status: {
       title: 'Status',
       type: 'string',
-      isConstant: true
+      isConstant: true,
+      isExcluded: 'add'
     },
     start_datetime: {
       title: 'Start Date & Time',
