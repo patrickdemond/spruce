@@ -191,8 +191,6 @@ cenozoApp.defineModule( { name: 'response', models: ['add', 'list', 'view'], def
           moduleList: [],
           questionList: [],
           onLoad: async function() {
-            var self = this;
-
             // get a list of all active languages
             var response = await CnHttpFactory.instance( {
               path: 'language',
@@ -231,7 +229,7 @@ cenozoApp.defineModule( { name: 'response', models: ['add', 'list', 'view'], def
               }
             } ).query();
 
-            this.moduleList = response.data.map( function( module ) {
+            this.moduleList = response.data.map( module => {
               module.prompts = CnTranslationHelper.parseDescriptions( module.prompts );
               module.pageList = [];
               return module;
@@ -250,11 +248,11 @@ cenozoApp.defineModule( { name: 'response', models: ['add', 'list', 'view'], def
               }
             } ).query();
 
-            response.data.forEach( function( page ) {
+            response.data.forEach( page => {
               // store each page in its parent module
               page.prompts = CnTranslationHelper.parseDescriptions( page.prompts );
               page.questionList = [];
-              self.moduleList.findByProperty( 'id', page.module_id ).pageList.push( page );
+              this.moduleList.findByProperty( 'id', page.module_id ).pageList.push( page );
             } );
 
             // now get a list of all questions and their answers for this response
@@ -274,16 +272,16 @@ cenozoApp.defineModule( { name: 'response', models: ['add', 'list', 'view'], def
               }
             } ).query();
 
-            response.data.forEach( function( question ) {
+            response.data.forEach( question => {
               question.prompts = CnTranslationHelper.parseDescriptions( question.prompts );
               question.value = angular.fromJson( question.value );
               if( null != question.value ) { // ignore questions which weren't answered
                 if( 'list' != question.type ) {
                   if( angular.isObject( question.value ) ) {
                     if( question.value.dkna ) {
-                      question.value = CnTranslationHelper.translate( 'misc.dkna', self.lang )
+                      question.value = CnTranslationHelper.translate( 'misc.dkna', this.lang )
                     } else if( question.value.refuse ) {
-                      question.value = CnTranslationHelper.translate( 'misc.refuse', self.lang )
+                      question.value = CnTranslationHelper.translate( 'misc.refuse', this.lang )
                     }
                   } else if( 'boolean' == question.type ) {
                     if( true === question.value ) question.value = 'Yes';
@@ -294,7 +292,7 @@ cenozoApp.defineModule( { name: 'response', models: ['add', 'list', 'view'], def
                 if( 'list' == question.type ) question.optionList = [];
 
                 // store each question in its parent page
-                self.moduleList.findByProperty( 'id', question.module_id )
+                this.moduleList.findByProperty( 'id', question.module_id )
                     .pageList.findByProperty( 'id', question.page_id ).questionList.push( question );
               }
             } );
@@ -316,12 +314,12 @@ cenozoApp.defineModule( { name: 'response', models: ['add', 'list', 'view'], def
               }
             } ).query();
 
-            response.data.forEach( function( option ) {
+            response.data.forEach( option => {
               option.prompts = CnTranslationHelper.parseDescriptions( option.prompts );
 
               // store each option in its parent question, but ignore any questions which aren't found since it means
               // the respondent never answered that question
-              var question = self.moduleList.findByProperty( 'id', option.module_id )
+              var question = this.moduleList.findByProperty( 'id', option.module_id )
                                  .pageList.findByProperty( 'id', option.page_id )
                                  .questionList.findByProperty( 'id', option.question_id )
               if( null != question ) {
@@ -348,7 +346,7 @@ cenozoApp.defineModule( { name: 'response', models: ['add', 'list', 'view'], def
                 option.value = null;
                 if( angular.isArray( question.value ) ) {
                   var matchedValue = null;
-                  if( question.value.some( function( value ) {
+                  if( question.value.some( value => {
                     matchedValue = value;
                     return ( angular.isObject( value ) && value.id == option.id ) ||
                            ( !angular.isObject( value ) && value == option.id );
@@ -371,7 +369,7 @@ cenozoApp.defineModule( { name: 'response', models: ['add', 'list', 'view'], def
             } );
 
             // now remove empty modules and pages
-            this.moduleList.forEach( function( module, mIndex ) {
+            this.moduleList.forEach( ( module, mIndex ) => {
               module.pageList = module.pageList.filter( page => 0 < page.questionList.length );
             } );
             this.moduleList = this.moduleList.filter( module => 0 < module.pageList.length );
@@ -407,14 +405,10 @@ cenozoApp.defineModule( { name: 'response', models: ['add', 'list', 'view'], def
             }
           } ).query();
 
-          this.metadata.columnList.language_id.enumList = [];
-          var self = this;
-          response.data.forEach( function( item ) {
-            self.metadata.columnList.language_id.enumList.push( {
-              value: item.id,
-              name: item.name
-            } );
-          } );
+          this.metadata.columnList.language_id.enumList = response.data.reduce( ( list, item ) => {
+            list.push( { value: item.id, name: item.name } );
+            return list;
+          }, [] );
         };
       };
 

@@ -1,5 +1,5 @@
 // extend the framework's module
-define( [ 'qnaire', 'root' ].reduce( function( list, name ) {
+define( [ 'qnaire', 'root' ].reduce( ( list, name ) => {
   return list.concat( cenozoApp.module( name ).getRequiredFiles() );
 }, [] ), function() {
   'use strict';

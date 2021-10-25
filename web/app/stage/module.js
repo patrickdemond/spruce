@@ -123,8 +123,8 @@ cenozoApp.defineModule( { name: 'stage', models: ['add', 'list', 'view'], create
         this.onNew = async function( record ) {
           await this.$$onNew( record );
           await this.parentModel.updateStageAndModuleList();
-          this.parentModel.metadata.columnList.first_module_id.enumList.forEach( function( item ) { item.disabled = true; } );
-          this.parentModel.metadata.columnList.last_module_id.enumList.forEach( function( item ) { item.disabled = true; } );
+          this.parentModel.metadata.columnList.first_module_id.enumList.forEach( item => { item.disabled = true; } );
+          this.parentModel.metadata.columnList.last_module_id.enumList.forEach( item => { item.disabled = true; } );
         };
       };
       return { instance: function( parentModel ) { return new object( parentModel ); } };
@@ -154,14 +154,12 @@ cenozoApp.defineModule( { name: 'stage', models: ['add', 'list', 'view'], create
           onPatch: async function( data ) {
             // when changing the first/last module update which can be selected by the other
             if( angular.isDefined( data.first_module_id ) ) {
-              var self = this;
-              this.parentModel.metadata.columnList.last_module_id.enumList.forEach( function( item ) {
-                item.disabled = self.record.first_module_rank >= item.rank;
+              this.parentModel.metadata.columnList.last_module_id.enumList.forEach( item => {
+                item.disabled = this.record.first_module_rank >= item.rank;
               } );
             } else if( angular.isDefined( data.last_module_id ) ) {
-              var self = this;
-              this.parentModel.metadata.columnList.first_module_id.enumList.forEach( function( item ) {
-                item.disabled = self.record.last_module_rank <= item.rank;
+              this.parentModel.metadata.columnList.first_module_id.enumList.forEach( item => {
+                item.disabled = this.record.last_module_rank <= item.rank;
               } );
             }
 
@@ -178,7 +176,6 @@ cenozoApp.defineModule( { name: 'stage', models: ['add', 'list', 'view'], create
     'CnBaseModelFactory', 'CnStageAddFactory', 'CnStageListFactory', 'CnStageViewFactory', 'CnHttpFactory',
     function( CnBaseModelFactory, CnStageAddFactory, CnStageListFactory, CnStageViewFactory, CnHttpFactory ) {
       var object = function( root ) {
-        var self = this;
         CnBaseModelFactory.construct( this, module );
         this.addModel = CnStageAddFactory.instance( this );
         this.listModel = CnStageListFactory.instance( this );
@@ -221,23 +218,11 @@ cenozoApp.defineModule( { name: 'stage', models: ['add', 'list', 'view'], create
               }
             } ).query();
 
-            this.metadata.columnList.first_module_id.enumList = []; 
-            this.metadata.columnList.last_module_id.enumList = []; 
-            var self = this;
-            response.data.forEach( function( item ) { 
-              self.metadata.columnList.first_module_id.enumList.push( {
-                value: item.id,
-                rank: item.rank,
-                name: item.rank + '. ' + item.name,
-                disabled: true
-              } );
-              self.metadata.columnList.last_module_id.enumList.push( {
-                value: item.id,
-                rank: item.rank,
-                name: item.rank + '. ' + item.name,
-                disabled: true
-              } );
-            } );
+            this.metadata.columnList.first_module_id.enumList = response.data.reduce( ( list, item ) => { 
+              list.push( { value: item.id, rank: item.rank, name: item.rank + '. ' + item.name, disabled: true } );
+              return list;
+            }, [] );
+            this.metadata.columnList.last_module_id.enumList = angular.copy( this.metadata.columnList.first_module_id.enumList );
           },
 
           updateModuleListState: function( firstEnumList, lastEnumList, prevStage, nextStage, firstModuleId, lastModuleId ) {
@@ -261,7 +246,7 @@ cenozoApp.defineModule( { name: 'stage', models: ['add', 'list', 'view'], create
             var maxRank = !prevStage ? minModuleRank : nextStage ? nextStage.last_module_rank - 1 : 1000000;
             // The max rank has to be equal or greater than the current last rank
             if( lastModuleRank && lastModuleRank < maxRank ) maxRank = lastModuleRank;
-            firstEnumList.forEach( function( item ) {
+            firstEnumList.forEach( item => {
               item.disabled = angular.isDefined( item.rank ) && !( minRank <= item.rank && item.rank <= maxRank );
             } );
 
@@ -272,7 +257,7 @@ cenozoApp.defineModule( { name: 'stage', models: ['add', 'list', 'view'], create
             if( firstModuleRank && firstModuleRank > minRank ) minRank = firstModuleRank;
             // If a stage comes after this one then it has to retain at least one module
             var maxRank = nextStage ? nextStage.last_module_rank - 1 : 1000000;
-            lastEnumList.forEach( function( item ) {
+            lastEnumList.forEach( item => {
               item.disabled = angular.isDefined( item.rank ) && !( minRank <= item.rank && item.rank <= maxRank );
             } );
           }

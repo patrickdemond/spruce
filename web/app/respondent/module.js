@@ -320,23 +320,21 @@ cenozoApp.defineModule( { name: 'respondent', dependencies: 'page', models: ['ad
           },
 
           getChildList: function() {
-            var self = this;
-            var list = this.$$getChildList().filter(
+            return this.$$getChildList().filter(
               child => (
                 // show the response list if the qnaire is answered more than once
-                'response' == child.subject.snake && null != self.record.repeated
+                'response' == child.subject.snake && null != this.record.repeated
               ) || (
                 // show mail list if the qnaire sends mail
-                'respondent_mail' == child.subject.snake && self.record.sends_mail
+                'respondent_mail' == child.subject.snake && this.record.sends_mail
               ) || (
                 // show stage list if the qnaire has stages and the qnaire is only answered once
-                'response_stage' == child.subject.snake && self.record.stages && null == self.record.repeated
+                'response_stage' == child.subject.snake && this.record.stages && null == this.record.repeated
               ) || (
                 // show attribute list if the qnaire is only answered once
-                'response_attribute' == child.subject.snake && null == self.record.repeated
+                'response_attribute' == child.subject.snake && null == this.record.repeated
               )
             );
-            return list;
           },
 
           reopen: async function() {
@@ -375,7 +373,6 @@ cenozoApp.defineModule( { name: 'respondent', dependencies: 'page', models: ['ad
           isDetached: function() { return CnSession.setting.detached; },
 
           getMetadata: async function() {
-            var self = this;
             await this.$$getMetadata();
 
             var response = await CnHttpFactory.instance( {
@@ -389,12 +386,12 @@ cenozoApp.defineModule( { name: 'respondent', dependencies: 'page', models: ['ad
                 }
               }
             } ).query();
-            this.metadata.columnList.language_id = { enumList: [] };
-            response.data.forEach( function( item ) {
-              self.metadata.columnList.language_id.enumList.push( {
-                value: item.id, name: item.name
-              } );
-            } );
+            this.metadata.columnList.language_id = {
+              enumList: response.data.reduce( ( list, item ) => {
+                list.push( { value: item.id, name: item.name } );
+                return list;
+              }, [] )
+            };
           },
 
           getRespondents: async function() {
