@@ -1,9 +1,7 @@
-define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) {
-  return list.concat( cenozoApp.module( name ).getRequiredFiles() );
-}, [] ), function() {
-  'use strict';
-
-  try { var module = cenozoApp.module( 'page', true ); } catch( err ) { console.warn( err ); return; }
+cenozoApp.defineModule( { name: 'page',
+                          dependencies: ['address', 'participant', 'question'],
+                          models: ['add', 'list', 'view'],
+                          create: module => {
 
   cenozoApp.initQnairePartModule( module, 'page' );
 
@@ -59,7 +57,7 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
   // used by services below to returns the index of the option matching the second argument
   function searchOptionList( optionList, id ) {
     var optionIndex = null;
-    if( angular.isArray( optionList ) ) optionList.some( function( option, index ) {
+    if( angular.isArray( optionList ) ) optionList.some( ( option, index ) => {
       if( option == id || ( angular.isObject( option ) && option.id == id ) ) {
         optionIndex = index;
         return true;
@@ -254,8 +252,6 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
               CnParticipantModelFactory, CnAddressModelFactory, CnHttpFactory, CnTranslationHelper,
               $state, $timeout, $interval ) {
       var object = function( parentModel ) {
-        var self = this;
-
         // private helper functions
         function formatDate( date ) { var m = getDate( date ); return m ? m.format( 'dddd, MMMM Do YYYY' ) : null; }
         function isDkna( value ) { return angular.isObject( value ) && true === value.dkna; }
@@ -410,11 +406,11 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
           },
 
           getVisibleQuestionList: function() {
-            return this.questionList.filter( question => self.evaluate( question.precondition ) );
+            return this.questionList.filter( question => this.evaluate( question.precondition ) );
           },
 
           getVisibleOptionList: function( question ) {
-            return question.optionList.filter( option => self.evaluate( option.precondition ) );
+            return question.optionList.filter( option => this.evaluate( option.precondition ) );
           },
 
           getFocusableQuestionList: function() {
@@ -574,7 +570,7 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
                   throw new Error( 'Questionnaire has not stages, unable to proceed.' );
 
                 // set each response stage's possible operations
-                this.responseStageList.forEach( function( responseStage ) {
+                this.responseStageList.forEach( responseStage => {
                   responseStage.operations = [];
 
                   if( !['not ready', 'parent skipped', 'skipped' ].includes( responseStage.status ) ) {
@@ -609,7 +605,7 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
                 }
 
                 // enum lists use value, so set the value to the deviation type's ID
-                this.deviationTypeList.forEach( function( deviationType ) { deviationType.value = deviationType.id; } );
+                this.deviationTypeList.forEach( deviationType => { deviationType.value = deviationType.id; } );
 
                 // setup the participant and address input lists
                 this.participantInputList = [ {
@@ -723,10 +719,10 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
 
               // set the current language to the first (visible) question's language
               if( 0 < this.questionList.length && angular.isDefined( this.questionList[0].language ) ) {
-                this.questionList.some( function( question ) {
+                this.questionList.some( question => {
                   // questions which aren't visible will have a null language
                   if( null != question.language ) {
-                    self.currentLanguage = question.language;
+                    this.currentLanguage = question.language;
                     return true;
                   }
                 } );
@@ -748,18 +744,18 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
                 } ).query();
 
                 var foundCurrentModule = false;
-                response.data.forEach( function( module ) {
-                  if( !foundCurrentModule && module.id == self.parentModel.viewModel.record.module_id ) {
+                response.data.forEach( module => {
+                  if( !foundCurrentModule && module.id == this.parentModel.viewModel.record.module_id ) {
                     foundCurrentModule = true
                   } else {
-                    if( foundCurrentModule ) self.nextModuleList.push( module );
-                    else self.prevModuleList.push( module );
+                    if( foundCurrentModule ) this.nextModuleList.push( module );
+                    else this.prevModuleList.push( module );
                   }
                 } );
               }
 
               var activeAttributeList = [];
-              var promiseList = this.questionList.reduce( function( list, question, questionIndex ) {
+              var promiseList = this.questionList.reduce( ( list, question, questionIndex ) => {
                 question.incomplete = false;
                 question.value = angular.fromJson( question.value );
                 question.backupValue = angular.copy( question.value );
@@ -767,10 +763,10 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
 
                 // if the question is a list type then get the options
                 if( 'list' == question.type ) {
-                  var getOptionsFn = async function() {
+                  var getOptionsFn = async () => {
                     var response = await CnHttpFactory.instance( {
                       path: ['question', question.id, 'question_option'].join( '/' ) + (
-                        !self.previewMode ? '?token=' + $state.params.token : ''
+                        !this.previewMode ? '?token=' + $state.params.token : ''
                       ),
                       data: {
                         select: { column: [
@@ -782,11 +778,11 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
                     } ).query();
 
                     question.optionList = response.data;
-                    question.optionList.forEach( function( option ) {
+                    question.optionList.forEach( option => {
                       activeAttributeList = activeAttributeList.concat( getAttributeNames( option.precondition ) );
                       option.prompts = CnTranslationHelper.parseDescriptions( option.prompts );
                       option.popups = CnTranslationHelper.parseDescriptions( option.popups );
-                      self.optionListById[option.id] = option;
+                      this.optionListById[option.id] = option;
                     } );
                   }
 
@@ -799,12 +795,12 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
 
               await Promise.all( promiseList );
 
-              this.questionList.forEach( function( question ) {
+              this.questionList.forEach( question => {
                 question.rawPrompts = question.prompts;
-                question.prompts = CnTranslationHelper.parseDescriptions( self.evaluateDescription( question.rawPrompts ) );
+                question.prompts = CnTranslationHelper.parseDescriptions( this.evaluateDescription( question.rawPrompts ) );
                 question.rawPopups = question.popups;
-                question.popups = CnTranslationHelper.parseDescriptions( self.evaluateDescription( question.rawPopups ) );
-                self.convertValueToModel( question );
+                question.popups = CnTranslationHelper.parseDescriptions( this.evaluateDescription( question.rawPopups ) );
+                this.convertValueToModel( question );
               } );
 
               // sort active attribute and make a unique list
@@ -834,18 +830,18 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
           },
 
           // Used to maintain a semaphore of queries so that they are all executed in sequence without any bumping the queue
-          runQuery: async function( fn ) {
+          runQuery: async fn => {
             await Promise.all( this.writePromiseList );
 
             var response = null;
-            var newIndex = self.promiseIndex++;
+            var newIndex = this.promiseIndex++;
             try {
               response = fn();
               response.index = newIndex;
             } finally {
               // remove the promise from the write promise list
-              var index = self.writePromiseList.findIndexByProperty( 'index', newIndex );
-              if( null != index ) self.writePromiseList.splice( index, 1 );
+              var index = this.writePromiseList.findIndexByProperty( 'index', newIndex );
+              if( null != index ) this.writePromiseList.splice( index, 1 );
             }
 
             await response;
@@ -866,7 +862,7 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
             } else if( 'list' == question.type ) {
               var selectedOptions = angular.isArray( question.value ) ? question.value : [];
               question.answer = {
-                optionList: question.optionList.reduce( function( list, option ) {
+                optionList: question.optionList.reduce( ( list, option ) => {
                   var optionIndex = searchOptionList( selectedOptions, option.id );
                   list[option.id] = option.multiple_answers
                                   ? { valueList: [], formattedValueList: [] }
@@ -918,7 +914,7 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
 
             if( 'list' == question.type ) {
               // get the list of all preconditions for all options belonging to this question
-              var preconditionListById = question.optionList.reduce( function( object, option ) {
+              var preconditionListById = question.optionList.reduce( ( object, option ) => {
                 object[option.id] = option.precondition;
                 return object;
               }, {} );
@@ -981,7 +977,7 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
 
             // replace any attributes
             if( this.previewMode ) {
-              this.activeAttributeList.forEach( function( attribute ) {
+              this.activeAttributeList.forEach( attribute => {
                 var qualifier = 'showhidden' == attribute.name ? '\\b' : '@';
                 var re = new RegExp( qualifier + attribute.name + qualifier );
                 var value = attribute.value;
@@ -1008,7 +1004,7 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
 
             // everything else needs to be evaluated
             var matches = expression.match( /\$[^$ ]+\$/g );
-            if( null != matches ) matches.forEach( function( match ) {
+            if( null != matches ) matches.forEach( match => {
               var parts = match.slice( 1, -1 ).toLowerCase().split( '.' );
               var fnName = 1 < parts.length ? parts[1] : null;
 
@@ -1025,7 +1021,7 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
 
               // find the referenced question
               var matchedQuestion = null;
-              self.questionList.some( function( q ) {
+              this.questionList.some( q => {
                 if( questionName == q.name.toLowerCase() ) {
                   matchedQuestion = q;
                   return true;
@@ -1056,7 +1052,7 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
                   // find the referenced option
                   var matchedOption = null;
                   if( angular.isArray( matchedQuestion.optionList ) ) {
-                    matchedQuestion.optionList.some( function( o ) {
+                    matchedQuestion.optionList.some( o => {
                       if( optionName == o.name.toLowerCase() ) {
                         matchedOption = o;
                         return true;
@@ -1107,10 +1103,10 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
           setLanguage: async function() {
             cenozoApp.setLang( this.currentLanguage );
             if( !this.previewMode && null != this.currentLanguage ) {
-              await this.runQuery( async function() {
+              await this.runQuery( async () => {
                 await CnHttpFactory.instance( {
-                  path: self.parentModel.getServiceResourceBasePath().replace( 'page/', 'respondent/' ) +
-                    '?action=set_language&code=' + self.currentLanguage
+                  path: this.parentModel.getServiceResourceBasePath().replace( 'page/', 'respondent/' ) +
+                    '?action=set_language&code=' + this.currentLanguage
                 } ).patch();
               } );
             }
@@ -1151,22 +1147,22 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
               tooSmall || tooLarge ?
 
               // When the number is out of bounds then alert the user
-              async function() {
+              async () => {
                 await CnModalMessageFactory.instance( {
-                  title: self.text( tooSmall ? 'misc.minimumTitle' : 'misc.maximumTitle' ),
-                  message: self.text( 'misc.limitMessage' ) + ' ' + (
-                    null == maximum ? self.text( 'misc.equalOrGreater' ) + ' ' + minimum + '.' :
-                    null == minimum ? self.text( 'misc.equalOrLess' ) + ' ' + maximum + '.' :
-                    [self.text( 'misc.between' ), minimum, self.text( 'misc.and' ), maximum + '.'].join( ' ' )
+                  title: this.text( tooSmall ? 'misc.minimumTitle' : 'misc.maximumTitle' ),
+                  message: this.text( 'misc.limitMessage' ) + ' ' + (
+                    null == maximum ? this.text( 'misc.equalOrGreater' ) + ' ' + minimum + '.' :
+                    null == minimum ? this.text( 'misc.equalOrLess' ) + ' ' + maximum + '.' :
+                    [this.text( 'misc.between' ), minimum, this.text( 'misc.and' ), maximum + '.'].join( ' ' )
                   )
                 } ).show();
 
                 question.value = angular.copy( question.backupValue );
-                self.convertValueToModel( question );
+                this.convertValueToModel( question );
               } :
 
               // No out of bounds detected, so proceed with setting the value
-              async function() {
+              async () => {
                 var proceed = true;
 
                 // Note that we need to treat entering text values a bit differently than other question types.
@@ -1180,24 +1176,25 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
                     if( isDkna( question.value ) ) ignore = 'ignoreDkna';
                     else if( isRefuse( question.value ) ) ignore = 'ignoreRefuse';
                     if( null != ignore ) { question[ignore] = true; }
-                    $timeout( function() { if( null != ignore ) delete question[ignore]; }, 500 );
+                    $timeout( () => { if( null != ignore ) delete question[ignore]; }, 500 );
                   } else if(
                     question.ignoreDkna && ( null === value || isDkna( value ) ) ||
                     question.ignoreRefuse && ( null === value || isRefuse( value ) )
                   ) {
                     // we may have tried setting dkna or refuse when it should be ignored, so change it in the model
-                    self.convertValueToModel( question );
+                    this.convertValueToModel( question );
                     proceed = false;
                   }
                 }
 
                 if( proceed ) {
                   try {
-                    self.working = true;
+                    this.working = true;
                     if( "" === value ) value = null;
 
-                    if( !self.previewMode ) {
+                    if( !this.previewMode ) {
                       // first communicate with the server (if we're working with a respondent)
+                      var self = this;
                       await CnHttpFactory.instance( {
                         path: 'answer/' + question.answer_id,
                         data: { value: angular.toJson( value ) },
@@ -1210,27 +1207,27 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
 
                     question.value = value;
                     question.backupValue = angular.copy( question.value );
-                    self.convertValueToModel( question );
+                    this.convertValueToModel( question );
 
                     // now blank out answers to questions which are no longer visible
                     // (this is done automatically on the server side)
-                    var visibleQuestionList = self.getVisibleQuestionList();
-                    self.questionList.forEach( function( q ) {
+                    var visibleQuestionList = this.getVisibleQuestionList();
+                    this.questionList.forEach( q => {
                       // re-evaluate descriptions as they may have changed based on the new answer
-                      q.prompts = CnTranslationHelper.parseDescriptions( self.evaluateDescription( q.rawPrompts ) );
-                      q.popups = CnTranslationHelper.parseDescriptions( self.evaluateDescription( q.rawPopups ) );
+                      q.prompts = CnTranslationHelper.parseDescriptions( this.evaluateDescription( q.rawPrompts ) );
+                      q.popups = CnTranslationHelper.parseDescriptions( this.evaluateDescription( q.rawPopups ) );
 
                       if( null == visibleQuestionList.findByProperty( 'id', q.id ) ) {
                         // q isn't visible so set its value to null if it isn't already
                         if( null != q.value ) {
                           q.value = null;
-                          self.convertValueToModel( q );
+                          this.convertValueToModel( q );
                         }
                       } else {
                         // q is visible, now check its options (assuming we haven't selected dkna/refused)
                         if( 'list' == q.type && !isDknaOrRefuse( q.value ) ) {
-                          var visibleOptionList = self.getVisibleOptionList( q );
-                          q.optionList.forEach( function( o ) {
+                          var visibleOptionList = this.getVisibleOptionList( q );
+                          q.optionList.forEach( o => {
                             if( null == visibleOptionList.findByProperty( 'id', o.id ) ) {
                               // o isn't visible so make sure it isn't selected
                               var v = angular.isArray( q.value ) ? q.value : [];
@@ -1239,7 +1236,7 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
                               if( 0 == v.length ) v = null;
 
                               q.value = v;
-                              self.convertValueToModel( q );
+                              this.convertValueToModel( q );
                             }
                           } );
                         }
@@ -1247,13 +1244,13 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
                     } );
 
                     if( !noCompleteCheck ) {
-                      var complete = self.questionIsComplete( question );
+                      var complete = this.questionIsComplete( question );
                       question.incomplete = false === complete ? true
                                           : true === complete ? false
                                           : complete;
                     }
                   } finally {
-                    self.working = false;
+                    this.working = false;
                   }
                 }
               }
@@ -1268,7 +1265,7 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
             } else {
               // get the current value array, remove exclusive options, add the new option and sort
               if( angular.isArray( question.value ) ) value = question.value;
-              value = value.filter( o => !self.optionListById[angular.isObject(o) ? o.id : o].exclusive );
+              value = value.filter( o => !this.optionListById[angular.isObject(o) ? o.id : o].exclusive );
               if( null == searchOptionList( value, option.id ) ) value.push( data );
               value.sort( function(a,b) {
                 return ( angular.isObject( a ) ? a.id : a ) - ( angular.isObject( b ) ? b.id : b );
@@ -1379,13 +1376,13 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
             var tooLarge = 'number' == option.extra && null != answerValue && ( null != maximum && answerValue > maximum );
 
             if( tooSmall || tooLarge ) {
-              await this.runQuery( async function() {
+              await this.runQuery( async () => {
                 await CnModalMessageFactory.instance( {
-                  title: self.text( tooSmall ? 'misc.minimumTitle' : 'misc.maximumTitle' ),
-                  message: self.text( 'misc.limitMessage' ) + ' ' + (
-                    null == maximum ? self.text( 'misc.equalOrGreater' ) + ' ' + minimum + '.' :
-                    null == minimum ? self.text( 'misc.equalOrLess' ) + ' ' + maximum + '.' :
-                    [self.text( 'misc.between' ), minimum, self.text( 'misc.and' ), maximum + '.'].join( ' ' )
+                  title: this.text( tooSmall ? 'misc.minimumTitle' : 'misc.maximumTitle' ),
+                  message: this.text( 'misc.limitMessage' ) + ' ' + (
+                    null == maximum ? this.text( 'misc.equalOrGreater' ) + ' ' + minimum + '.' :
+                    null == minimum ? this.text( 'misc.equalOrLess' ) + ' ' + maximum + '.' :
+                    [this.text( 'misc.between' ), minimum, this.text( 'misc.and' ), maximum + '.'].join( ' ' )
                   )
                 } ).show();
 
@@ -1438,10 +1435,10 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
           setResponseComments: async function() {
             try {
               this.working = true;
-              await this.runQuery( async function() {
+              await this.runQuery( async () => {
                 await CnHttpFactory.instance( {
-                  path: 'response/' + self.data.response_id,
-                  data: { comments: self.data.comments }
+                  path: 'response/' + this.data.response_id,
+                  data: { comments: this.data.comments }
                 } ).patch();
               } );
             } finally {
@@ -1463,7 +1460,7 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
             if( false !== response ) {
               try {
                 this.working = true;
-                await this.runQuery( async function() {
+                await this.runQuery( async () => {
                   await CnHttpFactory.instance( {
                     path: 'response_stage/' + responseStageId,
                     data: { comments: response }
@@ -1526,7 +1523,7 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
             if( proceed ) {
               try {
                 this.working = true;
-                await this.runQuery( async function() {
+                await this.runQuery( async () => {
                   var httpObj = { path: 'response_stage/' + responseStageId + '?action=' + operation };
                   if( null != patchData ) {
                     httpObj.data = patchData;
@@ -1536,7 +1533,7 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
 
                   // update the server with any changes
                   await CnHttpFactory.instance( httpObj ).patch();
-                  await self.parentModel.reloadState( true );
+                  await this.parentModel.reloadState( true );
                 } );
               } finally {
                 this.working = false;
@@ -1557,8 +1554,8 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
 
                 // check to make sure that all questions are complete, and highlight any which aren't
                 var mayProceed = true;
-                this.questionList.some( function( question ) {
-                  var complete = self.questionIsComplete( question );
+                this.questionList.some( question => {
+                  var complete = this.questionIsComplete( question );
                   question.incomplete = false === complete ? true
                                       : true === complete ? false
                                       : complete;
@@ -1570,11 +1567,11 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
 
                 if( mayProceed ) {
                   // proceed to the respondent's next valid page
-                  await this.runQuery( async function() {
+                  await this.runQuery( async () => {
                     await CnHttpFactory.instance( {
                       path: 'respondent/token=' + $state.params.token + '?action=proceed'
                     } ).patch();
-                    await self.parentModel.reloadState( true );
+                    await this.parentModel.reloadState( true );
                   } );
                 }
               } finally {
@@ -1594,11 +1591,11 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
               try {
                 // back up to the respondent's previous page
                 this.working = true;
-                await this.runQuery( async function() {
+                await this.runQuery( async () => {
                   await CnHttpFactory.instance( {
                     path: 'respondent/token=' + $state.params.token + '?action=backup'
                   } ).patch();
-                  await self.parentModel.reloadState( true );
+                  await this.parentModel.reloadState( true );
                 } );
               } finally {
                 this.working = false;
@@ -1610,11 +1607,11 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
             try {
               // jump to the first page in the provided module
               this.working = true;
-              await this.runQuery( async function() {
+              await this.runQuery( async () => {
                 await CnHttpFactory.instance( {
                   path: 'respondent/token=' + $state.params.token + '?action=jump&module_id=' + moduleId,
                 } ).patch();
-                await self.parentModel.reloadState( true );
+                await this.parentModel.reloadState( true );
               } );
             } finally {
               this.working = false;
@@ -1821,4 +1818,4 @@ define( [ 'address', 'participant', 'question' ].reduce( function( list, name ) 
       return $delegate;
     }
   ] );
-} );
+} } );

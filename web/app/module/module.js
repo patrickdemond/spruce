@@ -1,9 +1,4 @@
-define( [ 'page' ].reduce( function( list, name ) {
-  return list.concat( cenozoApp.module( name ).getRequiredFiles() );
-}, [] ), function() {
-  'use strict';
-
-  try { var module = cenozoApp.module( 'module', true ); } catch( err ) { console.warn( err ); return; }
+cenozoApp.defineModule( { name: 'module', dependencies: 'page', models: ['add', 'list', 'view'], create: module => {
 
   cenozoApp.initQnairePartModule( module, 'module' );
 
@@ -78,15 +73,14 @@ define( [ 'page' ].reduce( function( list, name ) {
     }
   ] );
 
-  // extend the list factory created by caling initQnairePartModule()
-  cenozo.providers.decorator( 'CnModuleListFactory', [
-    '$delegate', '$filter', 'CnHttpFactory',
-    function( $delegate, $filter, CnHttpFactory ) {
-      var instance = $delegate.instance;
-      $delegate.instance = function( parentModel ) {
-        var object = instance( parentModel );
+  /* ######################################################################################################## */
+  cenozo.providers.factory( 'CnModuleListFactory', [
+    'CnBaseListFactory',
+    function( CnBaseListFactory ) {
+      var object = function( parentModel ) {
+        CnBaseListFactory.construct( this, parentModel );
 
-        angular.extend( object, {
+        angular.extend( this, {
           stages: false,
           onList: async function( replace ) {
             await this.$$onList( replace );
@@ -100,11 +94,8 @@ define( [ 'page' ].reduce( function( list, name ) {
             }
           }
         } );
-
-        return object;
       };
-
-      return $delegate;
+      return { instance: function( parentModel ) { return new object( parentModel ); } };
     }
   ] );
 
@@ -130,4 +121,4 @@ define( [ 'page' ].reduce( function( list, name ) {
     }
   ] );
 
-} );
+} } );

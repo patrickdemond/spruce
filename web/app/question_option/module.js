@@ -1,7 +1,4 @@
-define( function() {
-  'use strict';
-
-  try { var module = cenozoApp.module( 'question_option', true ); } catch( err ) { console.warn( err ); return; }
+cenozoApp.defineModule( { name: 'question_option', models: ['add', 'list', 'view'], create: module => {
 
   cenozoApp.initQnairePartModule( module, 'question_option' );
 
@@ -138,4 +135,4 @@ define( function() {
       return $delegate;
     }
   ] );
-} );
+} } );

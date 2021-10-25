@@ -1,48 +1,6 @@
-define( function() {
-  'use strict';
-
-  try { var module = cenozoApp.module( 'question_option_description', true ); } catch( err ) { console.warn( err ); return; }
+cenozoApp.defineModule( { name: 'question_option_description', models: ['list', 'view'], create: module => {
 
   cenozoApp.initDescriptionModule( module, 'question_option' );
-
-  /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnQuestionOptionDescriptionList', [
-    'CnQuestionOptionDescriptionModelFactory',
-    function( CnQuestionOptionDescriptionModelFactory ) {
-      return {
-        templateUrl: module.getFileUrl( 'list.tpl.html' ),
-        restrict: 'E',
-        scope: { model: '=?' },
-        controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQuestionOptionDescriptionModelFactory.root;
-        }
-      };
-    }
-  ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnQuestionOptionDescriptionView', [
-    'CnQuestionOptionDescriptionModelFactory',
-    function( CnQuestionOptionDescriptionModelFactory ) {
-      return {
-        templateUrl: module.getFileUrl( 'view.tpl.html' ),
-        restrict: 'E',
-        scope: { model: '=?' },
-        controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQuestionOptionDescriptionModelFactory.root;
-        }
-      };
-    }
-  ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnQuestionOptionDescriptionListFactory', [
-    'CnBaseListFactory',
-    function( CnBaseListFactory ) {
-      var object = function( parentModel ) { CnBaseListFactory.construct( this, parentModel ); };
-      return { instance: function( parentModel ) { return new object( parentModel ); } };
-    }
-  ] );
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnQuestionOptionDescriptionViewFactory', [
@@ -74,4 +32,4 @@ define( function() {
     }
   ] );
 
-} );
+} } );

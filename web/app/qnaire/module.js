@@ -1,9 +1,5 @@
-define( [ 'module' ].reduce( function( list, name ) {
-  return list.concat( cenozoApp.module( name ).getRequiredFiles() );
-}, [] ), function() {
-  'use strict';
+cenozoApp.defineModule( { name: 'qnaire', dependencies: 'module', models: ['add', 'list', 'view'], create: module => {
 
-  try { var module = cenozoApp.module( 'qnaire', true ); } catch( err ) { console.warn( err ); return; }
   angular.extend( module, {
     identifier: {},
     name: {
@@ -393,21 +389,6 @@ define( [ 'module' ].reduce( function( list, name ) {
   ] );
 
   /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnQnaireList', [
-    'CnQnaireModelFactory',
-    function( CnQnaireModelFactory ) {
-      return {
-        templateUrl: module.getFileUrl( 'list.tpl.html' ),
-        restrict: 'E',
-        scope: { model: '=?' },
-        controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnaireModelFactory.root;
-        }
-      };
-    }
-  ] );
-
-  /* ######################################################################################################## */
   cenozo.providers.directive( 'cnQnaireView', [
     'CnQnaireModelFactory', 'CnModalConfirmFactory',
     function( CnQnaireModelFactory, CnModalConfirmFactory ) {
@@ -444,15 +425,6 @@ define( [ 'module' ].reduce( function( list, name ) {
           } );
         }
       };
-    }
-  ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnQnaireAddFactory', [
-    'CnBaseAddFactory',
-    function( CnBaseAddFactory ) {
-      var object = function( parentModel ) { CnBaseAddFactory.construct( this, parentModel ); };
-      return { instance: function( parentModel ) { return new object( parentModel ); } };
     }
   ] );
 
@@ -612,15 +584,6 @@ define( [ 'module' ].reduce( function( list, name ) {
   ] );
 
   /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnQnaireListFactory', [
-    'CnBaseListFactory',
-    function( CnBaseListFactory ) {
-      var object = function( parentModel ) { CnBaseListFactory.construct( this, parentModel ); };
-      return { instance: function( parentModel ) { return new object( parentModel ); } };
-    }
-  ] );
-
-  /* ######################################################################################################## */
   cenozo.providers.factory( 'CnQnaireViewFactory', [
     'CnBaseViewFactory', 'CnHttpFactory', 'CnModalMessageFactory', '$filter', '$state', '$rootScope',
     function( CnBaseViewFactory, CnHttpFactory, CnModalMessageFactory, $filter, $state, $rootScope ) {
@@ -653,6 +616,7 @@ define( [ 'module' ].reduce( function( list, name ) {
             this.differenceIsEmpty = false;
 
             // make some columns dependent on the parent qnaire
+            var self = this;
             var respondentModule = cenozoApp.module( 'respondent' );
             respondentModule.columnList.language.isIncluded = function( $state, model ) {
               return !self.record.repeated;
@@ -674,26 +638,25 @@ define( [ 'module' ].reduce( function( list, name ) {
 
           checkPatch: function() {
             if( !this.uploadReadReady ) {
-              var self = this;
-              // need to wait for cnUplod to do its thing
-              $rootScope.$on( 'cnUpload read', async function() {
+              // need to wait for cnUpload to do its thing
+              $rootScope.$on( 'cnUpload read', async () => {
                 try {
-                  self.working = true;
-                  self.uploadReadReady = true;
+                  this.working = true;
+                  this.uploadReadReady = true;
 
                   var data = new FormData();
-                  data.append( 'file', self.file );
+                  data.append( 'file', this.file );
 
                   // check the patch file
                   var response = await CnHttpFactory.instance( {
-                    path: self.parentModel.getServiceResourcePath() + '?patch=check',
-                    data: self.file
+                    path: this.parentModel.getServiceResourcePath() + '?patch=check',
+                    data: this.file
                   } ).patch();
 
-                  self.difference = response.data;
-                  self.differenceIsEmpty = 0 == Object.keys( self.difference ).length;
+                  this.difference = response.data;
+                  this.differenceIsEmpty = 0 == Object.keys( this.difference ).length;
                 } finally {
-                  self.working = false;
+                  this.working = false;
                 }
               } );
             }
@@ -725,30 +688,29 @@ define( [ 'module' ].reduce( function( list, name ) {
           }
         } );
 
-        var self = this;
-        async function init() {
-          await self.deferred.promise;
+        async function init( object ) {
+          await object.deferred.promise;
 
-          if( angular.isDefined( self.moduleModel ) ) {
-            self.moduleModel.getAddEnabled = function() {
-              return !self.record.readonly && self.moduleModel.$$getAddEnabled();
+          if( angular.isDefined( object.moduleModel ) ) {
+            object.moduleModel.getAddEnabled = function() {
+              return !object.record.readonly && object.moduleModel.$$getAddEnabled();
             }
-            self.moduleModel.getDeleteEnabled = function() {
-              return !self.record.readonly && self.moduleModel.$$getDeleteEnabled();
+            object.moduleModel.getDeleteEnabled = function() {
+              return !object.record.readonly && object.moduleModel.$$getDeleteEnabled();
             }
           }
 
-          if( angular.isDefined( self.attributeModel ) ) {
-            self.attributeModel.getAddEnabled = function() {
-              return !self.record.readonly && self.attributeModel.$$getAddEnabled();
+          if( angular.isDefined( object.attributeModel ) ) {
+            object.attributeModel.getAddEnabled = function() {
+              return !object.record.readonly && object.attributeModel.$$getAddEnabled();
             }
-            self.attributeModel.getDeleteEnabled = function() {
-              return !self.record.readonly && self.attributeModel.$$getDeleteEnabled();
+            object.attributeModel.getDeleteEnabled = function() {
+              return !object.record.readonly && object.attributeModel.$$getDeleteEnabled();
             }
           }
         }
 
-        init();
+        init( this );
       }
       return { instance: function( parentModel, root ) { return new object( parentModel, root ); } };
     }
@@ -791,15 +753,10 @@ define( [ 'module' ].reduce( function( list, name ) {
               }
             } ).query();
 
-            this.metadata.columnList.base_language_id.enumList = [];
-            var self = this;
-            response.data.forEach( function( item ) {
-              self.metadata.columnList.base_language_id.enumList.push( {
-                value: item.id,
-                name: item.name,
-                code: item.code // code is needed by the withdraw action
-              } );
-            } );
+            this.metadata.columnList.base_language_id.enumList = response.data.reduce( ( list, item ) => {
+              list.push( { value: item.id, name: item.name, code: item.code } ); // code is needed by the withdraw action
+              return list;
+            }, [] );
           }
         } );
       };
@@ -811,4 +768,4 @@ define( [ 'module' ].reduce( function( list, name ) {
     }
   ] );
 
-} );
+} } );

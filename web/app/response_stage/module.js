@@ -1,7 +1,5 @@
-define( function() {
-  'use strict';
+cenozoApp.defineModule( { name: 'response_stage', models: 'list', create: module => {
 
-  try { var module = cenozoApp.module( 'response_stage', true ); } catch( err ) { console.warn( err ); return; }
   angular.extend( module, {
     identifier: {
       parent: {
@@ -57,30 +55,6 @@ define( function() {
   } );
 
   /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnResponseStageList', [
-    'CnResponseStageModelFactory',
-    function( CnResponseStageModelFactory ) {
-      return {
-        templateUrl: module.getFileUrl( 'list.tpl.html' ),
-        restrict: 'E',
-        scope: { model: '=?' },
-        controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnResponseStageModelFactory.root;
-        }
-      };
-    }
-  ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnResponseStageListFactory', [
-    'CnBaseListFactory',
-    function( CnBaseListFactory ) {
-      var object = function( parentModel ) { CnBaseListFactory.construct( this, parentModel ); };
-      return { instance: function( parentModel ) { return new object( parentModel ); } };
-    }
-  ] );
-
-  /* ######################################################################################################## */
   cenozo.providers.factory( 'CnResponseStageModelFactory', [
     'CnBaseModelFactory', 'CnResponseStageListFactory',
     function( CnBaseModelFactory, CnResponseStageListFactory ) {
@@ -98,4 +72,4 @@ define( function() {
     }
   ] );
 
-}  );
+} } );

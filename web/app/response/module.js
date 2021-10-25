@@ -1,7 +1,5 @@
-define( function() {
-  'use strict';
+cenozoApp.defineModule( { name: 'response', models: ['add', 'list', 'view'], defaultTab: 'attribute', create: module => {
 
-  try { var module = cenozoApp.module( 'response', true ); } catch( err ) { console.warn( err ); return; }
   angular.extend( module, {
     identifier: {
       parent: {
@@ -168,36 +166,6 @@ define( function() {
           }, {
             title: 'display'
           } ] );
-        }
-      };
-    }
-  ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnResponseList', [
-    'CnResponseModelFactory',
-    function( CnResponseModelFactory ) {
-      return {
-        templateUrl: module.getFileUrl( 'list.tpl.html' ),
-        restrict: 'E',
-        scope: { model: '=?' },
-        controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnResponseModelFactory.root;
-        }
-      };
-    }
-  ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnResponseView', [
-    'CnResponseModelFactory',
-    function( CnResponseModelFactory ) {
-      return {
-        templateUrl: module.getFileUrl( 'view.tpl.html' ),
-        restrict: 'E',
-        scope: { model: '=?' },
-        controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnResponseModelFactory.root;
         }
       };
     }
@@ -415,24 +383,6 @@ define( function() {
   ] );
 
   /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnResponseListFactory', [
-    'CnBaseListFactory',
-    function( CnBaseListFactory ) {
-      var object = function( parentModel ) { CnBaseListFactory.construct( this, parentModel ); };
-      return { instance: function( parentModel ) { return new object( parentModel ); } };
-    }
-  ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnResponseViewFactory', [
-    'CnBaseViewFactory',
-    function( CnBaseViewFactory ) {
-      var object = function( parentModel, root ) { CnBaseViewFactory.construct( this, parentModel, root, 'attribute' ); }
-      return { instance: function( parentModel, root ) { return new object( parentModel, root ); } };
-    }
-  ] );
-
-  /* ######################################################################################################## */
   cenozo.providers.factory( 'CnResponseModelFactory', [
     'CnBaseModelFactory', 'CnResponseDisplayFactory', 'CnResponseListFactory', 'CnResponseViewFactory', 'CnHttpFactory',
     function( CnBaseModelFactory, CnResponseDisplayFactory, CnResponseListFactory, CnResponseViewFactory, CnHttpFactory ) {
@@ -475,4 +425,4 @@ define( function() {
     }
   ] );
 
-} );
+} } );

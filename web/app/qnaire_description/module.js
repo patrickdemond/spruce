@@ -1,48 +1,6 @@
-define( function() {
-  'use strict';
-
-  try { var module = cenozoApp.module( 'qnaire_description', true ); } catch( err ) { console.warn( err ); return; }
+cenozoApp.defineModule( { name: 'qnaire_description', models: ['list', 'view'], create: module => {
 
   cenozoApp.initDescriptionModule( module, 'qnaire' );
-
-  /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnQnaireDescriptionList', [
-    'CnQnaireDescriptionModelFactory',
-    function( CnQnaireDescriptionModelFactory ) {
-      return {
-        templateUrl: module.getFileUrl( 'list.tpl.html' ),
-        restrict: 'E',
-        scope: { model: '=?' },
-        controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnaireDescriptionModelFactory.root;
-        }
-      };
-    }
-  ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnQnaireDescriptionView', [
-    'CnQnaireDescriptionModelFactory',
-    function( CnQnaireDescriptionModelFactory ) {
-      return {
-        templateUrl: module.getFileUrl( 'view.tpl.html' ),
-        restrict: 'E',
-        scope: { model: '=?' },
-        controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnaireDescriptionModelFactory.root;
-        }
-      };
-    }
-  ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnQnaireDescriptionListFactory', [
-    'CnBaseListFactory',
-    function( CnBaseListFactory ) {
-      var object = function( parentModel ) { CnBaseListFactory.construct( this, parentModel ); };
-      return { instance: function( parentModel ) { return new object( parentModel ); } };
-    }
-  ] );
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnQnaireDescriptionViewFactory', [
@@ -74,4 +32,4 @@ define( function() {
     }
   ] );
 
-} );
+} } );

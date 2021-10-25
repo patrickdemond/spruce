@@ -1,48 +1,6 @@
-define( function() {
-  'use strict';
-
-  try { var module = cenozoApp.module( 'reminder_description', true ); } catch( err ) { console.warn( err ); return; }
+cenozoApp.defineModule( { name: 'reminder_description', models: ['list', 'view'], create: module => {
 
   cenozoApp.initDescriptionModule( module, 'reminder' );
-
-  /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnReminderDescriptionList', [
-    'CnReminderDescriptionModelFactory',
-    function( CnReminderDescriptionModelFactory ) {
-      return {
-        templateUrl: module.getFileUrl( 'list.tpl.html' ),
-        restrict: 'E',
-        scope: { model: '=?' },
-        controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnReminderDescriptionModelFactory.root;
-        }
-      };
-    }
-  ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnReminderDescriptionView', [
-    'CnReminderDescriptionModelFactory',
-    function( CnReminderDescriptionModelFactory ) {
-      return {
-        templateUrl: module.getFileUrl( 'view.tpl.html' ),
-        restrict: 'E',
-        scope: { model: '=?' },
-        controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnReminderDescriptionModelFactory.root;
-        }
-      };
-    }
-  ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnReminderDescriptionListFactory', [
-    'CnBaseListFactory',
-    function( CnBaseListFactory ) {
-      var object = function( parentModel ) { CnBaseListFactory.construct( this, parentModel ); };
-      return { instance: function( parentModel ) { return new object( parentModel ); } };
-    }
-  ] );
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnReminderDescriptionViewFactory', [
@@ -74,4 +32,4 @@ define( function() {
     }
   ] );
 
-} );
+} } );

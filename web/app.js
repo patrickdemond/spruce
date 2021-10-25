@@ -137,36 +137,6 @@ cenozoApp.initQnairePartModule = function( module, type ) {
   var typeCamel = type.snakeToCamel().ucWords();
 
   /* ######################################################################################################## */
-  cenozo.providers.directive( 'cn'+typeCamel+'Add', [
-    'Cn'+typeCamel+'ModelFactory',
-    function( CnModelFactory ) {
-      return {
-        templateUrl: module.getFileUrl( 'add.tpl.html' ),
-        restrict: 'E',
-        scope: { model: '=?' },
-        controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnModelFactory.root;
-        }
-      };
-    }
-  ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.directive( 'cn'+typeCamel+'List', [
-    'Cn'+typeCamel+'ModelFactory',
-    function( CnModelFactory ) {
-      return {
-        templateUrl: module.getFileUrl( 'list.tpl.html' ),
-        restrict: 'E',
-        scope: { model: '=?' },
-        controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnModelFactory.root;
-        }
-      };
-    }
-  ] );
-
-  /* ######################################################################################################## */
   cenozo.providers.directive( 'cn'+typeCamel+'View', [
     'Cn'+typeCamel+'ModelFactory', '$document', '$transitions',
     function( CnModelFactory, $document, $transitions ) {
@@ -227,15 +197,6 @@ cenozoApp.initQnairePartModule = function( module, type ) {
           }
         } );
       };
-      return { instance: function( parentModel ) { return new object( parentModel ); } };
-    }
-  ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.factory( 'Cn'+typeCamel+'ListFactory', [
-    'CnBaseListFactory',
-    function( CnBaseListFactory ) {
-      var object = function( parentModel ) { CnBaseListFactory.construct( this, parentModel ); };
       return { instance: function( parentModel ) { return new object( parentModel ); } };
     }
   ] );

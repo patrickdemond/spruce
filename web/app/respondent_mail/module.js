@@ -1,7 +1,5 @@
-define( function() {
-  'use strict';
+cenozoApp.defineModule( { name: 'respondent_mail', models: 'list', create: module => {
 
-  try { var module = cenozoApp.module( 'respondent_mail', true ); } catch( err ) { console.warn( err ); return; }
   angular.extend( module, {
     identifier: {
       parent: {
@@ -44,59 +42,4 @@ define( function() {
     }
   } );
 
-  /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnRespondentMailList', [
-    'CnRespondentMailModelFactory',
-    function( CnRespondentMailModelFactory ) {
-      return {
-        templateUrl: module.getFileUrl( 'list.tpl.html' ),
-        restrict: 'E',
-        scope: { model: '=?' },
-        controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnRespondentMailModelFactory.root;
-        }
-      };
-    }
-  ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnRespondentMailRun', [
-    'CnRespondentMailModelFactory',
-    function( CnRespondentMailModelFactory ) {
-      return {
-        templateUrl: module.getFileUrl( 'run.tpl.html' ),
-        restrict: 'E',
-        scope: { model: '=?' },
-        controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnRespondentMailModelFactory.root;
-        }
-      };
-    }
-  ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnRespondentMailListFactory', [
-    'CnBaseListFactory',
-    function( CnBaseListFactory ) {
-      var object = function( parentModel ) { CnBaseListFactory.construct( this, parentModel ); };
-      return { instance: function( parentModel ) { return new object( parentModel ); } };
-    }
-  ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnRespondentMailModelFactory', [
-    'CnBaseModelFactory', 'CnRespondentMailListFactory', 'CnHttpFactory',
-    function( CnBaseModelFactory, CnRespondentMailListFactory, CnHttpFactory ) {
-      var object = function( root ) {
-        CnBaseModelFactory.construct( this, module );
-        this.listModel = CnRespondentMailListFactory.instance( this );
-      };
-
-      return {
-        root: new object( true ),
-        instance: function() { return new object( false ); }
-      };
-    }
-  ] );
-
-} );
+} } );

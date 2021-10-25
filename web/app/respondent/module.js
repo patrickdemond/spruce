@@ -1,9 +1,5 @@
-define( [ 'page' ].reduce( function( list, name ) {
-  return list.concat( cenozoApp.module( name ).getRequiredFiles() );
-}, [] ), function() {
-  'use strict';
+cenozoApp.defineModule( { name: 'respondent', dependencies: 'page', models: ['add', 'list', 'view'], create: module => {
 
-  try { var module = cenozoApp.module( 'respondent', true ); } catch( err ) { console.warn( err ); return; }
   angular.extend( module, {
     identifier: {
       parent: {
@@ -277,56 +273,11 @@ define( [ 'page' ].reduce( function( list, name ) {
   } );
 
   /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnRespondentAdd', [
-    'CnRespondentModelFactory',
-    function( CnRespondentModelFactory ) {
-      return {
-        templateUrl: module.getFileUrl( 'add.tpl.html' ),
-        restrict: 'E',
-        scope: { model: '=?' },
-        controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnRespondentModelFactory.root;
-        }
-      };
-    }
-  ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnRespondentList', [
-    'CnRespondentModelFactory',
-    function( CnRespondentModelFactory ) {
-      return {
-        templateUrl: module.getFileUrl( 'list.tpl.html' ),
-        restrict: 'E',
-        scope: { model: '=?' },
-        controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnRespondentModelFactory.root;
-        }
-      };
-    }
-  ] );
-
-  /* ######################################################################################################## */
   cenozo.providers.directive( 'cnRespondentRun', [
     'CnRespondentModelFactory',
     function( CnRespondentModelFactory ) {
       return {
         templateUrl: module.getFileUrl( 'run.tpl.html' ),
-        restrict: 'E',
-        scope: { model: '=?' },
-        controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnRespondentModelFactory.root;
-        }
-      };
-    }
-  ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnRespondentView', [
-    'CnRespondentModelFactory',
-    function( CnRespondentModelFactory ) {
-      return {
-        templateUrl: module.getFileUrl( 'view.tpl.html' ),
         restrict: 'E',
         scope: { model: '=?' },
         controller: function( $scope ) {
@@ -346,15 +297,6 @@ define( [ 'page' ].reduce( function( list, name ) {
         // transition to viewing the new record instead of the default functionality
         this.transitionOnSave = function( record ) { parentModel.transitionToViewState( record ); };
       };
-      return { instance: function( parentModel ) { return new object( parentModel ); } };
-    }
-  ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnRespondentListFactory', [
-    'CnBaseListFactory',
-    function( CnBaseListFactory ) {
-      var object = function( parentModel ) { CnBaseListFactory.construct( this, parentModel ); };
       return { instance: function( parentModel ) { return new object( parentModel ); } };
     }
   ] );
@@ -521,4 +463,4 @@ define( [ 'page' ].reduce( function( list, name ) {
     }
   ] );
 
-} );
+} } );

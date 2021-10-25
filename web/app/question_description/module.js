@@ -1,48 +1,6 @@
-define( function() {
-  'use strict';
-
-  try { var module = cenozoApp.module( 'question_description', true ); } catch( err ) { console.warn( err ); return; }
+cenozoApp.defineModule( { name: 'question_description', models: ['list', 'view'], create: module => {
 
   cenozoApp.initDescriptionModule( module, 'question' );
-
-  /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnQuestionDescriptionList', [
-    'CnQuestionDescriptionModelFactory',
-    function( CnQuestionDescriptionModelFactory ) {
-      return {
-        templateUrl: module.getFileUrl( 'list.tpl.html' ),
-        restrict: 'E',
-        scope: { model: '=?' },
-        controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQuestionDescriptionModelFactory.root;
-        }
-      };
-    }
-  ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnQuestionDescriptionView', [
-    'CnQuestionDescriptionModelFactory',
-    function( CnQuestionDescriptionModelFactory ) {
-      return {
-        templateUrl: module.getFileUrl( 'view.tpl.html' ),
-        restrict: 'E',
-        scope: { model: '=?' },
-        controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQuestionDescriptionModelFactory.root;
-        }
-      };
-    }
-  ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnQuestionDescriptionListFactory', [
-    'CnBaseListFactory',
-    function( CnBaseListFactory ) {
-      var object = function( parentModel ) { CnBaseListFactory.construct( this, parentModel ); };
-      return { instance: function( parentModel ) { return new object( parentModel ); } };
-    }
-  ] );
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnQuestionDescriptionViewFactory', [
@@ -74,4 +32,4 @@ define( function() {
     }
   ] );
 
-} );
+} } );

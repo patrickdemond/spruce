@@ -1,9 +1,4 @@
-define( [ 'question_option' ].reduce( function( list, name ) {
-  return list.concat( cenozoApp.module( name ).getRequiredFiles() );
-}, [] ), function() {
-  'use strict';
-
-  try { var module = cenozoApp.module( 'question', true ); } catch( err ) { console.warn( err ); return; }
+cenozoApp.defineModule( { name: 'question', dependencies: 'question_option', models: ['add', 'list', 'view'], create: module => {
 
   cenozoApp.initQnairePartModule( module, 'question' );
 
@@ -103,18 +98,19 @@ define( [ 'question_option' ].reduce( function( list, name ) {
     }
   ] );
 
-  // extend the model factory
-  cenozo.providers.decorator( 'CnQuestionListFactory', [
-    '$delegate',
-    function( $delegate ) {
-      var instance = $delegate.instance;
-      $delegate.instance = function( parentModel ) {
-        // if we are looking at the list of questions in a qnaire then we must change the default column order
-        var object = instance( parentModel );
-        if( 'qnaire' == parentModel.getSubjectFromState() ) object.order.column = 'module.rank';
-        return object;
+  /* ######################################################################################################## */
+  cenozo.providers.factory( 'CnQuestionListFactory', [
+    'CnBaseListFactory',
+    function( CnBaseListFactory ) {
+      var object = function( parentModel ) { CnBaseListFactory.construct( this, parentModel ); };
+      return {
+        instance: function( parentModel ) {
+          // if we are looking at the list of questions in a qnaire then we must change the default column order
+          var object = new object( parentModel );
+          if( 'qnaire' == parentModel.getSubjectFromState() ) object.order.column = 'module.rank';
+          return object;
+        }
       };
-      return $delegate;
     }
   ] );
 
@@ -246,11 +242,10 @@ define( [ 'question_option' ].reduce( function( list, name ) {
               }
             } ).query();
 
-            this.metadata.columnList.device_id.enumList = [];
-            var self = this;
-            response.data.forEach( function( item ) {
-              self.metadata.columnList.device_id.enumList.push( { value: item.id, name: item.name } );
-            } );
+            this.metadata.columnList.device_id.enumList = response.data.reduce( ( list, item ) => {
+              list.push( { value: item.id, name: item.name } );
+              return list;
+            }, [] );
           }
         } );
         return object;
@@ -263,4 +258,4 @@ define( [ 'question_option' ].reduce( function( list, name ) {
       return $delegate;
     }
   ] );
-} );
+} } );

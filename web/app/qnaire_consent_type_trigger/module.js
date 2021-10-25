@@ -1,7 +1,5 @@
-define( function() {
-  'use strict';
+cenozoApp.defineModule( { name: 'qnaire_consent_type_trigger', models: ['add', 'list', 'view'], create: module => {
 
-  try { var module = cenozoApp.module( 'qnaire_consent_type_trigger', true ); } catch( err ) { console.warn( err ); return; }
   angular.extend( module, {
     identifier: {
       parent: {
@@ -67,51 +65,6 @@ define( function() {
   } );
 
   /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnQnaireConsentTypeTriggerAdd', [
-    'CnQnaireConsentTypeTriggerModelFactory',
-    function( CnQnaireConsentTypeTriggerModelFactory ) {
-      return {
-        templateUrl: module.getFileUrl( 'add.tpl.html' ),
-        restrict: 'E',
-        scope: { model: '=?' },
-        controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnaireConsentTypeTriggerModelFactory.root;
-        }
-      };
-    }
-  ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnQnaireConsentTypeTriggerList', [
-    'CnQnaireConsentTypeTriggerModelFactory',
-    function( CnQnaireConsentTypeTriggerModelFactory ) {
-      return {
-        templateUrl: module.getFileUrl( 'list.tpl.html' ),
-        restrict: 'E',
-        scope: { model: '=?' },
-        controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnaireConsentTypeTriggerModelFactory.root;
-        }
-      };
-    }
-  ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.directive( 'cnQnaireConsentTypeTriggerView', [
-    'CnQnaireConsentTypeTriggerModelFactory',
-    function( CnQnaireConsentTypeTriggerModelFactory ) {
-      return {
-        templateUrl: module.getFileUrl( 'view.tpl.html' ),
-        restrict: 'E',
-        scope: { model: '=?' },
-        controller: function( $scope ) {
-          if( angular.isUndefined( $scope.model ) ) $scope.model = CnQnaireConsentTypeTriggerModelFactory.root;
-        }
-      };
-    }
-  ] );
-
-  /* ######################################################################################################## */
   cenozo.providers.factory( 'CnQnaireConsentTypeTriggerAddFactory', [
     'CnBaseAddFactory',
     function( CnBaseAddFactory ) {
@@ -127,15 +80,6 @@ define( function() {
             [ 'qnaire', this.parentModel.getParentIdentifier().identifier, 'question' ].join( '/' );
         };
       };
-      return { instance: function( parentModel ) { return new object( parentModel ); } };
-    }
-  ] );
-
-  /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnQnaireConsentTypeTriggerListFactory', [
-    'CnBaseListFactory',
-    function( CnBaseListFactory ) {
-      var object = function( parentModel ) { CnBaseListFactory.construct( this, parentModel ); };
       return { instance: function( parentModel ) { return new object( parentModel ); } };
     }
   ] );
@@ -185,11 +129,10 @@ define( function() {
             }
           } ).query();
 
-          this.metadata.columnList.consent_type_id.enumList = [];
-          var self = this;
-          response.data.forEach( function( item ) {
-            self.metadata.columnList.consent_type_id.enumList.push( { value: item.id, name: item.name } );
-          } );
+          this.metadata.columnList.consent_type_id.enumList = response.data.reduce( ( list, item ) => {
+            list.push( { value: item.id, name: item.name } );
+            return list;
+          }, [] );
         };
       };
 
@@ -200,4 +143,4 @@ define( function() {
     }
   ] );
 
-} );
+} } );
