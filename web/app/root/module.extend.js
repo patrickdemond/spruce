@@ -1,8 +1,4 @@
-// extend the framework's module
-define( [ 'qnaire', 'root' ].reduce( ( list, name ) => {
-  return list.concat( cenozoApp.module( name ).getRequiredFiles() );
-}, [] ), function() {
-  'use strict';
+cenozoApp.extendModule( { name: 'root', dependencies: 'qnaire', create: module => {
 
   var qnaireModule = cenozoApp.module( 'qnaire' );
 
@@ -37,4 +33,4 @@ define( [ 'qnaire', 'root' ].reduce( ( list, name ) => {
     }
   ] );
 
-} );
+} } );

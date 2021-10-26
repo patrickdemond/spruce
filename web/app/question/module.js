@@ -106,9 +106,9 @@ cenozoApp.defineModule( { name: 'question', dependencies: 'question_option', mod
       return {
         instance: function( parentModel ) {
           // if we are looking at the list of questions in a qnaire then we must change the default column order
-          var object = new object( parentModel );
-          if( 'qnaire' == parentModel.getSubjectFromState() ) object.order.column = 'module.rank';
-          return object;
+          var obj = new object( parentModel );
+          if( 'qnaire' == parentModel.getSubjectFromState() ) obj.order.column = 'module.rank';
+          return obj;
         }
       };
     }

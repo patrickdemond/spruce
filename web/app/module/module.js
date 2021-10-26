@@ -75,8 +75,8 @@ cenozoApp.defineModule( { name: 'module', dependencies: 'page', models: ['add', 
 
   /* ######################################################################################################## */
   cenozo.providers.factory( 'CnModuleListFactory', [
-    'CnBaseListFactory',
-    function( CnBaseListFactory ) {
+    'CnBaseListFactory', 'CnHttpFactory',
+    function( CnBaseListFactory, CnHttpFactory ) {
       var object = function( parentModel ) {
         CnBaseListFactory.construct( this, parentModel );
 

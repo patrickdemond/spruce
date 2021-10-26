@@ -1,8 +1,4 @@
-// extend the framework's module
-define( [ cenozoApp.module( 'participant' ).getFileUrl( 'module.js' ) ], function() {
-  'use strict';
-
-  var module = cenozoApp.module( 'participant' );
+cenozoApp.extendModule( { name: 'participant', create: module => {
 
   // extend the list factory
   cenozo.providers.decorator( 'CnParticipantModelFactory', [
@@ -39,4 +35,4 @@ define( [ cenozoApp.module( 'participant' ).getFileUrl( 'module.js' ) ], functio
     }
   ] );
 
-} );
+} } );
