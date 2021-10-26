@@ -686,7 +686,7 @@ cenozo.service( 'CnTranslationHelper', [
       parseDescriptions: function( descriptionList, showHidden ) {
         var code = null;
         if( !angular.isString( descriptionList ) ) descriptionList = '';
-        return descriptionList.split( '`' ).reduce( function( list, part ) {
+        return descriptionList.split( '`' ).reduce( ( list, part ) => {
           if( angular.isDefined( showHidden ) ) {
             // replace hidden and reverse-hidden codes
             part = showHidden
@@ -821,10 +821,9 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
             },
           } ).query();
 
-          var self = this;
           this.qnaireList = response.data
-            .filter( item => 'move' != self.operation || 'qnaire' != self.parentType || self.sourceParentId != item.id )
-            .map( item => ({ value: item.id, name: item.name }) );
+            .filter( item => 'move' != this.operation || 'qnaire' != this.parentType || this.sourceParentId != item.id )
+            .map( item => ( { value: item.id, name: item.name } ) );
           this.qnaireList.unshift( { value: null, name: '(choose target questionnaire)' } );
         },
 
@@ -846,10 +845,9 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
               },
             } ).query();
 
-            var self = this;
             this.moduleList = response.data
-              .filter( item => 'move' != self.operation || 'module' != self.parentType || self.sourceParentId != item.id )
-              .map( item => ({ value: item.id, name: item.rank + '. ' + item.name }) );
+              .filter( item => 'move' != this.operation || 'module' != this.parentType || this.sourceParentId != item.id )
+              .map( item => ( { value: item.id, name: item.rank + '. ' + item.name } ) );
             this.moduleList.unshift( { value: null, name: '(choose target module)' } );
           }
         },
@@ -872,10 +870,9 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
               },
             } ).query();
 
-            var self = this;
             this.pageList = response.data
-              .filter( item => 'move' != self.operation || 'page' != self.parentType || self.sourceParentId != item.id )
-              .map( item => ({ value: item.id, name: item.rank + '. ' + item.name }) );
+              .filter( item => 'move' != this.operation || 'page' != this.parentType || this.sourceParentId != item.id )
+              .map( item => ( { value: item.id, name: item.rank + '. ' + item.name } ) );
             this.pageList.unshift( { value: null, name: '(choose target page)' } );
           }
         },
@@ -898,10 +895,9 @@ cenozo.factory( 'CnQnairePartCloneFactory', [
               },
             } ).query();
 
-            var self = this;
             this.questionList = response.data
-              .filter( item => 'move' != self.operation || 'question' != self.parentType || self.sourceParentId != item.id )
-              .map( item => ({ value: item.id, name: item.rank + '. ' + item.name }) );
+              .filter( item => 'move' != this.operation || 'question' != this.parentType || this.sourceParentId != item.id )
+              .map( item => ( { value: item.id, name: item.rank + '. ' + item.name } ) );
             this.questionList.unshift( {
               value: null,
               name: 0 == this.questionList.length ?
