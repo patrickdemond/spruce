@@ -21,8 +21,9 @@ class get extends \cenozo\service\get
     {
       $create_new_response = false;
 
-      // we need a semaphore to guard against duplicate responses
-      $semaphore = lib::create( 'business\semaphore' );
+      // We need a semaphore to guard against duplicate responses.  The semaphore is specific to the resource value
+      // which in this case is the respondent's token (or id) so that other respondents are not slowed down.
+      $semaphore = lib::create( 'business\semaphore', $this->get_resource_value( 0 ) );
       $semaphore->acquire();
 
       $db_respondent = $this->get_leaf_record();
