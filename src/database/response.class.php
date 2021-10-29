@@ -259,14 +259,18 @@ class response extends \cenozo\database\has_rank
       // make sure that all questions on the current page are finished
       $complete = true;
 
-      $object_list = array();
+      $question_list = array();
+      $question_sel = lib::create( 'database\select' );
+      $question_sel->add_column( 'id' );
+      $question_sel->add_column( 'name' );
+      $question_sel->add_column( 'type' );
       $question_mod = lib::create( 'database\modifier' );
       $question_mod->where( 'type', 'NOT IN', ['comment', 'device'] ); // comments and devices don't have answers
-      foreach( $db_page->get_question_object_list( $question_mod ) as $db_question )
+      foreach( $db_page->get_question_list( $question_sel, $question_mod ) as $question )
       {
         $db_answer = $answer_class_name::get_unique_record(
           array( 'response_id', 'question_id' ),
-          array( $this->id, $db_question->id )
+          array( $this->id, $question['id'] )
         );
 
         if( is_null( $db_answer ) || !$db_answer->is_complete() )
@@ -276,7 +280,7 @@ class response extends \cenozo\database\has_rank
               is_null( $db_answer ) ? 'but the answer doesn\'t exist.' : 'but the answer is incomplete.'
             ),
             $this->get_participant()->uid,
-            $db_question->name,
+            $question['name'],
             $db_page->name
           ) );
 
@@ -284,14 +288,14 @@ class response extends \cenozo\database\has_rank
           break;
         }
 
-        $object_list[] = array( 'question' => $db_question, 'answer' => $db_answer );
+        $question_list[] = array( 'type' => $question['type'], 'answer' => $db_answer );
       }
 
       if( $complete )
       {
         // before proceeding remove any empty option values
-        foreach( $object_list as $object )
-          if( 'list' == $object['question']->type )
+        foreach( $question_list as $object )
+          if( 'list' == $object['type'] )
             $object['answer']->remove_empty_answer_values();
 
         // record the time spent on the page (add time if there is already time set)

@@ -686,7 +686,21 @@ cenozoApp.defineModule( { name: 'page',
             }
 
             if( this.previewMode || null != this.data.page_id ) {
-              await this.parentModel.viewModel.onView( true );
+              this.reset();
+              const [viewResponse, questionResponse] = await Promise.all( [
+                this.parentModel.viewModel.onView( true ),
+
+                await CnHttpFactory.instance( {
+                  path: this.parentModel.getServiceResourceBasePath() + '/question',
+                  data: {
+                    select: { column: [
+                      'id', 'rank', 'name', 'type', 'mandatory', 'dkna_allowed', 'refuse_allowed', 'minimum', 'maximum',
+                      'precondition', 'prompts', 'popups', 'device_id', { table: 'device', column: 'name', alias: 'device' }
+                    ] },
+                    modifier: { order: 'question.rank' }
+                  }
+                } ).query()
+              ] );
 
               angular.extend( this.data, {
                 page_id: this.parentModel.viewModel.record.id,
@@ -704,18 +718,7 @@ cenozoApp.defineModule( { name: 'page',
                 )
               );
 
-              this.reset();
-              var response = await CnHttpFactory.instance( {
-                path: this.parentModel.getServiceResourceBasePath() + '/question',
-                data: {
-                  select: { column: [
-                    'id', 'rank', 'name', 'type', 'mandatory', 'dkna_allowed', 'refuse_allowed', 'minimum', 'maximum',
-                    'precondition', 'prompts', 'popups', 'device_id', { table: 'device', column: 'name', alias: 'device' }
-                  ] },
-                  modifier: { order: 'question.rank' }
-                }
-              } ).query();
-              this.questionList = response.data;
+              this.questionList = questionResponse.data;
 
               // set the current language to the first (visible) question's language
               if( 0 < this.questionList.length && angular.isDefined( this.questionList[0].language ) ) {
@@ -755,7 +758,7 @@ cenozoApp.defineModule( { name: 'page',
               }
 
               var activeAttributeList = [];
-              var promiseList = this.questionList.reduce( ( list, question, questionIndex ) => {
+              await Promise.all( this.questionList.reduce( ( list, question, questionIndex ) => {
                 question.incomplete = false;
                 question.value = angular.fromJson( question.value );
                 question.backupValue = angular.copy( question.value );
@@ -763,7 +766,7 @@ cenozoApp.defineModule( { name: 'page',
 
                 // if the question is a list type then get the options
                 if( 'list' == question.type ) {
-                  var getOptionsFn = async () => {
+                  const getQuestionOptions = async () => {
                     var response = await CnHttpFactory.instance( {
                       path: ['question', question.id, 'question_option'].join( '/' ) + (
                         !this.previewMode ? '?token=' + $state.params.token : ''
@@ -784,16 +787,11 @@ cenozoApp.defineModule( { name: 'page',
                       option.popups = CnTranslationHelper.parseDescriptions( option.popups );
                       this.optionListById[option.id] = option;
                     } );
-                  }
-
-                  list.push( getOptionsFn() );
+                  };
+                  list.push( getQuestionOptions() );
                 }
-
-
                 return list;
-              }, [] );
-
-              await Promise.all( promiseList );
+              }, [] ) );
 
               this.questionList.forEach( question => {
                 question.rawPrompts = question.prompts;
