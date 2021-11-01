@@ -13,6 +13,7 @@ define( [ 'module' ].reduce( function( list, name ) {
     },
     columnList: {
       name: {
+        column: 'qnaire.name',
         title: 'Name'
       },
       version: {
@@ -56,7 +57,7 @@ define( [ 'module' ].reduce( function( list, name ) {
       }
     },
     defaultOrder: {
-      column: 'name',
+      column: 'qnaire.name',
       reverse: false
     }
   } );
