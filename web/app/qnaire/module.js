@@ -9,6 +9,7 @@ cenozoApp.defineModule( { name: 'qnaire', dependencies: 'module', models: ['add'
     },
     columnList: {
       name: {
+        column: 'qnaire.name',
         title: 'Name'
       },
       version: {
@@ -56,7 +57,7 @@ cenozoApp.defineModule( { name: 'qnaire', dependencies: 'module', models: ['add'
       }
     },
     defaultOrder: {
-      column: 'name',
+      column: 'qnaire.name',
       reverse: false
     }
   } );
