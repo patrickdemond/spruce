@@ -847,8 +847,10 @@ cenozoApp.defineModule( { name: 'page',
                     question.optionList = response.data;
                     question.optionList.forEach( option => {
                       activeAttributeList = activeAttributeList.concat( getAttributeNames( option.precondition ) );
-                      option.prompts = CnTranslationHelper.parseDescriptions( option.prompts );
-                      option.popups = CnTranslationHelper.parseDescriptions( option.popups );
+                      option.rawPrompts = option.prompts;
+                      option.prompts = CnTranslationHelper.parseDescriptions( this.evaluateDescription( option.rawPrompts ) );
+                      option.rawPopups = option.popups;
+                      option.popups = CnTranslationHelper.parseDescriptions( this.evaluateDescription( option.rawPopups ) );
                       this.optionListById[option.id] = option;
                     } );
                   };
@@ -1278,6 +1280,13 @@ cenozoApp.defineModule( { name: 'page',
                       // re-evaluate descriptions as they may have changed based on the new answer
                       q.prompts = CnTranslationHelper.parseDescriptions( this.evaluateDescription( q.rawPrompts ) );
                       q.popups = CnTranslationHelper.parseDescriptions( this.evaluateDescription( q.rawPopups ) );
+
+                      if( 'list' == q.type ) {
+                        q.optionList.forEach( o => {
+                          o.prompts = CnTranslationHelper.parseDescriptions( this.evaluateDescription( o.rawPrompts ) );
+                          o.popups = CnTranslationHelper.parseDescriptions( this.evaluateDescription( o.rawPopups ) );
+                        } );
+                      }
 
                       if( null == visibleQuestionList.findByProperty( 'id', q.id ) ) {
                         // q isn't visible so set its value to null if it isn't already
