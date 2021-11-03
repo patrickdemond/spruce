@@ -21,19 +21,30 @@ class get extends \cenozo\service\get
 
     $data = $this->data;
 
-    if( 1 == preg_match( '/^token=([^;\/]+)/', $this->get_resource_value( 0 ), $parts ) )
+    $respondent = 1 == preg_match( '/^token=([^;\/]+)/', $this->get_resource_value( 0 ), $parts );
+    if( $respondent )
     {
       $db_respondent = $respondent_class_name::get_unique_record( 'token', $parts[1] );
       $this->db_response = is_null( $db_respondent ) ? NULL : $db_respondent->get_current_response();
     }
+    $db_qnaire = $respondent ? $db_respondent->get_qnaire() : $this->get_leaf_record()->get_qnaire();
+    $expression_manager = lib::create( 'business\expression_manager', $respondent ? $this->db_response : $db_qnaire );
 
     // handle hidden text in prompts and popups
-    $expression_manager = lib::create(
-      'business\expression_manager',
-      is_null( $this->db_response ) ? $this->get_leaf_record()->get_qnaire() : $this->db_response
-    );
     $expression_manager->process_hidden_text( $data );
-    if( !is_null( $this->db_response ) ) $data['uid'] = $this->db_response->get_participant()->uid;
+    
+    if( array_key_exists( 'prompts', $data ) )
+    {
+      $data['prompts'] = $db_qnaire->compile_description( $data['prompts'] );
+      if( $respondent ) $data['prompts'] = $this->db_response->compile_description( $data['prompts'] );
+    }
+
+    if( array_key_exists( 'popups', $data ) )
+    {
+      if( $respondent ) $data['popups'] = $this->db_response->compile_description( $data['popups'] );
+    }
+
+    if( $respondent ) $data['uid'] = $this->db_response->get_participant()->uid;
 
     $this->set_data( $data );
   }

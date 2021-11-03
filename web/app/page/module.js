@@ -246,11 +246,11 @@ cenozoApp.defineModule( { name: 'page',
     'CnModalConfirmFactory', 'CnModalMessageFactory', 'CnModalDatetimeFactory',
     'CnModalInputFactory', 'CnModalTextFactory', 'CnModalPreStageFactory',
     'CnParticipantModelFactory', 'CnAddressModelFactory', 'CnHttpFactory', 'CnTranslationHelper',
-    '$state', '$timeout', '$interval',
+    '$state', '$timeout', '$interval', '$sce',
     function( CnModalConfirmFactory, CnModalMessageFactory, CnModalDatetimeFactory,
               CnModalInputFactory, CnModalTextFactory, CnModalPreStageFactory,
               CnParticipantModelFactory, CnAddressModelFactory, CnHttpFactory, CnTranslationHelper,
-              $state, $timeout, $interval ) {
+              $state, $timeout, $interval, $sce ) {
       var object = function( parentModel ) {
         // private helper functions
         function formatDate( date ) { var m = getDate( date ); return m ? m.format( 'dddd, MMMM Do YYYY' ) : null; }
@@ -460,6 +460,70 @@ cenozoApp.defineModule( { name: 'page',
 
             // enclose with square brackets
             return null == key ? '' : ( '[' + key + ']' );
+          },
+
+          getModulePrompt: function() {
+            return $sce.trustAsHtml( this.parentModel.viewModel.record.module_prompts[this.currentLanguage] );
+          },
+
+          getModulePopup: function() {
+            return this.parentModel.viewModel.record.module_popups[this.currentLanguage];
+          },
+
+          getPagePrompt: function() {
+            return $sce.trustAsHtml(
+              ( this.parentModel.viewModel.record.popups[this.currentLanguage] ? '<b class="invert">ⓘ</b> ' : '' ) +
+              this.parentModel.viewModel.record.prompts[this.currentLanguage]
+            );
+          },
+
+          getPagePopup: function() {
+            return this.parentModel.viewModel.record.popups[this.currentLanguage];
+          },
+
+          getQuestionPrompt: function( question ) {
+            return $sce.trustAsHtml(
+              ( question.popups[this.currentLanguage] || question.minimum || question.maximum ? '<b class="invert">ⓘ</b> ' : '' ) +
+              question.prompts[this.currentLanguage]
+            );
+          },
+
+          getQuestionPopup: function( question ) {
+            return question.popups[this.currentLanguage] + (
+              ( question.minimum || question.maximum ? ' [' : '' ) +
+              ( question.minimum ? 'Min: ' + this.evaluateLimit( question.minimum ) : '' ) +
+              ( question.minimum && question.maximum ? ', ' : '' ) +
+              ( question.maximum ? 'Max: ' + this.evaluateLimit( question.maximum ) : '' ) +
+              ( question.minimum || question.maximum ? ']' : '' )
+            );
+          },
+
+          getOptionPrompt: function( question, option ) {
+            return $sce.trustAsHtml(
+              this.getHotKey( question, option.id ) + (
+                // only non-multiple answer options get a checkmark icon
+                option.multiple_answers ? '' :
+                  ' <i class="glyphicon ' + (
+                    question.answer.optionList[option.id].selected ? 'glyphicon-check' : 'glyphicon-unchecked'
+                  ) + '"></i> '
+              ) + (
+                option.popups[this.currentLanguage] || null != option.minimum || null != option.maximum ?
+                  '<b class="invert">ⓘ</b> ' : ''
+              ) + option.prompts[this.currentLanguage] + (
+                // only multiple answers get a plus icon
+                option.multiple_answers ? '<i class="glyphicon glyphicon-plus"></i>' : ''
+              )
+            );
+          },
+
+          getOptionPopup: function( option ) {
+            return option.popups[this.currentLanguage] + (
+              ( option.minimum || option.maximum ? ' [' : '' ) +
+              ( option.minimum ? 'Min: '+ this.evaluateLimit( option.minimum ) : '' ) +
+              ( option.minimum && option.maximum ? ', ' : '' ) +
+              ( option.maximum ? 'Max: '+ this.evaluateLimit( option.maximum ) : '' ) +
+              ( option.minimum || option.maximum ? ']' : '' )
+            );
           },
 
           onReady: async function() {

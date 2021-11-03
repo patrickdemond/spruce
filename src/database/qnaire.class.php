@@ -1882,6 +1882,26 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
+   * Compiles the images in any description
+   * @param string $description
+   */
+  public function compile_description( $description )
+  {
+    $image_class_name = lib::get_class_name( 'database\image' );
+
+    preg_match_all( '/@([A-Za-z0-9_]+)(\.width\( *([0-9]+%?) *\))?@/', $description, $matches );
+    foreach( $matches[1] as $index => $match )
+    {
+      $name = $match;
+      $width = array_key_exists( 3, $matches ) ? $matches[3][$index] : NULL;
+      $db_image = $image_class_name::get_unique_record( array( 'qnaire_id', 'name' ), array( $this->id, $name ) );
+      if( !is_null( $db_image ) ) $description = str_replace( $matches[0][$index], $db_image->get_tag( $width ), $description );
+    }
+
+    return $description;
+  }
+
+  /**
    * Applies a patch file to the qnaire and returns an object containing all elements which are affected by the patch
    * @param stdObject $patch_object An object containing all (nested) parameters to change
    * @param boolean $apply Whether to apply or evaluate the patch

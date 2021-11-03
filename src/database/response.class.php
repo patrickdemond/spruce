@@ -563,19 +563,15 @@ class response extends \cenozo\database\has_rank
     preg_match_all( '/@[A-Za-z0-9_]+@/', $description, $matches );
     foreach( $matches[0] as $match )
     {
-      $attribute_name = substr( $match, 1, -1 );
+      $name = substr( $match, 1, -1 );
+      $value = '';
       $db_attribute = $attribute_class_name::get_unique_record(
         array( 'qnaire_id', 'name' ),
-        array( $db_qnaire->id, $attribute_name )
+        array( $db_qnaire->id, $name )
       );
-
       if( is_null( $db_attribute ) )
       {
-        if( $db_qnaire->debug )
-        {
-          log::warning( sprintf( 'Invalid attribute "%s" found while compiling description', $attribute_name ) );
-          $description = str_replace( $match, '', $description );
-        }
+        if( $db_qnaire->debug ) log::warning( sprintf( 'Invalid attribute "%s" found while compiling description', $name ) );
       }
       else
       {
@@ -583,8 +579,10 @@ class response extends \cenozo\database\has_rank
           array( 'response_id', 'attribute_id' ),
           array( $this->id, $db_attribute->id )
         );
-        $description = str_replace( $match, $db_response_attribute->value, $description );
+        $value = $db_response_attribute->value;
       }
+
+      $description = str_replace( $match, $value, $description );
     }
 
     // convert questions

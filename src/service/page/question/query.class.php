@@ -46,19 +46,23 @@ class query extends \cenozo\service\query
 
     $list = parent::get_record_list();
 
-    // if we got the question from a respondent then compile any attribute or response variables in the description
-    if( 1 == preg_match( '/^token=([^;\/]+)/', $this->get_resource_value( 0 ), $parts ) )
+    $respondent = 1 == preg_match( '/^token=([^;\/]+)/', $this->get_resource_value( 0 ), $parts );
+    if( $respondent )
     {
       $db_respondent = $respondent_class_name::get_unique_record( 'token', $parts[1] );
       $db_response = is_null( $db_respondent ) ? NULL : $db_respondent->get_current_response();
-      $expression_manager = lib::create( 'business\expression_manager', $db_response );
+    }
+    $db_qnaire = $respondent ? $db_respondent->get_qnaire() : $this->get_parent_record()->get_qnaire();
+    $expression_manager = lib::create( 'business\expression_manager', $respondent ? $db_response : $db_qnaire );
 
-      foreach( $list as $index => $record )
+    foreach( $list as $index => $record )
+    {
+      $expression_manager->process_hidden_text( $record );
+
+      $processing = '';
+      try
       {
-        $expression_manager->process_hidden_text( $record );
-
-        $processing = '';
-        try
+        if( $respondent )
         {
           // compile preconditions
           if( array_key_exists( 'precondition', $record ) )
@@ -87,46 +91,47 @@ class query extends \cenozo\service\query
               lib::create( 'database\question', $record['id'] )
             );
           }
-
-          if( array_key_exists( 'prompts', $record ) )
-          {
-            $processing = 'prompts';
-            $list[$index]['prompts'] = $db_response->compile_description( $record['prompts'] );
-          }
-
-          if( array_key_exists( 'popups', $record ) )
-          {
-            $processing = 'popups';
-            $list[$index]['popups'] = $db_response->compile_description( $record['popups'] );
-          }
         }
-        catch( \cenozo\exception\runtime $e )
+
+        if( array_key_exists( 'prompts', $record ) )
         {
-          // when in debug mode display the compile error details
-          if( $db_respondent->get_qnaire()->debug )
-          {
-            $db_question = lib::create( 'database\question', $record['id'] );
-            $db_page = $db_question->get_page();
-            $db_module = $db_page->get_module();
-
-            $messages = array();
-            do { $messages[] = $e->get_raw_message(); } while( $e = $e->get_previous() );
-            $e = lib::create( 'exception\notice',
-              sprintf(
-                "Unable to compile %s for question \"%s\" on page \"%s\" in module \"%s\".\n\n%s",
-                $processing,
-                $db_question->name,
-                $db_page->name,
-                $db_module->name,
-                implode( "\n", $messages )
-              ),
-              __METHOD__,
-              $e
-            );
-          }
-
-          throw $e;
+          $processing = 'prompts';
+          $list[$index]['prompts'] = $db_qnaire->compile_description( $record['prompts'] );
+          if( $respondent ) $list[$index]['prompts'] = $db_response->compile_description( $list[$index]['prompts'] );
         }
+
+        if( array_key_exists( 'popups', $record ) )
+        {
+          $processing = 'popups';
+          if( $respondent ) $list[$index]['popups'] = $db_response->compile_description( $list[$index]['popups'] );
+        }
+      }
+      catch( \cenozo\exception\runtime $e )
+      {
+        // when in debug mode display the compile error details
+        if( $db_qnaire->debug )
+        {
+          $db_question = lib::create( 'database\question', $record['id'] );
+          $db_page = $db_question->get_page();
+          $db_module = $db_page->get_module();
+
+          $messages = array();
+          do { $messages[] = $e->get_raw_message(); } while( $e = $e->get_previous() );
+          $e = lib::create( 'exception\notice',
+            sprintf(
+              "Unable to compile %s for question \"%s\" on page \"%s\" in module \"%s\".\n\n%s",
+              $processing,
+              $db_question->name,
+              $db_page->name,
+              $db_module->name,
+              implode( "\n", $messages )
+            ),
+            __METHOD__,
+            $e
+          );
+        }
+
+        throw $e;
       }
     }
 

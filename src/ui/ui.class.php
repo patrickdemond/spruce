@@ -87,6 +87,7 @@ class ui extends \cenozo\ui\ui
       $module->add_child( 'stage' );
       $module->add_child( 'device' );
       $module->add_child( 'deviation_type' );
+      $module->add_child( 'image' );
       $module->add_choose( 'language' );
       $module->add_action( 'clone', '/{identifier}' );
       $module->add_action( 'get_respondent', '/{identifier}' );

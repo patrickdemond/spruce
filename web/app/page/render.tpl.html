@@ -268,11 +268,11 @@
         <div class="spacer">
           <div class="container-fluid vertical-spacer">
             <span class="text-info vertical-spacer larger"
-                  ng-bind-html="model.viewModel.record.module_prompts[model.renderModel.currentLanguage]"
-                  uib-tooltip-html="model.viewModel.record.module_popups[model.renderModel.currentLanguage]"></span>
+                  ng-bind-html="model.renderModel.getModulePrompt()"
+                  uib-tooltip-html="model.renderModel.getModulePopup()"></span>
             <span class="text-info vertical-spacer larger"
-                  ng-bind-html="model.viewModel.record.prompts[model.renderModel.currentLanguage]"
-                  uib-tooltip-html="model.viewModel.record.popups[model.renderModel.currentLanguage]"></span>
+                  ng-bind-html="model.renderModel.getPagePrompt()"
+                  uib-tooltip-html="model.renderModel.getPagePopup()"></span>
             <div ng-class="{ 'highlight-no-bold': model.renderModel.focusQuestionId == question.id }"
                  ng-attr-id="baseQuestion{{ question.id }}"
                  ng-repeat="question in model.renderModel.getVisibleQuestionList()">
@@ -280,22 +280,9 @@
               <div ng-if="model.viewModel.record.debug || model.renderModel.showHidden"
                    class="small text-muted">[{{ question.variable_name }}]</div>
               <div class="vertical-spacer larger"
-                   ng-class="{
-                     'text-info': 'comment' == question.type,
-                     'text-danger': true === question.incomplete
-                   }"
-                   ng-bind-html="(
-                     question.popups[model.renderModel.currentLanguage] || question.minimum || question.maximum
-                       ? '<b class=\'invert\'>ⓘ</b> '
-                       : ''
-                   ) + question.prompts[model.renderModel.currentLanguage]"
-                   uib-tooltip-html="question.popups[model.renderModel.currentLanguage] + (
-                     ( question.minimum || question.maximum ? ' [' : '' ) +
-                     ( question.minimum ? 'Min: ' + model.renderModel.evaluateLimit( question.minimum ) : '' ) +
-                     ( question.minimum && question.maximum ? ', ' : '' ) +
-                     ( question.maximum ? 'Max: ' + model.renderModel.evaluateLimit( question.maximum ) : '' ) +
-                     ( question.minimum || question.maximum ? ']' : '' )
-                   )">
+                   ng-class="{ 'text-info': 'comment' == question.type, 'text-danger': true === question.incomplete }"
+                   ng-bind-html="model.renderModel.getQuestionPrompt( question )"
+                   uib-tooltip-html="model.renderModel.getQuestionPopup( question )">
               </div>
               <div class="horizontal-spacer"
                    ng-class="{ 'has-error': true === question.incomplete }"
@@ -349,20 +336,8 @@
                       ng-click="question.answer.optionList[option.id].selected ?
                         model.renderModel.addOption( question, option ) :
                         model.renderModel.removeOption( question, option )"
-                      ng-bind-html="model.renderModel.getHotKey( question, option.id ) + ' <i class=\'glyphicon ' + (
-                        question.answer.optionList[option.id].selected ? 'glyphicon-check' : 'glyphicon-unchecked'
-                      ) + '\'></i> ' + (
-                        option.popups[model.renderModel.currentLanguage] || option.minimum || option.maximum
-                          ?  '<b class=\'invert\'>ⓘ</b> '
-                          : ''
-                      ) + option.prompts[model.renderModel.currentLanguage]"
-                      uib-tooltip-html="option.popups[model.renderModel.currentLanguage] + (
-                        ( option.minimum || option.maximum ? ' [' : '' ) +
-                        ( option.minimum ? 'Min: '+ model.renderModel.evaluateLimit( option.minimum ) : '' ) +
-                        ( option.minimum && option.maximum ? ', ' : '' ) +
-                        ( option.maximum ? 'Max: '+ model.renderModel.evaluateLimit( option.maximum ) : '' ) +
-                        ( option.minimum || option.maximum ? ']' : '' )
-                      )"
+                      ng-bind-html="model.renderModel.getOptionPrompt( question, option )"
+                      uib-tooltip-html="model.renderModel.getOptionPopup( option )"
                       uib-btn-checkbox>
                     </label>
                   </div>
@@ -372,19 +347,8 @@
                       ng-class="{ 'color-red': true === question.incomplete }"
                       style="text-align: left; white-space: normal;"
                       ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal', 'font-weight': 'normal' }"
-                      ng-bind-html="model.renderModel.getHotKey( question, option.id ) + ' ' + (
-                          option.popups[model.renderModel.currentLanguage] || option.minimum || option.maximum
-                            ? '<b class=\'invert\'>ⓘ</b> '
-                            : ''
-                        ) + option.prompts[model.renderModel.currentLanguage] +
-                        '<i class=\'glyphicon glyphicon-plus\'></i>'"
-                      uib-tooltip-html="option.popups[model.renderModel.currentLanguage] + (
-                        ( option.minimum || option.maximum ? ' [' : '' ) +
-                        ( option.minimum ? 'Min: '+ model.renderModel.evaluateLimit( option.minimum ) : '' ) +
-                        ( option.minimum && option.maximum ? ', ' : '' ) +
-                        ( option.maximum ? 'Max: '+ model.renderModel.evaluateLimit( option.maximum ) : '' ) +
-                        ( option.minimum || option.maximum ? ']' : '' )
-                      )"
+                      ng-bind-html="model.renderModel.getOptionPrompt( question, option )"
+                      uib-tooltip-html="model.renderModel.getOptionPopup( option )"
                       ng-click="model.renderModel.addAnswerValue( question, option )">
                     </label>
                   </div>
