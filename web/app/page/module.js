@@ -1288,6 +1288,13 @@ cenozoApp.defineModule( { name: 'page',
                         } );
                       }
 
+                      if( 'list' == q.type ) {
+                        q.optionList.forEach( o => {
+                          o.prompts = CnTranslationHelper.parseDescriptions( this.evaluateDescription( o.rawPrompts ) );
+                          o.popups = CnTranslationHelper.parseDescriptions( this.evaluateDescription( o.rawPopups ) );
+                        } );
+                      }
+
                       if( null == visibleQuestionList.findByProperty( 'id', q.id ) ) {
                         // q isn't visible so set its value to null if it isn't already
                         if( null != q.value ) {
