@@ -709,6 +709,15 @@ cenozoApp.defineModule( { name: 'qnaire', dependencies: 'module', models: ['add'
               return !object.record.readonly && object.attributeModel.$$getDeleteEnabled();
             }
           }
+
+          if( angular.isDefined( object.imageModel ) ) {
+            object.imageModel.getAddEnabled = function() {
+              return !object.record.readonly && object.imageModel.$$getAddEnabled();
+            }
+            object.imageModel.getDeleteEnabled = function() {
+              return !object.record.readonly && object.imageModel.$$getDeleteEnabled();
+            }
+          }
         }
 
         init( this );

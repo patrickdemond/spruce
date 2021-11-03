@@ -166,6 +166,20 @@ class qnaire extends \cenozo\database\record
       $db_attribute->save();
     }
 
+    // copy all images
+    foreach( $db_source_qnaire->get_image_object_list() as $db_source_image )
+    {
+      $db_image = lib::create( 'database\image' );
+      $db_image->qnaire_id = $this->id;
+      $db_image->name = $db_source_image->name;
+      $db_image->mime_type = $db_source_image->mime_type;
+      $db_image->size = $db_source_image->size;
+      $db_image->width = $db_source_image->width;
+      $db_image->height = $db_source_image->height;
+      $db_image->data = $db_source_image->data;
+      $db_image->save();
+    }
+
     // copy all reminders
     foreach( $db_source_qnaire->get_reminder_object_list() as $db_source_reminder )
     {
@@ -188,8 +202,8 @@ class qnaire extends \cenozo\database\record
 
     // copy all devices
     $device_sel = lib::create( 'database\select' );
-    $device_sel->add_column( 'type' );
     $device_sel->add_column( 'name' );
+    $device_sel->add_column( 'url' );
     $device_mod = lib::create( 'database\modifier' );
     $device_mod->order( 'device.id' );
     foreach( $db_source_qnaire->get_device_list( $device_sel, $device_mod ) as $db_source_device )
@@ -1914,6 +1928,7 @@ class qnaire extends \cenozo\database\record
 
     $language_class_name = lib::get_class_name( 'database\language' );
     $attribute_class_name = lib::get_class_name( 'database\attribute' );
+    $image_class_name = lib::get_class_name( 'database\image' );
     $deviation_type_class_name = lib::get_class_name( 'database\deviation_type' );
     $reminder_description_class_name = lib::get_class_name( 'database\reminder_description' );
     $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
@@ -2339,6 +2354,86 @@ class qnaire extends \cenozo\database\record
         if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
         if( 0 < count( $diff_list ) ) $difference_list['attribute_list'] = $diff_list;
+      }
+      else if( 'image_list' == $property )
+      {
+        // check every item in the patch object for additions and changes
+        $add_list = array();
+        $change_list = array();
+        foreach( $patch_object->image_list as $image )
+        {
+          $db_image = $image_class_name::get_unique_record(
+            array( 'qnaire_id', 'name' ),
+            array( $this->id, $image->name )
+          );
+
+          if( is_null( $db_image ) )
+          {
+            if( $apply )
+            {
+              $db_image = lib::create( 'database\image' );
+              $db_image->qnaire_id = $this->id;
+              $db_image->name = $image->name;
+              $db_image->mime_type = $image->mime_type;
+              $db_image->size = $image->size;
+              $db_image->width = $image->width;
+              $db_image->height = $image->height;
+              $db_image->data = $image->data;
+              $db_image->save();
+            }
+            else $add_list[] = $image;
+          }
+          else
+          {
+            // find and add all differences
+            $diff = array();
+            foreach( $image as $property => $value )
+              if( $db_image->$property != $image->$property )
+                $diff[$property] = $image->$property;
+
+            if( 0 < count( $diff ) )
+            {
+              if( $apply )
+              {
+                $db_image->name = $image->name;
+                $db_image->mime_type = $image->mime_type;
+                $db_image->size = $image->size;
+                $db_image->width = $image->width;
+                $db_image->height = $image->height;
+                $db_image->data = $image->data;
+                $db_image->save();
+              }
+              else $change_list[$db_image->name] = $diff;
+            }
+          }
+        }
+
+        // check every item in this object for removals
+        $remove_list = array();
+        foreach( $this->get_image_object_list() as $db_image )
+        {
+          $found = false;
+          foreach( $patch_object->image_list as $image )
+          {
+            if( $db_image->name == $image->name )
+            {
+              $found = true;
+              break;
+            }
+          }
+
+          if( !$found )
+          {
+            if( $apply ) $db_image->delete();
+            else $remove_list[] = $db_image->name;
+          }
+        }
+
+        $diff_list = array();
+        if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
+        if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
+        if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
+        if( 0 < count( $diff_list ) ) $difference_list['image_list'] = $diff_list;
       }
       else if( 'qnaire_description_list' == $property )
       {
@@ -2920,6 +3015,7 @@ class qnaire extends \cenozo\database\record
       'note' => $this->note,
       'language_list' => array(),
       'attribute_list' => array(),
+      'image_list' => array(),
       'reminder_list' => array(),
       'qnaire_description_list' => array(),
       'module_list' => array(),
@@ -2943,6 +3039,15 @@ class qnaire extends \cenozo\database\record
     $attribute_sel->add_column( 'code' );
     $attribute_sel->add_column( 'note' );
     foreach( $this->get_attribute_list( $attribute_sel ) as $item ) $qnaire_data['attribute_list'][] = $item;
+
+    $image_sel = lib::create( 'database\select' );
+    $image_sel->add_column( 'name' );
+    $image_sel->add_column( 'mime_type' );
+    $image_sel->add_column( 'size' );
+    $image_sel->add_column( 'width' );
+    $image_sel->add_column( 'height' );
+    $image_sel->add_column( 'data' );
+    foreach( $this->get_image_list( $image_sel ) as $item ) $qnaire_data['image_list'][] = $item;
 
     if( $this->stages )
     {
@@ -3358,6 +3463,19 @@ class qnaire extends \cenozo\database\record
       $db_attribute->code = $attribute->code;
       $db_attribute->note = $attribute->note;
       $db_attribute->save();
+    }
+
+    foreach( $qnaire_object->image_list as $image )
+    {
+      $db_image = lib::create( 'database\image' );
+      $db_image->qnaire_id = $db_qnaire->id;
+      $db_image->name = $image->name;
+      $db_image->mime_type = $image->mime_type;
+      $db_image->size = $image->size;
+      $db_image->width = $image->width;
+      $db_image->height = $image->height;
+      $db_image->data = $image->data;
+      $db_image->save();
     }
 
     if( $db_qnaire->stages )
