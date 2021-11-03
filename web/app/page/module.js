@@ -482,8 +482,10 @@ define( [ 'question' ].reduce( function( list, name ) {
                     question.optionList = response.data;
                     question.optionList.forEach( function( option ) {
                       activeAttributeList = activeAttributeList.concat( getAttributeNames( option.precondition ) );
-                      option.prompts = CnTranslationHelper.parseDescriptions( option.prompts );
-                      option.popups = CnTranslationHelper.parseDescriptions( option.popups );
+                      option.rawPrompts = option.prompts;
+                      option.prompts = CnTranslationHelper.parseDescriptions( self.evaluateDescription( option.rawPrompts ) );
+                      option.rawPopups = option.popups;
+                      option.popups = CnTranslationHelper.parseDescriptions( self.evaluateDescription( option.rawPopups ) );
                       self.optionListById[option.id] = option;
                     } );
                   }
@@ -887,6 +889,13 @@ define( [ 'question' ].reduce( function( list, name ) {
                       // re-evaluate descriptions as they may have changed based on the new answer
                       q.prompts = CnTranslationHelper.parseDescriptions( self.evaluateDescription( q.rawPrompts ) );
                       q.popups = CnTranslationHelper.parseDescriptions( self.evaluateDescription( q.rawPopups ) );
+
+                      if( 'list' == q.type ) {
+                        q.optionList.forEach( o => {
+                          o.prompts = CnTranslationHelper.parseDescriptions( self.evaluateDescription( o.rawPrompts ) );
+                          o.popups = CnTranslationHelper.parseDescriptions( self.evaluateDescription( o.rawPopups ) );
+                        } );
+                      }
 
                       if( null == visibleQuestionList.findByProperty( 'id', q.id ) ) {
                         // q isn't visible so set its value to null if it isn't already
