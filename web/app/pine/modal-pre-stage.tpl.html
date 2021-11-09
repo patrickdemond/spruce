@@ -13,6 +13,7 @@
                    ng-model="model.token"
                    cn-change="checkToken()"
                    class="form-control"
+                   autocomplete="off"
                    required></input>
             <span ng-if="form.token.$invalid && form.token.$dirty">
               <span class="help-block" ng-if="form.token.$error.required">Cannot be blank</span>
