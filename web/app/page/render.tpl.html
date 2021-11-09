@@ -55,7 +55,7 @@
 
     <!-- QNAIRES WITH STAGES ONLY -->
     <div ng-if="!model.renderModel.data.closed && model.renderModel.data.stages && !model.renderModel.data.page_id">
-      
+
       <!-- CHECK IN -->
       <div ng-if="!model.renderModel.data.checked_in" style="padding-top: 1em; padding-bottom: 1em">
         <div class="container-fluid">
@@ -135,7 +135,7 @@
           </button>
         </div>
       </div>
-      
+
       <!-- STAGE SELECTION -->
       <div ng-if="model.renderModel.data.checked_in" style="padding-top: 1em; padding-bottom: 1em">
         <div class="container-fluid">
@@ -233,6 +233,7 @@
                                                      2 == responseStage.operations.length ? '50%' : '33%' }"
                                 class="btn btn-default btn-narrow btn-thin"
                                 ng-bind-html="operation.title"
+                                ng-disabled="!model.renderModel.isStageOperationEnabled( responseStage.id, operation.name )"
                                 ng-click="model.renderModel.runStageOperation( responseStage.id, operation.name )"></button>
                       </div>
                     </td>
@@ -295,7 +296,7 @@
                          ng-model="question.answer.yes"
                          ng-click="model.renderModel.setAnswer( question, question.answer.yes ? true : null )"
                          uib-btn-checkbox>
-                    {{ model.renderModel.getHotKey( question, true ) }} 
+                    {{ model.renderModel.getHotKey( question, true ) }}
                     <i class="glyphicon" ng-class="question.answer.yes ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
                     {{ text( 'misc.yes' ) }}
                   </label>
@@ -305,7 +306,7 @@
                          ng-model="question.answer.no"
                          ng-click="model.renderModel.setAnswer( question, question.answer.no ? false : null )"
                          uib-btn-checkbox>
-                    {{ model.renderModel.getHotKey( question, false ) }} 
+                    {{ model.renderModel.getHotKey( question, false ) }}
                     <i class="glyphicon" ng-class="question.answer.no ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
                     {{ text( 'misc.no' ) }}
                   </label>
@@ -459,7 +460,7 @@
                          ng-model="question.answer.dkna"
                          ng-click="model.renderModel.setAnswer( question, question.answer.dkna ? { dkna: true } : null )"
                          uib-btn-checkbox>
-                    {{ model.renderModel.getHotKey( question, 'dkna' ) }} 
+                    {{ model.renderModel.getHotKey( question, 'dkna' ) }}
                     <i class="glyphicon" ng-class="question.answer.dkna ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
                     {{ text( 'misc.dkna' ) }}
                   </label>
@@ -474,7 +475,7 @@
                          ng-model="question.answer.refuse"
                          ng-click="model.renderModel.setAnswer( question, question.answer.refuse ? { refuse: true } : null )"
                          uib-btn-checkbox>
-                    {{ model.renderModel.getHotKey( question, 'refuse' ) }} 
+                    {{ model.renderModel.getHotKey( question, 'refuse' ) }}
                     <i class="glyphicon" ng-class="question.answer.refuse ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
                     {{ text( model.renderModel.showHidden ? 'misc.refuse' : 'misc.preferNotToAnswer' ) }}
                   </label>

@@ -638,19 +638,36 @@ cenozoApp.defineModule( { name: 'page',
                   responseStage.operations = [];
 
                   if( !['not ready', 'parent skipped', 'skipped' ].includes( responseStage.status ) ) {
+                    var self = this;
                     responseStage.operations.push( {
                       name: 'launch',
                       title: 'completed' == responseStage.status ? 'Re-Open' :
-                             'paused' == responseStage.status ? 'Resume' : 'Launch'
+                             'paused' == responseStage.status ? 'Resume' : 'Launch',
+                      // the launch operation may be an order deviation if another stage before this one is ready or paused
+                      getDeviation: function() {
+                        return self.responseStageList
+                          .filter( rs => rs.rank < responseStage.rank )
+                          .some( rs => ['ready', 'paused'].includes( rs.status ) ) ? 'order' : null;
+                      }
                     } );
                   }
 
                   if( ['paused', 'ready'].includes( responseStage.status ) ) {
-                    responseStage.operations.push( { name: 'skip', title: 'Skip' } );
+                    responseStage.operations.push( {
+                      name: 'skip',
+                      title: 'Skip',
+                      // the skip operation is always a deviation
+                      getDeviation: function() { return 'skip'; }
+                    } );
                   }
 
                   if( !['not ready', 'parent skipped', 'ready'].includes( responseStage.status ) ) {
-                    responseStage.operations.push( { name: 'reset', title: 'Reset' } );
+                    responseStage.operations.push( {
+                      name: 'reset',
+                      title: 'Reset',
+                      // the reset operation is never a deviation
+                      getDeviation: function() { return null; }
+                    } );
                   }
                 } );
 
@@ -660,13 +677,6 @@ cenozoApp.defineModule( { name: 'page',
                 this.consentList.forEach( consent => consent.access = null != consent.access );
 
                 this.deviationTypeList = deviationTypeResponse.data;
-                if( 0 == this.deviationTypeList.length ) {
-                  throw new Error( 'Questionnaire has no deviation types, unable to proceed.' );
-                } else if( 0 == this.deviationTypeList.filter( deviationType => 'skip' == deviationType.type ) ) {
-                  throw new Error( 'Questionnaire has no skip deviation types, unable to proceed.' );
-                } else if( 0 == this.deviationTypeList.filter( deviationType => 'order' == deviationType.type ) ) {
-                  throw new Error( 'Questionnaire has no order deviation types, unable to proceed.' );
-                }
 
                 // enum lists use value, so set the value to the deviation type's ID
                 this.deviationTypeList.forEach( deviationType => { deviationType.value = deviationType.id; } );
@@ -751,20 +761,10 @@ cenozoApp.defineModule( { name: 'page',
 
             if( this.previewMode || null != this.data.page_id ) {
               this.reset();
-              const [viewResponse, questionResponse] = await Promise.all( [
-                this.parentModel.viewModel.onView( true ),
 
-                await CnHttpFactory.instance( {
-                  path: this.parentModel.getServiceResourceBasePath() + '/question',
-                  data: {
-                    select: { column: [
-                      'id', 'rank', 'name', 'type', 'mandatory', 'dkna_allowed', 'refuse_allowed', 'minimum', 'maximum',
-                      'precondition', 'prompts', 'popups', 'device_id', { table: 'device', column: 'name', alias: 'device' }
-                    ] },
-                    modifier: { order: 'question.rank' }
-                  }
-                } ).query()
-              ] );
+              // We must view the page before getting the questions since viewing a new page will also create the answers
+              // to all questions on that page (which the question list needs)
+              await this.parentModel.viewModel.onView( true );
 
               angular.extend( this.data, {
                 page_id: this.parentModel.viewModel.record.id,
@@ -781,6 +781,17 @@ cenozoApp.defineModule( { name: 'page',
                     : this.parentModel.viewModel.record.qnaire_page / this.parentModel.viewModel.record.total_pages
                 )
               );
+
+              const questionResponse = await CnHttpFactory.instance( {
+                path: this.parentModel.getServiceResourceBasePath() + '/question',
+                data: {
+                  select: { column: [
+                    'id', 'rank', 'name', 'type', 'mandatory', 'dkna_allowed', 'refuse_allowed', 'minimum', 'maximum',
+                    'precondition', 'prompts', 'popups', 'device_id', { table: 'device', column: 'name', alias: 'device' }
+                  ] },
+                  modifier: { order: 'question.rank' }
+                }
+              } ).query();
 
               this.questionList = questionResponse.data;
 
@@ -1551,16 +1562,29 @@ cenozoApp.defineModule( { name: 'page',
             }
           },
 
-          runStageOperation: async function( responseStageId, operation ) {
+          isStageOperationEnabled: function( responseStageId, operationName ) {
+            var enabled = true;
+            if( ['skip', 'launch'].includes( operationName ) ) {
+              // if there are no deviation types for the skip or launch operation then disable that operation
+              var deviation = this.responseStageList.findByProperty( 'id', responseStageId )
+                                  .operations.findByProperty( 'name', operationName )
+                                  .getDeviation();
+              enabled = null == deviation || 0 < this.deviationTypeList.filter( dt => deviation == dt.type ).length;
+            }
+            return enabled;
+          },
+
+          runStageOperation: async function( responseStageId, operationName ) {
             // if no ID is provided then assume the currently active one
             if( !responseStageId ) responseStageId = this.data.response_stage_id;
+            var responseStage = this.responseStageList.findByProperty( 'id', responseStageId );
 
-            if( !['launch', 'pause', 'skip', 'reset'].includes( operation ) )
-              throw new Error( 'Tried to run invalid stage operation "' + operation + '"' );
+            if( !['launch', 'pause', 'skip', 'reset'].includes( operationName ) )
+              throw new Error( 'Tried to run invalid stage operation "' + operationName + '"' );
 
             var patchData = null;
             var proceed = true;
-            if( 'reset' == operation ) {
+            if( 'reset' == operationName ) {
               var response = await CnModalConfirmFactory.instance( {
                 message:
                   'Are you sure you wish to reset this stage?<br><br>' +
@@ -1568,23 +1592,14 @@ cenozoApp.defineModule( { name: 'page',
                 html: true
               } ).show();
               proceed = response;
-            } else if( ['skip', 'launch'].includes( operation ) ) {
+            } else if( ['skip', 'launch'].includes( operationName ) ) {
               // check if we have to ask for the reason for deviation
               proceed = false;
-              var responseStage = this.responseStageList.findByProperty( 'id', responseStageId );
-              var deviation = null;
-              if( 'launch' == operation ) {
-                if( this.responseStageList.filter( rs => rs.rank < responseStage.rank )
-                                          .some( rs => ['ready', 'paused'].includes( rs.status ) ) ) {
-                  deviation = 'order';
-                }
-              } else if( 'skip' == operation ) {
-                deviation = 'skip';
-              }
+              var deviation = responseStage.operations.findByProperty( 'name', operationName ).getDeviation();
 
               // now show the pre-stage dialog
               var response = await CnModalPreStageFactory.instance( {
-                title: responseStage.name + ': ' + operation.ucWords(),
+                title: responseStage.name + ': ' + operationName.ucWords(),
                 deviationTypeList: deviation ? this.deviationTypeList.filter( dt => deviation == dt.type ) : null,
                 validToken: $state.params.token,
                 deviationTypeId: responseStage.deviation_type_id,
@@ -1602,7 +1617,7 @@ cenozoApp.defineModule( { name: 'page',
               try {
                 this.working = true;
                 await this.runQuery( async () => {
-                  var httpObj = { path: 'response_stage/' + responseStageId + '?action=' + operation };
+                  var httpObj = { path: 'response_stage/' + responseStageId + '?action=' + operationName };
                   if( null != patchData ) {
                     httpObj.data = patchData;
                     // update the client with any changes

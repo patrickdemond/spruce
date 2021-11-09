@@ -35,10 +35,6 @@ cenozoApp.defineModule( { name: 'qnaire', dependencies: 'module', models: ['add'
         type: 'boolean',
         isIncluded: function( $state, model ) { return !model.isRole( 'interviewer' ); }
       },
-      total_pages: {
-        title: 'Pages',
-        type: 'string'
-      },
       repeat_detail: {
         title: 'Repeated',
         type: 'string',
@@ -106,13 +102,6 @@ cenozoApp.defineModule( { name: 'qnaire', dependencies: 'module', models: ['add'
       title: 'Stages',
       type: 'boolean',
       isExcluded: function( $state, model ) { return model.isRole( 'interviewer' ) ? true : 'add'; }
-    },
-    total_pages: {
-      title: 'Total Number of Pages',
-      type: 'string',
-      format: 'integer',
-      isConstant: true,
-      isExcluded: function( $state, model ) { return 'add'; }
     },
     closed: {
       title: 'Closed',
