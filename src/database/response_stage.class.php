@@ -126,6 +126,7 @@ class response_stage extends \cenozo\database\record
     $this->status = 'skipped';
     $this->page_id = NULL;
     $this->start_datetime = NULL;
+    $this->end_datetime = NULL;
     $this->save();
 
     // now update the response's status in case this results in ending the interview
@@ -145,6 +146,7 @@ class response_stage extends \cenozo\database\record
     $this->deviation_comments = NULL;
     $this->page_id = NULL;
     $this->start_datetime = NULL;
+    $this->end_datetime = NULL;
     $this->comments = NULL;
     $this->update_status();
   }
