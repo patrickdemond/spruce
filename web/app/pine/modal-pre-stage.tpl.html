@@ -3,6 +3,7 @@
     <h4 class="modal-title">{{ model.title }}</h4>
   </div>
   <div class="modal-body">
+    <div ng-if="model.warning" class="text-warning" ng-bind-html="model.warning"></div>
     <div class="row container-fluid">
       <div class="form-group first-form-group" ng-class="{ 'has-feedback has-error': form.token.$dirty && form.token.$invalid }">
         <label for="token" class="control-label col-sm-3">Token (Interview ID):</label>

@@ -245,11 +245,11 @@ cenozoApp.defineModule( { name: 'page',
   cenozo.providers.factory( 'CnPageRenderFactory', [
     'CnModalConfirmFactory', 'CnModalMessageFactory', 'CnModalDatetimeFactory',
     'CnModalInputFactory', 'CnModalTextFactory', 'CnModalPreStageFactory',
-    'CnParticipantModelFactory', 'CnAddressModelFactory', 'CnHttpFactory', 'CnTranslationHelper',
+    'CnSession', 'CnParticipantModelFactory', 'CnAddressModelFactory', 'CnHttpFactory', 'CnTranslationHelper',
     '$state', '$timeout', '$interval', '$sce',
     function( CnModalConfirmFactory, CnModalMessageFactory, CnModalDatetimeFactory,
               CnModalInputFactory, CnModalTextFactory, CnModalPreStageFactory,
-              CnParticipantModelFactory, CnAddressModelFactory, CnHttpFactory, CnTranslationHelper,
+              CnSession, CnParticipantModelFactory, CnAddressModelFactory, CnHttpFactory, CnTranslationHelper,
               $state, $timeout, $interval, $sce ) {
       var object = function( parentModel ) {
         // private helper functions
@@ -1582,13 +1582,57 @@ cenozoApp.defineModule( { name: 'page',
             if( !['launch', 'pause', 'skip', 'reset'].includes( operationName ) )
               throw new Error( 'Tried to run invalid stage operation "' + operationName + '"' );
 
+            // determine if the stage is already open and which user it is associated with
+            var responseStageResponse = await CnHttpFactory.instance( {
+              path: 'response_stage/' + responseStageId,
+              data: {
+                select: {
+                  column: [
+                    'status', 'user_id',
+                    { table: 'user', column: 'first_name' },
+                    { table: 'user', column: 'last_name' }
+                  ]
+                }
+              }
+            } ).get();
+
+            var data = responseStageResponse.data;
+            var warning = null;
+            
+            if( ['not ready', 'parent skipped'].includes( data.status ) ||
+                ( 'skipped' == data.status && 'reset' != operationName ) ||
+                ( 'ready' == data.status && 'reset' == operationName ) ||
+                ( 'completed' == data.status && 'skip' == operationName ) ) {
+              // the stage's current status and requested operation don't make sense, reload the page
+              await CnModalMessageFactory.instance( {
+                title: 'Please Note',
+                message: 'The interview has changed and must be reloaded before you can proceed. ' +
+                         'Once you close this message the interview data will automatically be refreshed.',
+                error: true
+              } ).show();
+              await this.onReady();
+              return;
+            } else if( 'active' == data.status ) {
+              warning = '<b>WARNING</b>: This stage is already active ' + (
+                data.user_id != CnSession.user.id ?
+                  'by another user (' + data.first_name + ' ' + data.last_name + ')' : 'under your account.'
+              );
+            } else if( 'paused' == data.status ||
+                       ( 'completed' == data.status && 'launch' == operationName ) ) {
+              // warn if this is a new user
+              if( data.user_id != CnSession.user.id )
+                warning = '<b>WARNING</b>: This stage was paused by another user (' + data.first_name + ' ' + data.last_name + ')';
+            }
+
             var patchData = null;
             var proceed = true;
             if( 'reset' == operationName ) {
               var response = await CnModalConfirmFactory.instance( {
                 message:
                   'Are you sure you wish to reset this stage?<br><br>' +
-                  '<b class="text-danger">Note that by proceeding all data collected during the stage will be deleted.</b>',
+                  '<b class="text-danger">Note that by proceeding all data collected during the stage will be deleted.' + (
+                    warning ? '<br><br>' + warning : ''
+                  ) + '</b>',
                 html: true
               } ).show();
               proceed = response;
@@ -1600,6 +1644,7 @@ cenozoApp.defineModule( { name: 'page',
               // now show the pre-stage dialog
               var response = await CnModalPreStageFactory.instance( {
                 title: responseStage.name + ': ' + operationName.ucWords(),
+                warning: warning,
                 deviationTypeList: deviation ? this.deviationTypeList.filter( dt => deviation == dt.type ) : null,
                 validToken: $state.params.token,
                 deviationTypeId: responseStage.deviation_type_id,
