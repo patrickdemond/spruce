@@ -13,10 +13,11 @@ cenozoApp.extendModule( { name: 'participant', create: module => {
         },
 
         getServiceData: function( type, columnRestrictLists ) {
-          return
-            'view' == type && 'respondent' == $delegate.root.getSubjectFromState() && 'run' == $delegate.root.getActionFromState() ?
-              { select: { column: ['honorific', 'first_name', 'other_name', 'last_name', 'date_of_birth', 'sex', 'email' ] } } :
-              $delegate.root.$$getServiceData( type, columnRestrictLists );
+          return 'view' == type &&
+                 'respondent' == $delegate.root.getSubjectFromState() &&
+                 'run' == $delegate.root.getActionFromState() ?
+            { select: { column: ['honorific', 'first_name', 'other_name', 'last_name', 'date_of_birth', 'sex', 'email' ] } } :
+            $delegate.root.$$getServiceData( type, columnRestrictLists );
         },
 
         // ignore the base model's additions to getMetadata as it requires additional data that we don't need
