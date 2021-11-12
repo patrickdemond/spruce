@@ -381,6 +381,22 @@ cenozoApp.defineModule( { name: 'response', models: ['add', 'list', 'view'], def
   ] );
 
   /* ######################################################################################################## */
+  cenozo.providers.factory( 'CnResponseViewFactory', [
+    'CnBaseViewFactory',
+    function( CnBaseViewFactory ) {
+      var object = function( parentModel, root ) {
+        CnBaseViewFactory.construct( this, parentModel, root, 'response_attribute' );
+
+        this.getChildList = function() {
+          // show stage list if the qnaire has stages
+          return this.$$getChildList().filter( child => 'response_stage' != child.subject.snake || this.record.stages );
+        };
+      };
+      return { instance: function( parentModel, root ) { return new object( parentModel, root ); } };
+    }
+  ] );
+
+  /* ######################################################################################################## */
   cenozo.providers.factory( 'CnResponseModelFactory', [
     'CnBaseModelFactory', 'CnResponseDisplayFactory', 'CnResponseListFactory', 'CnResponseViewFactory', 'CnHttpFactory',
     function( CnBaseModelFactory, CnResponseDisplayFactory, CnResponseListFactory, CnResponseViewFactory, CnHttpFactory ) {

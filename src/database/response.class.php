@@ -208,6 +208,12 @@ class response extends \cenozo\database\has_rank
    */
   public function update_status()
   {
+    if( !$this->get_respondent()->get_qnaire()->stages )
+    {
+      log::warning( 'Tried to update the status of response whose qnaire has no stages.' );
+      return false;
+    }
+
     // update the status of all response stages
     foreach( $this->get_response_stage_object_list() as $db_response_stage ) $db_response_stage->update_status();
 
