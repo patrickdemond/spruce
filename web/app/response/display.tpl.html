@@ -17,9 +17,14 @@
       <div class="container-fuild" ng-repeat="question in page.questionList">
         <div ng-if="question.prompts[model.displayModel.lang]">
           <span ng-bind-html="question.prompts[model.displayModel.lang]"></span>
-          <strong ng-if="'list' != question.type"
+          <strong ng-if="!['audio','list'].includes( question.type )"
                   style="padding: 0 4px; outline: black solid 1px;"
                   ng-bind-html="question.value"></strong>
+          <div ng-if="'audio' == question.type" class="container-fluid">
+            <audio ng-src="{{ question.value }}"
+                   class="full-width"
+                   controls></audio>
+          </div>
           <div ng-if="'list' == question.type" class="container-fluid" ng-repeat="option in question.optionList">
             <div ng-if="option.prompts[model.displayModel.lang]">
               <strong>{{ option.selected ? "&#x2611;" : "&#x25a2;" }}</strong>

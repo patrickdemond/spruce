@@ -245,11 +245,13 @@ cenozoApp.defineModule( { name: 'page',
   cenozo.providers.factory( 'CnPageRenderFactory', [
     'CnModalConfirmFactory', 'CnModalMessageFactory', 'CnModalDatetimeFactory',
     'CnModalInputFactory', 'CnModalTextFactory', 'CnModalPreStageFactory',
-    'CnSession', 'CnParticipantModelFactory', 'CnAddressModelFactory', 'CnHttpFactory', 'CnTranslationHelper',
+    'CnSession', 'CnHttpFactory', 'CnTranslationHelper', 'CnAudioRecordingFactory',
+    'CnParticipantModelFactory', 'CnAddressModelFactory',
     '$state', '$timeout', '$interval', '$sce',
     function( CnModalConfirmFactory, CnModalMessageFactory, CnModalDatetimeFactory,
               CnModalInputFactory, CnModalTextFactory, CnModalPreStageFactory,
-              CnSession, CnParticipantModelFactory, CnAddressModelFactory, CnHttpFactory, CnTranslationHelper,
+              CnSession, CnHttpFactory, CnTranslationHelper, CnAudioRecordingFactory,
+              CnParticipantModelFactory, CnAddressModelFactory,
               $state, $timeout, $interval, $sce ) {
       var object = function( parentModel ) {
         // private helper functions
@@ -331,6 +333,7 @@ cenozoApp.defineModule( { name: 'page',
           ],
           deviationTypeList: null,
           languageList: null,
+          recordingInProgress: false,
           showHidden: false,
           focusQuestionId: null,
           hotKeyDisabled: false,
@@ -348,7 +351,8 @@ cenozoApp.defineModule( { name: 'page',
               activeAttributeList: [],
               prevModuleList: [],
               nextModuleList: [],
-              focusQuestionId: null
+              focusQuestionId: null,
+              recordingInProgress: false
             } );
           },
 
@@ -841,7 +845,7 @@ cenozoApp.defineModule( { name: 'page',
 
                 // if the question is a list type then get the options
                 if( 'list' == question.type ) {
-                  const getQuestionOptions = async () => {
+                  list.push( ( async () => {
                     var response = await CnHttpFactory.instance( {
                       path: ['question', question.id, 'question_option'].join( '/' ) + (
                         !this.previewMode ? '?token=' + $state.params.token : ''
@@ -864,8 +868,26 @@ cenozoApp.defineModule( { name: 'page',
                       option.popups = CnTranslationHelper.parseDescriptions( this.evaluateDescription( option.rawPopups ) );
                       this.optionListById[option.id] = option;
                     } );
-                  };
-                  list.push( getQuestionOptions() );
+                  } )() );
+                } else if( 'audio' == question.type ) {
+                  // setup the audio recording for this question
+                  question.audio = CnAudioRecordingFactory.instance( {
+                    timeLimit: 0 < question.maximum ? question.maximum : 60,
+                    onComplete: ( recorder, blob ) => { this.setAnswer( question, blob ); },
+                    onTimeout: ( recorder ) => {
+                      CnModalMessageFactory.instance( {
+                        title: this.text( 'misc.maxRecordingTimeTitle' ),
+                        message: this.text( 'misc.maxRecordingTimeMessage' ),
+                      } ).show();
+                    }
+                  } );
+
+                  if( question.value ) {
+                    list.push( ( async () => {
+                      const base64Response = await fetch( question.value );
+                      question.value = await base64Response.blob();
+                    } )() );
+                  }
                 }
                 return list;
               }, [] ) );
@@ -962,6 +984,11 @@ cenozoApp.defineModule( { name: 'page',
                   return list;
                 }, {} )
               }
+            } else if( 'audio' == question.type ) {
+              question.answer = {
+                value: question.value,
+                formattedValue: angular.isObject( question.value ) ? window.URL.createObjectURL( question.value ) : null
+              };
             } else {
               question.answer = {
                 value: angular.isString( question.value ) || angular.isNumber( question.value ) ? question.value : null,
@@ -1187,6 +1214,26 @@ cenozoApp.defineModule( { name: 'page',
             }
           },
 
+          startRecording: async function( question ) {
+            var proceed = true;
+            if( question.answer.formattedValue ) {
+              var response = await CnModalConfirmFactory.instance( {
+                title: this.text( 'misc.pleaseConfirm' ),
+                message: this.text( 'misc.reRecordConfirm' )
+              } ).show();
+              proceed = response;
+            }
+
+            if( proceed ) {
+              this.recordingInProgress = true;
+              question.audio.start();
+            }
+          },
+          stopRecording: async function( question ) {
+            question.audio.stop();
+            this.recordingInProgress = false;
+          },
+
           launchDevice: async function( question ) {
             try {
               this.working = true;
@@ -1268,11 +1315,14 @@ cenozoApp.defineModule( { name: 'page',
                     if( "" === value ) value = null;
 
                     if( !this.previewMode ) {
+                      // audio blobs need to be converted to base64 strings before sending to the server
+                      var valueForPatch = 'audio' == question.type ? await cenozo.convertBlobToBase64( value ) : value;
+
                       // first communicate with the server (if we're working with a respondent)
                       var self = this;
                       await CnHttpFactory.instance( {
                         path: 'answer/' + question.answer_id,
-                        data: { value: angular.toJson( value ) },
+                        data: { value: angular.toJson( valueForPatch ) },
                         onError: function( error ) {
                           question.value = angular.copy( question.backupValue );
                           self.convertValueToModel( question );
@@ -1598,7 +1648,7 @@ cenozoApp.defineModule( { name: 'page',
 
             var data = responseStageResponse.data;
             var warning = null;
-            
+
             if( ['not ready', 'parent skipped'].includes( data.status ) ||
                 ( 'skipped' == data.status && 'reset' != operationName ) ||
                 ( 'ready' == data.status && 'reset' == operationName ) ||

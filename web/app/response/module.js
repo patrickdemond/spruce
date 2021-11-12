@@ -272,30 +272,46 @@ cenozoApp.defineModule( { name: 'response', models: ['add', 'list', 'view'], def
               }
             } ).query();
 
-            response.data.forEach( question => {
-              question.prompts = CnTranslationHelper.parseDescriptions( question.prompts );
-              question.value = angular.fromJson( question.value );
-              if( null != question.value ) { // ignore questions which weren't answered
-                if( 'list' != question.type ) {
-                  if( angular.isObject( question.value ) ) {
-                    if( question.value.dkna ) {
-                      question.value = CnTranslationHelper.translate( 'misc.dkna', this.lang )
-                    } else if( question.value.refuse ) {
-                      question.value = CnTranslationHelper.translate( 'misc.refuse', this.lang )
+            await Promise.all(
+              response.data.reduce( ( list, question ) => {
+                question.prompts = CnTranslationHelper.parseDescriptions( question.prompts );
+                question.value = angular.fromJson( question.value );
+                if( null != question.value ) { // ignore questions which weren't answered
+                  if( 'list' == question.type ) {
+                    question.optionList = [];
+                  } else if( 'audio' == question.type ) {
+                    // audio needs to be converted to an object URL
+                    if( null != question.value ) {
+                      // convert base64 to blob
+                      list.push( ( async() => {
+                        const base64Response = await fetch( question.value );
+                        question.value = await base64Response.blob();
+
+                        // convert blob to object URL
+                        question.value = window.URL.createObjectURL( question.value );
+                      } )() );
                     }
-                  } else if( 'boolean' == question.type ) {
-                    if( true === question.value ) question.value = 'Yes';
-                    else if( false === question.value ) question.value = 'No';
+                  } else {
+                    if( angular.isObject( question.value ) ) {
+                      if( question.value.dkna ) {
+                        question.value = CnTranslationHelper.translate( 'misc.dkna', this.lang )
+                      } else if( question.value.refuse ) {
+                        question.value = CnTranslationHelper.translate( 'misc.refuse', this.lang )
+                      }
+                    } else if( 'boolean' == question.type ) {
+                      if( true === question.value ) question.value = 'Yes';
+                      else if( false === question.value ) question.value = 'No';
+                    }
                   }
+
+                  // store each question in its parent page
+                  this.moduleList.findByProperty( 'id', question.module_id )
+                      .pageList.findByProperty( 'id', question.page_id ).questionList.push( question );
                 }
 
-                if( 'list' == question.type ) question.optionList = [];
-
-                // store each question in its parent page
-                this.moduleList.findByProperty( 'id', question.module_id )
-                    .pageList.findByProperty( 'id', question.page_id ).questionList.push( question );
-              }
-            } );
+                return list;
+              }, [] )
+            );
 
             // now get a list of all options
             var response = await CnHttpFactory.instance( {

@@ -51,12 +51,16 @@ cenozoApp.defineModule( { name: 'question', dependencies: 'question_option', mod
   module.addInput( '', 'minimum', {
     title: 'Minimum',
     type: 'string',
-    isExcluded: function( $state, model ) { return !['date', 'number'].includes( model.viewModel.record.type ) ? true : 'add'; }
+    isExcluded: function( $state, model ) { return !['date', 'number'].includes( model.viewModel.record.type ) ? true : 'add'; },
+    help: 'The minimum possible value for this question.'
   } );
   module.addInput( '', 'maximum', {
     title: 'Maximum',
     type: 'string',
-    isExcluded: function( $state, model ) { return !['date', 'number'].includes( model.viewModel.record.type ) ? true : 'add'; }
+    isExcluded: function( $state, model ) {
+      return !['audio', 'date', 'number'].includes( model.viewModel.record.type ) ? true : 'add';
+    },
+    help: 'The maximum possible value for this question (or maximum number of seconds for audio recordings).'
   } );
   module.addInput( '', 'default_answer', {
     title: 'Default Answer',

@@ -289,6 +289,23 @@
                    ng-class="{ 'has-error': true === question.incomplete }"
                    ng-if="'comment' != question.type"
                    ng-switch="question.type">
+                <div ng-switch-when="audio">
+                  <audio ng-attr-id="question{{ question.id }}"
+                         ng-src="{{ question.answer.formattedValue }}"
+                         class="full-width"
+                         ng-style="{ 'background': question.incomplete ? 'red' : 'none' }"
+                         controls></audio>
+                  <button type="button"
+                          class="btn btn-default larger col-xs-6"
+                          ng-click="model.renderModel.startRecording( question )"
+                          ng-disabled="model.renderModel.recordingInProgress"
+                          ng-bind-html="text( question.answer.formattedValue ? 'misc.reRecord' : 'misc.record' )" />
+                  <button type="button"
+                          class="btn btn-default larger col-xs-6"
+                          ng-click="model.renderModel.stopRecording( question )"
+                          ng-disabled="!model.renderModel.recordingInProgress"
+                          ng-bind-html="text( 'misc.stop' )" />
+                </div>
                 <div ng-switch-when="boolean">
                   <label class="btn btn-default full-width larger"
                          ng-class="{ 'color-red': true === question.incomplete }"
