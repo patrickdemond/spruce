@@ -677,6 +677,7 @@ cenozo.service( 'CnTranslationHelper', [
           between: { en: 'between', fr: 'comprise entre' },
           and: { en: 'and', fr: 'et' },
           record: { en: 'Record', fr: 'TODO: TRANSLATE' },
+          recording: { en: 'Recording...', fr: 'TODO: TRANSLATE' },
           reRecord: { en: 'Re-record', fr: 'TODO: TRANSLATE' },
           stop: { en: 'Stop', fr: 'TODO: TRANSLATE' },
           reRecordConfirm: { en: 'Are you sure you wish to replace the existing recording?', fr: 'TODO: TRANSLATE' },

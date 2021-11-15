@@ -290,21 +290,45 @@
                    ng-if="'comment' != question.type"
                    ng-switch="question.type">
                 <div ng-switch-when="audio">
-                  <audio ng-attr-id="question{{ question.id }}"
-                         ng-src="{{ question.answer.formattedValue }}"
-                         class="full-width"
-                         ng-style="{ 'background': question.incomplete ? 'red' : 'none' }"
-                         controls></audio>
                   <button type="button"
-                          class="btn btn-default larger col-xs-6"
-                          ng-click="model.renderModel.startRecording( question )"
-                          ng-disabled="model.renderModel.recordingInProgress"
-                          ng-bind-html="text( question.answer.formattedValue ? 'misc.reRecord' : 'misc.record' )" />
-                  <button type="button"
-                          class="btn btn-default larger col-xs-6"
-                          ng-click="model.renderModel.stopRecording( question )"
-                          ng-disabled="!model.renderModel.recordingInProgress"
-                          ng-bind-html="text( 'misc.stop' )" />
+                          class="btn btn-default larger col-xs-3"
+                          ng-class="{ 'color-red': true === question.incomplete }"
+                          ng-click="question.audio.recordingInProgress ?
+                            model.renderModel.stopRecording( question ) : model.renderModel.startRecording( question )"
+                          ng-bind-html="text(
+                            question.audio.recordingInProgress ? 'misc.stop' :
+                            question.answer.formattedValue ? 'misc.reRecord' :
+                            'misc.record'
+                          )" />
+                  <div class="col-xs-9 col-slim-right">
+                    <div ng-if="!question.audio.recordingInProgress"
+                         ng-style="{
+                          'cursor': question.answer.formattedValue ? 'auto' : 'not-allowed',
+                          'opacity': question.answer.formattedValue ? 1.0 : 0.5
+                        }">
+                      <audio ng-attr-id="questionAudio{{ question.id }}"
+                             ng-src="{{ question.answer.formattedValue }}"
+                             class="full-width"
+                             ng-style="{
+                               'pointer-events': question.answer.formattedValue ? 'auto' : 'none',
+                               'background': question.incomplete ? 'red' : 'none'
+                             }"
+                             controls></audio>
+                    </div>
+                    <div ng-if="question.audio.recordingInProgress"
+                         class="progress no-rounding"
+                         style="height: 40px; background-color: lightgrey; border: 4px solid darkslategrey; margin-bottom: 6.8px;">
+                      <div class="progress-bar larger"
+                           role="volumebar"
+                           style="background-color: red;
+                                  width: {{ question.audio.inputVolume*100 }}%;
+                                  -webkit-transition: none;
+                                  transition: none;"
+                           aria-valuenow="{{ question.audio.inputVolume*100  }}"
+                           aria-valuemin="0"
+                           aria-valuemax="100"></div>
+                    </div>
+                  </div>
                 </div>
                 <div ng-switch-when="boolean">
                   <label class="btn btn-default full-width larger"

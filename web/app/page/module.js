@@ -333,7 +333,6 @@ cenozoApp.defineModule( { name: 'page',
           ],
           deviationTypeList: null,
           languageList: null,
-          recordingInProgress: false,
           showHidden: false,
           focusQuestionId: null,
           hotKeyDisabled: false,
@@ -351,8 +350,7 @@ cenozoApp.defineModule( { name: 'page',
               activeAttributeList: [],
               prevModuleList: [],
               nextModuleList: [],
-              focusQuestionId: null,
-              recordingInProgress: false
+              focusQuestionId: null
             } );
           },
 
@@ -874,7 +872,7 @@ cenozoApp.defineModule( { name: 'page',
                   question.audio = CnAudioRecordingFactory.instance( {
                     timeLimit: 0 < question.maximum ? question.maximum : 60,
                     onComplete: ( recorder, blob ) => { this.setAnswer( question, blob ); },
-                    onTimeout: ( recorder ) => {
+                    onTimeout: recorder => {
                       CnModalMessageFactory.instance( {
                         title: this.text( 'misc.maxRecordingTimeTitle' ),
                         message: this.text( 'misc.maxRecordingTimeMessage' ),
@@ -882,7 +880,7 @@ cenozoApp.defineModule( { name: 'page',
                     }
                   } );
 
-                  if( question.value ) {
+                  if( question.value && !angular.isObject( question.value ) ) {
                     list.push( ( async () => {
                       const base64Response = await fetch( question.value );
                       question.value = await base64Response.blob();
@@ -987,7 +985,7 @@ cenozoApp.defineModule( { name: 'page',
             } else if( 'audio' == question.type ) {
               question.answer = {
                 value: question.value,
-                formattedValue: angular.isObject( question.value ) ? window.URL.createObjectURL( question.value ) : null
+                formattedValue: question.value instanceof Blob ? window.URL.createObjectURL( question.value ) : null
               };
             } else {
               question.answer = {
@@ -1224,15 +1222,10 @@ cenozoApp.defineModule( { name: 'page',
               proceed = response;
             }
 
-            if( proceed ) {
-              this.recordingInProgress = true;
-              question.audio.start();
-            }
+            if( proceed ) question.audio.start();
           },
-          stopRecording: async function( question ) {
-            question.audio.stop();
-            this.recordingInProgress = false;
-          },
+
+          stopRecording: async function( question ) { question.audio.stop(); },
 
           launchDevice: async function( question ) {
             try {
@@ -1316,7 +1309,8 @@ cenozoApp.defineModule( { name: 'page',
 
                     if( !this.previewMode ) {
                       // audio blobs need to be converted to base64 strings before sending to the server
-                      var valueForPatch = 'audio' == question.type ? await cenozo.convertBlobToBase64( value ) : value;
+                      var valueForPatch = 'audio' == question.type && value instanceof Blob
+                                        ? await cenozo.convertBlobToBase64( value ) : value;
 
                       // first communicate with the server (if we're working with a respondent)
                       var self = this;
