@@ -170,9 +170,15 @@
                 <div class="vertical-spacer">
                   <button type="button"
                           class="btn btn-default btn-thin full-width"
-                          ng-disabled="null != model.renderModel.data.end_datetime"
+                          ng-if="null == model.renderModel.data.end_datetime"
                           ng-click="model.renderModel.setCheckIn( false )">
                     Re-open Check-In
+                  </button>
+                  <button type="button"
+                          class="btn btn-default btn-thin full-width"
+                          ng-if="null != model.renderModel.data.end_datetime"
+                          ng-click="model.renderModel.reopen()">
+                    Re-open Interview
                   </button>
                 </div>
               </div>

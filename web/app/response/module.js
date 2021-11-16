@@ -191,16 +191,6 @@ cenozoApp.defineModule( { name: 'response', models: ['add', 'list', 'view'], def
           moduleList: [],
           questionList: [],
           onLoad: async function() {
-            // get a list of all active languages
-            var response = await CnHttpFactory.instance( {
-              path: 'language',
-              data: {
-                select: { column: [ 'code', 'name' ] },
-                modifier: { where: { column: 'active', operator: '=', value: true } }
-              }
-            } ).get();
-            this.languageList = response.data;
-
             // get a list of all modules
             var response = await CnHttpFactory.instance( {
               path: 'response/' + this.parentModel.getQueryParameter( 'identifier' ),
@@ -217,63 +207,89 @@ cenozoApp.defineModule( { name: 'response', models: ['add', 'list', 'view'], def
             this.qnaire_id = response.data.qnaire_id;
             this.lang = response.data.lang;
 
-            var response = await CnHttpFactory.instance( {
-              path: 'module',
-              data: {
-                select: { column: [ 'id', 'prompts' ] },
-                modifier: {
-                  where: { column: 'qnaire.id', operator: '=', value: this.qnaire_id },
-                  order: 'module.rank'
-                },
-                limit: 1000000 // get all records
-              }
-            } ).query();
+            // get a list of the qnaires languages
+            var [languageResponse, moduleResponse, pageResponse, questionResponse, optionResponse ] = await Promise.all( [
 
-            this.moduleList = response.data.map( module => {
+              CnHttpFactory.instance( {
+                path: ['qnaire', this.qnaire_id, 'language'].join( '/' ),
+                data: { select: { column: [ 'code', 'name' ] } }
+              } ).get(),
+
+              CnHttpFactory.instance( {
+                path: 'module',
+                data: {
+                  select: { column: [ 'id', 'prompts' ] },
+                  modifier: {
+                    where: { column: 'qnaire.id', operator: '=', value: this.qnaire_id },
+                    order: 'module.rank'
+                  },
+                  limit: 1000000 // get all records
+                }
+              } ).query(),
+
+              CnHttpFactory.instance( {
+                path: 'page',
+                data: {
+                  select: { column: [ 'id', 'module_id', 'prompts' ] },
+                  modifier: {
+                    where: { column: 'qnaire.id', operator: '=', value: this.qnaire_id },
+                    order: [ 'module.rank', 'page.rank' ],
+                    limit: 1000000 // get all records
+                  }
+                }
+              } ).query(),
+
+              CnHttpFactory.instance( {
+                path: ['response', this.parentModel.getQueryParameter( 'identifier' ), 'question'].join( '/' ),
+                data: {
+                  select: { column: [
+                    'id', 'page_id', 'prompts', 'type', 'dkna_allowed', 'refuse_allowed',
+                    { table: 'page', column: 'module_id' },
+                    { table: 'language', column: 'code', alias: 'language' },
+                    { table: 'answer', column: 'value' }
+                  ] },
+                  modifier: {
+                    order: [ 'module.rank', 'page.rank', 'question.rank' ],
+                    limit: 1000000 // get all records
+                  }
+                }
+              } ).query(),
+
+              CnHttpFactory.instance( {
+                path: 'question_option',
+                data: {
+                  select: { column: [
+                    'id', 'question_id', 'prompts',
+                    { table: 'module', column: 'id', alias: 'module_id' },
+                    { table: 'page', column: 'id', alias: 'page_id' }
+                  ] },
+                  modifier: {
+                    where: { column: 'qnaire.id', operator: '=', value: this.qnaire_id },
+                    order: [ 'module.rank', 'page.rank', 'question.rank', { 'question_option.rank': true } ],
+                    limit: 1000000 // get all records
+                  }
+                }
+              } ).query()
+
+            ] );
+
+            this.languageList = languageResponse.data;
+
+            this.moduleList = moduleResponse.data.map( module => {
               module.prompts = CnTranslationHelper.parseDescriptions( module.prompts );
               module.pageList = [];
               return module;
             } );
 
-            // now get a list of all pages
-            var response = await CnHttpFactory.instance( {
-              path: 'page',
-              data: {
-                select: { column: [ 'id', 'module_id', 'prompts' ] },
-                modifier: {
-                  where: { column: 'qnaire.id', operator: '=', value: this.qnaire_id },
-                  order: [ 'module.rank', 'page.rank' ],
-                  limit: 1000000 // get all records
-                }
-              }
-            } ).query();
-
-            response.data.forEach( page => {
+            pageResponse.data.forEach( page => {
               // store each page in its parent module
               page.prompts = CnTranslationHelper.parseDescriptions( page.prompts );
               page.questionList = [];
               this.moduleList.findByProperty( 'id', page.module_id ).pageList.push( page );
             } );
 
-            // now get a list of all questions and their answers for this response
-            var response = await CnHttpFactory.instance( {
-              path: ['response', this.parentModel.getQueryParameter( 'identifier' ), 'question'].join( '/' ),
-              data: {
-                select: { column: [
-                  'id', 'page_id', 'prompts', 'type', 'dkna_allowed', 'refuse_allowed',
-                  { table: 'page', column: 'module_id' },
-                  { table: 'language', column: 'code', alias: 'language' },
-                  { table: 'answer', column: 'value' }
-                ] },
-                modifier: {
-                  order: [ 'module.rank', 'page.rank', 'question.rank' ],
-                  limit: 1000000 // get all records
-                }
-              }
-            } ).query();
-
             await Promise.all(
-              response.data.reduce( ( list, question ) => {
+              questionResponse.data.reduce( ( list, question ) => {
                 question.prompts = CnTranslationHelper.parseDescriptions( question.prompts );
                 question.value = angular.fromJson( question.value );
                 if( null != question.value ) { // ignore questions which weren't answered
@@ -313,24 +329,7 @@ cenozoApp.defineModule( { name: 'response', models: ['add', 'list', 'view'], def
               }, [] )
             );
 
-            // now get a list of all options
-            var response = await CnHttpFactory.instance( {
-              path: 'question_option',
-              data: {
-                select: { column: [
-                  'id', 'question_id', 'prompts',
-                  { table: 'module', column: 'id', alias: 'module_id' },
-                  { table: 'page', column: 'id', alias: 'page_id' }
-                ] },
-                modifier: {
-                  where: { column: 'qnaire.id', operator: '=', value: this.qnaire_id },
-                  order: [ 'module.rank', 'page.rank', 'question.rank', { 'question_option.rank': true } ],
-                  limit: 1000000 // get all records
-                }
-              }
-            } ).query();
-
-            response.data.forEach( option => {
+            optionResponse.data.forEach( option => {
               option.prompts = CnTranslationHelper.parseDescriptions( option.prompts );
 
               // store each option in its parent question, but ignore any questions which aren't found since it means

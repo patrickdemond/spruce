@@ -142,7 +142,7 @@ class respondent extends \cenozo\database\record
       $response_stage_mod->where( 'status', '=', 'completed' );
       $response_stage_mod->order_desc( 'stage.rank' );
       $response_stage_mod->limit( 1 );
-      $response_stage_list = $db_response->get_response_stage_object_list();
+      $response_stage_list = $db_response->get_response_stage_object_list( $response_stage_mod );
      
       if( 0 < count( $response_stage_list ) )
       {
@@ -158,7 +158,7 @@ class respondent extends \cenozo\database\record
         $response_stage_mod->join( 'stage', 'response_stage.stage_id', 'stage.id' );
         $response_stage_mod->order( 'stage.rank' );
         $response_stage_mod->limit( 1 );
-        $response_stage_list = $db_response->get_response_stage_object_list();
+        $response_stage_list = $db_response->get_response_stage_object_list( $response_stage_mod );
         $db_response_stage = current( $response_stage_list );
         $db_response_stage->reset();
       }

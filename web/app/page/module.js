@@ -375,6 +375,13 @@ cenozoApp.defineModule( { name: 'page',
             }
           },
 
+          reopen: async function() {
+            await CnHttpFactory.instance( {
+              path: 'respondent/token=' + $state.params.token + '?action=reopen'
+            } ).patch();
+            await this.parentModel.reloadState( true );
+          },
+
           setCheckIn: async function( checkedIn ) {
             // update the token if we've changed it
             var updatedToken = null;
@@ -658,7 +665,7 @@ cenozoApp.defineModule( { name: 'page',
                     } );
                   }
 
-                  if( ['paused', 'ready'].includes( responseStage.status ) ) {
+                  if( ['paused', 'ready'].includes( responseStage.status ) && responseStage.rank != this.responseStageList.length ) {
                     responseStage.operations.push( {
                       name: 'skip',
                       title: 'Skip',

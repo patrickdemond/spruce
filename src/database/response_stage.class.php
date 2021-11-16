@@ -20,10 +20,11 @@ class response_stage extends \cenozo\database\record
   {
     $stage_class_name = lib::get_class_name( 'database\stage' );
 
-    if( in_array( $this->status, ['not ready', 'parent skipped', 'ready'] ) )
+    if( in_array( $this->status, ['not ready', 'parent skipped', 'paused', 'ready'] ) )
     {
       $db_response = $this->get_response();
       $db_stage = $this->get_stage();
+      $expression_manager = lib::create( 'business\expression_manager', $db_response );
 
       if( $db_stage->is_last_stage() )
       {
@@ -37,14 +38,16 @@ class response_stage extends \cenozo\database\record
         }
         else // we still evaluate the precondition, if there is one
         {
-          $expression_manager = lib::create( 'business\expression_manager', $db_response );
-          $this->status = $expression_manager->evaluate( $db_stage->precondition ) ? 'ready' : 'not ready';
+          $this->status = $expression_manager->evaluate( $db_stage->precondition )
+                        ? ( is_null( $this->page_id ) ? 'ready' : 'paused' )
+                        : 'not ready';
         }
       }
       else
       {
-        $expression_manager = lib::create( 'business\expression_manager', $db_response );
-        $this->status = $expression_manager->evaluate( $db_stage->precondition ) ? 'ready' : 'not ready';
+        $this->status = $expression_manager->evaluate( $db_stage->precondition )
+                      ? ( is_null( $this->page_id ) ? 'ready' : 'paused' )
+                      : 'not ready';
 
         // skip stages which are dependent on a parent stage which has been skipped
         if( 'not ready' == $this->status )

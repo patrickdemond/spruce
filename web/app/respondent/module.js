@@ -244,17 +244,10 @@ cenozoApp.defineModule( { name: 'respondent', dependencies: 'page', models: ['ad
   } );
 
   module.addExtraOperation( 'view', {
-    title: 'Reopen',
-    operation: async function( $state, model ) { await model.viewModel.reopen(); },
-    isIncluded: function( $state, model ) { return null != model.viewModel.record.end_datetime; }
-  } );
-
-  module.addExtraOperation( 'view', {
-    title: 'Launch',
+    title: 'Open',
     operation: async function( $state, model ) {
       await $state.go( 'respondent.run', { token: model.viewModel.record.token } );
-    },
-    isIncluded: function( $state, model ) { return null == model.viewModel.record.end_datetime; }
+    }
   } );
 
   module.addExtraOperation( 'view', {
@@ -335,13 +328,6 @@ cenozoApp.defineModule( { name: 'respondent', dependencies: 'page', models: ['ad
                 'response_attribute' == child.subject.snake && null == this.record.repeated
               )
             );
-          },
-
-          reopen: async function() {
-            await CnHttpFactory.instance( {
-              path: this.parentModel.getServiceResourcePath() + '?action=reopen'
-            } ).patch();
-            this.parentModel.reloadState( true );
           },
 
           resendMail: async function() {
