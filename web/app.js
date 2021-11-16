@@ -668,7 +668,7 @@ cenozo.service( 'CnTranslationHelper', [
           next: { en: 'Next', fr: 'Suivant' },
           previous: { en: 'Previous', fr: 'Précédent' },
           submit: { en: 'Submit', fr: 'Envoyer' },
-          pleaseConfirm: { en: 'Please Confirm', fr: 'TODO: TRANSLATE' },
+          pleaseConfirm: { en: 'Please confirm', fr: 'Veuillez confirmer' },
           minimumTitle: { en: 'Value is too small', fr: 'La valeur est trop petite' },
           maximumTitle: { en: 'Value is too large', fr: 'La valeur est trop grande' },
           limitMessage: { en: 'Please provide an answer that is', fr: 'Veuillez fournir une réponse' },
@@ -676,13 +676,18 @@ cenozo.service( 'CnTranslationHelper', [
           equalOrLess: { en: 'equal to or less than', fr: 'égale ou inférieure à' },
           between: { en: 'between', fr: 'comprise entre' },
           and: { en: 'and', fr: 'et' },
-          record: { en: 'Record', fr: 'TODO: TRANSLATE' },
-          recording: { en: 'Recording...', fr: 'TODO: TRANSLATE' },
-          reRecord: { en: 'Re-record', fr: 'TODO: TRANSLATE' },
-          stop: { en: 'Stop', fr: 'TODO: TRANSLATE' },
-          reRecordConfirm: { en: 'Are you sure you wish to replace the existing recording?', fr: 'TODO: TRANSLATE' },
-          maxRecordingTimeTitle: { en: 'Recording Stopped', fr: 'TODO: TRANSLATE' },
-          maxRecordingTimeMessage: { en: 'The maximum time allowed for this recording has been reached.', fr: 'TODO: TRANSLATE' },
+          record: { en: 'Record', fr: 'Enregistrer' },
+          reRecord: { en: 'Re-record', fr: 'Réenregistrer' },
+          stop: { en: 'Stop', fr: 'Arrêter' },
+          reRecordConfirm: {
+            en: 'Are you sure you wish to replace the existing recording?',
+            fr: 'Êtes-vous certain(e) de vouloir remplacer l’enregistrement existant?'
+          },
+          maxRecordingTimeTitle: { en: 'Recording Stopped', fr: 'Enregistrement arrêté' },
+          maxRecordingTimeMessage: {
+            en: 'The maximum time allowed for this recording has been reached.',
+            fr: 'La durée maximale autorisée pour cet enregistrement a été atteinte.'
+          },
           qnaireClosed: { en: 'Questionnaire Closed', fr: 'Période de réponse terminée' },
           mustCompleteAll: {
             en: 'You must complete all questions before you can proceed.',

@@ -465,22 +465,26 @@ cenozoApp.defineModule( { name: 'page',
           },
 
           getModulePrompt: function() {
-            return $sce.trustAsHtml( this.parentModel.viewModel.record.module_prompts[this.currentLanguage] );
+            return null != this.parentModel.viewModel.record.module_prompts ?
+              $sce.trustAsHtml( this.parentModel.viewModel.record.module_prompts[this.currentLanguage] ) : '';
           },
 
           getModulePopup: function() {
-            return this.parentModel.viewModel.record.module_popups[this.currentLanguage];
+            return null != this.parentModel.viewModel.record.module_popups ?
+              this.parentModel.viewModel.record.module_popups[this.currentLanguage] : '';
           },
 
           getPagePrompt: function() {
-            return $sce.trustAsHtml(
-              ( this.parentModel.viewModel.record.popups[this.currentLanguage] ? '<b class="invert">ⓘ</b> ' : '' ) +
-              this.parentModel.viewModel.record.prompts[this.currentLanguage]
-            );
+            return null != this.parentModel.viewModel.record.prompts && null != this.parentModel.viewModel.record.popups ?
+              $sce.trustAsHtml(
+                ( this.parentModel.viewModel.record.popups[this.currentLanguage] ? '<b class="invert">ⓘ</b> ' : '' ) +
+                this.parentModel.viewModel.record.prompts[this.currentLanguage]
+              ) : '';
           },
 
           getPagePopup: function() {
-            return this.parentModel.viewModel.record.popups[this.currentLanguage];
+            return null != this.parentModel.viewModel.record.popups ?
+              this.parentModel.viewModel.record.popups[this.currentLanguage] : '';
           },
 
           getQuestionPrompt: function( question ) {

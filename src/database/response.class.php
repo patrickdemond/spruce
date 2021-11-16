@@ -658,6 +658,8 @@ class response extends \cenozo\database\has_rank
         }
         else if( is_null( $value ) ) $compiled = '';
         else if( 'boolean' == $db_question->type ) $compiled = $value ? 'true' : 'false';
+        else if( 'audio' == $db_question->type )
+          $compiled = sprintf( '<audio controls class="full-width" style="height: 40px;" src="%s"></audio>', $value );
         else $compiled = $value;
 
         $description = str_replace( $match, $compiled, $description );
