@@ -32,7 +32,21 @@ class stage extends \cenozo\database\has_rank
     parent::save();
 
     // update all preconditions if the stage's name is changing
-    if( $changing_name ) $this->get_qnaire()->update_name_in_preconditions( 'stage', $old_name, $this->name ); 
+    if( $changing_name ) $this->get_qnaire()->update_name_in_preconditions( 'stage', $old_name, $this->name );
+  }
+
+  /**
+   * Determines if this is the last stage
+   * @return boolean
+   */
+  public function is_last_stage()
+  {
+    $select = lib::create( 'database\select' );
+    $select->add_column( 'MAX( rank )', 'max_rank', false );
+    $modifier = lib::create( 'database\modifier' );
+    $modifier->where( 'qnaire_id', '=', $this->qnaire_id );
+    $list = static::select( $select, $modifier );
+    return current( $list )['max_rank'] == $this->rank;
   }
 
   /**

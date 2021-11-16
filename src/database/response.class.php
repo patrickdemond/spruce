@@ -215,7 +215,10 @@ class response extends \cenozo\database\has_rank
     }
 
     // update the status of all response stages
-    foreach( $this->get_response_stage_object_list() as $db_response_stage ) $db_response_stage->update_status();
+    $response_stage_mod = lib::create( 'database\modifier' );
+    $response_stage_mod->join( 'stage', 'response_stage.stage_id', 'stage.id' );
+    $response_stage_mod->order( 'stage.rank' );
+    foreach( $this->get_response_stage_object_list( $response_stage_mod ) as $db_response_stage ) $db_response_stage->update_status();
 
     // update the submitted status if there are no incomplete stages left
     if( !$this->has_unfinished_stages() )

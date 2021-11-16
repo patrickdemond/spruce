@@ -25,35 +25,54 @@ class response_stage extends \cenozo\database\record
       $db_response = $this->get_response();
       $db_stage = $this->get_stage();
 
-      $expression_manager = lib::create( 'business\expression_manager', $db_response );
-      $this->status = $expression_manager->evaluate( $db_stage->precondition ) ? 'ready' : 'not ready';
-
-      // skip stages which are dependent on a parent stage which has been skipped
-      if( 'not ready' == $this->status )
+      if( $db_stage->is_last_stage() )
       {
-        $matches = array();
-        if( preg_match_all( '/#[^#]+#/', $db_stage->precondition, $matches ) )
+        // the last stage can only proceed once all other stages are completed or skipped
+        $response_stage_mod = lib::create( 'database\modifier' );
+        $response_stage_mod->where( 'stage_id', '!=', $db_stage->id );
+        $response_stage_mod->where( 'status', 'NOT IN', array( 'completed', 'skipped', 'parent skipped' ) );
+        if( 0 < $db_response->get_response_stage_count( $response_stage_mod ) )
         {
-          foreach( $matches[0] as $match )
-          {
-            $parent_stage_name = preg_replace( '/\.status\(\)$/', '', trim( $match, '#' ) );
-            $db_parent_stage = $stage_class_name::get_unique_record(
-              array( 'qnaire_id', 'name' ),
-              array( $db_stage->qnaire_id, $parent_stage_name )
-            );
-            if( !is_null( $db_parent_stage ) )
-            {
-              $db_parent_response_stage = static::get_unique_record(
-                array( 'response_id', 'stage_id' ),
-                array( $db_response->id, $db_parent_stage->id )
-              );
+          $this->status = 'not ready';
+        }
+        else // we still evaluate the precondition, if there is one
+        {
+          $expression_manager = lib::create( 'business\expression_manager', $db_response );
+          $this->status = $expression_manager->evaluate( $db_stage->precondition ) ? 'ready' : 'not ready';
+        }
+      }
+      else
+      {
+        $expression_manager = lib::create( 'business\expression_manager', $db_response );
+        $this->status = $expression_manager->evaluate( $db_stage->precondition ) ? 'ready' : 'not ready';
 
-              if( !is_null( $db_parent_response_stage ) )
+        // skip stages which are dependent on a parent stage which has been skipped
+        if( 'not ready' == $this->status )
+        {
+          $matches = array();
+          if( preg_match_all( '/#[^#]+#/', $db_stage->precondition, $matches ) )
+          {
+            foreach( $matches[0] as $match )
+            {
+              $parent_stage_name = preg_replace( '/\.status\(\)$/', '', trim( $match, '#' ) );
+              $db_parent_stage = $stage_class_name::get_unique_record(
+                array( 'qnaire_id', 'name' ),
+                array( $db_stage->qnaire_id, $parent_stage_name )
+              );
+              if( !is_null( $db_parent_stage ) )
               {
-                if( 'skipped' == $db_parent_response_stage->status )
+                $db_parent_response_stage = static::get_unique_record(
+                  array( 'response_id', 'stage_id' ),
+                  array( $db_response->id, $db_parent_stage->id )
+                );
+
+                if( !is_null( $db_parent_response_stage ) )
                 {
-                  $this->status = 'parent skipped';
-                  break;
+                  if( 'skipped' == $db_parent_response_stage->status )
+                  {
+                    $this->status = 'parent skipped';
+                    break;
+                  }
                 }
               }
             }
