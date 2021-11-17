@@ -795,17 +795,27 @@ cenozoApp.defineModule( { name: 'page',
                 )
               );
 
-              const questionResponse = await CnHttpFactory.instance( {
-                path: this.parentModel.getServiceResourceBasePath() + '/question',
-                data: {
-                  select: { column: [
-                    'id', 'rank', 'name', 'type', 'mandatory', 'dkna_allowed', 'refuse_allowed', 'minimum', 'maximum',
-                    'precondition', 'prompts', 'popups', 'device_id', { table: 'device', column: 'name', alias: 'device' }
-                  ] },
-                  modifier: { order: 'question.rank' }
-                }
-              } ).query();
+              const [questionResponse, languageResponse] = await Promise.all( [
+                CnHttpFactory.instance( {
+                  path: this.parentModel.getServiceResourceBasePath() + '/question',
+                  data: {
+                    select: { column: [
+                      'id', 'rank', 'name', 'type', 'mandatory', 'dkna_allowed', 'refuse_allowed', 'minimum', 'maximum',
+                      'precondition', 'prompts', 'popups', 'device_id', { table: 'device', column: 'name', alias: 'device' }
+                    ] },
+                    modifier: { order: 'question.rank' }
+                  }
+                } ).query(),
 
+                await CnHttpFactory.instance( {
+                  path: [ 'qnaire', this.data.qnaire_id, 'language' ].join( '/' ),
+                  data: { select: { column: [ 'id', 'code', 'name' ] } }
+                } ).query()
+              ] );
+
+              if( null == this.currentLanguage ) this.currentLanguage = this.data.base_language;
+
+              this.languageList = languageResponse.data;
               this.questionList = questionResponse.data;
 
               // set the current language to the first (visible) question's language
@@ -914,17 +924,17 @@ cenozoApp.defineModule( { name: 'page',
                 .sort()
                 .filter( ( attribute, index, array ) => index === array.indexOf( attribute ) )
                 .map( attribute => ( { name: attribute, value: null } ) );
-            } else if( !this.data.stage_selection && null == this.data.page_id ) {
-              await this.reset();
+            } else {
+              if( !this.data.stage_selection && null == this.data.page_id ) await this.reset();
+
+              var response = await CnHttpFactory.instance( {
+                path: [ 'qnaire', this.data.qnaire_id, 'language' ].join( '/' ),
+                data: { select: { column: [ 'id', 'code', 'name' ] } }
+              } ).query();
+              this.languageList = response.data;
+
+              if( null == this.currentLanguage ) this.currentLanguage = this.data.base_language;
             }
-
-            var response = await CnHttpFactory.instance( {
-              path: [ 'qnaire', this.data.qnaire_id, 'language' ].join( '/' ),
-              data: { select: { column: [ 'id', 'code', 'name' ] } }
-            } ).query();
-            this.languageList = response.data;
-
-            if( null == this.currentLanguage ) this.currentLanguage = this.data.base_language;
 
             // finally, now that we know the language set the title
             this.data.title = this.data.submitted ? 'Conclusion'
