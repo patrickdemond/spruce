@@ -75,7 +75,7 @@ class response extends \cenozo\database\has_rank
     parent::save();
 
     // create the response's attributes
-    $this->create_attributes();
+    if( $new ) $this->create_attributes();
 
     // see if the qnaire exists as a script and apply the started/finished events if it does
     if( $new && 1 == $this->rank )
