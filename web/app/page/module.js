@@ -277,16 +277,12 @@ cenozoApp.defineModule( { name: 'page',
           return list;
         }
 
-        function focusElement( id ) {
+        async function focusElement( id ) {
           // keep trying until the element exists (10 tries max)
-          var promise = $interval(
-            function() { $timeout(
-              function() {
-                var element = document.getElementById( id );
-                if( null != element ) { element.focus(); $interval.cancel( promise ); }
-              }, 50
-            ) }, 50, 10
-          );
+          var promise = await $interval( () => {
+            var element = document.getElementById( id );
+            if( null != element ) { element.focus(); $interval.cancel( promise ); }
+          }, 50, 10 );
           return promise;
         }
 

@@ -169,6 +169,7 @@ class ui extends \cenozo\ui\ui
     $this->add_listitem( 'Questionnaires', 'qnaire' );
     if( 'readonly' == $db_role->name ) $this->add_listitem( 'Overviews', 'overview' );
     $this->remove_listitem( 'Collections' );
+    $this->remove_listitem( 'Identifiers' );
     $this->remove_listitem( 'Participants' );
 
     if( 'interviewer' == $db_role->name )
