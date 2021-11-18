@@ -3418,6 +3418,21 @@ class qnaire extends \cenozo\database\record
 
     $default_page_max_time = lib::create( 'business\setting_manager' )->get_setting( 'general', 'default_page_max_time' );
 
+    // make sure the qnaire doesn't already exist
+    $db_qnaire = static::get_unique_record( 'name', $qnaire_object->name );
+    if( !is_null( $db_qnaire ) )
+    {
+      throw lib::create( 'exception\notice',
+        sprintf(
+          'A questionnaire named "%s" already exists. '.
+          ' Please make sure to rename the questionnaire you are trying to import a different name, '.
+          'or patch the existing questionnaire instead.',
+          $qnaire_object->name
+        ),
+        __METHOD__
+      );
+    }
+
     $db_qnaire = lib::create( 'database\qnaire' );
     $db_qnaire->base_language_id = $language_class_name::get_unique_record( 'code', $qnaire_object->base_language )->id;
     $db_qnaire->name = $qnaire_object->name;
