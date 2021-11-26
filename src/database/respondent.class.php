@@ -259,30 +259,35 @@ class respondent extends \cenozo\database\record
       // create a reminder for all iterations of the questionnaire;
       for( $rank = $lowest_rank; $rank <= $number_of_iterations; $rank++ )
       {
-        $datetime = clone (
-          array_key_exists( $rank, $respondent_invitation_mail_list ) ?
-          $respondent_invitation_mail_list[$rank]->get_mail()->schedule_datetime :
-          $base_datetime
-        );
+        $db_respondent_mail = $respondent_invitation_mail_list[$rank];
 
-        $datetime->add( new \DateInterval( sprintf(
-          'P%s%d%s',
-          'hour' == $db_reminder->unit ? 'T' : '',
-          $db_reminder->offset,
-          strtoupper( substr( $db_reminder->unit, 0, 1 ) )
-        ) ) );
+        if( !is_null( $db_respondent_mail ) )
+        {
+          $datetime = clone (
+            array_key_exists( $rank, $respondent_invitation_mail_list ) ?
+            $respondent_invitation_mail_list[$rank]->get_mail()->schedule_datetime :
+            $base_datetime
+          );
 
-        if( 1 < $rank )
-        { // add repeated span for iterations beyond the first
           $datetime->add( new \DateInterval( sprintf(
             'P%s%d%s',
-            'hour' == $db_qnaire->repeated ? 'T' : '',
-            $db_qnaire->repeat_offset * ( $rank - 1 ),
-            strtoupper( substr( $db_qnaire->repeated, 0, 1 ) )
+            'hour' == $db_reminder->unit ? 'T' : '',
+            $db_reminder->offset,
+            strtoupper( substr( $db_reminder->unit, 0, 1 ) )
           ) ) );
-        }
 
-        if( $datetime >= $now ) $this->add_mail( $db_reminder, $rank, $datetime );
+          if( 1 < $rank )
+          { // add repeated span for iterations beyond the first
+            $datetime->add( new \DateInterval( sprintf(
+              'P%s%d%s',
+              'hour' == $db_qnaire->repeated ? 'T' : '',
+              $db_qnaire->repeat_offset * ( $rank - 1 ),
+              strtoupper( substr( $db_qnaire->repeated, 0, 1 ) )
+            ) ) );
+          }
+
+          if( $datetime >= $now ) $this->add_mail( $db_reminder, $rank, $datetime );
+        }
       }
     }
   }
