@@ -594,13 +594,17 @@ class response extends \cenozo\database\has_rank
       $description = str_replace( $match, $value, $description );
     }
 
-    // convert questions
-    preg_match_all( '/\$[A-Za-z0-9_]+\$/', $description, $matches );
-    foreach( $matches[0] as $match )
+    // convert questions and question options
+    preg_match_all( '/\$([A-Za-z0-9_]+)(:[A-Za-z0-9_]+|.extra\([^)]+\)|.count\(\))?\$/', $description, $matches );
+    foreach( $matches[1] as $index => $question_name )
     {
+      $matched_expression = $matches[0][$index];
+      $get_count = '.count' == $matches[2][$index];
+      $get_extra = preg_match( '/.extra\((.*)\)/', $matches[2][$index], $extra_matches ) ? $extra_matches[1] : false;
+      $get_option = preg_match( '/:([A-Za-z0-9_]+)/', $matches[2][$index], $option_matches ) ? $option_matches[1] : false;
+
       $modifier = lib::create( 'database\modifier' );
       $modifier->where( 'exclusive', '=', false );
-      $question_name = substr( $match, 1, -1 );
       $db_question = $db_qnaire->get_question( $question_name );
       if( is_null( $db_question ) || in_array( $db_question->type, ['comment', 'device'] ) )
       {
@@ -611,8 +615,11 @@ class response extends \cenozo\database\has_rank
             ? 'question doesn\'t exist'
             : sprintf( 'question type "%s" does not have a value', $db_question->type )
         );
-
-        $description = str_replace( $match, $db_qnaire->debug ? '<b><i>WARNING: '.$warning.'</i></b>' : '', $description );
+        $description = str_replace(
+          $matched_expression,
+          $db_qnaire->debug ? '<b><i>WARNING: '.$warning.'</i></b>' : '',
+          $description
+        );
         log::warning( $warning );
       }
       else
@@ -627,37 +634,71 @@ class response extends \cenozo\database\has_rank
         else if( is_object( $value ) && property_exists( $value, 'refuse' ) && $value->refuse ) $compiled = '(no answer)';
         else if( is_array( $value ) )
         {
-          $question_option_id_list = array();
-          $raw_answer_list = array();
-          foreach( $value as $option )
+          if( $get_count )
           {
-            // selected option may have additional details (so the answer is an object)
-            if( is_object( $option ) )
-            {
-              // the option's extra data may have multiple answers (an array) or a single answer
-              if( is_array( $option->value ) ) $raw_answer_list = array_merge( $raw_answer_list, $option->value );
-              else $raw_answer_list[] = $option->value;
-            }
-            else
-            {
-              $question_option_id_list[] = $option;
-            }
+            $compiled = count( $value );
           }
+          else
+          {
+            $question_option_id_list = array();
+            $raw_answer_list = array();
+            foreach( $value as $option )
+            {
+              if( $get_option || $get_extra )
+              {
+                // we only used the matched option when getting the option's name or extra value
+                $db_question_option = lib::create( 'database\question_option', is_object( $option ) ? $option->id : $option );
+                if( $get_option == $db_question_option->name )
+                {
+                  $question_option_id_list[] = $db_question_option->id;
+                  break;
+                }
+                else if( $get_extra == $db_question_option->name )
+                {
+                  $raw_answer_list = is_array( $option->value ) ? $option->value : [$option->value];
+                  break;
+                }
+              }
+              else
+              {
+                // selected option may have additional details (so the answer is an object)
+                if( is_object( $option ) )
+                {
+                  // the option's extra data may have multiple answers (an array) or a single answer
+                  if( is_array( $option->value ) )
+                  {
+                    $raw_answer_list = array_merge( $raw_answer_list, $option->value );
+                  }
+                  else
+                  {
+                    $raw_answer_list[] = $option->value;
+                  }
+                }
+                else
+                {
+                  $question_option_id_list[] = $option;
+                }
+              }
+            }
 
-          // get the description of all selected options
-          $answers = array();
-          $description_sel = lib::create( 'database\select' );
-          $description_sel->add_column( 'value' );
-          $description_mod = lib::create( 'database\modifier' );
-          $description_mod->where( 'question_option_id', 'IN', $question_option_id_list );
-          $description_mod->where( 'type', '=', 'prompt' );
-          $description_mod->where( 'language_id', '=', $this->language_id );
-          foreach( $question_option_description_class_name::select( $description_sel, $description_mod ) as $row )
-            $answers[] = $row['value'];
+            $answers = array();
+            if( 0 < count( $question_option_id_list ) )
+            {
+              // get the description of all selected options
+              $description_sel = lib::create( 'database\select' );
+              $description_sel->add_column( 'value' );
+              $description_mod = lib::create( 'database\modifier' );
+              $description_mod->where( 'question_option_id', 'IN', $question_option_id_list );
+              $description_mod->where( 'type', '=', 'prompt' );
+              $description_mod->where( 'language_id', '=', $this->language_id );
+              foreach( $question_option_description_class_name::select( $description_sel, $description_mod ) as $row )
+                $answers[] = $row['value'];
+            }
 
-          // append any extra option values to the list
-          if( 0 < count( $raw_answer_list ) ) $answers = array_merge( $answers, $raw_answer_list );
-          $compiled = implode( ', ', $answers );
+            // append any extra option values to the list
+            if( 0 < count( $raw_answer_list ) ) $answers = array_merge( $answers, $raw_answer_list );
+            $compiled = implode( ', ', $answers );
+          }
         }
         else if( is_null( $value ) ) $compiled = '';
         else if( 'boolean' == $db_question->type ) $compiled = $value ? 'true' : 'false';
@@ -665,7 +706,7 @@ class response extends \cenozo\database\has_rank
           $compiled = sprintf( '<audio controls class="full-width" style="height: 40px;" src="%s"></audio>', $value );
         else $compiled = $value;
 
-        $description = str_replace( $match, $compiled, $description );
+        $description = str_replace( $matched_expression, $compiled, $description );
       }
     }
 
