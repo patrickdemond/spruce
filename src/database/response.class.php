@@ -568,145 +568,149 @@ class response extends \cenozo\database\has_rank
 
     $db_qnaire = $this->get_qnaire();
 
-    // convert attributes
-    preg_match_all( '/@[A-Za-z0-9_]+@/', $description, $matches );
-    foreach( $matches[0] as $match )
+    // Keep converting attributes and questions until there are none left to convert
+    // This has to be done in a loop since a question's description may contain other attributes or questions
+    while( preg_match_all( '/@[A-Za-z0-9_]+@/', $description, $attribute_matches ) ||
+           preg_match_all( '/\$([A-Za-z0-9_]+)(:[A-Za-z0-9_]+|.extra\([^)]+\)|.count\(\))?\$/', $description, $question_matches ) )
     {
-      $name = substr( $match, 1, -1 );
-      $value = '';
-      $db_attribute = $attribute_class_name::get_unique_record(
-        array( 'qnaire_id', 'name' ),
-        array( $db_qnaire->id, $name )
-      );
-      if( is_null( $db_attribute ) )
+      // convert attributes
+      foreach( $attribute_matches[0] as $match )
       {
-        if( $db_qnaire->debug ) log::warning( sprintf( 'Invalid attribute "%s" found while compiling description', $name ) );
-      }
-      else
-      {
-        $db_response_attribute = $response_attribute_class_name::get_unique_record(
-          array( 'response_id', 'attribute_id' ),
-          array( $this->id, $db_attribute->id )
+        $name = substr( $match, 1, -1 );
+        $value = '';
+        $db_attribute = $attribute_class_name::get_unique_record(
+          array( 'qnaire_id', 'name' ),
+          array( $db_qnaire->id, $name )
         );
-        $value = $db_response_attribute->value;
-      }
-
-      $description = str_replace( $match, $value, $description );
-    }
-
-    // convert questions and question options
-    preg_match_all( '/\$([A-Za-z0-9_]+)(:[A-Za-z0-9_]+|.extra\([^)]+\)|.count\(\))?\$/', $description, $matches );
-    foreach( $matches[1] as $index => $question_name )
-    {
-      $matched_expression = $matches[0][$index];
-      $get_count = '.count' == $matches[2][$index];
-      $get_extra = preg_match( '/.extra\((.*)\)/', $matches[2][$index], $extra_matches ) ? $extra_matches[1] : false;
-      $get_option = preg_match( '/:([A-Za-z0-9_]+)/', $matches[2][$index], $option_matches ) ? $option_matches[1] : false;
-
-      $modifier = lib::create( 'database\modifier' );
-      $modifier->where( 'exclusive', '=', false );
-      $db_question = $db_qnaire->get_question( $question_name );
-      if( is_null( $db_question ) || in_array( $db_question->type, ['comment', 'device'] ) )
-      {
-        $warning = sprintf(
-          'Invalid question "%s" found while compiling description: %s',
-          $question_name,
-          is_null( $db_question )
-            ? 'question doesn\'t exist'
-            : sprintf( 'question type "%s" does not have a value', $db_question->type )
-        );
-        $description = str_replace(
-          $matched_expression,
-          $db_qnaire->debug ? '<b><i>WARNING: '.$warning.'</i></b>' : '',
-          $description
-        );
-        log::warning( $warning );
-      }
-      else
-      {
-        $db_answer = $answer_class_name::get_unique_record(
-          array( 'response_id', 'question_id' ),
-          array( $this->id, $db_question->id )
-        );
-        $value = is_null( $db_answer ) ? NULL : util::json_decode( $db_answer->value );
-
-        if( is_object( $value ) && property_exists( $value, 'dkna' ) && $value->dkna ) $compiled = '(no answer)';
-        else if( is_object( $value ) && property_exists( $value, 'refuse' ) && $value->refuse ) $compiled = '(no answer)';
-        else if( is_array( $value ) )
+        if( is_null( $db_attribute ) )
         {
-          if( $get_count )
+          if( $db_qnaire->debug ) log::warning( sprintf( 'Invalid attribute "%s" found while compiling description', $name ) );
+        }
+        else
+        {
+          $db_response_attribute = $response_attribute_class_name::get_unique_record(
+            array( 'response_id', 'attribute_id' ),
+            array( $this->id, $db_attribute->id )
+          );
+          $value = $db_response_attribute->value;
+        }
+
+        $description = str_replace( $match, $value, $description );
+      }
+
+      // convert questions and question options
+      foreach( $question_matches[1] as $index => $question_name )
+      {
+        $matched_expression = $question_matches[0][$index];
+        $get_count = '.count' == $question_matches[2][$index];
+        $get_extra = preg_match( '/.extra\((.*)\)/', $question_matches[2][$index], $extra_matches ) ? $extra_matches[1] : false;
+        $get_option = preg_match( '/:([A-Za-z0-9_]+)/', $question_matches[2][$index], $option_matches ) ? $option_matches[1] : false;
+
+        $modifier = lib::create( 'database\modifier' );
+        $modifier->where( 'exclusive', '=', false );
+        $db_question = $db_qnaire->get_question( $question_name );
+        if( is_null( $db_question ) || in_array( $db_question->type, ['comment', 'device'] ) )
+        {
+          $warning = sprintf(
+            'Invalid question "%s" found while compiling description: %s',
+            $question_name,
+            is_null( $db_question )
+              ? 'question doesn\'t exist'
+              : sprintf( 'question type "%s" does not have a value', $db_question->type )
+          );
+          $description = str_replace(
+            $matched_expression,
+            $db_qnaire->debug ? '<b><i>WARNING: '.$warning.'</i></b>' : '',
+            $description
+          );
+          log::warning( $warning );
+        }
+        else
+        {
+          $db_answer = $answer_class_name::get_unique_record(
+            array( 'response_id', 'question_id' ),
+            array( $this->id, $db_question->id )
+          );
+          $value = is_null( $db_answer ) ? NULL : util::json_decode( $db_answer->value );
+
+          if( is_object( $value ) && property_exists( $value, 'dkna' ) && $value->dkna ) $compiled = '(no answer)';
+          else if( is_object( $value ) && property_exists( $value, 'refuse' ) && $value->refuse ) $compiled = '(no answer)';
+          else if( is_array( $value ) )
           {
-            $compiled = count( $value );
-          }
-          else
-          {
-            $question_option_id_list = array();
-            $raw_answer_list = array();
-            foreach( $value as $option )
+            if( $get_count )
             {
-              if( $get_option || $get_extra )
+              $compiled = count( $value );
+            }
+            else
+            {
+              $question_option_id_list = array();
+              $raw_answer_list = array();
+              foreach( $value as $option )
               {
-                // we only used the matched option when getting the option's name or extra value
-                $db_question_option = lib::create( 'database\question_option', is_object( $option ) ? $option->id : $option );
-                if( $get_option == $db_question_option->name )
+                if( $get_option || $get_extra )
                 {
-                  $question_option_id_list[] = $db_question_option->id;
-                  break;
-                }
-                else if( $get_extra == $db_question_option->name )
-                {
-                  $raw_answer_list = is_array( $option->value ) ? $option->value : [$option->value];
-                  break;
-                }
-              }
-              else
-              {
-                // selected option may have additional details (so the answer is an object)
-                if( is_object( $option ) )
-                {
-                  // the option's extra data may have multiple answers (an array) or a single answer
-                  if( is_array( $option->value ) )
+                  // we only used the matched option when getting the option's name or extra value
+                  $db_question_option = lib::create( 'database\question_option', is_object( $option ) ? $option->id : $option );
+                  if( $get_option == $db_question_option->name )
                   {
-                    $raw_answer_list = array_merge( $raw_answer_list, $option->value );
+                    $question_option_id_list[] = $db_question_option->id;
+                    break;
                   }
-                  else
+                  else if( $get_extra == $db_question_option->name )
                   {
-                    $raw_answer_list[] = $option->value;
+                    $raw_answer_list = is_array( $option->value ) ? $option->value : [$option->value];
+                    break;
                   }
                 }
                 else
                 {
-                  $question_option_id_list[] = $option;
+                  // selected option may have additional details (so the answer is an object)
+                  if( is_object( $option ) )
+                  {
+                    // the option's extra data may have multiple answers (an array) or a single answer
+                    if( is_array( $option->value ) )
+                    {
+                      $raw_answer_list = array_merge( $raw_answer_list, $option->value );
+                    }
+                    else
+                    {
+                      $raw_answer_list[] = $option->value;
+                    }
+                  }
+                  else
+                  {
+                    $question_option_id_list[] = $option;
+                  }
                 }
               }
-            }
 
-            $answers = array();
-            if( 0 < count( $question_option_id_list ) )
-            {
-              // get the description of all selected options
-              $description_sel = lib::create( 'database\select' );
-              $description_sel->add_column( 'value' );
-              $description_mod = lib::create( 'database\modifier' );
-              $description_mod->where( 'question_option_id', 'IN', $question_option_id_list );
-              $description_mod->where( 'type', '=', 'prompt' );
-              $description_mod->where( 'language_id', '=', $this->language_id );
-              foreach( $question_option_description_class_name::select( $description_sel, $description_mod ) as $row )
-                $answers[] = $row['value'];
-            }
+              $answers = array();
+              if( 0 < count( $question_option_id_list ) )
+              {
+                // get the description of all selected options
+                $description_sel = lib::create( 'database\select' );
+                $description_sel->add_column( 'value' );
+                $description_mod = lib::create( 'database\modifier' );
+                $description_mod->where( 'question_option_id', 'IN', $question_option_id_list );
+                $description_mod->where( 'type', '=', 'prompt' );
+                $description_mod->where( 'language_id', '=', $this->language_id );
+                foreach( $question_option_description_class_name::select( $description_sel, $description_mod ) as $row )
+                  $answers[] = $row['value'];
+              }
 
-            // append any extra option values to the list
-            if( 0 < count( $raw_answer_list ) ) $answers = array_merge( $answers, $raw_answer_list );
-            $compiled = implode( ', ', $answers );
+              // append any extra option values to the list
+              if( 0 < count( $raw_answer_list ) ) $answers = array_merge( $answers, $raw_answer_list );
+              $compiled = implode( ', ', $answers );
+            }
           }
-        }
-        else if( is_null( $value ) ) $compiled = '';
-        else if( 'boolean' == $db_question->type ) $compiled = $value ? 'true' : 'false';
-        else if( 'audio' == $db_question->type )
-          $compiled = sprintf( '<audio controls class="full-width" style="height: 40px;" src="%s"></audio>', $value );
-        else $compiled = $value;
+          else if( is_null( $value ) ) $compiled = '';
+          else if( 'boolean' == $db_question->type ) $compiled = $value ? 'true' : 'false';
+          else if( 'audio' == $db_question->type )
+            $compiled = sprintf( '<audio controls class="full-width" style="height: 40px;" src="%s"></audio>', $value );
+          else $compiled = $value;
 
-        $description = str_replace( $matched_expression, $compiled, $description );
+          $description = str_replace( $matched_expression, $compiled, $description );
+        }
       }
     }
 
