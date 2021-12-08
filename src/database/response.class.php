@@ -570,8 +570,18 @@ class response extends \cenozo\database\has_rank
 
     // Keep converting attributes and questions until there are none left to convert
     // This has to be done in a loop since a question's description may contain other attributes or questions
-    while( preg_match_all( '/@[A-Za-z0-9_]+@/', $description, $attribute_matches ) ||
-           preg_match_all( '/\$([A-Za-z0-9_]+)(:[A-Za-z0-9_]+|.extra\([^)]+\)|.count\(\))?\$/', $description, $question_matches ) )
+    $attribute_test = preg_match_all(
+      '/@[A-Za-z0-9_]+@/',
+      $description,
+      $attribute_matches
+    );
+    $question_test = preg_match_all(
+      '/\$([A-Za-z0-9_]+)(:[A-Za-z0-9_]+|.extra\([^)]+\)|.count\(\))?\$/',
+      $description,
+      $question_matches
+    );
+
+    while( $attribute_test || $question_test )
     {
       // convert attributes
       foreach( $attribute_matches[0] as $match )
@@ -712,6 +722,18 @@ class response extends \cenozo\database\has_rank
           $description = str_replace( $matched_expression, $compiled, $description );
         }
       }
+
+      // now determine if there are more attributes or questions to decode in the description
+      $attribute_test = preg_match_all(
+        '/@[A-Za-z0-9_]+@/',
+        $description,
+        $attribute_matches
+      );
+      $question_test = preg_match_all(
+        '/\$([A-Za-z0-9_]+)(:[A-Za-z0-9_]+|.extra\([^)]+\)|.count\(\))?\$/',
+        $description,
+        $question_matches
+      );
     }
 
     return $description;
