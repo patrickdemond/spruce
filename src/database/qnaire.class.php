@@ -254,12 +254,12 @@ class qnaire extends \cenozo\database\record
     $deviation_sel->add_column( 'name' );
     $deviation_mod = lib::create( 'database\modifier' );
     $deviation_mod->order( 'deviation_type.id' );
-    foreach( $db_source_qnaire->get_deviation_type_list( $deviation_sel, $deviation_mod ) as $db_source_deviation_type )
+    foreach( $db_source_qnaire->get_deviation_type_list( $deviation_sel, $deviation_mod ) as $source_deviation_type )
     {
       $db_deviation_type = lib::create( 'database\deviation_type' );
       $db_deviation_type->qnaire_id = $this->id;
-      $db_deviation_type->type = $db_source_deviation_type->type;
-      $db_deviation_type->name = $db_source_deviation_type->name;
+      $db_deviation_type->type = $source_deviation_type['type'];
+      $db_deviation_type->name = $source_deviation_type['name'];
       $db_deviation_type->save();
     }
 
