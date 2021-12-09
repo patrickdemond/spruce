@@ -744,7 +744,7 @@ class response extends \cenozo\database\has_rank
       );
     }
 
-    foreach( $ignore_question_list as $question )
+    foreach( array_unique( $ignore_question_list ) as $question )
     {
       $description = str_replace( trim( $question, '$' ), $question, $description );
     }
