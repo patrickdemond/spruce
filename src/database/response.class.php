@@ -580,6 +580,7 @@ class response extends \cenozo\database\has_rank
       $description,
       $question_matches
     );
+    $ignore_question_list = array();
 
     while( $attribute_test || $question_test )
     {
@@ -634,6 +635,13 @@ class response extends \cenozo\database\has_rank
             $description
           );
           log::warning( $warning );
+        }
+        else if( $db_question->page_id == $this->page_id )
+        {
+          // Do not compile questions that are on the same page, let the frontend do this dynamically instead
+          // Instead, remove the $'s around the expression and put them back in after the loop is done
+          $ignore_question_list[] = $matched_expression;
+          $description = str_replace( $matched_expression, trim( $matched_expression, '$' ), $description );
         }
         else
         {
@@ -734,6 +742,11 @@ class response extends \cenozo\database\has_rank
         $description,
         $question_matches
       );
+    }
+
+    foreach( $ignore_question_list as $question )
+    {
+      $description = str_replace( trim( $question, '$' ), $question, $description );
     }
 
     return $description;
