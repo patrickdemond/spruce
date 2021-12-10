@@ -273,7 +273,7 @@ class qnaire extends \cenozo\database\record
       $db_qnaire_consent_type_confirm->save();
     }
 
-    // copy all consent confirms
+    // copy all consent triggers
     foreach( $db_source_qnaire->get_qnaire_consent_type_trigger_object_list() as $db_source_consent_type )
     {
       $db_question = $this->get_question( $db_source_consent_type->get_question()->name );
@@ -284,6 +284,18 @@ class qnaire extends \cenozo\database\record
       $db_qnaire_consent_type_trigger->answer_value = $db_source_consent_type->answer_value;
       $db_qnaire_consent_type_trigger->accept = $db_source_consent_type->accept;
       $db_qnaire_consent_type_trigger->save();
+    }
+
+    // copy all proxy triggers
+    foreach( $db_source_qnaire->get_qnaire_proxy_type_trigger_object_list() as $db_source_proxy_type )
+    {
+      $db_question = $this->get_question( $db_source_proxy_type->get_question()->name );
+      $db_qnaire_proxy_type_trigger = lib::create( 'database\qnaire_proxy_type_trigger' );
+      $db_qnaire_proxy_type_trigger->qnaire_id = $this->id;
+      $db_qnaire_proxy_type_trigger->proxy_type_id = $db_source_proxy_type->proxy_type_id;
+      $db_qnaire_proxy_type_trigger->question_id = $db_question->id;
+      $db_qnaire_proxy_type_trigger->answer_value = $db_source_proxy_type->answer_value;
+      $db_qnaire_proxy_type_trigger->save();
     }
 
     // now copy the descriptions
@@ -618,6 +630,7 @@ class qnaire extends \cenozo\database\record
     if( is_null( PARENT_INSTANCE_URL ) ) return;
 
     $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
+    $proxy_type_class_name = lib::get_class_name( 'database\proxy_type' );
     $role_class_name = lib::get_class_name( 'database\role' );
 
     // update the consent type list
@@ -692,6 +705,84 @@ class qnaire extends \cenozo\database\record
         {
           $db_role = $role_class_name::get_unique_record( 'name', $role );
           if( !is_null( $db_role ) ) $db_consent_type->add_role( $db_role->id );
+        }
+      }
+    }
+
+    // update the proxy type list
+    $select = lib::create( 'database\select' );
+    $select->add_column( 'name' );
+    $select->add_column( 'description' );
+    $select->add_column( 'prompt' );
+    $select->add_column( 'role_list' );
+
+    $url = sprintf( '%s/api/proxy_type?select={"column":["name","description","prompt","role_list"]}', PARENT_INSTANCE_URL );
+    $curl = curl_init();
+    curl_setopt( $curl, CURLOPT_URL, $url );
+    curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
+    curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+    curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, 5 );
+    curl_setopt(
+      $curl,
+      CURLOPT_HTTPHEADER,
+      array( sprintf(
+        'Authorization: Basic %s',
+        base64_encode( sprintf( '%s:%s', $this->beartooth_username, $this->beartooth_password ) )
+      ) )
+    );
+
+    $response = curl_exec( $curl );
+    if( curl_errno( $curl ) )
+    {
+      throw lib::create( 'exception\runtime',
+        sprintf( 'Got error code %s when synchronizing proxy types with parent instance.  Message: %s',
+                 curl_errno( $curl ),
+                 curl_error( $curl ) ),
+        __METHOD__
+      );
+    }
+
+    $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
+    if( 401 == $code )
+    {
+      throw lib::create( 'exception\notice',
+        'Unable to synchronize, invalid Beartooth username and/or password.',
+        __METHOD__
+      );
+    }
+    else if( 306 == $code )
+    {
+      throw lib::create( 'exception\notice',
+        sprintf( "Parent Pine instance responded with the following notice\n\n\"%s\"", util::json_decode($response ) ),
+        __METHOD__
+      );
+    }
+    else if( 300 <= $code )
+    {
+      throw lib::create( 'exception\runtime',
+        sprintf( 'Got error code %s when synchronizing proxy types with parent instance.', $code ),
+        __METHOD__
+      );
+    }
+    else
+    {
+      foreach( util::json_decode( $response ) as $proxy_type )
+      {
+        // see if the proxy type exists and create it if it doesn't
+        $db_proxy_type = $proxy_type_class_name::get_unique_record( 'name', $proxy_type->name );
+        if( is_null( $db_proxy_type ) ) $db_proxy_type = lib::create( 'database\proxy_type' );
+
+        $db_proxy_type->name = $proxy_type->name;
+        $db_proxy_type->description = $proxy_type->description;
+        $db_proxy_type->prompt = $proxy_type->prompt;
+        $db_proxy_type->save();
+
+        // replace all role access
+        $db_proxy_type->remove_role( NULL );
+        foreach( preg_split( '/, */', $proxy_type->role_list ) as $role )
+        {
+          $db_role = $role_class_name::get_unique_record( 'name', $role );
+          if( !is_null( $db_role ) ) $db_proxy_type->add_role( $db_role->id );
         }
       }
     }
@@ -939,6 +1030,29 @@ class qnaire extends \cenozo\database\record
       }
 
       if( 0 < count( $consent_list ) ) $participant['consent_list'] = $consent_list;
+
+      // add any proxy trigger records
+      $proxy_list = array();
+      $proxy_sel = lib::create( 'database\select' );
+      $proxy_sel->add_table_column( 'proxy_type', 'name' );
+      $proxy_sel->add_table_column( 'proxy', 'datetime' );
+      $proxy_mod = lib::create( 'database\modifier' );
+      $proxy_mod->join( 'proxy_type', 'qnaire_proxy_type_trigger.proxy_type_id', 'proxy_type.id' );
+      $join_mod = lib::create( 'database\modifier' );
+      $join_mod->where( 'proxy_type.id', '=', 'participant_last_proxy.proxy_type_id', false );
+      $join_mod->where( 'participant_last_proxy.participant_id', '=', $db_participant->id );
+      $proxy_mod->join_modifier( 'participant_last_proxy', $join_mod );
+      $proxy_mod->join( 'proxy', 'participant_last_proxy.proxy_id', 'proxy.id' );
+      foreach( $this->get_qnaire_proxy_type_trigger_list( $proxy_sel, $proxy_mod ) as $proxy )
+      {
+        $proxy_list[] = array(
+          'name' => $proxy['name'],
+          'datetime' => $proxy['datetime'],
+          'type' => 'trigger'
+        );
+      }
+
+      if( 0 < count( $proxy_list ) ) $participant['proxy_list'] = $proxy_list;
 
       $respondent = array(
         'uid' => $db_participant->uid,
@@ -1932,8 +2046,10 @@ class qnaire extends \cenozo\database\record
     $deviation_type_class_name = lib::get_class_name( 'database\deviation_type' );
     $reminder_description_class_name = lib::get_class_name( 'database\reminder_description' );
     $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
+    $proxy_type_class_name = lib::get_class_name( 'database\proxy_type' );
     $qnaire_consent_type_confirm_class_name = lib::get_class_name( 'database\qnaire_consent_type_confirm' );
     $qnaire_consent_type_trigger_class_name = lib::get_class_name( 'database\qnaire_consent_type_trigger' );
+    $qnaire_proxy_type_trigger_class_name = lib::get_class_name( 'database\qnaire_proxy_type_trigger' );
     $qnaire_description_class_name = lib::get_class_name( 'database\qnaire_description' );
     $module_class_name = lib::get_class_name( 'database\module' );
     $stage_class_name = lib::get_class_name( 'database\stage' );
@@ -1944,6 +2060,7 @@ class qnaire extends \cenozo\database\record
     $name_suffix = bin2hex( openssl_random_pseudo_bytes( 5 ) );
 
     $difference_list = array();
+    $change_question_name_list = array();
 
     foreach( $patch_object as $property => $value )
     {
@@ -2596,6 +2713,30 @@ class qnaire extends \cenozo\database\record
         if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
         if( 0 < count( $diff_list ) ) $difference_list['module_list'] = $diff_list;
+
+        // get a list of all questions with new names (used by other properties)
+        if( array_key_exists( 'module_list', $difference_list ) && array_key_exists( 'change', $difference_list['module_list'] ) )
+        {
+          foreach( $difference_list['module_list']['change'] as $module_change )
+          {
+            if( property_exists( $module_change, 'page_list' ) && array_key_exists( 'change', $module_change->page_list ) )
+            {
+              foreach( $module_change->page_list['change'] as $page_change )
+              {
+                if( property_exists( $page_change, 'question_list' ) && array_key_exists( 'change', $page_change->question_list ) )
+                {
+                  foreach( $page_change->question_list['change'] as $old_name => $question_change )
+                  {
+                    if( property_exists( $question_change, 'name' ) )
+                    {
+                      $change_question_name_list[$question_change->name] = $old_name;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
       else if( 'stage_list' == $property )
       {
@@ -2747,31 +2888,6 @@ class qnaire extends \cenozo\database\record
       }
       else if( 'qnaire_consent_type_trigger_list' == $property )
       {
-        // get a list of all questions with new names
-        $change_question_name_list = array();
-        if( array_key_exists( 'module_list', $difference_list ) && array_key_exists( 'change', $difference_list['module_list'] ) )
-        {
-          foreach( $difference_list['module_list']['change'] as $module_change )
-          {
-            if( property_exists( $module_change, 'page_list' ) && array_key_exists( 'change', $module_change->page_list ) )
-            {
-              foreach( $module_change->page_list['change'] as $page_change )
-              {
-                if( property_exists( $page_change, 'question_list' ) && array_key_exists( 'change', $page_change->question_list ) )
-                {
-                  foreach( $page_change->question_list['change'] as $old_name => $question_change )
-                  {
-                    if( property_exists( $question_change, 'name' ) )
-                    {
-                      $change_question_name_list[$question_change->name] = $old_name;
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-
         // check every item in the patch object for additions and changes
         $add_list = array();
         $change_list = array();
@@ -2896,6 +3012,137 @@ class qnaire extends \cenozo\database\record
         if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
         if( 0 < count( $diff_list ) ) $difference_list['qnaire_consent_type_trigger_list'] = $diff_list;
+      }
+      else if( 'qnaire_proxy_type_trigger_list' == $property )
+      {
+        // check every item in the patch object for additions and changes
+        $add_list = array();
+        $change_list = array();
+        foreach( $patch_object->qnaire_proxy_type_trigger_list as $qnaire_proxy_type_trigger )
+        {
+          $db_proxy_type = $qnaire_proxy_type_trigger->proxy_type_name
+                         ? $proxy_type_class_name::get_unique_record( 'name', $qnaire_proxy_type_trigger->proxy_type_name )
+                         : NULL;
+
+          if( is_null( $db_proxy_type ) && $qnaire_proxy_type_trigger->proxy_type_name )
+          {
+            if( !$apply )
+            {
+              $error = new \stdClass();
+              $error->WARNING = sprintf(
+                'Consent Trigger for "%s" will be ignore since the proxy type does not exist.',
+                $qnaire_proxy_type_trigger->proxy_type_name
+              );
+              $add_list[] = $error;
+            }
+          }
+          else
+          {
+            $db_question = $this->get_question(
+              array_key_exists( $qnaire_proxy_type_trigger->question_name, $change_question_name_list ) ?
+              $change_question_name_list[$qnaire_proxy_type_trigger->question_name] :
+              $qnaire_proxy_type_trigger->question_name
+            );
+
+            // check to see if the question has been renamed as part of the applied patch
+            if( $apply && is_null( $db_question ) )
+              $db_question = $this->get_question( sprintf( '%s_%s', $qnaire_proxy_type_trigger->question_name, $name_suffix ) );
+
+            $db_qnaire_proxy_type_trigger = $qnaire_proxy_type_trigger_class_name::get_unique_record(
+              array( 'qnaire_id', 'proxy_type_id', 'question_id' ),
+              array( $this->id, is_null( $db_proxy_type ) ? NULL : $db_proxy_type->id, $db_question->id )
+            );
+
+            if( is_null( $db_qnaire_proxy_type_trigger ) )
+            {
+              if( $apply )
+              {
+                $db_qnaire_proxy_type_trigger = lib::create( 'database\qnaire_proxy_type_trigger' );
+                $db_qnaire_proxy_type_trigger->qnaire_id = $this->id;
+                $db_qnaire_proxy_type_trigger->proxy_type_id = is_null( $db_proxy_type ) ? NULL : $db_proxy_type->id;
+                $db_qnaire_proxy_type_trigger->question_id = $db_question->id;
+                $db_qnaire_proxy_type_trigger->answer_value = $qnaire_proxy_type_trigger->answer_value;
+                $db_qnaire_proxy_type_trigger->save();
+              }
+              else
+              {
+                // if the proxy type name is an empty string then show (empty) instead
+                if( !$qnaire_proxy_type_trigger->proxy_type_name ) $qnaire_proxy_type_trigger->proxy_type_name = '(empty)';
+                $add_list[] = $qnaire_proxy_type_trigger;
+              }
+            }
+            else
+            {
+              // find and add all differences
+              $diff = array();
+              foreach( $qnaire_proxy_type_trigger as $property => $value )
+                if( !in_array( $property, [ 'proxy_type_name', 'question_name' ] ) &&
+                    $db_qnaire_proxy_type_trigger->$property != $qnaire_proxy_type_trigger->$property )
+                  $diff[$property] = $qnaire_proxy_type_trigger->$property;
+
+              if( 0 < count( $diff ) )
+              {
+                if( $apply )
+                {
+                  $db_qnaire_proxy_type_trigger->answer_value = $qnaire_proxy_type_trigger->answer_value;
+                  $db_qnaire_proxy_type_trigger->save();
+                }
+                else
+                {
+                  $index = sprintf(
+                    '%s [%s]',
+                    $qnaire_proxy_type_trigger->proxy_type_name ? $qnaire_proxy_type_trigger->proxy_type_name : '(empty)',
+                    $qnaire_proxy_type_trigger->question_name
+                  );
+                  $change_list[$index] = $diff;
+                }
+              }
+            }
+          }
+        }
+
+        // check every item in this object for removals
+        $remove_list = array();
+        foreach( $this->get_qnaire_proxy_type_trigger_object_list() as $db_qnaire_proxy_type_trigger )
+        {
+          $db_proxy_type = $db_qnaire_proxy_type_trigger->get_proxy_type();
+          $proxy_type_name = is_null( $db_proxy_type ) ? '' : $db_proxy_type->name;
+          $changed_name = array_search( $db_qnaire_proxy_type_trigger->get_question()->name, $change_question_name_list );
+          $question_name = $changed_name ? $changed_name : $db_qnaire_proxy_type_trigger->get_question()->name;
+          if( $apply ) $question_name = preg_replace( sprintf( '/_%s$/', $name_suffix ), '', $question_name );
+
+          $found = false;
+          foreach( $patch_object->qnaire_proxy_type_trigger_list as $qnaire_proxy_type_trigger )
+          {
+            // see if the qnaire_proxy_type_trigger exists
+            if( ( $proxy_type_name == $qnaire_proxy_type_trigger->proxy_type_name &&
+                  $question_name == $qnaire_proxy_type_trigger->question_name ) )
+            {
+              $found = true;
+              break;
+            }
+          }
+
+          if( !$found )
+          {
+            if( $apply ) $db_qnaire_proxy_type_trigger->delete();
+            else
+            {
+              $index = sprintf(
+                '%s [%s]',
+                $proxy_type_name ? $proxy_type_name : '(empty)',
+                $question_name
+              );
+              $remove_list[] = $index;
+            }
+          }
+        }
+
+        $diff_list = array();
+        if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
+        if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
+        if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
+        if( 0 < count( $diff_list ) ) $difference_list['qnaire_proxy_type_trigger_list'] = $diff_list;
       }
       else
       {
@@ -3230,23 +3477,33 @@ class qnaire extends \cenozo\database\record
       foreach( $this->get_stage_list( $stage_sel, $stage_mod ) as $item ) $qnaire_data['stage_list'][] = $item;
     }
 
-    $qnaire_confirm_sel = lib::create( 'database\select' );
-    $qnaire_confirm_sel->add_table_column( 'consent_type', 'name', 'consent_type_name' );
-    $qnaire_confirm_mod = lib::create( 'database\modifier' );
-    $qnaire_confirm_mod->join( 'consent_type', 'qnaire_consent_type_confirm.consent_type_id', 'consent_type.id' );
-    foreach( $this->get_qnaire_consent_type_confirm_list( $qnaire_confirm_sel, $qnaire_confirm_mod ) as $item )
+    $qnaire_cconfirm_sel = lib::create( 'database\select' );
+    $qnaire_cconfirm_sel->add_table_column( 'consent_type', 'name', 'consent_type_name' );
+    $qnaire_cconfirm_mod = lib::create( 'database\modifier' );
+    $qnaire_cconfirm_mod->join( 'consent_type', 'qnaire_consent_type_confirm.consent_type_id', 'consent_type.id' );
+    foreach( $this->get_qnaire_consent_type_confirm_list( $qnaire_cconfirm_sel, $qnaire_cconfirm_mod ) as $item )
       $qnaire_data['qnaire_consent_type_confirm_list'][] = $item;
 
-    $qnaire_trigger_sel = lib::create( 'database\select' );
-    $qnaire_trigger_sel->add_table_column( 'consent_type', 'name', 'consent_type_name' );
-    $qnaire_trigger_sel->add_table_column( 'question', 'name', 'question_name' );
-    $qnaire_trigger_sel->add_column( 'answer_value' );
-    $qnaire_trigger_sel->add_column( 'accept' );
-    $qnaire_trigger_mod = lib::create( 'database\modifier' );
-    $qnaire_trigger_mod->join( 'consent_type', 'qnaire_consent_type_trigger.consent_type_id', 'consent_type.id' );
-    $qnaire_trigger_mod->join( 'question', 'qnaire_consent_type_trigger.question_id', 'question.id' );
-    foreach( $this->get_qnaire_consent_type_trigger_list( $qnaire_trigger_sel, $qnaire_trigger_mod ) as $item )
+    $qnaire_ctrigger_sel = lib::create( 'database\select' );
+    $qnaire_ctrigger_sel->add_table_column( 'consent_type', 'name', 'consent_type_name' );
+    $qnaire_ctrigger_sel->add_table_column( 'question', 'name', 'question_name' );
+    $qnaire_ctrigger_sel->add_column( 'answer_value' );
+    $qnaire_ctrigger_sel->add_column( 'accept' );
+    $qnaire_ctrigger_mod = lib::create( 'database\modifier' );
+    $qnaire_ctrigger_mod->join( 'consent_type', 'qnaire_consent_type_trigger.consent_type_id', 'consent_type.id' );
+    $qnaire_ctrigger_mod->join( 'question', 'qnaire_consent_type_trigger.question_id', 'question.id' );
+    foreach( $this->get_qnaire_consent_type_trigger_list( $qnaire_ctrigger_sel, $qnaire_ctrigger_mod ) as $item )
       $qnaire_data['qnaire_consent_type_trigger_list'][] = $item;
+
+    $qnaire_ptrigger_sel = lib::create( 'database\select' );
+    $qnaire_ptrigger_sel->add_column( 'IFNULL( proxy_type.name, "" )', 'proxy_type_name', false );
+    $qnaire_ptrigger_sel->add_table_column( 'question', 'name', 'question_name' );
+    $qnaire_ptrigger_sel->add_column( 'answer_value' );
+    $qnaire_ptrigger_mod = lib::create( 'database\modifier' );
+    $qnaire_ptrigger_mod->left_join( 'proxy_type', 'qnaire_proxy_type_trigger.proxy_type_id', 'proxy_type.id' );
+    $qnaire_ptrigger_mod->join( 'question', 'qnaire_proxy_type_trigger.question_id', 'question.id' );
+    foreach( $this->get_qnaire_proxy_type_trigger_list( $qnaire_ptrigger_sel, $qnaire_ptrigger_mod ) as $item )
+      $qnaire_data['qnaire_proxy_type_trigger_list'][] = $item;
 
     if( 'export' == $type )
     {
@@ -3413,6 +3670,7 @@ class qnaire extends \cenozo\database\record
   {
     $language_class_name = lib::get_class_name( 'database\language' );
     $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
+    $proxy_type_class_name = lib::get_class_name( 'database\proxy_type' );
     $module_class_name = lib::get_class_name( 'database\module' );
     $device_class_name = lib::get_class_name( 'database\device' );
 
@@ -3686,6 +3944,33 @@ class qnaire extends \cenozo\database\record
       $db_qnaire_consent_type_trigger->answer_value = $qnaire_consent_type_trigger->answer_value;
       $db_qnaire_consent_type_trigger->accept = $qnaire_consent_type_trigger->accept;
       $db_qnaire_consent_type_trigger->save();
+    }
+
+    foreach( $qnaire_object->qnaire_proxy_type_trigger_list as $qnaire_proxy_type_trigger )
+    {
+      $db_proxy_type = NULL;
+      if( $qnaire_proxy_type_trigger->proxy_type_name )
+      {
+        $db_proxy_type = $proxy_type_class_name::get_unique_record( 'name', $qnaire_proxy_type_trigger->proxy_type_name );
+        if( is_null( $db_proxy_type ) )
+        {
+          throw lib::create( 'exception\notice',
+            sprintf(
+              'Unable to import questionnaire since it has a proxy trigger for proxy type "%s" which does not exist.',
+              $qnaire_proxy_type_trigger->proxy_type_name
+            ),
+            __METHOD__
+          );
+        }
+      }
+
+      $db_question = $db_qnaire->get_question( $qnaire_proxy_type_trigger->question_name );
+      $db_qnaire_proxy_type_trigger = lib::create( 'database\qnaire_proxy_type_trigger' );
+      $db_qnaire_proxy_type_trigger->qnaire_id = $db_qnaire->id;
+      $db_qnaire_proxy_type_trigger->proxy_type_id = is_null( $db_proxy_type ) ? NULL : $db_proxy_type->id;
+      $db_qnaire_proxy_type_trigger->question_id = $db_question->id;
+      $db_qnaire_proxy_type_trigger->answer_value = $qnaire_proxy_type_trigger->answer_value;
+      $db_qnaire_proxy_type_trigger->save();
     }
 
     if( $qnaire_object->readonly )

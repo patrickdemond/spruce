@@ -17,7 +17,20 @@ CREATE PROCEDURE patch_role_has_service()
       "SELECT role.id, service.id ",
       "FROM ", @cenozo, ".role, service ",
       "WHERE role.name = 'administrator' ",
-      "AND service.subject = 'image' ",
+      "AND service.subject IN( 'image', 'proxy', 'proxy_type', 'qnaire_proxy_type_trigger' ) ",
+      "AND service.restricted = 1"
+    );
+    PREPARE statement FROM @sql;
+    EXECUTE statement;
+    DEALLOCATE PREPARE statement;
+
+    -- interviewer
+    SET @sql = CONCAT(
+      "INSERT IGNORE INTO role_has_service( role_id, service_id ) ",
+      "SELECT role.id, service.id ",
+      "FROM ", @cenozo, ".role, service ",
+      "WHERE role.name = 'interviewer' ",
+      "AND service.subject = 'proxy' ",
       "AND service.restricted = 1"
     );
     PREPARE statement FROM @sql;

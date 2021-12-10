@@ -1,4 +1,4 @@
-cenozoApp.defineModule( { name: 'qnaire_consent_type_trigger', models: ['add', 'list', 'view'], create: module => {
+cenozoApp.defineModule( { name: 'qnaire_proxy_type_trigger', models: ['add', 'list', 'view'], create: module => {
 
   angular.extend( module, {
     identifier: {
@@ -8,14 +8,14 @@ cenozoApp.defineModule( { name: 'qnaire_consent_type_trigger', models: ['add', '
       }
     },
     name: {
-      singular: 'consent trigger',
-      plural: 'consent triggers',
-      possessive: 'consent trigger\'s'
+      singular: 'proxy trigger',
+      plural: 'proxy triggers',
+      possessive: 'proxy trigger\'s'
     },
     columnList: {
-      consent_type: {
-        title: 'Consent Type',
-        column: 'consent_type.name'
+      proxy_type: {
+        title: 'Proxy Type',
+        column: 'proxy_type.name'
       },
       question: {
         title: 'Question',
@@ -23,10 +23,6 @@ cenozoApp.defineModule( { name: 'qnaire_consent_type_trigger', models: ['add', '
       },
       answer_value: {
         title: 'Required Answer'
-      },
-      accept: {
-        title: 'Consent Accept',
-        type: 'boolean'
       }
     },
     defaultOrder: {
@@ -36,8 +32,8 @@ cenozoApp.defineModule( { name: 'qnaire_consent_type_trigger', models: ['add', '
   } );
 
   module.addInputGroup( '', {
-    consent_type_id: {
-      title: 'Consent Type',
+    proxy_type_id: {
+      title: 'Proxy Type',
       type: 'enum'
     },
     question_id: {
@@ -57,15 +53,11 @@ cenozoApp.defineModule( { name: 'qnaire_consent_type_trigger', models: ['add', '
       title: 'Required Answer',
       type: 'string'
     },
-    accept: {
-      title: 'Consent Accept',
-      type: 'boolean'
-    },
     qnaire_id: { column: 'qnaire.id', type: 'hidden' }
   } );
 
   /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnQnaireConsentTypeTriggerAddFactory', [
+  cenozo.providers.factory( 'CnQnaireProxyTypeTriggerAddFactory', [
     'CnBaseAddFactory',
     function( CnBaseAddFactory ) {
       var object = function( parentModel ) {
@@ -85,7 +77,7 @@ cenozoApp.defineModule( { name: 'qnaire_consent_type_trigger', models: ['add', '
   ] );
 
   /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnQnaireConsentTypeTriggerViewFactory', [
+  cenozo.providers.factory( 'CnQnaireProxyTypeTriggerViewFactory', [
     'CnBaseViewFactory',
     function( CnBaseViewFactory ) {
       var object = function( parentModel, root ) {
@@ -104,32 +96,32 @@ cenozoApp.defineModule( { name: 'qnaire_consent_type_trigger', models: ['add', '
   ] );
 
   /* ######################################################################################################## */
-  cenozo.providers.factory( 'CnQnaireConsentTypeTriggerModelFactory', [
+  cenozo.providers.factory( 'CnQnaireProxyTypeTriggerModelFactory', [
     'CnBaseModelFactory',
-    'CnQnaireConsentTypeTriggerAddFactory', 'CnQnaireConsentTypeTriggerListFactory', 'CnQnaireConsentTypeTriggerViewFactory',
+    'CnQnaireProxyTypeTriggerAddFactory', 'CnQnaireProxyTypeTriggerListFactory', 'CnQnaireProxyTypeTriggerViewFactory',
     'CnHttpFactory',
     function( CnBaseModelFactory,
-              CnQnaireConsentTypeTriggerAddFactory, CnQnaireConsentTypeTriggerListFactory, CnQnaireConsentTypeTriggerViewFactory,
+              CnQnaireProxyTypeTriggerAddFactory, CnQnaireProxyTypeTriggerListFactory, CnQnaireProxyTypeTriggerViewFactory,
               CnHttpFactory ) {
       var object = function( root ) {
         CnBaseModelFactory.construct( this, module );
-        this.addModel = CnQnaireConsentTypeTriggerAddFactory.instance( this );
-        this.listModel = CnQnaireConsentTypeTriggerListFactory.instance( this );
-        this.viewModel = CnQnaireConsentTypeTriggerViewFactory.instance( this, root );
+        this.addModel = CnQnaireProxyTypeTriggerAddFactory.instance( this );
+        this.listModel = CnQnaireProxyTypeTriggerListFactory.instance( this );
+        this.viewModel = CnQnaireProxyTypeTriggerViewFactory.instance( this, root );
 
         // extend getMetadata
         this.getMetadata = async function() {
           await this.$$getMetadata();
           
           var response = await CnHttpFactory.instance( {
-            path: 'consent_type',
+            path: 'proxy_type',
             data: {
               select: { column: [ 'id', 'name' ] },
               modifier: { order: 'name', limit: 1000 }
             }
           } ).query();
 
-          this.metadata.columnList.consent_type_id.enumList = response.data.reduce( ( list, item ) => {
+          this.metadata.columnList.proxy_type_id.enumList = response.data.reduce( ( list, item ) => {
             list.push( { value: item.id, name: item.name } );
             return list;
           }, [] );
