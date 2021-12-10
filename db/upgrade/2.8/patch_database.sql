@@ -7,6 +7,7 @@ SOURCE table_character_sets.sql
 SOURCE image.sql
 SOURCE question.sql
 SOURCE qnaire_proxy_type_trigger.sql
+SOURCE module.sql
 SOURCE service.sql
 SOURCE role_has_service.sql
 

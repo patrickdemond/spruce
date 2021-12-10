@@ -53,6 +53,18 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
+   * Override the parent method
+   */
+  public function delete()
+  {
+    // if we have stages we have to explicitly delete them because of database constraint on-delete voodoo
+    $delete_mod = lib::create( 'database\modifier' );
+    $delete_mod->where( 'qnaire_id', '=', $this->id );
+    static::db()->execute( sprintf( 'DELETE FROM stage %s', $delete_mod->get_sql() ) );
+    parent::delete();
+  }
+
+  /**
    * Returns the qnaire's first module
    * @return database\module
    */
@@ -3267,7 +3279,8 @@ class qnaire extends \cenozo\database\record
       'qnaire_description_list' => array(),
       'module_list' => array(),
       'qnaire_consent_type_confirm_list' => array(),
-      'qnaire_consent_type_trigger_list' => array()
+      'qnaire_consent_type_trigger_list' => array(),
+      'qnaire_proxy_type_trigger_list' => array()
     );
 
     if( $this->stages )
