@@ -1,6 +1,11 @@
 SELECT "Adding new services" AS "";
 
 INSERT IGNORE INTO service ( subject, method, resource, restricted ) VALUES
+( 'alternate_consent_type', 'DELETE', 1, 1 ),
+( 'alternate_consent_type', 'GET', 0, 0 ),
+( 'alternate_consent_type', 'GET', 1, 0 ),
+( 'alternate_consent_type', 'PATCH', 1, 1 ),
+( 'alternate_consent_type', 'POST', 0, 1 ),
 ( 'country', 'GET', 0, 0 ),
 ( 'country', 'GET', 1, 0 ),
 ( 'image', 'DELETE', 1, 1 ),
@@ -17,6 +22,11 @@ INSERT IGNORE INTO service ( subject, method, resource, restricted ) VALUES
 ( 'proxy_type', 'GET', 1, 0 ),
 ( 'proxy_type', 'PATCH', 1, 1 ),
 ( 'proxy_type', 'POST', 0, 1 ),
+( 'qnaire_alternate_consent_type_trigger', 'DELETE', 1, 1 ),
+( 'qnaire_alternate_consent_type_trigger', 'GET', 0, 1 ),
+( 'qnaire_alternate_consent_type_trigger', 'GET', 1, 1 ),
+( 'qnaire_alternate_consent_type_trigger', 'PATCH', 1, 1 ),
+( 'qnaire_alternate_consent_type_trigger', 'POST', 0, 1 ),
 ( 'qnaire_proxy_type_trigger', 'DELETE', 1, 1 ),
 ( 'qnaire_proxy_type_trigger', 'GET', 0, 1 ),
 ( 'qnaire_proxy_type_trigger', 'GET', 1, 1 ),

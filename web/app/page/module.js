@@ -330,6 +330,7 @@ cenozoApp.defineModule( { name: 'page',
           deviationTypeList: null,
           languageList: null,
           showHidden: false,
+          alternateId: null,
           focusQuestionId: null,
           hotKeyDisabled: false,
           upperDigitsActivated: false,
@@ -544,6 +545,10 @@ cenozoApp.defineModule( { name: 'page',
                             : angular.isDefined( $state.params.show_hidden )
                             ? $state.params.show_hidden
                             : false;
+
+            this.alternateId = angular.isDefined( $state.params.alternate_id )
+                             ? $state.params.alternate_id
+                             : null;
 
             if( !this.previewMode ) {
               angular.extend( this, {
@@ -1333,7 +1338,10 @@ cenozoApp.defineModule( { name: 'page',
                       var self = this;
                       await CnHttpFactory.instance( {
                         path: 'answer/' + question.answer_id,
-                        data: { value: angular.toJson( valueForPatch ) },
+                        data: {
+                          value: angular.toJson( valueForPatch ),
+                          alternate_id: this.alternateId
+                        },
                         onError: function( error ) {
                           question.value = angular.copy( question.backupValue );
                           self.convertValueToModel( question );

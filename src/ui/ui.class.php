@@ -84,6 +84,7 @@ class ui extends \cenozo\ui\ui
       $module->add_child( 'attribute' );
       $module->add_child( 'qnaire_consent_type_confirm' );
       $module->add_child( 'qnaire_consent_type_trigger' );
+      $module->add_child( 'qnaire_alternate_consent_type_trigger' );
       $module->add_child( 'qnaire_proxy_type_trigger' );
       $module->add_child( 'stage' );
       $module->add_child( 'device' );
@@ -105,7 +106,7 @@ class ui extends \cenozo\ui\ui
     {
       $module->add_child( 'response' );
       $module->add_child( 'respondent_mail' );
-      $module->add_action( 'run', '/{token}?{show_hidden}' );
+      $module->add_action( 'run', '/{token}?{show_hidden}&{alternate_id}' );
 
       // add response children and actions here in case the qnaire is only done once
       $module->add_child( 'response_stage' );
@@ -147,6 +148,7 @@ class ui extends \cenozo\ui\ui
       $module->add_child( 'question_description' );
       $module->add_child( 'question_option' );
       $module->add_child( 'qnaire_consent_type_trigger' );
+      $module->add_child( 'qnaire_alternate_consent_type_trigger' );
       $module->add_child( 'qnaire_proxy_type_trigger' );
       $module->add_action( 'clone', '/{identifier}' );
     }
@@ -160,7 +162,7 @@ class ui extends \cenozo\ui\ui
   }
 
   /**
-   * Extends the parent method
+   * Extends the parent methodNN
    */
   protected function build_listitem_list()
   {

@@ -298,6 +298,19 @@ class qnaire extends \cenozo\database\record
       $db_qnaire_consent_type_trigger->save();
     }
 
+    // copy all alternate consent triggers
+    foreach( $db_source_qnaire->get_qnaire_alternate_consent_type_trigger_object_list() as $db_source_aconsent_type )
+    {
+      $db_question = $this->get_question( $db_source_aconsent_type->get_question()->name );
+      $db_qnaire_aconsent_type_trigger = lib::create( 'database\qnaire_alternate_consent_type_trigger' );
+      $db_qnaire_aconsent_type_trigger->qnaire_id = $this->id;
+      $db_qnaire_aconsent_type_trigger->alternate_consent_type_id = $db_source_aconsent_type->alternate_consent_type_id;
+      $db_qnaire_aconsent_type_trigger->question_id = $db_question->id;
+      $db_qnaire_aconsent_type_trigger->answer_value = $db_source_aconsent_type->answer_value;
+      $db_qnaire_aconsent_type_trigger->accept = $db_source_aconsent_type->accept;
+      $db_qnaire_aconsent_type_trigger->save();
+    }
+
     // copy all proxy triggers
     foreach( $db_source_qnaire->get_qnaire_proxy_type_trigger_object_list() as $db_source_proxy_type )
     {
@@ -642,6 +655,7 @@ class qnaire extends \cenozo\database\record
     if( is_null( PARENT_INSTANCE_URL ) ) return;
 
     $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
+    $alternate_consent_type_class_name = lib::get_class_name( 'database\alternate_consent_type' );
     $proxy_type_class_name = lib::get_class_name( 'database\proxy_type' );
     $role_class_name = lib::get_class_name( 'database\role' );
 
@@ -717,6 +731,82 @@ class qnaire extends \cenozo\database\record
         {
           $db_role = $role_class_name::get_unique_record( 'name', $role );
           if( !is_null( $db_role ) ) $db_consent_type->add_role( $db_role->id );
+        }
+      }
+    }
+
+    // update the alternate consent type list
+    $select = lib::create( 'database\select' );
+    $select->add_column( 'name' );
+    $select->add_column( 'description' );
+    $select->add_column( 'role_list' );
+
+    $url = sprintf( '%s/api/alternate_consent_type?select={"column":["name","description","role_list"]}', PARENT_INSTANCE_URL );
+    $curl = curl_init();
+    curl_setopt( $curl, CURLOPT_URL, $url );
+    curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
+    curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+    curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, 5 );
+    curl_setopt(
+      $curl,
+      CURLOPT_HTTPHEADER,
+      array( sprintf(
+        'Authorization: Basic %s',
+        base64_encode( sprintf( '%s:%s', $this->beartooth_username, $this->beartooth_password ) )
+      ) )
+    );
+
+    $response = curl_exec( $curl );
+    if( curl_errno( $curl ) )
+    {
+      throw lib::create( 'exception\runtime',
+        sprintf( 'Got error code %s when synchronizing alternate_consent types with parent instance.  Message: %s',
+                 curl_errno( $curl ),
+                 curl_error( $curl ) ),
+        __METHOD__
+      );
+    }
+
+    $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
+    if( 401 == $code )
+    {
+      throw lib::create( 'exception\notice',
+        'Unable to synchronize, invalid Beartooth username and/or password.',
+        __METHOD__
+      );
+    }
+    else if( 306 == $code )
+    {
+      throw lib::create( 'exception\notice',
+        sprintf( "Parent Pine instance responded with the following notice\n\n\"%s\"", util::json_decode($response ) ),
+        __METHOD__
+      );
+    }
+    else if( 300 <= $code )
+    {
+      throw lib::create( 'exception\runtime',
+        sprintf( 'Got error code %s when synchronizing alternate_consent types with parent instance.', $code ),
+        __METHOD__
+      );
+    }
+    else
+    {
+      foreach( util::json_decode( $response ) as $alternate_consent_type )
+      {
+        // see if the alternate_consent type exists and create it if it doesn't
+        $db_aconsent_type = $alternate_consent_type_class_name::get_unique_record( 'name', $alternate_consent_type->name );
+        if( is_null( $db_aconsent_type ) ) $db_aconsent_type = lib::create( 'database\alternate_consent_type' );
+
+        $db_aconsent_type->name = $alternate_consent_type->name;
+        $db_aconsent_type->description = $alternate_consent_type->description;
+        $db_aconsent_type->save();
+
+        // replace all role access
+        $db_aconsent_type->remove_role( NULL );
+        foreach( preg_split( '/, */', $alternate_consent_type->role_list ) as $role )
+        {
+          $db_role = $role_class_name::get_unique_record( 'name', $role );
+          if( !is_null( $db_role ) ) $db_aconsent_type->add_role( $db_role->id );
         }
       }
     }
@@ -981,7 +1071,7 @@ class qnaire extends \cenozo\database\record
         )
       );
 
-      // add any consent trigger records
+      // add any consent trigger records (NOTE: exporting alternate consent types has not yet been implemented)
       $consent_list = array();
       $consent_sel = lib::create( 'database\select' );
       $consent_sel->add_table_column( 'consent_type', 'name' );
@@ -1554,7 +1644,7 @@ class qnaire extends \cenozo\database\record
       $db_address->postcode = $participant->postcode;
       $db_address->save();
 
-      // create consent records
+      // create consent records (NOTE: importing alternate consent is not yet implemented)
       foreach( explode( ';', $participant->consent_list ) as $consent_entry )
       {
         // entries have the format: consent_type_name$accept$datetime, convert to an associative array
@@ -2058,9 +2148,11 @@ class qnaire extends \cenozo\database\record
     $deviation_type_class_name = lib::get_class_name( 'database\deviation_type' );
     $reminder_description_class_name = lib::get_class_name( 'database\reminder_description' );
     $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
+    $alternate_consent_type_class_name = lib::get_class_name( 'database\alternate_consent_type' );
     $proxy_type_class_name = lib::get_class_name( 'database\proxy_type' );
     $qnaire_consent_type_confirm_class_name = lib::get_class_name( 'database\qnaire_consent_type_confirm' );
     $qnaire_consent_type_trigger_class_name = lib::get_class_name( 'database\qnaire_consent_type_trigger' );
+    $qnaire_alternate_consent_type_trigger_class_name = lib::get_class_name( 'database\qnaire_alternate_consent_type_trigger' );
     $qnaire_proxy_type_trigger_class_name = lib::get_class_name( 'database\qnaire_proxy_type_trigger' );
     $qnaire_description_class_name = lib::get_class_name( 'database\qnaire_description' );
     $module_class_name = lib::get_class_name( 'database\module' );
@@ -2913,7 +3005,7 @@ class qnaire extends \cenozo\database\record
             {
               $error = new \stdClass();
               $error->WARNING = sprintf(
-                'Consent Trigger for "%s" will be ignore since the consent type does not exist.',
+                'Consent trigger for "%s" will be ignore since the consent type does not exist.',
                 $qnaire_consent_type_trigger->consent_type_name
               );
               $add_list[] = $error;
@@ -3025,6 +3117,136 @@ class qnaire extends \cenozo\database\record
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
         if( 0 < count( $diff_list ) ) $difference_list['qnaire_consent_type_trigger_list'] = $diff_list;
       }
+      else if( 'qnaire_alternate_consent_type_trigger_list' == $property )
+      {
+        // check every item in the patch object for additions and changes
+        $add_list = array();
+        $change_list = array();
+        foreach( $patch_object->qnaire_alternate_consent_type_trigger_list as $qnaire_aconsent_type_trigger )
+        {
+          $db_aconsent_type = $alternate_consent_type_class_name::get_unique_record(
+            'name',
+            $qnaire_aconsent_type_trigger->alternate_consent_type_name
+          );
+
+          if( is_null( $db_aconsent_type ) )
+          {
+            if( !$apply )
+            {
+              $error = new \stdClass();
+              $error->WARNING = sprintf(
+                'Alternate consent trigger for "%s" will be ignore since the alternate consent type does not exist.',
+                $qnaire_aconsent_type_trigger->alternate_consent_type_name
+              );
+              $add_list[] = $error;
+            }
+          }
+          else
+          {
+            $db_question = $this->get_question(
+              array_key_exists( $qnaire_aconsent_type_trigger->question_name, $change_question_name_list ) ?
+              $change_question_name_list[$qnaire_aconsent_type_trigger->question_name] :
+              $qnaire_aconsent_type_trigger->question_name
+            );
+
+            // check to see if the question has been renamed as part of the applied patch
+            if( $apply && is_null( $db_question ) )
+              $db_question = $this->get_question( sprintf( '%s_%s', $qnaire_aconsent_type_trigger->question_name, $name_suffix ) );
+
+            $db_qnaire_aconsent_type_trigger = $qnaire_alternate_consent_type_trigger_class_name::get_unique_record(
+              array( 'qnaire_id', 'alternate_consent_type_id', 'question_id', 'accept' ),
+              array( $this->id, $db_aconsent_type->id, $db_question->id, $qnaire_aconsent_type_trigger->accept )
+            );
+
+            if( is_null( $db_qnaire_aconsent_type_trigger ) )
+            {
+              if( $apply )
+              {
+                $db_qnaire_aconsent_type_trigger = lib::create( 'database\qnaire_alternate_consent_type_trigger' );
+                $db_qnaire_aconsent_type_trigger->qnaire_id = $this->id;
+                $db_qnaire_aconsent_type_trigger->alternate_consent_type_id = $db_aconsent_type->id;
+                $db_qnaire_aconsent_type_trigger->question_id = $db_question->id;
+                $db_qnaire_aconsent_type_trigger->answer_value = $qnaire_aconsent_type_trigger->answer_value;
+                $db_qnaire_aconsent_type_trigger->accept = $qnaire_aconsent_type_trigger->accept;
+                $db_qnaire_aconsent_type_trigger->save();
+              }
+              else $add_list[] = $qnaire_aconsent_type_trigger;
+            }
+            else
+            {
+              // find and add all differences
+              $diff = array();
+              foreach( $qnaire_aconsent_type_trigger as $property => $value )
+                if( !in_array( $property, [ 'alternate_consent_type_name', 'question_name' ] ) &&
+                    $db_qnaire_aconsent_type_trigger->$property != $qnaire_aconsent_type_trigger->$property )
+                  $diff[$property] = $qnaire_aconsent_type_trigger->$property;
+
+              if( 0 < count( $diff ) )
+              {
+                if( $apply )
+                {
+                  $db_qnaire_aconsent_type_trigger->answer_value = $qnaire_aconsent_type_trigger->answer_value;
+                  $db_qnaire_aconsent_type_trigger->save();
+                }
+                else
+                {
+                  $index = sprintf(
+                    '%s %s [%s]',
+                    $qnaire_aconsent_type_trigger->alternate_consent_type_name,
+                    $qnaire_aconsent_type_trigger->accept ? 'accept' : 'reject',
+                    $qnaire_aconsent_type_trigger->question_name
+                  );
+                  $change_list[$index] = $diff;
+                }
+              }
+            }
+          }
+        }
+
+        // check every item in this object for removals
+        $remove_list = array();
+        foreach( $this->get_qnaire_alternate_consent_type_trigger_object_list() as $db_qnaire_aconsent_type_trigger )
+        {
+          $alternate_consent_type_name = $db_qnaire_aconsent_type_trigger->get_alternate_consent_type()->name;
+          $changed_name = array_search( $db_qnaire_aconsent_type_trigger->get_question()->name, $change_question_name_list );
+          $question_name = $changed_name ? $changed_name : $db_qnaire_aconsent_type_trigger->get_question()->name;
+          if( $apply ) $question_name = preg_replace( sprintf( '/_%s$/', $name_suffix ), '', $question_name );
+
+          $found = false;
+          foreach( $patch_object->qnaire_alternate_consent_type_trigger_list as $qnaire_aconsent_type_trigger )
+          {
+            // see if the qnaire_alternate_consent_type_trigger exists
+            if( ( $alternate_consent_type_name == $qnaire_aconsent_type_trigger->alternate_consent_type_name &&
+                  $question_name == $qnaire_aconsent_type_trigger->question_name &&
+                  $db_qnaire_aconsent_type_trigger->accept == $qnaire_aconsent_type_trigger->accept ) )
+            {
+              $found = true;
+              break;
+            }
+          }
+
+          if( !$found )
+          {
+            if( $apply ) $db_qnaire_aconsent_type_trigger->delete();
+            else
+            {
+              $index = sprintf(
+                '%s %s [%s]',
+                $alternate_consent_type_name,
+                $db_qnaire_aconsent_type_trigger->accept ? 'accept' : 'reject',
+                $question_name
+              );
+              $remove_list[] = $index;
+            }
+          }
+        }
+
+        $diff_list = array();
+        if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
+        if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
+        if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
+        if( 0 < count( $diff_list ) ) $difference_list['qnaire_alternate_consent_type_trigger_list'] = $diff_list;
+      }
       else if( 'qnaire_proxy_type_trigger_list' == $property )
       {
         // check every item in the patch object for additions and changes
@@ -3042,7 +3264,7 @@ class qnaire extends \cenozo\database\record
             {
               $error = new \stdClass();
               $error->WARNING = sprintf(
-                'Consent Trigger for "%s" will be ignore since the proxy type does not exist.',
+                'Proxy trigger for "%s" will be ignore since the proxy type does not exist.',
                 $qnaire_proxy_type_trigger->proxy_type_name
               );
               $add_list[] = $error;
@@ -3280,6 +3502,7 @@ class qnaire extends \cenozo\database\record
       'module_list' => array(),
       'qnaire_consent_type_confirm_list' => array(),
       'qnaire_consent_type_trigger_list' => array(),
+      'qnaire_alternate_consent_type_trigger_list' => array(),
       'qnaire_proxy_type_trigger_list' => array()
     );
 
@@ -3508,6 +3731,21 @@ class qnaire extends \cenozo\database\record
     foreach( $this->get_qnaire_consent_type_trigger_list( $qnaire_ctrigger_sel, $qnaire_ctrigger_mod ) as $item )
       $qnaire_data['qnaire_consent_type_trigger_list'][] = $item;
 
+    $qnaire_ctrigger_sel = lib::create( 'database\select' );
+    $qnaire_ctrigger_sel->add_table_column( 'alternate_consent_type', 'name', 'alternate_consent_type_name' );
+    $qnaire_ctrigger_sel->add_table_column( 'question', 'name', 'question_name' );
+    $qnaire_ctrigger_sel->add_column( 'answer_value' );
+    $qnaire_ctrigger_sel->add_column( 'accept' );
+    $qnaire_ctrigger_mod = lib::create( 'database\modifier' );
+    $qnaire_ctrigger_mod->join(
+      'alternate_consent_type',
+      'qnaire_alternate_consent_type_trigger.alternate_consent_type_id',
+      'alternate_consent_type.id'
+    );
+    $qnaire_ctrigger_mod->join( 'question', 'qnaire_alternate_consent_type_trigger.question_id', 'question.id' );
+    foreach( $this->get_qnaire_alternate_consent_type_trigger_list( $qnaire_ctrigger_sel, $qnaire_ctrigger_mod ) as $item )
+      $qnaire_data['qnaire_alternate_consent_type_trigger_list'][] = $item;
+
     $qnaire_ptrigger_sel = lib::create( 'database\select' );
     $qnaire_ptrigger_sel->add_column( 'IFNULL( proxy_type.name, "" )', 'proxy_type_name', false );
     $qnaire_ptrigger_sel->add_table_column( 'question', 'name', 'question_name' );
@@ -3683,6 +3921,7 @@ class qnaire extends \cenozo\database\record
   {
     $language_class_name = lib::get_class_name( 'database\language' );
     $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
+    $alternate_consent_type_class_name = lib::get_class_name( 'database\alternate_consent_type' );
     $proxy_type_class_name = lib::get_class_name( 'database\proxy_type' );
     $module_class_name = lib::get_class_name( 'database\module' );
     $device_class_name = lib::get_class_name( 'database\device' );
@@ -3957,6 +4196,34 @@ class qnaire extends \cenozo\database\record
       $db_qnaire_consent_type_trigger->answer_value = $qnaire_consent_type_trigger->answer_value;
       $db_qnaire_consent_type_trigger->accept = $qnaire_consent_type_trigger->accept;
       $db_qnaire_consent_type_trigger->save();
+    }
+
+    foreach( $qnaire_object->qnaire_alternate_consent_type_trigger_list as $qnaire_alternate_consent_type_trigger )
+    {
+      $db_alternate_consent_type = $alternate_consent_type_class_name::get_unique_record(
+        'name',
+        $qnaire_alternate_consent_type_trigger->alternate_consent_type_name
+      );
+      if( is_null( $db_alternate_consent_type ) )
+      {
+        throw lib::create( 'exception\notice',
+          sprintf(
+            'Unable to import questionnaire since it has a alternate_consent trigger for '.
+            'alternate_consent type "%s" which does not exist.',
+            $qnaire_alternate_consent_type_trigger->alternate_consent_type_name
+          ),
+          __METHOD__
+        );
+      }
+
+      $db_question = $db_qnaire->get_question( $qnaire_alternate_consent_type_trigger->question_name );
+      $db_qnaire_alternate_consent_type_trigger = lib::create( 'database\qnaire_alternate_consent_type_trigger' );
+      $db_qnaire_alternate_consent_type_trigger->qnaire_id = $db_qnaire->id;
+      $db_qnaire_alternate_consent_type_trigger->alternate_consent_type_id = $db_alternate_consent_type->id;
+      $db_qnaire_alternate_consent_type_trigger->question_id = $db_question->id;
+      $db_qnaire_alternate_consent_type_trigger->answer_value = $qnaire_alternate_consent_type_trigger->answer_value;
+      $db_qnaire_alternate_consent_type_trigger->accept = $qnaire_alternate_consent_type_trigger->accept;
+      $db_qnaire_alternate_consent_type_trigger->save();
     }
 
     foreach( $qnaire_object->qnaire_proxy_type_trigger_list as $qnaire_proxy_type_trigger )

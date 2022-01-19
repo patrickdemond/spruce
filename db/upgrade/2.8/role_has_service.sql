@@ -17,7 +17,10 @@ CREATE PROCEDURE patch_role_has_service()
       "SELECT role.id, service.id ",
       "FROM ", @cenozo, ".role, service ",
       "WHERE role.name = 'administrator' ",
-      "AND service.subject IN( 'image', 'proxy', 'proxy_type', 'qnaire_proxy_type_trigger' ) ",
+      "AND service.subject IN( ",
+        "'alternate_consent_type', 'image', 'proxy', 'proxy_type', ",
+        "'qnaire_alternate_consent_type_trigger', 'qnaire_proxy_type_trigger' ",
+      ") ",
       "AND service.restricted = 1"
     );
     PREPARE statement FROM @sql;

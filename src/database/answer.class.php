@@ -35,6 +35,30 @@ class answer extends \cenozo\database\record
     // always set the language to whatever the response's current language is
     $this->language_id = $db_response->language_id;
 
+    // if the alternate_id is set make sure it belongs to the respondent
+    if( $this->has_column_changed( 'alternate_id' ) && !is_null( $this->alternate_id ) )
+    {
+      $select = lib::create( 'database\select' );
+      $select->from( 'alternate' );
+      $select->add_column( 'COUNT(*)', 'total', false );
+      $modifier = lib::create( 'database\modifier' );
+      $modifier->join( 'respondent', 'alternate.participant_id', 'respondent.participant_id' );
+      $modifier->join( 'response', 'respondent.id', 'response.respondent_id' );
+      $modifier->where( 'response.id', '=', $db_response->id );
+      $modifier->where( 'alternate.id', '=', $this->alternate_id );
+
+      if( 0 == static::db()->get_one( sprintf( '%s %s', $select->get_sql(), $modifier->get_sql() ) ) )
+      {
+        log::warning( sprintf(
+          'Tried to set answer as alternate unrelated to respondent (response_id=%d, question_id=%d, alternate_id=%d)',
+          $db_response->id,
+          $this->question_id,
+          $this->alternate_id
+        ) );
+        $this->alternate_id = NULL;
+      }
+    }
+
     parent::save();
 
     // When changing an answer we may have to update other answers on the same page which are affected by the answer that
