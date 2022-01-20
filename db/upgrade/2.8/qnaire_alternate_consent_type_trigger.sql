@@ -33,7 +33,7 @@ CREATE PROCEDURE patch_qnaire_proxy_type()
           "REFERENCES qnaire (id) ",
           "ON DELETE CASCADE ",
           "ON UPDATE NO ACTION, ",
-        "CONSTRAINT fk_qnaire_alternate_consent_type_trigger_aalternate_consent_type_id ",
+        "CONSTRAINT fk_qnaire_alternate_consent_type_trigger_aconsent_type_id ",
           "FOREIGN KEY (alternate_consent_type_id) ",
           "REFERENCES ", @cenozo, ".alternate_consent_type (id) ",
           "ON DELETE CASCADE ",
