@@ -3638,6 +3638,7 @@ class qnaire extends \cenozo\database\record
             'rank' => $db_question->rank,
             'name' => $db_question->name,
             'type' => $db_question->type,
+            'export' => $db_question->export,
             'mandatory' => $db_question->mandatory,
             'dkna_allowed' => $db_question->dkna_allowed,
             'refuse_allowed' => $db_question->refuse_allowed,
@@ -4087,6 +4088,7 @@ class qnaire extends \cenozo\database\record
           $db_question->rank = $question_object->rank;
           $db_question->name = $question_object->name;
           $db_question->type = $question_object->type;
+          $db_question->export = $question_object->export;
           $db_question->mandatory = $question_object->mandatory;
           $db_question->dkna_allowed = $question_object->dkna_allowed;
           $db_question->refuse_allowed = $question_object->refuse_allowed;
