@@ -1740,9 +1740,10 @@ class qnaire extends \cenozo\database\record
   /**
    * Returns an array of all questions belonging to this qnaire
    * @param boolean $descriptions If true then include module, page and question descriptions
+   * @param boolean $export_only Whether to restrict to questions marked for export only
    * @return array
    */
-  public function get_all_questions( $descriptions = false )
+  public function get_all_questions( $descriptions = false, $export_only = false )
   {
     $column_list = array();
 
@@ -1763,6 +1764,7 @@ class qnaire extends \cenozo\database\record
       {
         $question_mod = lib::create( 'database\modifier' );
         $question_mod->where( 'type', 'NOT IN', ['comment', 'device'] );
+        if( $export_only ) $question_mod->where( 'export', '=', true );
         $question_mod->order( 'question.rank' );
         foreach( $db_page->get_question_object_list( $question_mod ) as $db_question )
         {
@@ -1974,15 +1976,16 @@ class qnaire extends \cenozo\database\record
   /**
    * Returns an array of all responses to this qnaire
    * @param database\modifier $modifier
+   * @param boolean $exporting Whether the data is being exported (some questions are marked to not be exported)
    * @return array( 'header', 'data' )
    */
-  public function get_response_data( $modifier = NULL )
+  public function get_response_data( $modifier = NULL, $exporting = false )
   {
     ini_set( 'memory_limit', '1G' );
     set_time_limit( 900 ); // 15 minutes max
 
     $response_class_name = lib::get_class_name( 'database\response' );
-    $column_list = $this->get_all_questions();
+    $column_list = $this->get_all_questions( false, $exporting ); // exclude questions not marked for export
 
     // now loop through all responses and fill in the data array
     $data = array();

@@ -50,7 +50,8 @@ class query extends \cenozo\service\query
       $modifier->limit( $this->modifier->get_limit() );
       $modifier->offset( $this->modifier->get_offset() );
 
-      $response_data = $this->get_parent_record()->get_response_data( $modifier );
+      // get response data that is marked for export only
+      $response_data = $this->get_parent_record()->get_response_data( $modifier, true );
       $data = $response_data['data'];
       foreach( $data as $index => $row ) $data[$index] = array_combine( $response_data['header'], $data[$index] );
       return $data;

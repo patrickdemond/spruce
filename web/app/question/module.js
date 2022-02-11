@@ -24,7 +24,8 @@ cenozoApp.defineModule( { name: 'question', dependencies: 'question_option', mod
       title: 'Question',
       isIncluded: function( $state, model ) { return 'qnaire' == model.getSubjectFromState(); }
     },
-    type: { title: 'Type' }
+    type: { title: 'Type' },
+    export: { title: 'Exported', type: 'boolean' }
   } );
 
   module.columnList.rank.isIncluded = function( $state, model ) { return 'qnaire' != model.getSubjectFromState(); };
@@ -33,6 +34,7 @@ cenozoApp.defineModule( { name: 'question', dependencies: 'question_option', mod
   module.columnList.precondition.isIncluded = function( $state, model ) { return 'qnaire' != model.getSubjectFromState(); };
 
   module.addInput( '', 'type', { title: 'Type', type: 'enum' } );
+  module.addInput( '', 'export', { title: 'Export', type: 'boolean', help: 'Whether answers to this question are exported.' } );
   module.addInput( '', 'dkna_allowed', {
     title: 'Allow DKNA',
     type: 'boolean',
