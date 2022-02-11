@@ -27,7 +27,7 @@ CREATE PROCEDURE patch_qnaire_proxy_type()
         "INDEX fk_qnaire_id (qnaire_id ASC), ",
         "INDEX fk_alternate_consent_type_id (alternate_consent_type_id ASC), ",
         "INDEX fk_question_id (question_id ASC), ",
-        "UNIQUE INDEX uq_qnaire_id_alternate_consent_type_id_question_id_accept (qnaire_id ASC, alternate_consent_type_id ASC, question_id ASC, accept ASC), ",
+        "UNIQUE INDEX uq_qnaire_id_alternate_consent_type_id_question_id_answer_value (qnaire_id ASC, alternate_consent_type_id ASC, question_id ASC, answer_value ASC), ",
         "CONSTRAINT fk_qnaire_alternate_consent_type_trigger_qnaire_id ",
           "FOREIGN KEY (qnaire_id) ",
           "REFERENCES qnaire (id) ",
