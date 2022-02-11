@@ -30,8 +30,6 @@ class response extends \cenozo\database\has_rank
     $qnaire_consent_type_trigger_class_name = lib::get_class_name( 'database\qnaire_consent_type_trigger' );
     $qnaire_alternate_consent_type_trigger_class_name = lib::get_class_name( 'database\qnaire_alternate_consent_type_trigger' );
     $qnaire_proxy_type_trigger_class_name = lib::get_class_name( 'database\qnaire_proxy_type_trigger' );
-    $answer_class_name = lib::get_class_name( 'database\answer' );
-    $question_option_class_name = lib::get_class_name( 'database\question_option' );
 
     $session = lib::create( 'business\session' );
 
@@ -112,66 +110,35 @@ class response extends \cenozo\database\has_rank
       $modifier->where( 'qnaire_id', '=', $db_qnaire->id );
       foreach( $qnaire_consent_type_trigger_class_name::select_objects( $modifier ) as $db_qnaire_consent_type_trigger )
       {
-        $db_question = $db_qnaire_consent_type_trigger->get_question();
-        $db_answer = $answer_class_name::get_unique_record(
-          array( 'response_id', 'question_id' ),
-          array( $this->id, $db_question->id )
-        );
-
-        if( !is_null( $db_answer ) && '{"dkna":true}' != $db_answer->value && '{"refuse":true}' != $db_answer->value )
+        if( $this->check_trigger( $db_qnaire_consent_type_trigger ) )
         {
-          $create = false;
-          $answer_value = util::json_decode( $db_answer->value );
-          if( 'boolean' == $db_question->type )
-          {
-            $create = ( 'true' === $db_qnaire_consent_type_trigger->answer_value && true === $answer_value ) ||
-                      ( 'false' === $db_qnaire_consent_type_trigger->answer_value && false === $answer_value );
-          }
-          else if( 'list' == $db_question->type )
-          {
-            $db_question_option = $question_option_class_name::get_unique_record(
-              array( 'question_id', 'name' ),
-              array( $db_question->id, $db_qnaire_consent_type_trigger->answer_value )
-            );
-            $create = !is_null( $db_question_option ) && in_array( $db_question_option->id, $answer_value );
-          }
-          else if( 'number' == $db_question->type )
-          {
-            $create = (float)$db_qnaire_consent_type_trigger->answer_value == $answer_value;
-          }
-          else // all the rest need a simple comparison
-          {
-            $create = $db_qnaire_consent_type_trigger->answer_value === $answer_value;
-          }
+          $db_question = $db_qnaire_consent_type_trigger->get_question();
 
-          if( $create )
+          if( $db_qnaire->debug )
           {
-            if( $db_qnaire->debug )
-            {
-              log::info( sprintf(
-                'Creating new %s "%s" consent due to question "%s" having the value "%s" (questionnaire "%s")',
-                $db_qnaire_consent_type_trigger->accept ? 'accept' : 'deny',
-                $db_qnaire_consent_type_trigger->get_consent_type()->name,
-                $db_question->name,
-                $db_qnaire_consent_type_trigger->answer_value,
-                $db_qnaire->name
-              ) );
-            }
-
-            $db_consent = lib::create( 'database\consent' );
-            $db_consent->participant_id = $db_participant->id;
-            $db_consent->consent_type_id = $db_qnaire_consent_type_trigger->consent_type_id;
-            $db_consent->accept = $db_qnaire_consent_type_trigger->accept;
-            $db_consent->written = false;
-            $db_consent->datetime = util::get_datetime_object();
-            $db_consent->note = sprintf(
-              'Created by Pine after questionnaire "%s" was completed with question "%s" having the value "%s"',
-              $db_qnaire->name,
+            log::info( sprintf(
+              'Creating new %s "%s" consent due to question "%s" having the value "%s" (questionnaire "%s")',
+              $db_qnaire_consent_type_trigger->accept ? 'accept' : 'deny',
+              $db_qnaire_consent_type_trigger->get_consent_type()->name,
               $db_question->name,
-              $db_qnaire_consent_type_trigger->answer_value
-            );
-            $db_consent->save();
+              $db_qnaire_consent_type_trigger->answer_value,
+              $db_qnaire->name
+            ) );
           }
+
+          $db_consent = lib::create( 'database\consent' );
+          $db_consent->participant_id = $db_participant->id;
+          $db_consent->consent_type_id = $db_qnaire_consent_type_trigger->consent_type_id;
+          $db_consent->accept = $db_qnaire_consent_type_trigger->accept;
+          $db_consent->written = false;
+          $db_consent->datetime = util::get_datetime_object();
+          $db_consent->note = sprintf(
+            'Created by Pine after questionnaire "%s" was completed with question "%s" having the value "%s"',
+            $db_qnaire->name,
+            $db_question->name,
+            $db_qnaire_consent_type_trigger->answer_value
+          );
+          $db_consent->save();
         }
       }
 
@@ -181,77 +148,50 @@ class response extends \cenozo\database\has_rank
       foreach( $qnaire_alternate_consent_type_trigger_class_name::select_objects( $modifier )
                  as $db_qnaire_alternate_consent_type_trigger )
       {
-        $db_question = $db_qnaire_alternate_consent_type_trigger->get_question();
-        $db_answer = $answer_class_name::get_unique_record(
-          array( 'response_id', 'question_id' ),
-          array( $this->id, $db_question->id )
-        );
-
-        if( !is_null( $db_answer ) && '{"dkna":true}' != $db_answer->value && '{"refuse":true}' != $db_answer->value )
+        if( $this->check_trigger( $db_qnaire_alternate_consent_type_trigger ) )
         {
-          $create = false;
-          $answer_value = util::json_decode( $db_answer->value );
-          if( 'boolean' == $db_question->type )
+          $db_question = $db_qnaire_alternate_consent_type_trigger->get_question();
+          $db_answer = $answer_class_name::get_unique_record(
+            array( 'response_id', 'question_id' ),
+            array( $this->id, $db_question->id )
+          );
+
+          if( $db_qnaire->debug )
           {
-            $create = ( 'true' === $db_qnaire_alternate_consent_type_trigger->answer_value && true === $answer_value ) ||
-                      ( 'false' === $db_qnaire_alternate_consent_type_trigger->answer_value && false === $answer_value );
+            log::info( sprintf(
+              'Creating new %s "%s" alternate consent due to question "%s" having the value "%s" (questionnaire "%s")',
+              $db_qnaire_alternate_consent_type_trigger->accept ? 'accept' : 'deny',
+              $db_qnaire_alternate_consent_type_trigger->get_alternate_consent_type()->name,
+              $db_question->name,
+              $db_qnaire_alternate_consent_type_trigger->answer_value,
+              $db_qnaire->name
+            ) );
           }
-          else if( 'list' == $db_question->type )
+
+          if( is_null( $db_answer->alternate_id ) )
           {
-            $db_question_option = $question_option_class_name::get_unique_record(
-              array( 'question_id', 'name' ),
-              array( $db_question->id, $db_qnaire_alternate_consent_type_trigger->answer_value )
+            log::warning( sprintf(
+              'Alternate consent trigger cannot create record since answer was provided by a participant and not an alternate. '.
+              '(response=%d, question=%d)',
+              $this->id,
+              $db_answer->question_id
+            ) );
+          }
+          else
+          {
+            $db_alternate_consent = lib::create( 'database\alternate_consent' );
+            $db_alternate_consent->alternate_id = $db_answer->alternate_id;
+            $db_alternate_consent->alternate_consent_type_id = $db_qnaire_alternate_consent_type_trigger->alternate_consent_type_id;
+            $db_alternate_consent->accept = $db_qnaire_alternate_consent_type_trigger->accept;
+            $db_alternate_consent->written = false;
+            $db_alternate_consent->datetime = util::get_datetime_object();
+            $db_alternate_consent->note = sprintf(
+              'Created by Pine after questionnaire "%s" was completed with question "%s" having the value "%s"',
+              $db_qnaire->name,
+              $db_question->name,
+              $db_qnaire_alternate_consent_type_trigger->answer_value
             );
-            $create = !is_null( $db_question_option ) && in_array( $db_question_option->id, $answer_value );
-          }
-          else if( 'number' == $db_question->type )
-          {
-            $create = (float)$db_qnaire_alternate_consent_type_trigger->answer_value == $answer_value;
-          }
-          else // all the rest need a simple comparison
-          {
-            $create = $db_qnaire_alternate_consent_type_trigger->answer_value === $answer_value;
-          }
-
-          if( $create )
-          {
-            if( $db_qnaire->debug )
-            {
-              log::info( sprintf(
-                'Creating new %s "%s" alternate consent due to question "%s" having the value "%s" (questionnaire "%s")',
-                $db_qnaire_alternate_consent_type_trigger->accept ? 'accept' : 'deny',
-                $db_qnaire_alternate_consent_type_trigger->get_alternate_consent_type()->name,
-                $db_question->name,
-                $db_qnaire_alternate_consent_type_trigger->answer_value,
-                $db_qnaire->name
-              ) );
-            }
-
-            if( is_null( $db_answer->alternate_id ) )
-            {
-              log::warning( sprintf(
-                'Alternate consent trigger cannot create record since answer was provided by a participant and not an alternate. '.
-                '(response=%d, question=%d)',
-                $this->id,
-                $db_answer->question_id
-              ) );
-            }
-            else
-            {
-              $db_alternate_consent = lib::create( 'database\alternate_consent' );
-              $db_alternate_consent->alternate_id = $db_answer->alternate_id;
-              $db_alternate_consent->alternate_consent_type_id = $db_qnaire_alternate_consent_type_trigger->alternate_consent_type_id;
-              $db_alternate_consent->accept = $db_qnaire_alternate_consent_type_trigger->accept;
-              $db_alternate_consent->written = false;
-              $db_alternate_consent->datetime = util::get_datetime_object();
-              $db_alternate_consent->note = sprintf(
-                'Created by Pine after questionnaire "%s" was completed with question "%s" having the value "%s"',
-                $db_qnaire->name,
-                $db_question->name,
-                $db_qnaire_alternate_consent_type_trigger->answer_value
-              );
-              $db_alternate_consent->save();
-            }
+            $db_alternate_consent->save();
           }
         }
       }
@@ -261,70 +201,39 @@ class response extends \cenozo\database\has_rank
       $modifier->where( 'qnaire_id', '=', $db_qnaire->id );
       foreach( $qnaire_proxy_type_trigger_class_name::select_objects( $modifier ) as $db_qnaire_proxy_type_trigger )
       {
-        $db_question = $db_qnaire_proxy_type_trigger->get_question();
-        $db_answer = $answer_class_name::get_unique_record(
-          array( 'response_id', 'question_id' ),
-          array( $this->id, $db_question->id )
-        );
-
-        if( !is_null( $db_answer ) && '{"dkna":true}' != $db_answer->value && '{"refuse":true}' != $db_answer->value )
+        if( $this->check_trigger( $db_qnaire_proxy_type_trigger ) )
         {
-          $create = false;
-          $answer_value = util::json_decode( $db_answer->value );
-          if( 'boolean' == $db_question->type )
-          {
-            $create = ( 'true' === $db_qnaire_proxy_type_trigger->answer_value && true === $answer_value ) ||
-                      ( 'false' === $db_qnaire_proxy_type_trigger->answer_value && false === $answer_value );
-          }
-          else if( 'list' == $db_question->type )
-          {
-            $db_question_option = $question_option_class_name::get_unique_record(
-              array( 'question_id', 'name' ),
-              array( $db_question->id, $db_qnaire_proxy_type_trigger->answer_value )
-            );
-            $create = !is_null( $db_question_option ) && in_array( $db_question_option->id, $answer_value );
-          }
-          else if( 'number' == $db_question->type )
-          {
-            $create = (float)$db_qnaire_proxy_type_trigger->answer_value == $answer_value;
-          }
-          else // all the rest need a simple comparison
-          {
-            $create = $db_qnaire_proxy_type_trigger->answer_value === $answer_value;
-          }
+          $db_question = $db_qnaire_proxy_type_trigger->get_question();
 
-          if( $create )
+          if( $db_qnaire->debug )
           {
-            if( $db_qnaire->debug )
-            {
-              $db_proxy_type = $db_qnaire_proxy_type_trigger->get_proxy_type();
-              log::info( sprintf(
-                'Creating new "%s" proxy due to question "%s" having the value "%s" (questionnaire "%s")',
-                is_null( $db_proxy_type ) ? 'empty' : $db_proxy_type->name,
-                $db_question->name,
-                $db_qnaire_proxy_type_trigger->answer_value,
-                $db_qnaire->name
-              ) );
-            }
-
-            $db_proxy = lib::create( 'database\proxy' );
-            $db_proxy->participant_id = $db_participant->id;
-            $db_proxy->proxy_type_id = $db_qnaire_proxy_type_trigger->proxy_type_id;
-            $db_proxy->datetime = util::get_datetime_object();
-            $db_proxy->user_id = $session->get_user()->id;
-            $db_proxy->site_id = $session->get_site()->id;
-            $db_proxy->role_id = $session->get_role()->id;
-            $db_proxy->application_id = $session->get_application()->id;
-            $db_proxy->note = sprintf(
-              'Created by Pine after questionnaire "%s" was completed with question "%s" having the value "%s"',
-              $db_qnaire->name,
+            $db_proxy_type = $db_qnaire_proxy_type_trigger->get_proxy_type();
+            log::info( sprintf(
+              'Creating new "%s" proxy due to question "%s" having the value "%s" (questionnaire "%s")',
+              is_null( $db_proxy_type ) ? 'empty' : $db_proxy_type->name,
               $db_question->name,
-              $db_qnaire_proxy_type_trigger->answer_value
-            );
-            
-            // save the proxy file ignoring runtime errors (that denotes a duplicate which we can ignore)
-            try { $db_proxy->save(); } catch( \cenozo\exception\runtime $e ) {}
+              $db_qnaire_proxy_type_trigger->answer_value,
+              $db_qnaire->name
+            ) );
           }
+
+          $db_proxy = lib::create( 'database\proxy' );
+          $db_proxy->participant_id = $db_participant->id;
+          $db_proxy->proxy_type_id = $db_qnaire_proxy_type_trigger->proxy_type_id;
+          $db_proxy->datetime = util::get_datetime_object();
+          $db_proxy->user_id = $session->get_user()->id;
+          $db_proxy->site_id = $session->get_site()->id;
+          $db_proxy->role_id = $session->get_role()->id;
+          $db_proxy->application_id = $session->get_application()->id;
+          $db_proxy->note = sprintf(
+            'Created by Pine after questionnaire "%s" was completed with question "%s" having the value "%s"',
+            $db_qnaire->name,
+            $db_question->name,
+            $db_qnaire_proxy_type_trigger->answer_value
+          );
+
+          // save the proxy file ignoring runtime errors (that denotes a duplicate which we can ignore)
+          try { $db_proxy->save(); } catch( \cenozo\exception\runtime $e ) {}
         }
       }
     }
@@ -907,5 +816,59 @@ class response extends \cenozo\database\has_rank
     }
 
     return $description;
+  }
+
+  /**
+   * Determines whether a consent trigger should create a new record
+   * @param database\record $db_trigger A qnaire_*_trigger record
+   * @return boolean
+   */
+  private function check_trigger( $db_trigger )
+  {
+    $answer_class_name = lib::get_class_name( 'database\answer' );
+    $question_option_class_name = lib::get_class_name( 'database\question_option' );
+
+    $create = false;
+    $db_question = $db_trigger->get_question();
+    $db_answer = $answer_class_name::get_unique_record(
+      array( 'response_id', 'question_id' ),
+      array( $this->id, $db_question->id )
+    );
+
+    if( !is_null( $db_answer ) )
+    {
+      $answer_value = util::json_decode( $db_answer->value );
+      $refuse_check = str_replace( ' ', '', $db_trigger->answer_value );
+      if( in_array( $refuse_check, [ '{"dkna":true}', '{"refuse":true}' ] ) )
+      {
+        $create = $refuse_check == $db_answer->value;
+      }
+      else if( '{"dkna":true}' != $db_answer->value && '{"refuse":true}' != $db_answer->value )
+      {
+        if( 'boolean' == $db_question->type )
+        {
+          $create = ( 'true' === $db_trigger->answer_value && true === $answer_value ) ||
+                    ( 'false' === $db_trigger->answer_value && false === $answer_value );
+        }
+        else if( 'list' == $db_question->type )
+        {
+          $db_question_option = $question_option_class_name::get_unique_record(
+            array( 'question_id', 'name' ),
+            array( $db_question->id, $db_trigger->answer_value )
+          );
+          $create = !is_null( $db_question_option ) && in_array( $db_question_option->id, $answer_value );
+        }
+        else if( 'number' == $db_question->type )
+        {
+          $create = (float)$db_trigger->answer_value == $answer_value;
+        }
+        else // all the rest need a simple comparison
+        {
+          $create = $db_trigger->answer_value === $answer_value;
+        }
+      }
+    }
+
+    return $create;
   }
 }
