@@ -78,4 +78,45 @@ class get extends \cenozo\service\get
       $semaphore->release();
     }
   }
+
+  /**
+   * Extend parent method
+   */
+  public function execute()
+  {
+    parent::execute();
+
+    $db_respondent = $this->get_leaf_record();
+    if( !is_null( $db_respondent ) )
+    {
+      $expression_manager = lib::create( 'business\expression_manager', $db_respondent->get_current_response() );
+      $db_qnaire = $db_respondent->get_qnaire();
+      $db_response = $db_respondent->get_current_response();
+      $column_values = $db_respondent->get_column_values( $this->select, $this->modifier );
+
+      // Evaluate expressions in the descriptions
+      $description_list = array();
+      if( array_key_exists( 'introduction_list', $column_values ) ) $description_list['introduction'] = array();
+      if( array_key_exists( 'conclusion_list', $column_values ) ) $description_list['conclusion'] = array();
+      if( array_key_exists( 'closed_list', $column_values ) ) $description_list['closed'] = array();
+      if( 0 < count( $description_list ) )
+      {
+        $qnaire_description_mod = lib::create( 'database\modifier' );
+        $qnaire_description_mod->where( 'type', 'IN', array_keys( $description_list ) );
+
+        foreach( $db_qnaire->get_qnaire_description_object_list( $qnaire_description_mod ) as $db_qnaire_description )
+        {
+          $description_list[$db_qnaire_description->type][] = sprintf(
+            '%s`%s',
+            $db_qnaire_description->get_language()->code,
+            $db_qnaire_description->get_compiled_value( $db_respondent, $db_response->rank )
+          );
+        }
+
+        foreach( $description_list as $type => $description )
+          $column_values[sprintf( '%s_list', $type )] = implode( '`', $description );
+        $this->set_data( $column_values );
+      }
+    }
+  }
 }

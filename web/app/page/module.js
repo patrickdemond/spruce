@@ -315,9 +315,9 @@ cenozoApp.defineModule( { name: 'page',
             closed: null,
             submitted: null,
             uid: null,
-            introductions: null,
-            conclusions: null,
-            closes: null,
+            introductionList: null,
+            conclusionList: null,
+            closedList: null,
             title: null,
           },
           responseStageList: null,
@@ -563,7 +563,8 @@ cenozoApp.defineModule( { name: 'page',
               var response = await CnHttpFactory.instance( {
                 path: 'respondent/token=' + $state.params.token + params,
                 data: { select: { column: [
-                  'token', 'participant_id', 'qnaire_id', 'start_datetime', 'end_datetime', 'introductions', 'conclusions', 'closes',
+                  'token', 'participant_id', 'qnaire_id', 'start_datetime', 'end_datetime',
+                  'introduction_list', 'conclusion_list', 'closed_list',
                   { table: 'participant', column: 'first_name' },
                   { table: 'participant', column: 'last_name' },
                   { table: 'qnaire', column: 'stages' },
@@ -767,9 +768,9 @@ cenozoApp.defineModule( { name: 'page',
 
               // parse the intro, conclusion and close descriptions
               angular.extend( this.data, {
-                introductions: CnTranslationHelper.parseDescriptions( this.data.introductions, this.showHidden ),
-                conclusions: CnTranslationHelper.parseDescriptions( this.data.conclusions, this.showHidden ),
-                closes: CnTranslationHelper.parseDescriptions( this.data.closes, this.showHidden )
+                introductionList: CnTranslationHelper.parseDescriptions( this.data.introduction_list, this.showHidden ),
+                conclusionList: CnTranslationHelper.parseDescriptions( this.data.conclusion_list, this.showHidden ),
+                closedList: CnTranslationHelper.parseDescriptions( this.data.closed_list, this.showHidden )
               } );
             }
 

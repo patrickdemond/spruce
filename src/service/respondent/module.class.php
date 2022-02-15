@@ -100,9 +100,9 @@ class module extends \cenozo\service\module
       if( $select->has_column( 'completed' ) )
         $select->add_constant( $db_respondent->is_complete(), 'completed', 'boolean' );
 
-      if( $select->has_column( 'introductions' ) )
+      if( $select->has_column( 'introduction_list' ) )
       {
-        // join to the introductions
+        // join to the introduction descriptions
         $join_mod = lib::create( 'database\modifier' );
         $join_mod->where( 'qnaire.id', '=', 'introduction.qnaire_id', false );
         $join_mod->where( 'introduction.type', '=', 'introduction' );
@@ -110,16 +110,16 @@ class module extends \cenozo\service\module
         $modifier->join( 'language', 'introduction.language_id', 'introduction_language.id', '', 'introduction_language' );
         $select->add_column(
           'GROUP_CONCAT( DISTINCT CONCAT_WS( "`", introduction_language.code, IFNULL( introduction.value, "" ) ) SEPARATOR "`" )',
-          'introductions',
+          'introduction_list',
           false
         );
 
         $modifier->group( 'qnaire.id' );
       }
 
-      if( $select->has_column( 'conclusions' ) )
+      if( $select->has_column( 'conclusion_list' ) )
       {
-        // join to the conclusions
+        // join to the conclusion descriptions
         $join_mod = lib::create( 'database\modifier' );
         $join_mod->where( 'qnaire.id', '=', 'conclusion.qnaire_id', false );
         $join_mod->where( 'conclusion.type', '=', 'conclusion' );
@@ -127,14 +127,14 @@ class module extends \cenozo\service\module
         $modifier->join( 'language', 'conclusion.language_id', 'conclusion_language.id', '', 'conclusion_language' );
         $select->add_column(
           'GROUP_CONCAT( DISTINCT CONCAT_WS( "`", conclusion_language.code, IFNULL( conclusion.value, "" ) ) SEPARATOR "`" )',
-          'conclusions',
+          'conclusion_list',
           false
         );
       }
 
-      if( $select->has_column( 'closes' ) )
+      if( $select->has_column( 'closed_list' ) )
       {
-        // join to the closes
+        // join to the close descriptions
         $join_mod = lib::create( 'database\modifier' );
         $join_mod->where( 'qnaire.id', '=', 'closed.qnaire_id', false );
         $join_mod->where( 'closed.type', '=', 'closed' );
@@ -142,7 +142,7 @@ class module extends \cenozo\service\module
         $modifier->join( 'language', 'closed.language_id', 'closed_language.id', '', 'closed_language' );
         $select->add_column(
           'GROUP_CONCAT( DISTINCT CONCAT_WS( "`", closed_language.code, IFNULL( closed.value, "" ) ) SEPARATOR "`" )',
-          'closes',
+          'closed_list',
           false
         );
       }
