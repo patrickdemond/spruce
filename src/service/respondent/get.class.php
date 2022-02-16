@@ -89,8 +89,8 @@ class get extends \cenozo\service\get
     $db_respondent = $this->get_leaf_record();
     if( !is_null( $db_respondent ) )
     {
-      $expression_manager = lib::create( 'business\expression_manager', $db_respondent->get_current_response() );
       $db_qnaire = $db_respondent->get_qnaire();
+      $expression_manager = lib::create( 'business\expression_manager', $db_qnaire );
       $db_response = $db_respondent->get_current_response();
       $column_values = $db_respondent->get_column_values( $this->select, $this->modifier );
 
