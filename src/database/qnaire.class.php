@@ -3027,8 +3027,8 @@ class qnaire extends \cenozo\database\record
               $db_question = $this->get_question( sprintf( '%s_%s', $qnaire_consent_type_trigger->question_name, $name_suffix ) );
 
             $db_qnaire_consent_type_trigger = $qnaire_consent_type_trigger_class_name::get_unique_record(
-              array( 'qnaire_id', 'consent_type_id', 'question_id', 'accept' ),
-              array( $this->id, $db_consent_type->id, $db_question->id, $qnaire_consent_type_trigger->accept )
+              array( 'qnaire_id', 'consent_type_id', 'question_id', 'answer_value' ),
+              array( $this->id, $db_consent_type->id, $db_question->id, $qnaire_consent_type_trigger->answer_value )
             );
 
             if( is_null( $db_qnaire_consent_type_trigger ) )
@@ -3157,8 +3157,8 @@ class qnaire extends \cenozo\database\record
               $db_question = $this->get_question( sprintf( '%s_%s', $qnaire_aconsent_type_trigger->question_name, $name_suffix ) );
 
             $db_qnaire_aconsent_type_trigger = $qnaire_alternate_consent_type_trigger_class_name::get_unique_record(
-              array( 'qnaire_id', 'alternate_consent_type_id', 'question_id', 'accept' ),
-              array( $this->id, $db_aconsent_type->id, $db_question->id, $qnaire_aconsent_type_trigger->accept )
+              array( 'qnaire_id', 'alternate_consent_type_id', 'question_id', 'answer_value' ),
+              array( $this->id, $db_aconsent_type->id, $db_question->id, $qnaire_aconsent_type_trigger->answer_value )
             );
 
             if( is_null( $db_qnaire_aconsent_type_trigger ) )
@@ -3286,8 +3286,9 @@ class qnaire extends \cenozo\database\record
               $db_question = $this->get_question( sprintf( '%s_%s', $qnaire_proxy_type_trigger->question_name, $name_suffix ) );
 
             $db_qnaire_proxy_type_trigger = $qnaire_proxy_type_trigger_class_name::get_unique_record(
-              array( 'qnaire_id', 'proxy_type_id', 'question_id' ),
-              array( $this->id, is_null( $db_proxy_type ) ? NULL : $db_proxy_type->id, $db_question->id )
+              array( 'qnaire_id', 'proxy_type_id', 'question_id', 'answer_value' ),
+              array( $this->id, is_null( $db_proxy_type ) ? NULL : $db_proxy_type->id,
+                     $db_question->id, $qnaire_proxy_type_trigger->answer_value )
             );
 
             if( is_null( $db_qnaire_proxy_type_trigger ) )
