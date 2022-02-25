@@ -24,8 +24,8 @@
         <div ng-repeat="(property, child) in model.viewModel.difference" class="row">
           <div ng-if="![
               'stage_list', 'module_list', 'attribute_list', 'image_list', 'deviation_type_list', 'reminder_list',
-              'qnaire_consent_type_confirm_list', 'qnaire_consent_type_trigger_list', 'qnaire_alternate_consent_type_trigger_list',
-              'qnaire_proxy_type_trigger_list'
+              'qnaire_consent_type_confirm_list', 'qnaire_participant_trigger_list', 'qnaire_consent_type_trigger_list',
+              'qnaire_alternate_consent_type_trigger_list', 'qnaire_proxy_type_trigger_list'
             ].includes( property )">
             <label class="col-sm-2 control-label">{{
               property | cnStrReplace:'qnaire':'' | cnStrReplace:'_':' ' | cnStrReplace:' list':'s' | cnUCWords
@@ -64,25 +64,31 @@
             <div class="container-fluid"><cn-qnaire-part-patch subject="stage" model="child"></cn-qnaire-part-patch></div>
           </div>
           <div ng-if="'qnaire_consent_type_confirm_list' == property">
-            <label class="container-fluid">Consent Confirm List</label>
+            <label class="container-fluid">Consent Type Confirm List</label>
             <div class="container-fluid">
               <cn-qnaire-part-patch subject="qnaire_consent_type_confirm" model="child"></cn-qnaire-part-patch>
             </div>
           </div>
+          <div ng-if="'qnaire_participant_trigger_list' == property">
+            <label class="container-fluid">Participant Trigger List</label>
+            <div class="container-fluid">
+              <cn-qnaire-part-patch subject="qnaire_participant_trigger" model="child"></cn-qnaire-part-patch>
+            </div>
+          </div>
           <div ng-if="'qnaire_consent_type_trigger_list' == property">
-            <label class="container-fluid">Consent Trigger List</label>
+            <label class="container-fluid">Consent Type Trigger List</label>
             <div class="container-fluid">
               <cn-qnaire-part-patch subject="qnaire_consent_type_trigger" model="child"></cn-qnaire-part-patch>
             </div>
           </div>
           <div ng-if="'qnaire_alternate_consent_type_trigger_list' == property">
-            <label class="container-fluid">Consent Trigger List</label>
+            <label class="container-fluid">Alternate Consent Type Trigger List</label>
             <div class="container-fluid">
               <cn-qnaire-part-patch subject="qnaire_alternate_consent_type_trigger" model="child"></cn-qnaire-part-patch>
             </div>
           </div>
           <div ng-if="'qnaire_proxy_type_trigger_list' == property">
-            <label class="container-fluid">Consent Trigger List</label>
+            <label class="container-fluid">Proxy Type Trigger List</label>
             <div class="container-fluid">
               <cn-qnaire-part-patch subject="qnaire_proxy_type_trigger" model="child"></cn-qnaire-part-patch>
             </div>

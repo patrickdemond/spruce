@@ -14,6 +14,73 @@ use cenozo\lib, cenozo\log, pine\util;
 class qnaire extends \cenozo\database\record
 {
   /**
+   * Override the parent method
+   */
+  public static function get_relationship( $record_type )
+  {
+    // artificially create a relationship between response and qnaire
+    $relationship_class_name = lib::get_class_name( 'database\relationship' );
+    return 'response' == $record_type ? $relationship_class_name::ONE_TO_MANY : parent::get_relationship( $record_type );
+  }
+
+  /**
+   * Override the parent method
+   */
+  protected function get_record_list( $record_type, $select = NULL, $modifier = NULL, $return_alt = '', $distinct = false )
+  {
+    $response_class_name = lib::get_class_name( 'database\response' );
+
+    if( !is_string( $record_type ) || 0 == strlen( $record_type ) )
+      throw lib::create( 'exception\argument', 'record_type', $record_type, __METHOD__ );
+    if( !is_null( $select ) && !is_a( $select, lib::get_class_name( 'database\select' ) ) )
+      throw lib::create( 'exception\argument', 'select', $select, __METHOD__ );
+    if( !is_null( $modifier ) && !is_a( $modifier, lib::get_class_name( 'database\modifier' ) ) )
+      throw lib::create( 'exception\argument', 'modifier', $modifier, __METHOD__ );
+    if( !is_string( $return_alt ) )
+      throw lib::create( 'exception\argument', 'return_alt', $return_alt, __METHOD__ );
+
+    // artificially create a relationship between response and qnaire
+    $return_value = 'count' == $return_alt ? 0 : array();
+    if( 'response' == $record_type )
+    {
+      if( is_null( $this->id ) )
+      {
+        log::warning( 'Tried to query qnaire record with no primary key.' );
+      }
+      else
+      {
+        if( is_null( $modifier ) ) $modifier = lib::create( 'database\modifier' );
+
+        // wrap the existing modifier's where statements to avoid logic errors
+        $modifier->wrap_where();
+
+        if( !$modifier->has_join( 'respondent_current_response' ) )
+        {
+          $modifier->join( 'respondent_current_response', 'response.id', 'respondent_current_response.response_id' );
+          $modifier->join( 'respondent', 'respondent_current_response.respondent_id', 'respondent.id' );
+        }
+
+        if( !$modifier->has_join( 'qnaire' ) ) $modifier->join( 'qnaire', 'respondent.qnaire_id', 'qnaire.id' );
+        $modifier->where( 'qnaire.id', '=', $this->id );
+
+        if( 'count' == $return_alt )
+        {
+          $return_value = $response_class_name::count( $modifier, $distinct );
+        }
+        else
+        {
+          $return_value = 'object' == $return_alt ?
+            $response_class_name::select_objects( $modifier ) :
+            $response_class_name::select( $select, $modifier );
+        }
+      }
+    }
+    else $return_value = parent::get_record_list( $record_type, $select, $modifier, $return_alt, $distinct );
+
+    return $return_value;
+  }
+
+  /**
    * Overrides the parent class
    */
   public function save()
@@ -283,6 +350,19 @@ class qnaire extends \cenozo\database\record
       $db_qnaire_consent_type_confirm->qnaire_id = $this->id;
       $db_qnaire_consent_type_confirm->consent_type_id = $db_source_consent_type->consent_type_id;
       $db_qnaire_consent_type_confirm->save();
+    }
+
+    // copy all participant triggers
+    foreach( $db_source_qnaire->get_qnaire_participant_trigger_object_list() as $db_source_participant )
+    {
+      $db_question = $this->get_question( $db_source_participant->get_question()->name );
+      $db_qnaire_participant_trigger = lib::create( 'database\qnaire_participant_trigger' );
+      $db_qnaire_participant_trigger->qnaire_id = $this->id;
+      $db_qnaire_participant_trigger->question_id = $db_question->id;
+      $db_qnaire_participant_trigger->answer_value = $db_source_participant->answer_value;
+      $db_qnaire_participant_trigger->column_name = $db_source_participant->column_name;
+      $db_qnaire_participant_trigger->value = $db_source_participant->value;
+      $db_qnaire_participant_trigger->save();
     }
 
     // copy all consent triggers
@@ -1058,7 +1138,15 @@ class qnaire extends \cenozo\database\record
           'other_name' => $db_participant->other_name,
           'last_name' => $db_participant->last_name,
           'current_sex' => $db_participant->current_sex,
-          'email' => $db_participant->email
+          'email' => $db_participant->email,
+
+          // these may be modified by participant triggers
+          'override_stratum' => $db_participant->override_stratum,
+          'mass_email' => $db_participant->mass_email,
+          'delink' => $db_participant->delink,
+          'withdraw_third_party' => $db_participant->withdraw_third_party,
+          'out_of_area' => $db_participant->out_of_area,
+          'low_education' => $db_participant->low_education
         ),
         'address' => array(
           'address1' => $db_address->address1,
@@ -1626,6 +1714,14 @@ class qnaire extends \cenozo\database\record
       $db_participant->current_sex = $participant->current_sex;
       $db_participant->email = $participant->email;
       if( $participant->date_of_birth ) $db_participant->date_of_birth = $participant->date_of_birth;
+
+      // these may be modified by participant triggers
+      $db_participant->override_stratum = $participant->override_stratum;
+      $db_participant->mass_email = $participant->mass_email;
+      $db_participant->delink = $participant->delink;
+      $db_participant->withdraw_third_party = $participant->withdraw_third_party;
+      $db_participant->out_of_area = $participant->out_of_area;
+      $db_participant->low_education = $participant->low_education;
       $db_participant->save();
 
       // update the address record
@@ -2154,6 +2250,7 @@ class qnaire extends \cenozo\database\record
     $alternate_consent_type_class_name = lib::get_class_name( 'database\alternate_consent_type' );
     $proxy_type_class_name = lib::get_class_name( 'database\proxy_type' );
     $qnaire_consent_type_confirm_class_name = lib::get_class_name( 'database\qnaire_consent_type_confirm' );
+    $qnaire_participant_trigger_class_name = lib::get_class_name( 'database\qnaire_participant_trigger' );
     $qnaire_consent_type_trigger_class_name = lib::get_class_name( 'database\qnaire_consent_type_trigger' );
     $qnaire_alternate_consent_type_trigger_class_name = lib::get_class_name( 'database\qnaire_alternate_consent_type_trigger' );
     $qnaire_proxy_type_trigger_class_name = lib::get_class_name( 'database\qnaire_proxy_type_trigger' );
@@ -2993,6 +3090,115 @@ class qnaire extends \cenozo\database\record
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
         if( 0 < count( $diff_list ) ) $difference_list['qnaire_consent_type_confirm_list'] = $diff_list;
       }
+      else if( 'qnaire_participant_trigger_list' == $property )
+      {
+        // check every item in the patch object for additions and changes
+        $add_list = array();
+        $change_list = array();
+        foreach( $patch_object->qnaire_participant_trigger_list as $qnaire_participant_trigger )
+        {
+          $db_question = $this->get_question(
+            array_key_exists( $qnaire_participant_trigger->question_name, $change_question_name_list ) ?
+            $change_question_name_list[$qnaire_participant_trigger->question_name] :
+            $qnaire_participant_trigger->question_name
+          );
+
+          // check to see if the question has been renamed as part of the applied patch
+          if( $apply && is_null( $db_question ) )
+            $db_question = $this->get_question( sprintf( '%s_%s', $qnaire_participant_trigger->question_name, $name_suffix ) );
+
+          $db_qnaire_participant_trigger = $qnaire_participant_trigger_class_name::get_unique_record(
+            array( 'qnaire_id', 'question_id', 'answer_value', 'answer_value', 'column_name' ),
+            array( $this->id, $db_question->id, $qnaire_participant_trigger->answer_value, $qnaire_participant_trigger->column_name )
+          );
+
+          if( is_null( $db_qnaire_participant_trigger ) )
+          {
+            if( $apply )
+            {
+              $db_qnaire_participant_trigger = lib::create( 'database\qnaire_participant_trigger' );
+              $db_qnaire_participant_trigger->qnaire_id = $this->id;
+              $db_qnaire_participant_trigger->question_id = $db_question->id;
+              $db_qnaire_participant_trigger->answer_value = $qnaire_participant_trigger->answer_value;
+              $db_qnaire_participant_trigger->column_name = $qnaire_participant_trigger->column_name;
+              $db_qnaire_participant_trigger->value = $qnaire_participant_trigger->value;
+              $db_qnaire_participant_trigger->save();
+            }
+            else $add_list[] = $qnaire_participant_trigger;
+          }
+          else
+          {
+            // find and add all differences
+            $diff = array();
+            foreach( $qnaire_participant_trigger as $property => $value )
+              if( 'question_name' != $property &&
+                  $db_qnaire_participant_trigger->$property != $qnaire_participant_trigger->$property )
+                $diff[$property] = $qnaire_participant_trigger->$property;
+
+            if( 0 < count( $diff ) )
+            {
+              if( $apply )
+              {
+                $db_qnaire_participant_trigger->answer_value = $qnaire_participant_trigger->answer_value;
+                $db_qnaire_participant_trigger->save();
+              }
+              else
+              {
+                $index = sprintf(
+                  '%s %s [%s]',
+                  $qnaire_participant_trigger->column_name,
+                  $qnaire_participant_trigger->value,
+                  $qnaire_participant_trigger->question_name
+                );
+                $change_list[$index] = $diff;
+              }
+            }
+          }
+        }
+
+        // check every item in this object for removals
+        $remove_list = array();
+        foreach( $this->get_qnaire_participant_trigger_object_list() as $db_qnaire_participant_trigger )
+        {
+          $changed_name = array_search( $db_qnaire_participant_trigger->get_question()->name, $change_question_name_list );
+          $question_name = $changed_name ? $changed_name : $db_qnaire_participant_trigger->get_question()->name;
+          if( $apply ) $question_name = preg_replace( sprintf( '/_%s$/', $name_suffix ), '', $question_name );
+
+          $found = false;
+          foreach( $patch_object->qnaire_participant_trigger_list as $qnaire_participant_trigger )
+          {
+            // see if the qnaire_participant_trigger exists
+            if( ( $db_qnaire_participant_trigger->column_name == $qnaire_participant_trigger->column_name &&
+                  $question_name == $qnaire_participant_trigger->question_name &&
+                  $db_qnaire_participant_trigger->value == $qnaire_participant_trigger->value ) )
+            {
+              $found = true;
+              break;
+            }
+          }
+
+          if( !$found )
+          {
+            if( $apply ) $db_qnaire_participant_trigger->delete();
+            else
+            {
+              $index = sprintf(
+                '%s %s [%s]',
+                $db_qnaier_participant_trigger->column_name,
+                $db_qnaire_participant_trigger->value,
+                $question_name
+              );
+              $remove_list[] = $index;
+            }
+          }
+        }
+
+        $diff_list = array();
+        if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
+        if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
+        if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
+        if( 0 < count( $diff_list ) ) $difference_list['qnaire_participant_trigger_list'] = $diff_list;
+      }
       else if( 'qnaire_consent_type_trigger_list' == $property )
       {
         // check every item in the patch object for additions and changes
@@ -3504,6 +3710,7 @@ class qnaire extends \cenozo\database\record
       'reminder_list' => array(),
       'qnaire_description_list' => array(),
       'module_list' => array(),
+      'qnaire_participant_trigger_list' => array(),
       'qnaire_consent_type_confirm_list' => array(),
       'qnaire_consent_type_trigger_list' => array(),
       'qnaire_alternate_consent_type_trigger_list' => array(),
@@ -3724,6 +3931,16 @@ class qnaire extends \cenozo\database\record
     $qnaire_cconfirm_mod->join( 'consent_type', 'qnaire_consent_type_confirm.consent_type_id', 'consent_type.id' );
     foreach( $this->get_qnaire_consent_type_confirm_list( $qnaire_cconfirm_sel, $qnaire_cconfirm_mod ) as $item )
       $qnaire_data['qnaire_consent_type_confirm_list'][] = $item;
+
+    $qnaire_ptrigger_sel = lib::create( 'database\select' );
+    $qnaire_ptrigger_sel->add_table_column( 'question', 'name', 'question_name' );
+    $qnaire_ptrigger_sel->add_column( 'answer_value' );
+    $qnaire_ptrigger_sel->add_column( 'column_name' );
+    $qnaire_ptrigger_sel->add_column( 'value' );
+    $qnaire_ptrigger_mod = lib::create( 'database\modifier' );
+    $qnaire_ptrigger_mod->join( 'question', 'qnaire_participant_trigger.question_id', 'question.id' );
+    foreach( $this->get_qnaire_participant_trigger_list( $qnaire_ptrigger_sel, $qnaire_ptrigger_mod ) as $item )
+      $qnaire_data['qnaire_participant_trigger_list'][] = $item;
 
     $qnaire_ctrigger_sel = lib::create( 'database\select' );
     $qnaire_ctrigger_sel->add_table_column( 'consent_type', 'name', 'consent_type_name' );
@@ -4178,6 +4395,18 @@ class qnaire extends \cenozo\database\record
       $db_qnaire_consent_type_confirm->qnaire_id = $db_qnaire->id;
       $db_qnaire_consent_type_confirm->consent_type_id = $db_consent_type->id;
       $db_qnaire_consent_type_confirm->save();
+    }
+
+    foreach( $qnaire_object->qnaire_participant_trigger_list as $qnaire_participant_trigger )
+    {
+      $db_question = $db_qnaire->get_question( $qnaire_participant_trigger->question_name );
+      $db_qnaire_participant_trigger = lib::create( 'database\qnaire_participant_trigger' );
+      $db_qnaire_participant_trigger->qnaire_id = $db_qnaire->id;
+      $db_qnaire_participant_trigger->question_id = $db_question->id;
+      $db_qnaire_participant_trigger->answer_value = $qnaire_participant_trigger->answer_value;
+      $db_qnaire_participant_trigger->column_name = $qnaire_participant_trigger->column_name;
+      $db_qnaire_participant_trigger->value = $qnaire_participant_trigger->value;
+      $db_qnaire_participant_trigger->save();
     }
 
     foreach( $qnaire_object->qnaire_consent_type_trigger_list as $qnaire_consent_type_trigger )

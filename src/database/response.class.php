@@ -22,11 +22,44 @@ class response extends \cenozo\database\has_rank
   protected static $rank_parent = 'respondent';
 
   /**
+   * Override parent method
+   */
+  public static function get_record_from_identifier( $identifier )
+  {
+    $respondent_class_name = lib::get_class_name( 'database\respondent' );
+
+    if( 1 == preg_match( '/^[^=;]+=[^=;]+(;[^=;]+=[^=;]+)*$/', $identifier ) )
+    { // see if the identifier has exactly two keys: qnaire_id and participant_id
+      $columns = array();
+      $values = array();
+      foreach( explode( ';', $identifier ) as $part )
+      {
+        $pair = explode( '=', $part );
+        if( 2 == count( $pair ) )
+        {
+          $columns[] = $pair[0];
+          $values[] = $pair[1];
+        }
+      }
+
+      if( in_array( 'qnaire_id', $columns ) && in_array( 'participant_id', $columns ) )
+      {
+        // return the current response for the respondent corresponding with the provided participant/qnaire ids
+        $db_respondent = $respondent_class_name::get_unique_record( $columns, $values );
+        return is_null( $db_respondent ) ? NULL : $db_respondent->get_current_response();
+      }
+    }
+
+    return parent::get_record_from_identifier( $identifier );
+  }
+
+  /**
    * Override the parent method
    */
   public function save()
   {
     $script_class_name = lib::get_class_name( 'database\script' );
+    $qnaire_participant_trigger_class_name = lib::get_class_name( 'database\qnaire_participant_trigger' );
     $qnaire_consent_type_trigger_class_name = lib::get_class_name( 'database\qnaire_consent_type_trigger' );
     $qnaire_alternate_consent_type_trigger_class_name = lib::get_class_name( 'database\qnaire_alternate_consent_type_trigger' );
     $qnaire_proxy_type_trigger_class_name = lib::get_class_name( 'database\qnaire_proxy_type_trigger' );
@@ -104,6 +137,35 @@ class response extends \cenozo\database\has_rank
 
       // when submitting the response check if the respondent is done and remove any unsent mail
       $db_respondent->remove_unsent_mail();
+
+      // update any triggered participant columns
+      $modifier = lib::create( 'database\modifier' );
+      $modifier->where( 'qnaire_id', '=', $db_qnaire->id );
+      foreach( $qnaire_participant_trigger_class_name::select_objects( $modifier ) as $db_qnaire_participant_trigger )
+      {
+        if( $this->check_trigger( $db_qnaire_participant_trigger ) )
+        {
+          $db_question = $db_qnaire_participant_trigger->get_question();
+
+          if( $db_qnaire->debug )
+          {
+            log::info( sprintf(
+              'Updating participant.%s to %s due to question "%s" having the value "%s" (questionnaire "%s")',
+              $db_qnaire_participant_trigger->column_name,
+              $db_qnaire_participant_trigger->value,
+              $db_question->name,
+              $db_qnaire_participant_trigger->answer_value,
+              $db_qnaire->name
+            ) );
+          }
+
+          // this is safe because the column_name is an enum type, so dangerous column names can't exist here
+          $column_name = $db_qnaire_participant_trigger->column_name;
+          // currently only boolean columns are supported
+          $db_participant->$column_name = 'true' == $db_qnaire_participant_trigger->value;
+          $db_participant->save();
+        }
+      }
 
       // create any triggered consent records
       $modifier = lib::create( 'database\modifier' );

@@ -19,7 +19,7 @@ CREATE PROCEDURE patch_role_has_service()
       "WHERE role.name = 'administrator' ",
       "AND service.subject IN( ",
         "'alternate_consent_type', 'image', 'proxy', 'proxy_type', ",
-        "'qnaire_alternate_consent_type_trigger', 'qnaire_proxy_type_trigger' ",
+        "'qnaire_alternate_consent_type_trigger', 'qnaire_participant_trigger', 'qnaire_proxy_type_trigger' ",
       ") ",
       "AND service.restricted = 1"
     );
@@ -48,6 +48,21 @@ CREATE PROCEDURE patch_role_has_service()
       "WHERE role.name = 'readonly' ",
       "AND service.subject IN( 'address', 'participant' ) ",
       "AND service.method = 'GET' ",
+      "AND service.resource = 1 ",
+      "AND service.restricted = 1"
+    );
+    PREPARE statement FROM @sql;
+    EXECUTE statement;
+    DEALLOCATE PREPARE statement;
+
+    -- respondent
+    SET @sql = CONCAT(
+      "INSERT IGNORE INTO role_has_service( role_id, service_id ) ",
+      "SELECT role.id, service.id ",
+      "FROM ", @cenozo, ".role, service ",
+      "WHERE role.name = 'respondent' ",
+      "AND service.subject = 'response' ",
+      "AND service.method = 'DELETE' ",
       "AND service.resource = 1 ",
       "AND service.restricted = 1"
     );

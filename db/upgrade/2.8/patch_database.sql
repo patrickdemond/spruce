@@ -10,6 +10,7 @@ SOURCE answer.sql
 SOURCE qnaire_consent_type_trigger.sql
 SOURCE qnaire_proxy_type_trigger.sql
 SOURCE qnaire_alternate_consent_type_trigger.sql
+SOURCE qnaire_participant_trigger.sql
 SOURCE module.sql
 SOURCE service.sql
 SOURCE role_has_service.sql
