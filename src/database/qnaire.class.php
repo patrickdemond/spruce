@@ -3108,7 +3108,7 @@ class qnaire extends \cenozo\database\record
             $db_question = $this->get_question( sprintf( '%s_%s', $qnaire_participant_trigger->question_name, $name_suffix ) );
 
           $db_qnaire_participant_trigger = $qnaire_participant_trigger_class_name::get_unique_record(
-            array( 'qnaire_id', 'question_id', 'answer_value', 'answer_value', 'column_name' ),
+            array( 'qnaire_id', 'question_id', 'answer_value', 'column_name' ),
             array( $this->id, $db_question->id, $qnaire_participant_trigger->answer_value, $qnaire_participant_trigger->column_name )
           );
 
