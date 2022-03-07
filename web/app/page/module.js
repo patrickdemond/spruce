@@ -1356,46 +1356,45 @@ cenozoApp.defineModule( { name: 'page',
 
                     // now blank out answers to questions which are no longer visible
                     // (this is done automatically on the server side)
-                    var visibleQuestionList = this.getVisibleQuestionList();
                     this.questionList.forEach( q => {
-                      // re-evaluate descriptions as they may have changed based on the new answer
-                      q.prompts = CnTranslationHelper.parseDescriptions( this.evaluateDescription( q.rawPrompts ) );
-                      q.popups = CnTranslationHelper.parseDescriptions( this.evaluateDescription( q.rawPopups ) );
-
-                      if( 'list' == q.type ) {
-                        q.optionList.forEach( o => {
-                          o.prompts = CnTranslationHelper.parseDescriptions( this.evaluateDescription( o.rawPrompts ) );
-                          o.popups = CnTranslationHelper.parseDescriptions( this.evaluateDescription( o.rawPopups ) );
-                        } );
-                      }
-
-                      if( 'list' == q.type ) {
-                        q.optionList.forEach( o => {
-                          o.prompts = CnTranslationHelper.parseDescriptions( this.evaluateDescription( o.rawPrompts ) );
-                          o.popups = CnTranslationHelper.parseDescriptions( this.evaluateDescription( o.rawPopups ) );
-                        } );
-                      }
-
-                      if( null == visibleQuestionList.findByProperty( 'id', q.id ) ) {
-                        // q isn't visible so set its value to null if it isn't already
+                      if( !this.evaluate( q.precondition ) ) {
                         if( null != q.value ) {
                           q.value = null;
                           this.convertValueToModel( q );
                         }
                       } else {
+                        // re-evaluate descriptions as they may have changed based on the new answer
+                        q.prompts = CnTranslationHelper.parseDescriptions( this.evaluateDescription( q.rawPrompts ) );
+                        q.popups = CnTranslationHelper.parseDescriptions( this.evaluateDescription( q.rawPopups ) );
+
+                        if( 'list' == q.type ) {
+                          q.optionList.forEach( o => {
+                            o.prompts = CnTranslationHelper.parseDescriptions( this.evaluateDescription( o.rawPrompts ) );
+                            o.popups = CnTranslationHelper.parseDescriptions( this.evaluateDescription( o.rawPopups ) );
+                          } );
+                        }
+
+                        if( 'list' == q.type ) {
+                          q.optionList.forEach( o => {
+                            o.prompts = CnTranslationHelper.parseDescriptions( this.evaluateDescription( o.rawPrompts ) );
+                            o.popups = CnTranslationHelper.parseDescriptions( this.evaluateDescription( o.rawPopups ) );
+                          } );
+                        }
+
                         // q is visible, now check its options (assuming we haven't selected dkna/refused)
                         if( 'list' == q.type && !isDknaOrRefuse( q.value ) ) {
                           var visibleOptionList = this.getVisibleOptionList( q );
                           q.optionList.forEach( o => {
                             if( null == visibleOptionList.findByProperty( 'id', o.id ) ) {
                               // o isn't visible so make sure it isn't selected
-                              var v = angular.isArray( q.value ) ? q.value : [];
-                              var i = searchOptionList( v, o.id );
-                              if( null != i ) v.splice( i, 1 );
-                              if( 0 == v.length ) v = null;
-
-                              q.value = v;
-                              this.convertValueToModel( q );
+                              if( angular.isArray( q.value ) ) {
+                                var i = searchOptionList( q.value, o.id );
+                                if( null != i ) {
+                                  q.value.splice( i, 1 );
+                                  if( 0 == q.value.length ) q.value = null;
+                                  this.convertValueToModel( q );
+                                }
+                              }
                             }
                           } );
                         }
