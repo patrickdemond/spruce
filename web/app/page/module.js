@@ -1254,8 +1254,8 @@ cenozoApp.defineModule( { name: 'page',
             try {
               this.working = true;
               var modal = CnModalMessageFactory.instance( {
-                title: 'Please Wait',
-                message: 'Please wait while communicating with the ' + question.device + ' device service.',
+                title: this.text( 'misc.deviceWaitTitle' ),
+                message: this.text( 'misc.deviceWaitMessage' ),
                 block: true
               } );
               modal.show();
@@ -1750,13 +1750,16 @@ cenozoApp.defineModule( { name: 'page',
           },
 
           proceed: async function() {
+            const record = this.parentModel.viewModel.record;
             if( this.previewMode ) {
-              await $state.go(
-                'page.render',
-                { identifier: this.parentModel.viewModel.record.next_id },
-                { reload: true }
-              );
+              await $state.go( 'page.render', { identifier: record.next_id }, { reload: true } );
             } else {
+              var modal = CnModalMessageFactory.instance( {
+                title: this.text( 'misc.submitWaitTitle' ),
+                message: this.text( 'misc.submitWaitMessage' ),
+                block: true
+              } );
+
               try {
                 this.working = true;
 
@@ -1764,9 +1767,7 @@ cenozoApp.defineModule( { name: 'page',
                 var mayProceed = true;
                 this.questionList.some( question => {
                   var complete = this.questionIsComplete( question );
-                  question.incomplete = false === complete ? true
-                                      : true === complete ? false
-                                      : complete;
+                  question.incomplete = false === complete ? true : true === complete ? false : complete;
                   if( question.incomplete ) {
                     mayProceed = false;
                     return true;
@@ -1776,13 +1777,13 @@ cenozoApp.defineModule( { name: 'page',
                 if( mayProceed ) {
                   // proceed to the respondent's next valid page
                   await this.runQuery( async () => {
-                    await CnHttpFactory.instance( {
-                      path: 'respondent/token=' + $state.params.token + '?action=proceed'
-                    } ).patch();
+                    if( null === record.next_id ) modal.show(); // show a wait dialog when submitting the qnaire
+                    await CnHttpFactory.instance( { path: 'respondent/token=' + $state.params.token + '?action=proceed' } ).patch();
                     await this.parentModel.reloadState( true );
                   } );
                 }
               } finally {
+                if( null === record.next_id ) modal.close(); // close the wait dialog when submitted the qnaire
                 this.working = false;
               }
             }
