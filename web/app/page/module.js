@@ -1172,40 +1172,53 @@ cenozoApp.defineModule( { name: 'page',
                   if( angular.isString( matchedQuestion.value ) )
                     compiled = "'" + matchedQuestion.value.replace( /'/g, "\\'" ) + "'";
                 } else if( 'list' == matchedQuestion.type ) {
-                  // find the referenced option
-                  var matchedOption = null;
-                  if( angular.isArray( matchedQuestion.optionList ) ) {
-                    matchedQuestion.optionList.some( o => {
-                      if( optionName == o.name.toLowerCase() ) {
-                        matchedOption = o;
-                        return true;
-                      }
-                    } );
-                  }
+                  if( null == optionName ) {
+                    // print the description of all selected options
+                    compiled = angular.isObject( matchedQuestion.value ) && angular.isDefined( matchedQuestion.value.refuse )
+                             ? this.text( 'misc.refuse' )
+                             : angular.isObject( matchedQuestion.value ) && angular.isDefined( matchedQuestion.value.dkna )
+                             ? this.text( 'misc.dkna' )
+                             : angular.isArray( matchedQuestion.value )
+                             ? matchedQuestion.value.map(
+                                 id => matchedQuestion.optionList.findByProperty( 'id', id ).prompts[this.currentLanguage]
+                               ).join( ', ' )
+                             : '';
+                  } else {
+                    // find the referenced option
+                    var matchedOption = null;
+                    if( angular.isArray( matchedQuestion.optionList ) ) {
+                      matchedQuestion.optionList.some( o => {
+                        if( optionName == o.name.toLowerCase() ) {
+                          matchedOption = o;
+                          return true;
+                        }
+                      } );
+                    }
 
-                  if( null != matchedOption && angular.isArray( matchedQuestion.value ) ) {
-                    if( null == matchedOption.extra ) {
-                      compiled = matchedQuestion.value.includes( matchedOption.id ) ? 'true' : 'false';
-                    } else {
-                      var answer = matchedQuestion.value.findByProperty( 'id', matchedOption.id );
-                      if( !angular.isObject( answer ) ) {
-                        compiled = 'extra()' == fnName ? 'null' : 'false';
+                    if( null != matchedOption && angular.isArray( matchedQuestion.value ) ) {
+                      if( null == matchedOption.extra ) {
+                        compiled = matchedQuestion.value.includes( matchedOption.id ) ? 'true' : 'false';
                       } else {
-                        if( 'extra()' == fnName ) {
-                          // if the answer is an array join all non-null values together into a comma-separated list
-                          var value = angular.isArray( answer.value )
-                                    ? answer.value.filter( a => null != a ).join( ', ' )
-                                    : answer.value;
-                          compiled = 'number' == matchedOption.extra ? value : '"' + value.replace( '"', '\"' ) + '"';
-                        } else if( matchedOption.multiple_answers ) {
-                          // make sure at least one of the answers isn't null
-                          compiled = answer.value.some( v => v != null ) ? 'true' : 'false';
-                        } else if( 'extra()' == fnName ) {
-                          compiled = 'number' == matchedOption.extra
-                                   ? answer.value :
-                                   ( '"' + answer.value.replace( '"', '\"' ) + '"' );
+                        var answer = matchedQuestion.value.findByProperty( 'id', matchedOption.id );
+                        if( !angular.isObject( answer ) ) {
+                          compiled = 'extra()' == fnName ? 'null' : 'false';
                         } else {
-                          compiled = null != answer.value ? 'true' : 'false';
+                          if( 'extra()' == fnName ) {
+                            // if the answer is an array join all non-null values together into a comma-separated list
+                            var value = angular.isArray( answer.value )
+                                      ? answer.value.filter( a => null != a ).join( ', ' )
+                                      : answer.value;
+                            compiled = 'number' == matchedOption.extra ? value : '"' + value.replace( '"', '\"' ) + '"';
+                          } else if( matchedOption.multiple_answers ) {
+                            // make sure at least one of the answers isn't null
+                            compiled = answer.value.some( v => v != null ) ? 'true' : 'false';
+                          } else if( 'extra()' == fnName ) {
+                            compiled = 'number' == matchedOption.extra
+                                     ? answer.value :
+                                     ( '"' + answer.value.replace( '"', '\"' ) + '"' );
+                          } else {
+                            compiled = null != answer.value ? 'true' : 'false';
+                          }
                         }
                       }
                     }
