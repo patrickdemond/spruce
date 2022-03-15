@@ -99,6 +99,9 @@ class ui extends \cenozo\ui\ui
       $module->add_action( 'patch', '/{identifier}' );
     }
 
+    $module = $this->get_module( 'device' );
+    if( !is_null( $module ) ) $module->add_child( 'device_data' );
+
     $module = $this->get_module( 'reminder' );
     if( !is_null( $module ) ) $module->add_child( 'reminder_description' );
 

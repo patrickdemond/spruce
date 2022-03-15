@@ -277,4 +277,22 @@ class answer extends \cenozo\database\record
       }
     }
   }
+
+  /** 
+   * Launches this answer's device
+   */
+  public function launch_device()
+  {
+    $db_device = $this->get_question()->get_device();
+    if( is_null( $db_device ) )
+    {
+      throw lib::create( 'exception\runtime',
+        sprintf( 'Tried to run device for answer %d but question has no device associated with it.', $this->id ),
+        __METHOD__
+      );
+    }
+
+    $this->value = util::json_encode( $db_device->launch( $this ) );
+    $this->save();
+  }
 }

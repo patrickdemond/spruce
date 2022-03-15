@@ -1272,7 +1272,8 @@ cenozoApp.defineModule( { name: 'page',
                 block: true
               } );
               modal.show();
-              await CnHttpFactory.instance( { path: 'question/' + question.id + '?action=launch_device' } ).get();
+              //await CnHttpFactory.instance( { path: 'question/' + question.id + '?action=launch_device' } ).get();
+              await CnHttpFactory.instance( { path: 'answer/' + question.answer_id + '?action=launch_device' } ).patch();
             } finally {
               modal.close();
               this.working = false;

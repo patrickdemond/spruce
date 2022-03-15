@@ -61,9 +61,8 @@ class juniper_manager extends \cenozo\base_object
    * @return varies
    * @access public
    */
-  public function launch()
+  public function launch( $data = NULL )
   {
-    $data = new \stdClass;
     return $this->send( $this->db_device->url, 'POST', $data );
   }
 
@@ -78,7 +77,6 @@ class juniper_manager extends \cenozo\base_object
   {
     //if( !$this->exists() ) return NULL;
 
-    $util_class_name = lib::get_class_name( 'util' );
     $setting_manager = lib::create( 'business\setting_manager' );
     $user = $setting_manager->get_setting( 'utility', 'username' );
     $pass = $setting_manager->get_setting( 'utility', 'password' );
@@ -86,12 +84,9 @@ class juniper_manager extends \cenozo\base_object
 
     $code = 0;
 
-    // prepare cURL request
-    $url = $api_path; //sprintf( '%s/api/%s', $this->db_device->url, $api_path );
-
     // set URL and other appropriate options
     $curl = curl_init();
-    curl_setopt( $curl, CURLOPT_URL, $url );
+    curl_setopt( $curl, CURLOPT_URL, $api_path );
     curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
     curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
     curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, $this->timeout );
@@ -107,8 +102,8 @@ class juniper_manager extends \cenozo\base_object
 
     if( !is_null( $data ) )
     {
-      $header_list[] = 'Content-Type: device/json';
-      curl_setopt( $curl, CURLOPT_POSTFIELDS, $util_class_name::json_encode( $data ) );
+      $header_list[] = 'Content-Type: application/json';
+      curl_setopt( $curl, CURLOPT_POSTFIELDS, util::json_encode( $data ) );
     }
 
     curl_setopt( $curl, CURLOPT_HTTPHEADER, $header_list );
@@ -129,8 +124,9 @@ class juniper_manager extends \cenozo\base_object
     if( 300 <= $code )
     {
       throw lib::create( 'exception\runtime',
-        sprintf( 'Got response code %s when trying %s request to %s.',
+        sprintf( 'Got response code %s "%s" when trying %s request to %s.',
                  $code,
+                 $response,
                  $method,
                  $this->db_device->name ),
         __METHOD__ );
