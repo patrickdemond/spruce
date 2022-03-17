@@ -38,12 +38,12 @@ cenozoApp.defineModule( { name: 'question', dependencies: 'question_option', mod
   module.addInput( '', 'dkna_allowed', {
     title: 'Allow DKNA',
     type: 'boolean',
-    isExcluded: function( $state, model ) { return ['comment', 'device'].includes( model.viewModel.record.type ) ? true : 'add'; }
+    isExcluded: function( $state, model ) { return 'comment' == model.viewModel.record.type ? true : 'add'; }
   } );
   module.addInput( '', 'refuse_allowed', {
     title: 'Allow Refuse',
     type: 'boolean',
-    isExcluded: function( $state, model ) { return ['comment', 'device'].includes( model.viewModel.record.type ) ? true : 'add'; }
+    isExcluded: function( $state, model ) { return 'comment' == model.viewModel.record.type ? true : 'add'; }
   } );
   module.addInput( '', 'device_id', {
     title: 'Device',
@@ -145,11 +145,6 @@ cenozoApp.defineModule( { name: 'question', dependencies: 'question_option', mod
             var removingOptions = angular.isDefined( data.type ) &&
                                 'list' != object.record.type &&
                                 0 < object.record.question_option_count;
-
-            // see if we're changing from 
-            var noLongerDeviceType = angular.isDefined( data.type ) &&
-                                     'device'
-
 
             // warn if changing name will cause automatic change to preconditions
             if( angular.isDefined( data.name ) ) {

@@ -1263,6 +1263,10 @@ cenozoApp.defineModule( { name: 'page',
 
           stopRecording: async function( question ) { question.audio.stop(); },
 
+          isDeviceComplete: function( question ) {
+            return angular.isObject( question.value ) && !isDknaOrRefuse( question.value );
+          },
+
           launchDevice: async function( question ) {
             try {
               this.working = true;
@@ -1272,9 +1276,13 @@ cenozoApp.defineModule( { name: 'page',
                 block: true
               } );
               modal.show();
-              //await CnHttpFactory.instance( { path: 'question/' + question.id + '?action=launch_device' } ).get();
-              await CnHttpFactory.instance( { path: 'answer/' + question.answer_id + '?action=launch_device' } ).patch();
+
+              var response = await CnHttpFactory.instance( {
+                path: 'answer/' + question.answer_id + '?action=launch_device'
+              } ).patch();
+              question.value = response;
             } finally {
+              this.convertValueToModel( question );
               modal.close();
               this.working = false;
             }

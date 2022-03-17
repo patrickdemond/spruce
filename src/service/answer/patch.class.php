@@ -47,7 +47,9 @@ class patch extends \cenozo\service\patch
     if( 'launch_device' == $this->get_argument( 'action', NULL ) )
     {
       // launch the associated device
-      $this->get_leaf_record()->launch_device();
+      $db_answer = $this->get_leaf_record();
+      $db_answer->launch_device();
+      $this->set_data( $db_answer->value );
     }
   }
 }

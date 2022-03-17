@@ -23,20 +23,13 @@ class device_data extends \cenozo\database\record
    */
   public function get_compiled_value( $db_answer )
   {
-    $db_response = $db_answer->get_response();
-    $db_respondent = $db_response->get_respondent();
+    // compile variables as if they were in a description (forced in case the question is on the same page)
+    $value = $db_answer->get_response()->compile_description( $this->code, true );
 
-    if( '$' == $this->code[0] )
-    {
-      // see if we can evaluate as an expression
-      $expression_manager = lib::create( 'business\expression_manager', $db_response );
-      return $expression_manager->evaluate( $this->code );
-    }
+    // convert string representation of boolean values to boolean values
+    if( 'false' == $value ) $value = false;
+    else if( 'true' == $value ) $value = true;
 
-    // if none of the above matches then assume we want data from the data manager
-    $data_manager = lib::create( 'business\data_manager' );
-    return 0 === strpos( $this->code, 'participant.' )
-           ? $data_manager->get_participant_value( $db_respondent->get_participant(), $this->code )
-           : $data_manager->get_value( $this->code );
+    return $value;
   }
 }

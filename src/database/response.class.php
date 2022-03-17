@@ -686,8 +686,9 @@ class response extends \cenozo\database\has_rank
   /**
    * Compiles a question's or option's description
    * @param string $description
+   * @param boolean $force Whether to force compile values even if they are on the current page
    */
-  public function compile_description( $description )
+  public function compile_description( $description, $force = false )
   {
     $attribute_class_name = lib::get_class_name( 'database\attribute' );
     $response_attribute_class_name = lib::get_class_name( 'database\response_attribute' );
@@ -741,9 +742,6 @@ class response extends \cenozo\database\has_rank
       foreach( $question_matches[1] as $index => $question_name )
       {
         $matched_expression = $question_matches[0][$index];
-        $get_count = '.count' == $question_matches[2][$index];
-        $get_extra = preg_match( '/.extra\((.*)\)/', $question_matches[2][$index], $extra_matches ) ? $extra_matches[1] : false;
-        $get_option = preg_match( '/:([A-Za-z0-9_]+)/', $question_matches[2][$index], $option_matches ) ? $option_matches[1] : false;
 
         $modifier = lib::create( 'database\modifier' );
         $modifier->where( 'exclusive', '=', false );
@@ -764,7 +762,7 @@ class response extends \cenozo\database\has_rank
           );
           log::warning( $warning );
         }
-        else if( $db_question->page_id == $this->page_id )
+        else if( $db_question->page_id == $this->page_id && !$force )
         {
           // Do not compile questions that are on the same page, let the frontend do this dynamically instead
           // Instead, remove the $'s around the expression and put them back in after the loop is done
@@ -783,9 +781,41 @@ class response extends \cenozo\database\has_rank
           else if( is_object( $value ) && property_exists( $value, 'refuse' ) && $value->refuse ) $compiled = '(no answer)';
           else if( is_array( $value ) )
           {
-            if( $get_count )
+            if( '.count' == $question_matches[2][$index] )
             {
               $compiled = count( $value );
+            }
+            else if( preg_match( '/.extra\((.*)\)/', $question_matches[2][$index], $extra_matches ) )
+            {
+              $extra_option_name = $extra_matches[1];
+              $compiled = '';
+
+              // we only used the matched option when getting the option's name or extra value
+              foreach( $value as $option )
+              {
+                $db_question_option = lib::create( 'database\question_option', is_object( $option ) ? $option->id : $option );
+                if( $extra_option_name == $db_question_option->name )
+                {
+                  $compiled = is_array( $option->value ) ? implode( ', ', $option->value ) : $option->value;
+                  break;
+                }
+              }
+            }
+            else if( preg_match( '/:([A-Za-z0-9_]+)/', $question_matches[2][$index], $selected_matches ) )
+            {
+              $selected_option_name = $selected_matches[1];
+              $compiled = 'false';
+
+              // we only used the matched option when getting the option's name or extra value
+              foreach( $value as $option )
+              {
+                $db_question_option = lib::create( 'database\question_option', is_object( $option ) ? $option->id : $option );
+                if( $selected_option_name == $db_question_option->name )
+                {
+                  $compiled = 'true';
+                  break;
+                }
+              }
             }
             else
             {
@@ -793,40 +823,22 @@ class response extends \cenozo\database\has_rank
               $raw_answer_list = array();
               foreach( $value as $option )
               {
-                if( $get_option || $get_extra )
+                // selected option may have additional details (so the answer is an object)
+                if( is_object( $option ) )
                 {
-                  // we only used the matched option when getting the option's name or extra value
-                  $db_question_option = lib::create( 'database\question_option', is_object( $option ) ? $option->id : $option );
-                  if( $get_option == $db_question_option->name )
+                  // the option's extra data may have multiple answers (an array) or a single answer
+                  if( is_array( $option->value ) )
                   {
-                    $question_option_id_list[] = $db_question_option->id;
-                    break;
+                    $raw_answer_list = array_merge( $raw_answer_list, $option->value );
                   }
-                  else if( $get_extra == $db_question_option->name )
+                  else
                   {
-                    $raw_answer_list = is_array( $option->value ) ? $option->value : [$option->value];
-                    break;
+                    $raw_answer_list[] = $option->value;
                   }
                 }
                 else
                 {
-                  // selected option may have additional details (so the answer is an object)
-                  if( is_object( $option ) )
-                  {
-                    // the option's extra data may have multiple answers (an array) or a single answer
-                    if( is_array( $option->value ) )
-                    {
-                      $raw_answer_list = array_merge( $raw_answer_list, $option->value );
-                    }
-                    else
-                    {
-                      $raw_answer_list[] = $option->value;
-                    }
-                  }
-                  else
-                  {
-                    $question_option_id_list[] = $option;
-                  }
+                  $question_option_id_list[] = $option;
                 }
               }
 

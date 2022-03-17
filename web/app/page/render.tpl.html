@@ -366,7 +366,7 @@
                   <button ng-if="null != question.device_id" class="btn btn-default larger full-width"
                           ng-disabled="model.renderModel.working"
                           ng-click="model.renderModel.launchDevice( question )">
-                    Launch {{ question.device }} Device
+                    {{ model.renderModel.isDeviceComplete( question ) ? 'Re-' : '' }}Launch {{ question.device }} Device
                   </button>
                 </div>
                 <div ng-switch-when="list"
@@ -496,7 +496,7 @@
                   cn-elastic>
                 </textarea>
                 <div class="btn-group full-width"
-                     ng-if="!['comment', 'device'].includes( question.type ) && ( question.dkna_allowed || question.refuse_allowed )">
+                     ng-if="'comment' != question.type && ( question.dkna_allowed || question.refuse_allowed )">
                   <label class="btn btn-default larger"
                          ng-if="question.dkna_allowed"
                          ng-class="{
