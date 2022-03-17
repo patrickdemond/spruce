@@ -1179,9 +1179,11 @@ cenozoApp.defineModule( { name: 'page',
                              : angular.isObject( matchedQuestion.value ) && angular.isDefined( matchedQuestion.value.dkna )
                              ? this.text( 'misc.dkna' )
                              : angular.isArray( matchedQuestion.value )
-                             ? matchedQuestion.value.map(
-                                 id => matchedQuestion.optionList.findByProperty( 'id', id ).prompts[this.currentLanguage]
-                               ).join( ', ' )
+                             ? matchedQuestion.value.map( option => (
+                                 matchedQuestion.optionList.findByProperty(
+                                   'id', angular.isObject( option ) ? option.id : option
+                                 ).prompts[this.currentLanguage] + ( angular.isObject( option ) ? ' ' + option.value : '' )
+                               ) ).join( ', ' )
                              : '';
                   } else {
                     // find the referenced option
