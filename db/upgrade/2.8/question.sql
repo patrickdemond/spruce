@@ -26,6 +26,21 @@ CREATE PROCEDURE patch_question()
       ALTER TABLE question ADD COLUMN export TINYINT(1) NOT NULL DEFAULT 1 AFTER type;
     END IF;
 
+    SELECT "Changing constraint for device" AS "";
+
+    SELECT delete_rule INTO @test
+    FROM information_schema.REFERENTIAL_CONSTRAINTS
+    WHERE constraint_schema = DATABASE()
+    AND table_name = "question"
+    AND constraint_name = "fk_question_device_id";
+
+    IF 'NO ACTION' = @test  THEN
+      ALTER TABLE question DROP CONSTRAINT fk_question_device_id;
+      ALTER TABLE question
+      ADD CONSTRAINT fk_question_device_id FOREIGN KEY (device_id) REFERENCES device (id)
+      ON DELETE SET NULL ON UPDATE NO ACTION;
+    END IF;
+
   END //
 DELIMITER ;
 
