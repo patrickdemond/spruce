@@ -4364,14 +4364,41 @@ class qnaire extends \cenozo\database\record
         $db_stage->qnaire_id = $db_qnaire->id;
         $db_stage->rank = $stage->rank;
         $db_stage->name = $stage->name;
-        $db_stage->first_module_id = $module_class_name::get_unique_record(
+
+        $db_first_module = $module_class_name::get_unique_record(
           array( 'qnaire_id', 'rank' ),
           array( $db_qnaire->id, $stage->first_module_rank )
-        )->id;
-        $db_stage->last_module_id = $module_class_name::get_unique_record(
+        );
+        if( is_null( $db_first_module ) )
+        {
+          throw lib::create( 'exception\notice',
+            sprintf(
+              'Import file references rank %d as first module for stage "%s", but module does not exist.',
+              $stage->first_module_rank,
+              $stage->name
+            ),
+            __METHOD__
+          );
+        }
+
+        $db_last_module = $module_class_name::get_unique_record(
           array( 'qnaire_id', 'rank' ),
           array( $db_qnaire->id, $stage->last_module_rank )
-        )->id;
+        );
+        if( is_null( $db_last_module ) )
+        {
+          throw lib::create( 'exception\notice',
+            sprintf(
+              'Import file references rank %d as last module for stage "%s", but module does not exist.',
+              $stage->last_module_rank,
+              $stage->name
+            ),
+            __METHOD__
+          );
+        }
+
+        $db_stage->first_module_id = $db_first_module->id;
+        $db_stage->last_module_id = $db_last_module->id;
         $db_stage->precondition = $stage->precondition;
         $db_stage->save();
       }
