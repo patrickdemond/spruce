@@ -383,9 +383,20 @@ cenozoApp.defineModule( { name: 'page',
             // update the token if we've changed it
             var updatedToken = null;
             if( checkedIn && this.data.token != this.data.scanned_token ) {
+              var self = this;
               await CnHttpFactory.instance( {
                 path: 'respondent/token=' + $state.params.token,
-                data: { token: this.data.scanned_token }
+                data: { token: this.data.scanned_token },
+                onError: function( error ) {
+                  if( 409 == error.status ) {
+                    CnModalMessageFactory.instance( {
+                      title: 'Interview ID already exists',
+                      message: 'You cannot use the Interview ID "' + self.data.scanned_token + '" since it already exists.  ' +
+                        'Please double check that you have entered it correctly or try a different ID.',
+                      error: true
+                    } ).show();
+                  } else CnModalMessageFactory.httpError( error );
+                }
               } ).patch();
               updatedToken = this.data.scanned_token;
             }
