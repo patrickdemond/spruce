@@ -431,7 +431,7 @@ cenozoApp.defineModule( { name: 'page',
           },
 
           getFocusableQuestionList: function() {
-            return this.getVisibleQuestionList().filter( question => !['comment', 'device'].includes( question.type ) );
+            return this.getVisibleQuestionList().filter( question => 'comment' != question.type );
           },
 
           getHotKey: function( question, item ) {
@@ -1035,7 +1035,7 @@ cenozoApp.defineModule( { name: 'page',
           // Returns true if complete, false if not and the option ID if an option's extra data is missing
           questionIsComplete: function( question ) {
             // comment and device questions are always complete
-            if( ['comment', 'device'].includes( question.type ) ) return true;
+            if( 'comment' == question.type ) return true;
 
             // hidden questions are always complete
             if( !this.evaluate( question.precondition ) ) return true;

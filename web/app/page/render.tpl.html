@@ -364,6 +364,7 @@
                     Warning: Device question is not associated with a device!
                   </h4>
                   <button ng-if="null != question.device_id" class="btn btn-default larger full-width"
+                          ng-class="{ 'color-red': true === question.incomplete }"
                           ng-disabled="model.renderModel.working"
                           ng-click="model.renderModel.launchDevice( question )">
                     {{ model.renderModel.isDeviceComplete( question ) ? 'Re-' : '' }}Launch {{ question.device }} Device
