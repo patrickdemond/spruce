@@ -92,6 +92,7 @@ class get extends \cenozo\service\get
       $db_qnaire = $db_respondent->get_qnaire();
       $expression_manager = lib::create( 'business\expression_manager', $db_qnaire );
       $db_response = $db_respondent->get_current_response();
+      $rank = is_null( $db_response ) ? 1 : $db_response->rank;
       $column_values = $db_respondent->get_column_values( $this->select, $this->modifier );
 
       // Evaluate expressions in the descriptions
@@ -109,7 +110,7 @@ class get extends \cenozo\service\get
           $description_list[$db_qnaire_description->type][] = sprintf(
             '%s`%s',
             $db_qnaire_description->get_language()->code,
-            $db_qnaire_description->get_compiled_value( $db_respondent, $db_response->rank )
+            $db_qnaire_description->get_compiled_value( $db_respondent, $rank )
           );
         }
 
