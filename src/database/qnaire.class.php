@@ -1227,12 +1227,12 @@ class qnaire extends \cenozo\database\record
       $proxy_sel->add_table_column( 'proxy_type', 'name' );
       $proxy_sel->add_table_column( 'proxy', 'datetime' );
       $proxy_mod = lib::create( 'database\modifier' );
-      $proxy_mod->join( 'proxy_type', 'qnaire_proxy_type_trigger.proxy_type_id', 'proxy_type.id' );
-      $join_mod = lib::create( 'database\modifier' );
-      $join_mod->where( 'proxy_type.id', '=', 'participant_last_proxy.proxy_type_id', false );
-      $join_mod->where( 'participant_last_proxy.participant_id', '=', $db_participant->id );
-      $proxy_mod->join_modifier( 'participant_last_proxy', $join_mod );
+
+      $proxy_mod->join( 'participant_last_proxy', 'participant_last_proxy.participant_id', $db_participant->id );
       $proxy_mod->join( 'proxy', 'participant_last_proxy.proxy_id', 'proxy.id' );
+      $proxy_mod->join( 'proxy_type', 'proxy.proxy_type_id', 'proxy_type.id' );
+      $proxy_mod->where( 'proxy_type.id', '=', 'qnaire_proxy_type_trigger.proxy_type_id' );
+
       foreach( $this->get_qnaire_proxy_type_trigger_list( $proxy_sel, $proxy_mod ) as $proxy )
       {
         $proxy_list[] = array(
