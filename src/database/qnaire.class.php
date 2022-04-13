@@ -1120,9 +1120,8 @@ class qnaire extends \cenozo\database\record
     }
     else
     {
-      // make sure the respondent is completed and un-exported
-      if( !is_null( $db_specific_respondent->end_datetime ) && is_null( $db_specific_respondent->export_datetime ) )
-        $respondent_list[] = $db_specific_respondent;
+      // make sure the respondent has completed the qnaire
+      if( !is_null( $db_specific_respondent->end_datetime ) ) $respondent_list[] = $db_specific_respondent;
     }
 
     foreach( $respondent_list as $db_respondent )
