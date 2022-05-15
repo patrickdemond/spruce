@@ -56,10 +56,10 @@ class patch extends \cenozo\service\patch
         if( is_null( $db_response ) )
         {
           throw lib::create( 'exception\runtime', sprintf(
-            'Tried to perform %s action on respondent %s for qnaire "%s" but no response record exists.',
+            'Tried to perform a PATCH on respondent %s for qnaire "%s" but no response record exists.',
             $db_respondent->get_participant()->uid,
             $db_respondent->get_qnaire()->name
-          ) );
+          ), __METHOD__ );
         }
 
         if( 'force_submit' == $action )
