@@ -20,13 +20,13 @@ class post extends \cenozo\service\post
   {
     parent::validate();
 
+    $db_qnaire = $this->get_parent_record();
     $action = $this->get_argument( 'action', NULL );
     if( !is_null( $action ) )
     {
       if( 'import' != $action )
       {
         // make sure the qnaire has beartooth credentials
-        $db_qnaire = $this->get_parent_record();
         if( is_null( $db_qnaire->beartooth_url ) ||
             is_null( $db_qnaire->beartooth_username ) ||
             is_null( $db_qnaire->beartooth_password ) )
@@ -47,10 +47,15 @@ class post extends \cenozo\service\post
       $db_last_hold = $db_participant->get_last_hold();
       $db_last_hold_type = is_null( $db_last_hold ) ? NULL : $db_last_hold->get_hold_type();
       $final_hold = !is_null( $db_last_hold_type ) && 'final' == $db_last_hold_type->type;
-      if( !is_null( $db_participant->exclusion_id ) || $final_hold )
+      if( !is_null( $db_participant->exclusion_id ) )
       {
         $this->status->set_code( 306 );
-        $this->set_data( 'Only enrolled participants who are not in a final hold may be added to the questionnaire.' );
+        $this->set_data( 'Only enrolled participants may be added to a questionnaire.' );
+      }
+      else if( $final_hold && !$db_qnaire->allow_in_hold )
+      {
+        $this->status->set_code( 306 );
+        $this->set_data( 'This questionniare does not allow participants who in a final hold to be interviewed.' );
       }
     }
   }

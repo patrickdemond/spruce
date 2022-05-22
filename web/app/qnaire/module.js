@@ -131,6 +131,14 @@ cenozoApp.defineModule({
           return model.isRole("interviewer") ? true : "add";
         },
       },
+      allow_in_hold: {
+        title: "Allow when in Hold",
+        type: "boolean",
+        isExcluded: function ($state, model) {
+          return model.isRole("interviewer") ? true : "add";
+        },
+        help: "Whether to allow participants who are in a final hold to answer the questionnaire.",
+      },
       stages: {
         title: "Stages",
         type: "boolean",
