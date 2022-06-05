@@ -1,4 +1,4 @@
-<div ng-repeat="item in ( (model|cnIsArray) ? model : model.add )">
+<div ng-repeat="item in ( (model|cnIsArray) ? model : model.add ) track by $index">
   <div class="panel panel-default" style="margin-bottom: 0">
     <div ng-if="!(model|cnIsArray)" class="panel-heading"><em>ADD:</em></div>
     <div class="panel-body">
@@ -20,7 +20,7 @@
     </div>
   </div>
 </div>
-<div ng-repeat="(name, item) in model.change">
+<div ng-repeat="(name, item) in model.change track by $index">
   <div class="panel panel-default" style="margin-bottom: 0">
     <div class="panel-heading"><em>CHANGE:</em> "{{ name }}"</div>
     <div class="panel-body">
@@ -42,7 +42,7 @@
     </div>
   </div>
 </div>
-<div ng-repeat="item in model.remove">
+<div ng-repeat="item in model.remove track by $index">
   <div class="panel panel-default" style="margin-bottom: 0">
     <div class="panel-heading"><em>REMOVE:</em> "{{ item }}"</div>
   </div>
