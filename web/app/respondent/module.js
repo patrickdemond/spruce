@@ -321,6 +321,7 @@ cenozoApp.defineModule({
       operation: async function ($state, model) {
         await $state.go("respondent.run", {
           token: model.viewModel.record.token,
+          show_hidden: 1,
         });
       },
       isIncluded: function ($state, model) {
