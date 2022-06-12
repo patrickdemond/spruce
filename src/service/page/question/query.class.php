@@ -58,6 +58,7 @@ class query extends \cenozo\service\query
     foreach( $list as $index => $record )
     {
       $expression_manager->process_hidden_text( $record );
+      $list[$index] = $record;
 
       $processing = '';
       try

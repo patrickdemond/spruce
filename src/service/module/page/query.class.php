@@ -31,7 +31,11 @@ class query extends \cenozo\service\query
       'business\expression_manager',
       is_null( $db_response ) ? $this->get_parent_record()->get_qnaire() : $db_response
     );
-    foreach( $list as $index => $record ) $expression_manager->process_hidden_text( $record );
+    foreach( $list as $index => $record )
+    {
+      $expression_manager->process_hidden_text( $record );
+      $list[$index] = $record;
+    }
 
     return $list;
   }
