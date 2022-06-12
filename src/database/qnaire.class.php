@@ -728,16 +728,86 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
-   * Synchronizes the consent types and qnaire with the qnaire belonging to the parent instance
+   * Synchronizes data with the parent instance
+   * 
+   * This includes studies, consent types, alternate consent types, proxy types, and qnaires
    */
   public function sync_with_parent()
   {
     if( is_null( PARENT_INSTANCE_URL ) ) return;
 
+    $study_class_name = lib::get_class_name( 'database\study' );
     $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
     $alternate_consent_type_class_name = lib::get_class_name( 'database\alternate_consent_type' );
     $proxy_type_class_name = lib::get_class_name( 'database\proxy_type' );
     $role_class_name = lib::get_class_name( 'database\role' );
+
+    // update the study list
+    $select = lib::create( 'database\select' );
+    $select->add_column( 'name' );
+    $select->add_column( 'description' );
+
+    $url = sprintf( '%s/api/study?select={"column":["name","description"]}', PARENT_INSTANCE_URL );
+    $curl = curl_init();
+    curl_setopt( $curl, CURLOPT_URL, $url );
+    curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
+    curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+    curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, 5 );
+    curl_setopt(
+      $curl,
+      CURLOPT_HTTPHEADER,
+      array( sprintf(
+        'Authorization: Basic %s',
+        base64_encode( sprintf( '%s:%s', $this->beartooth_username, $this->beartooth_password ) )
+      ) )
+    );
+
+    $response = curl_exec( $curl );
+    if( curl_errno( $curl ) )
+    {
+      throw lib::create( 'exception\runtime',
+        sprintf( 'Got error code %s when synchronizing studies with parent instance.  Message: %s',
+                 curl_errno( $curl ),
+                 curl_error( $curl ) ),
+        __METHOD__
+      );
+    }
+
+    $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
+    if( 401 == $code )
+    {
+      throw lib::create( 'exception\notice',
+        'Unable to synchronize, invalid Beartooth username and/or password.',
+        __METHOD__
+      );
+    }
+    else if( 306 == $code )
+    {
+      throw lib::create( 'exception\notice',
+        sprintf( "Parent Pine instance responded with the following notice\n\n\"%s\"", util::json_decode($response ) ),
+        __METHOD__
+      );
+    }
+    else if( 300 <= $code )
+    {
+      throw lib::create( 'exception\runtime',
+        sprintf( 'Got error code %s when synchronizing studies with parent instance.', $code ),
+        __METHOD__
+      );
+    }
+    else
+    {
+      foreach( util::json_decode( $response ) as $study )
+      {
+        // see if the study exists and create it if it doesn't
+        $db_study = $study_class_name::get_unique_record( 'name', $study->name );
+        if( is_null( $db_study ) ) $db_study = lib::create( 'database\study' );
+
+        $db_study->name = $study->name;
+        $db_study->description = $study->description;
+        $db_study->save();
+      }
+    }
 
     // update the consent type list
     $select = lib::create( 'database\select' );
@@ -1632,6 +1702,7 @@ class qnaire extends \cenozo\database\record
     $cohort_class_name = lib::get_class_name( 'database\cohort' );
     $language_class_name = lib::get_class_name( 'database\language' );
     $region_class_name = lib::get_class_name( 'database\region' );
+    $study_class_name = lib::get_class_name( 'database\study' );
     $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
 
     if( is_null( $this->beartooth_url ) || is_null( $this->beartooth_username ) || is_null( $this->beartooth_password ) )
@@ -1738,6 +1809,42 @@ class qnaire extends \cenozo\database\record
       $db_address->region_id = $region_class_name::get_unique_record( 'name', $participant->region )->id;
       $db_address->postcode = $participant->postcode;
       $db_address->save();
+
+      // replace all eligibility with the provided list
+      $study_name_list = explode( ';', $participant->study_list );
+
+      if( 0 == count( $study_name_list ) )
+      {
+        $study_mod = lib::create( 'database\modifier' );
+        $study_mod->where( 'participant_id', '=', $db_participant->id );
+        static::db()->execute( sprintf( 'DELETE FROM study_has_participant %s', $study_mod->get_sql() ) );
+      }
+      else
+      {
+        $study_sel = lib::create( 'database\select' );
+        $study_sel->from( 'study' );
+        $study_sel->add_column( 'study.id', 'study_id', false );
+        $participant_sel->add_column( 'participant.id', 'participant_id', false );
+
+        $study_mod = lib::create( 'database\modifier' );
+        $study_mod->where( 'study.name', 'IN', $study_name_list );
+        $study_mod->where( 'participant.id', '=', $db_participant->id );
+
+        static::db()->execute( sprintf(
+          'INSERT IGNORE INTO study_has_participant( study_id, participant_id ) '.
+          '%s %s',
+          $study_sel->get_sql(),
+          $study_mod->get_sql()
+        ) );
+
+        $study_mod = lib::create( 'database\modifier' );
+        $study_mod->where( 'study.name', 'NOT IN', $study_name_list );
+        $study_mod->where( 'participant.id', '=', $db_participant->id );
+        static::db()->execute( sprintf(
+          'DELETE FROM study_has_participant %s',
+          $study_mod->get_sql()
+        ) );
+      }
 
       // create consent records (NOTE: importing alternate consent is not yet implemented)
       foreach( explode( ';', $participant->consent_list ) as $consent_entry )
