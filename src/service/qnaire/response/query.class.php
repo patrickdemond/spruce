@@ -36,25 +36,24 @@ class query extends \cenozo\service\query
    */
   protected function get_record_list()
   {
+    $data = array();
+
     // if exporting data then we need the qnaire class to generate it for us
     if( $this->get_argument( 'export', false ) )
     {
       $modifier = lib::create( 'database\modifier');
-      // make sure the response has at least one answer
-      $modifier->join( 'respondent', 'response.respondent_id', 'respondent.id' );
-      $modifier->join( 'participant', 'respondent.participant_id', 'participant.id' );
-      $modifier->join( 'answer', 'response.id', 'answer.response_id' );
-      $modifier->group( 'response.id' );
-      $modifier->order( 'participant.uid' );
-      $modifier->order( 'response.rank' );
       $modifier->limit( $this->modifier->get_limit() );
       $modifier->offset( $this->modifier->get_offset() );
 
       // get response data that is marked for export only
-      $response_data = $this->get_parent_record()->get_response_data( $modifier, true );
+      $response_data = $this->get_parent_record()->get_response_data(
+        $modifier,
+        true, // exporting data
+        $this->get_argument( 'attributes', false ), // whether to include attributes
+        true // only include responses with answers
+      );
       $data = $response_data['data'];
       foreach( $data as $index => $row ) $data[$index] = array_combine( $response_data['header'], $data[$index] );
-      return $data;
     }
     else
     {
@@ -63,7 +62,9 @@ class query extends \cenozo\service\query
       $modifier = clone $this->modifier;
       $modifier->where( 'respondent.qnaire_id', '=', $this->get_parent_record()->id );
 
-      return $response_class_name::select( $this->select, $modifier );
+      $data = $response_class_name::select( $this->select, $modifier );
     }
+
+    return $data;
   }
 }

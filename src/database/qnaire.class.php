@@ -2179,20 +2179,27 @@ class qnaire extends \cenozo\database\record
    * Returns an array of all responses to this qnaire
    * @param database\modifier $modifier
    * @param boolean $exporting Whether the data is being exported (some questions are marked to not be exported)
+   * @param boolean $attributes Whether to include attribute values
+   * @param boolean $answers_only Whether to restrict responses to those with one or more answers
    * @return array( 'header', 'data' )
    */
-  public function get_response_data( $modifier = NULL, $exporting = false )
+  public function get_response_data(
+    $modifier = NULL, $exporting = false, $attributes = false, $answers_only = false )
   {
     ini_set( 'memory_limit', '1G' );
     set_time_limit( 900 ); // 15 minutes max
 
     $response_class_name = lib::get_class_name( 'database\response' );
+    $answer_class_name = lib::get_class_name( 'database\answer' );
+    $response_attribute_class_name = lib::get_class_name( 'database\response_attribute' );
     $column_list = $this->get_all_questions( false, $exporting ); // exclude questions not marked for export
+    $attribute_list = array();
 
     // now loop through all responses and fill in the data array
     $data = array();
     $response_mod = lib::create( 'database\modifier' );
     $response_mod->join( 'respondent', 'response.respondent_id', 'respondent.id' );
+    $response_mod->join( 'participant', 'respondent.participant_id', 'participant.id' );
     $response_mod->where( 'respondent.qnaire_id', '=', $this->id );
     $response_mod->order( 'respondent.end_datetime' );
 
@@ -2203,31 +2210,100 @@ class qnaire extends \cenozo\database\record
       $response_mod->offset( $modifier->get_offset() );
     }
 
-    foreach( $response_class_name::select_objects( $response_mod ) as $db_response )
+    $response_sel = lib::create( 'database\select' );
+    $response_sel->add_column( 'id' );
+    $response_sel->add_column( 'rank' );
+    $response_sel->add_column( 'qnaire_version' );
+    $response_sel->add_column( 'submitted' );
+    $response_sel->add_column(
+      'DATE_FORMAT( response.start_datetime, "%Y-%m-%dT%T+00:00" )',
+      'start_datetime',
+      false
+    );
+    $response_sel->add_column(
+      'DATE_FORMAT( response.last_datetime, "%Y-%m-%dT%T+00:00" )',
+      'last_datetime',
+      false
+    );
+    $response_sel->add_table_column( 'participant', 'uid' );
+
+    // get all answers for all responses
+    $answer_sel = lib::create( 'database\select' );
+    $answer_sel->add_column( 'response_id' );
+    $answer_sel->add_column( 'question_id' );
+    $answer_sel->add_column( 'value' );
+    $answer_mod = lib::create( 'database\modifier' );
+    $answer_mod->join( 'response', 'answer.response_id', 'response.id' );
+    $answer_mod->join( 'respondent', 'response.respondent_id', 'respondent.id' );
+    $answer_mod->where( 'respondent.qnaire_id', '=', $this->id );
+    $answer_mod->order( 'response_id' );
+    $answer_mod->order( 'question_id' );
+    if( !is_null( $modifier ) ) $answer_mod->merge( $modifier );
+
+    $answer_data = array();
+    foreach( $answer_class_name::select( $answer_sel, $answer_mod ) as $answer )
     {
-      $answer_list = array();
-      $answer_sel = lib::create( 'database\select' );
-      $answer_sel->add_column( 'question_id' );
-      $answer_sel->add_column( 'value' );
-      $answer_mod = lib::create( 'database\modifier' );
-      $answer_mod->order( 'question_id' );
-      foreach( $db_response->get_answer_list( $answer_sel, $answer_mod ) as $answer )
-        $answer_list[$answer['question_id']] = $answer['value'];
+      if( !array_key_exists( $answer['response_id'], $answer_data ) ) $answer_data[$answer['response_id']] = [];
+      $answer_data[$answer['response_id']][$answer['question_id']] = $answer['value'];
+    }
+
+    $response_attribute_data = array();
+    if( $attributes )
+    {
+      // get a list of all attributes for this qnaire
+      $attribute_sel = lib::create( 'database\select' );
+      $attribute_sel->add_column( 'name' );
+      $attribute_mod = lib::create( 'database\modifier' );
+      $attribute_mod->order( 'attribute.id' );
+      foreach( $this->get_attribute_list( $attribute_sel, $attribute_mod ) as $attribute )
+        $attribute_list[] = $attribute['name'];
+
+      // get all response attributes for all responses
+      $response_attribute_sel = lib::create( 'database\select' );
+      $response_attribute_sel->add_column( 'response_id' );
+      $response_attribute_sel->add_table_column( 'attribute', 'name' );
+      $response_attribute_sel->add_column( 'value' );
+      $response_attribute_mod = lib::create( 'database\modifier' );
+      $response_attribute_mod->join( 'attribute', 'response_attribute.attribute_id', 'attribute.id' );
+      $response_attribute_mod->join( 'response', 'response_attribute.response_id', 'response.id' );
+      $response_attribute_mod->join( 'respondent', 'response.respondent_id', 'respondent.id' );
+      $response_attribute_mod->where( 'respondent.qnaire_id', '=', $this->id );
+      $response_attribute_mod->order( 'response_id' );
+      $response_attribute_mod->order( 'attribute_id' );
+      if( !is_null( $modifier ) ) $response_attribute_mod->merge( $modifier );
+
+      foreach( $response_attribute_class_name::select( $response_attribute_sel, $response_attribute_mod ) as $ra )
+      {
+        if( !array_key_exists( $ra['response_id'], $response_attribute_data ) )
+          $response_attribute_data[$ra['response_id']] = [];
+        $response_attribute_data[$ra['response_id']][$ra['name']] = $ra['value'];
+      }
+    }
+
+    // loop through each response and build the data
+    foreach( $response_class_name::select( $response_sel, $response_mod ) as $response )
+    {
+      $answer_list = array_key_exists( $response['id'], $answer_data )
+                   ? $answer_data[$response['id']]
+                   : NULL;
+
+      // if requested, don't add responses with no answers
+      if( $answers_only && is_null( $answer_list ) ) continue;
 
       $data_row = array(
-        $db_response->get_respondent()->get_participant()->uid,
-        $db_response->rank,
-        $db_response->qnaire_version,
-        $db_response->submitted ? 1 : 0,
-        is_null( $db_response->start_datetime ) ? NULL : $db_response->start_datetime->format( 'c' ),
-        is_null( $db_response->last_datetime ) ? NULL : $db_response->last_datetime->format( 'c' )
+        $response['uid'],
+        $response['rank'],
+        $response['qnaire_version'],
+        $response['submitted'] ? 1 : 0,
+        $response['start_datetime'],
+        $response['last_datetime']
       );
 
       foreach( $column_list as $column_name => $column )
       {
         $row_value = NULL;
 
-        if( array_key_exists( $column['question_id'], $answer_list ) )
+        if( !is_null( $answer_list ) && array_key_exists( $column['question_id'], $answer_list ) )
         {
           $answer = util::json_decode( $answer_list[$column['question_id']] );
           if( is_object( $answer ) && property_exists( $answer, 'dkna' ) && $answer->dkna )
@@ -2266,10 +2342,13 @@ class qnaire extends \cenozo\database\record
                 $row_value = !$column['all_exclusive'] ? 'NO' : NULL;
                 if( is_array( $answer ) ) foreach( $answer as $a )
                 {
-                  if( ( is_object( $a ) && $column['option_id'] == $a->id ) || ( !is_object( $a ) && $column['option_id'] == $a ) )
+                  if( ( is_object( $a ) && $column['option_id'] == $a->id ) ||
+                      ( !is_object( $a ) && $column['option_id'] == $a ) )
                   {
                     // use the value if the option asks for extra data
-                    $row_value = is_null( $column['extra'] ) ? 'YES' : ( property_exists( $a, 'value' ) ? $a->value : NULL );
+                    $row_value = is_null( $column['extra'] ) ? 'YES' : (
+                      property_exists( $a, 'value' ) ? $a->value : NULL
+                    );
                     break;
                   }
                 }
@@ -2308,11 +2387,22 @@ class qnaire extends \cenozo\database\record
         $data_row[] = is_array( $row_value ) ? implode( ';', $row_value ) : $row_value;
       }
 
+      if( $attributes )
+      {
+        foreach( $attribute_list as $attribute )
+        {
+          $data_row[] = array_key_exists( $response['id'], $response_attribute_data )
+                      ? $response_attribute_data[$response['id']][$attribute]
+                      : NULL;
+        }
+      }
+
       $data[] = $data_row;
     }
 
     $header = array_keys( $column_list );
     array_unshift( $header, 'uid', 'rank', 'qnaire_version', 'submitted', 'start_datetime', 'last_datetime' );
+    if( $attributes ) foreach( $attribute_list as $attribute ) $header[] = sprintf( 'attribute:%s', $attribute );
     return array( 'header' => $header, 'data' => $data );
   }
 
