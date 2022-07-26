@@ -67,7 +67,7 @@ class get extends \cenozo\service\get
         'business\expression_manager',
         is_null( $this->db_response ) ? $this->get_leaf_record()->get_qnaire() : $this->db_response
       );
-      $qnaire_username = $setting_manager->get_setting( 'utility', 'qnaire_username' );
+      $respondent_username = $setting_manager->get_setting( 'utility', 'respondent_username' );
       $db_user = lib::create( 'business\session' )->get_user();
       $db_page = $this->db_response->get_page();
 
@@ -88,7 +88,7 @@ class get extends \cenozo\service\get
           $db_answer = lib::create( 'database\answer' );
           $db_answer->response_id = $this->db_response->id;
           $db_answer->question_id = $question['id'];
-          $db_answer->user_id = $qnaire_username == $db_user->name ? NULL : $db_user->id;
+          $db_answer->user_id = $respondent_username == $db_user->name ? NULL : $db_user->id;
 
           // apply the default answer if there is one
           if( !is_null( $question['default_answer'] ) )

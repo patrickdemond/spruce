@@ -18,9 +18,6 @@ $SETTINGS['general']['build'] = 'd35df64';
 // the default maximum number of seconds that a page should take to complete
 $SETTINGS['general']['default_page_max_time'] = 60;
 
-// hard-coded databaseaccess ID which identifies the respondent's access record
-$SETTINGS['general']['respondent_access_id'] = NULL;
-
 // whether this instance gets its respondents from a detached beartooth instance
 $SETTINGS['general']['detached'] = false;
 
@@ -31,7 +28,7 @@ $SETTINGS['url']['parent_instance'] = NULL;
 $SETTINGS['path']['APPLICATION'] = str_replace( '/settings.ini.php', '', __FILE__ );
 
 // the user to use when filling in a qnaire without logging in
-$SETTINGS['utility']['qnaire_username'] = 'pine';
+$SETTINGS['utility']['respondent_username'] = 'pine';
 
 // the location of qnaire export files
 $SETTINGS['path']['QNAIRE_EXPORT'] = str_replace( 'settings.ini.php', 'doc/qnaire_export', __FILE__ );

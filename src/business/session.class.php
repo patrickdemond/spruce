@@ -19,41 +19,43 @@ class session extends \cenozo\business\session
    */
   public function login( $username = NULL, $db_site = NULL, $db_role = NULL )
   {
+    $setting_manager = lib::create( 'business\setting_manager' );
+    $respondent_username = $setting_manager->get_setting( 'utility', 'respondent_username' );
+
+    $is_respondent = false;
     if( !$this->is_shutdown() )
     {
-      $setting_manager = lib::create( 'business\setting_manager' );
-      $qnaire_username = $setting_manager->get_setting( 'utility', 'qnaire_username' );
-
-      // If an access.id exists in the session then we're already logged in.
-      // Check if we're logged in as the qnaire user and if so then logout if loading anything other than the response run page
-      if( array_key_exists( 'access.id', $_SESSION ) )
+      // If a JWT exists then we're already logged in.
+      if( !is_null( $this->jwt ) )
       {
-        try
+        $db_access = lib::create( 'database\access', $this->jwt->get_data( 'access_id' ) );
+
+        if( $respondent_username == $db_access->get_user()->name )
         {
-          $db_access = lib::create( 'database\access', $_SESSION['access.id'] );
-          if( $qnaire_username == $db_access->get_user()->name )
+          // don't record activity from the qnaire user
+          $this->no_activity = true;
+
+          // we're logged in as the qnaire user, log out if we're loading anything other than a response
+          if( !array_key_exists( 'REDIRECT_URL', $_SERVER ) ||
+              ( 0 == preg_match( '#/api/#', $_SERVER['REDIRECT_URL'] ) && is_null( $this->get_response() ) ) )
           {
-            // we're logged in as the qnaire user, log out if we're loading anything other than a response
-            if( !array_key_exists( 'REDIRECT_URL', $_SERVER ) ||
-                ( 0 == preg_match( '#/api/#', $_SERVER['REDIRECT_URL'] ) && is_null( $this->get_response() ) ) )
-            {
-              unset( $_SESSION['access.id'] );
-              $this->logout();
-            }
+            $this->logout();
           }
         }
-        catch( \cenozo\exception\runtime $e ) {} // ignore invalid access ids
       }
-      // If there is no access.id in the session then we're not logged in.
-      // If we're looking at the response run page then automatically log in as the qnaire user
-      else if( is_null( $username ) && !is_null( $this->get_response() ) )
+      // If there is no JWT and we're viewing a response then automatically log in as the respondent user
+      else if( is_null( $username ) &&
+               is_null( $db_site ) &&
+               is_null( $db_role ) &&
+               !is_null( $this->get_response() ) )
       {
-        // log in as the qnaire user
-        $username = $qnaire_username;
+        $is_respondent = true;
       }
     }
 
-    return parent::login( $username, $db_site, $db_role );
+    return $is_respondent ?
+      parent::login( $respondent_username ) :
+      parent::login( $username, $db_site, $db_role );
   }
 
   /**
@@ -100,20 +102,6 @@ class session extends \cenozo\business\session
     }
 
     return $this->db_response;
-  }
-
-  /**
-   * Extends the parent method
-   */
-  public function initialize( $no_activity = false )
-  {
-    // turn off activity when using the special access role
-    $setting_manager = lib::create( 'business\setting_manager' );
-    $respondent_access_id = $setting_manager->get_setting( 'general', 'respondent_access_id' );
-    if( array_key_exists( 'access.id', $_SESSION ) &&
-        !is_null( $respondent_access_id ) &&
-        $_SESSION['access.id'] == $respondent_access_id ) $no_activity = true;
-    parent::initialize( $no_activity );
   }
 
   /**
