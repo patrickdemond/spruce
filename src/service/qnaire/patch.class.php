@@ -17,7 +17,7 @@ class patch extends \cenozo\service\patch
   {
     parent::validate();
 
-    if( 300 > $this->get_status()->get_code() )
+    if( $this->may_continue() )
     {
       if( !$this->get_argument( 'patch', false ) )
       {
