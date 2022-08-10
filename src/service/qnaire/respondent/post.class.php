@@ -39,7 +39,7 @@ class post extends \cenozo\service\post
         }
       }
     }
-    else if( 300 > $this->get_status()->get_code() )
+    else if( $this->may_continue() )
     {
       // make sure the participant is enrolled and not in a final hold
       $post_array = $this->get_file_as_array();

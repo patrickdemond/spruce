@@ -17,7 +17,7 @@ class patch extends \cenozo\service\patch
   {
     parent::validate();
 
-    if( 300 > $this->get_status()->get_code() )
+    if( $this->may_continue() )
     {
       // only jump when in debug mode
       if( 'jump' == $this->get_argument( 'action', false ) && !$this->get_leaf_record()->get_qnaire()->debug )

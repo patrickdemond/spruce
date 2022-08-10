@@ -50,7 +50,7 @@ class get extends \cenozo\service\downloadable
   {
     parent::prepare();
 
-    if( 300 > $this->status->get_code() )
+    if( $this->may_continue() )
     {
       $output = $this->get_argument( 'output', NULL );
       if( !is_null( $output ) ) $this->get_leaf_record()->generate( $output );

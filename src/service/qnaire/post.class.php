@@ -17,7 +17,7 @@ class post extends \cenozo\service\post
   {
     parent::validate();
 
-    if( 300 > $this->get_status()->get_code() )
+    if( $this->may_continue() )
     {
       $post_array = $this->get_file_as_array();
 

@@ -671,7 +671,7 @@ class qnaire extends \cenozo\database\record
     {
       return sprintf( "Beartooth responded with the following notice\n\n\"%s\"", util::json_decode($response ) );
     }
-    else if( 300 <= $code )
+    else if( 204 == $code || 300 <= $code )
     {
       return sprintf( 'Got response code %s when connecting to Beartooth server.', $code );
     }
@@ -719,7 +719,7 @@ class qnaire extends \cenozo\database\record
     {
       return sprintf( "Parent Pine instance responded with the following notice\n\n\"%s\"", util::json_decode($response ) );
     }
-    else if( 300 <= $code )
+    else if( 204 == $code || 300 <= $code )
     {
       return sprintf( 'Got error code %s when connecting to parent Pine server.', $code );
     }
@@ -788,7 +788,7 @@ class qnaire extends \cenozo\database\record
         __METHOD__
       );
     }
-    else if( 300 <= $code )
+    else if( 204 == $code || 300 <= $code )
     {
       throw lib::create( 'exception\runtime',
         sprintf( 'Got error code %s when synchronizing studies with parent instance.', $code ),
@@ -856,7 +856,7 @@ class qnaire extends \cenozo\database\record
         __METHOD__
       );
     }
-    else if( 300 <= $code )
+    else if( 204 == $code || 300 <= $code )
     {
       throw lib::create( 'exception\runtime',
         sprintf( 'Got error code %s when synchronizing consent types with parent instance.', $code ),
@@ -932,7 +932,7 @@ class qnaire extends \cenozo\database\record
         __METHOD__
       );
     }
-    else if( 300 <= $code )
+    else if( 204 == $code || 300 <= $code )
     {
       throw lib::create( 'exception\runtime',
         sprintf( 'Got error code %s when synchronizing alternate_consent types with parent instance.', $code ),
@@ -1009,7 +1009,7 @@ class qnaire extends \cenozo\database\record
         __METHOD__
       );
     }
-    else if( 300 <= $code )
+    else if( 204 == $code || 300 <= $code )
     {
       throw lib::create( 'exception\runtime',
         sprintf( 'Got error code %s when synchronizing proxy types with parent instance.', $code ),
@@ -1090,7 +1090,7 @@ class qnaire extends \cenozo\database\record
         __METHOD__
       );
     }
-    else if( 300 <= $code )
+    else if( 204 == $code || 300 <= $code )
     {
       throw lib::create( 'exception\runtime',
         sprintf( 'Got error code %s when synchronizing qnaire with parent instance.', $code ),
@@ -1145,7 +1145,7 @@ class qnaire extends \cenozo\database\record
             __METHOD__
           );
         }
-        else if( 300 <= $code )
+        else if( 204 == $code || 300 <= $code )
         {
           throw lib::create( 'exception\runtime',
             sprintf( 'Got error code %s when synchronizing qnaire with parent instance (export).', $code ),
@@ -1441,7 +1441,7 @@ class qnaire extends \cenozo\database\record
           __METHOD__
         );
       }
-      else if( 300 <= $code )
+      else if( 204 == $code || 300 <= $code )
       {
         throw lib::create( 'exception\runtime',
           sprintf( 'Got error code %s when exporting respondent data to parent instance.', $code ),
@@ -1508,7 +1508,7 @@ class qnaire extends \cenozo\database\record
           __METHOD__
         );
       }
-      else if( 300 <= $code )
+      else if( 204 == $code || 300 <= $code )
       {
         throw lib::create( 'exception\runtime',
           sprintf( 'Got response code %s when getting exporting participant data to Beartooth.', $code ),
@@ -1756,7 +1756,7 @@ class qnaire extends \cenozo\database\record
         __METHOD__
       );
     }
-    else if( 300 <= $code )
+    else if( 204 == $code || 300 <= $code )
     {
       throw lib::create( 'exception\runtime',
         sprintf( 'Got response code %s when getting appointment list from Beartooth.', $code ),
