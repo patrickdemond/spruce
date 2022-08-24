@@ -57,8 +57,8 @@ cenozo.directive("cnQnairePartPatch", [
 /* ############################################################################################## */
 cenozoApp.initQnairePartModule = function (module, type) {
   var columnList = {
-    rank: { title: "Rank", type: "rank" },
-    name: { title: "Name" },
+    rank: { column: type+".rank", title: "Rank", type: "rank" },
+    name: { column: type+".name", title: "Name" },
   };
 
   var childType = null;
