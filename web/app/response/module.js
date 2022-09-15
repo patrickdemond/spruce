@@ -199,7 +199,8 @@ cenozoApp.defineModule({
     cenozo.providers.factory("CnResponseDisplayFactory", [
       "CnHttpFactory",
       "CnTranslationHelper",
-      function (CnHttpFactory, CnTranslationHelper) {
+      "$state",
+      function (CnHttpFactory, CnTranslationHelper, $state) {
         var object = function (parentModel) {
           var dknaPrompts = {
             en: CnTranslationHelper.translate("misc.dkna", "en"),
@@ -216,6 +217,13 @@ cenozoApp.defineModule({
             moduleList: [],
             questionList: [],
             onLoad: async function () {
+              // make sure the identifier is valid
+              const identifier = this.parentModel.getQueryParameter("identifier");
+              if( !identifier ) {
+                $state.go("error.404");
+                return;
+              }
+
               // get a list of all modules
               var response = await CnHttpFactory.instance({
                 path:
