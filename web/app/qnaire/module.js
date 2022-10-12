@@ -585,12 +585,14 @@ cenozoApp.defineModule({
 
     /* ############################################################################################## */
     cenozo.providers.factory("CnQnaireCloneFactory", [
+      "CnQnaireModelFactory",
       "CnHttpFactory",
       "CnModalMessageFactory",
       "$state",
-      function (CnHttpFactory, CnModalMessageFactory, $state) {
+      function (CnQnaireModelFactory, CnHttpFactory, CnModalMessageFactory, $state) {
         var object = function () {
           angular.extend(this, {
+            parentModel: CnQnaireModelFactory.root,
             parentQnaireId: $state.params.identifier,
             sourceName: null,
             working: false,
@@ -667,11 +669,13 @@ cenozoApp.defineModule({
 
     /* ############################################################################################## */
     cenozo.providers.factory("CnQnaireImportFactory", [
+      "CnQnaireModelFactory",
       "CnHttpFactory",
       "$state",
-      function (CnHttpFactory, $state) {
+      function (CnQnaireModelFactory, CnHttpFactory, $state) {
         var object = function () {
           angular.extend(this, {
+            parentModel: CnQnaireModelFactory.root,
             working: false,
             file: null,
 
@@ -707,12 +711,14 @@ cenozoApp.defineModule({
 
     /* ############################################################################################## */
     cenozo.providers.factory("CnQnaireMassRespondentFactory", [
+      "CnQnaireModelFactory",
       "CnSession",
       "CnHttpFactory",
       "CnModalMessageFactory",
       "CnParticipantSelectionFactory",
       "$state",
       function (
+        CnQnaireModelFactory,
         CnSession,
         CnHttpFactory,
         CnModalMessageFactory,
@@ -721,6 +727,7 @@ cenozoApp.defineModule({
       ) {
         var object = function () {
           angular.extend(this, {
+            parentModel: CnQnaireModelFactory.root,
             working: false,
             participantSelection: CnParticipantSelectionFactory.instance({
               path: ["qnaire", $state.params.identifier, "participant"].join(

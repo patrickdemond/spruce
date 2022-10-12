@@ -18,6 +18,9 @@ INSERT IGNORE INTO service ( subject, method, resource, restricted ) VALUES
 ( 'image', 'GET', 1, 0 ),
 ( 'image', 'PATCH', 1, 1 ),
 ( 'image', 'POST', 0, 1 ),
+( 'notation', 'DELETE', 1, 1 ),
+( 'notation', 'PATCH', 1, 1 ),
+( 'notation', 'POST', 0, 1 ),
 ( 'proxy', 'GET', 0, 1 ),
 ( 'proxy', 'GET', 1, 1 ),
 ( 'proxy', 'PATCH', 1, 1 ),
@@ -41,4 +44,5 @@ INSERT IGNORE INTO service ( subject, method, resource, restricted ) VALUES
 ( 'qnaire_proxy_type_trigger', 'GET', 0, 1 ),
 ( 'qnaire_proxy_type_trigger', 'GET', 1, 1 ),
 ( 'qnaire_proxy_type_trigger', 'PATCH', 1, 1 ),
-( 'qnaire_proxy_type_trigger', 'POST', 0, 1 );
+( 'qnaire_proxy_type_trigger', 'POST', 0, 1 ),
+( 'stratum', 'GET', 0, 0 );

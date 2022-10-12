@@ -69,9 +69,10 @@ cenozoApp.defineModule({
     /* ############################################################################################## */
     cenozo.providers.directive("cnModuleClone", [
       "CnQnairePartCloneFactory",
+      "CnModuleModelFactory",
       "CnSession",
       "$state",
-      function (CnQnairePartCloneFactory, CnSession, $state) {
+      function (CnQnairePartCloneFactory, CnModuleModelFactory, CnSession, $state) {
         return {
           templateUrl: cenozoApp.getFileUrl(
             "pine",
@@ -80,8 +81,10 @@ cenozoApp.defineModule({
           restrict: "E",
           scope: { model: "=?" },
           controller: async function ($scope) {
-            if (angular.isUndefined($scope.model))
+            if (angular.isUndefined($scope.model)) {
               $scope.model = CnQnairePartCloneFactory.instance("module");
+              $scope.model.parentModel = CnModuleModelFactory.root;
+            }
 
             await $scope.model.onLoad();
 

@@ -1,4 +1,16 @@
-<div class="container-fluid bg-primary rounded-top"><h4>Patch Questionnaire</h4></div>
+<div class="container-fluid bg-primary rounded-top">
+  <h4>
+    <div class="pull-right">
+      <i class="glyphicon glyphicon-question-sign glyph-hover btn-primary btn-header"
+         ng-class="{'glyph-disabled':!model.module.hasNotation()}"
+         ng-if="model.isRole('administrator') || model.module.hasNotation()"
+         uib-tooltip="Click to view documentation"
+         tooltip-placement="left"
+         ng-click="model.showNotation(); $event.stopPropagation()"></i>
+    </div>
+    Patch Questionnaire
+  </h4>
+</div>
 <form name="form" class="form-horizontal" novalidate>
   <div class="form-body">
     <div class="form-group">
