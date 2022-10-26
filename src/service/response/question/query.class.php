@@ -26,12 +26,221 @@ class query extends \cenozo\service\query
   /**
    * Replace parent method
    */
+  protected function setup()
+  {
+    $module_class_name = lib::get_class_name( 'database\module' );
+    $page_class_name = lib::get_class_name( 'database\page' );
+    $question_class_name = lib::get_class_name( 'database\question' );
+    $question_option_class_name = lib::get_class_name( 'database\question_option' );
+
+    parent::setup();
+
+    // generate a list of all visible questions and any answers
+    $db_response = $this->get_parent_record();
+    $db_language = $db_response->get_language();
+    $db_qnaire = $db_response->get_respondent()->get_qnaire();
+    $expression_manager = lib::create( 'business\expression_manager', $db_response );
+    $this->data_list = array();
+
+    $module_sel = lib::create( 'database\select' );
+    $module_sel->from( 'module' );
+    $module_sel->add_column( 'id' );
+    $module_sel->add_column( 'precondition' );
+    $module_sel->add_table_column( 'module_description', 'value', 'description' );
+
+    $module_mod = lib::create( 'database\modifier' );
+    $module_mod->where( 'qnaire_id', '=', $db_qnaire->id );
+    $module_mod->order( 'module.rank' );
+    
+    $join_mod = lib::create( 'database\modifier' );
+    $join_mod->where( 'module.id', '=', 'module_description.module_id', false );
+    $join_mod->where( 'module_description.language_id', '=', $db_language->id );
+    $join_mod->where( 'module_description.type', '=', 'prompt' );
+    $module_mod->join_modifier( 'module_description', $join_mod );
+
+    foreach( $module_class_name::select( $module_sel, $module_mod ) as $module )
+    {
+      if( $expression_manager->evaluate( $module['precondition'] ) )
+      {
+        $module_data = array(
+          'description' => $db_response->compile_description( $module['description'], true ),
+          'page_list' => array()
+        );
+
+        $page_sel = lib::create( 'database\select' );
+        $page_sel->from( 'page' );
+        $page_sel->add_column( 'id' );
+        $page_sel->add_column( 'precondition' );
+        $page_sel->add_table_column( 'page_description', 'value', 'description' );
+
+        $page_mod = lib::create( 'database\modifier' );
+        $page_mod->where( 'module_id', '=', $module['id'] );
+        $page_mod->order( 'page.rank' );
+        
+        $join_mod = lib::create( 'database\modifier' );
+        $join_mod->where( 'page.id', '=', 'page_description.page_id', false );
+        $join_mod->where( 'page_description.language_id', '=', $db_language->id );
+        $join_mod->where( 'page_description.type', '=', 'prompt' );
+        $page_mod->join_modifier( 'page_description', $join_mod );
+
+        foreach( $page_class_name::select( $page_sel, $page_mod ) as $page )
+        {
+          if( $expression_manager->evaluate( $page['precondition'] ) )
+          {
+            $page_data = array(
+              'description' => $db_response->compile_description( $page['description'], true ),
+              'question_list' => array()
+            );
+
+            $question_sel = lib::create( 'database\select' );
+            $question_sel->from( 'question' );
+            $question_sel->add_column( 'id' );
+            $question_sel->add_column( 'type' );
+            $question_sel->add_column( 'precondition' );
+            $question_sel->add_table_column( 'question_description', 'value', 'description' );
+            $question_sel->add_table_column( 'answer', 'value', 'answer' );
+            $question_sel->add_column(
+              sprintf( 'IFNULL( answer.language_id, %d )', $db_language->id ),
+              'language_id',
+              false
+            );
+
+            $question_mod = lib::create( 'database\modifier' );
+            $question_mod->where( 'page_id', '=', $page['id'] );
+            $question_mod->order( 'question.rank' );
+            
+            $join_mod = lib::create( 'database\modifier' );
+            $join_mod->where( 'question.id', '=', 'answer.question_id', false );
+            $join_mod->where( 'answer.response_id', '=', $db_response->id );
+            $question_mod->join_modifier( 'answer', $join_mod, 'left' );
+
+            $join_mod = lib::create( 'database\modifier' );
+            $join_mod->where( 'question.id', '=', 'question_description.question_id', false );
+            $join_mod->where(
+              sprintf( 'IFNULL( answer.language_id, %d )', $db_language->id ),
+              '=',
+              'question_description.language_id',
+              false
+            );
+            $join_mod->where( 'question_description.type', '=', 'prompt' );
+            $question_mod->join_modifier( 'question_description', $join_mod );
+
+            foreach( $question_class_name::select( $question_sel, $question_mod ) as $question )
+            {
+              if( $expression_manager->evaluate( $question['precondition'] ) )
+              {
+                // get the answer for this question, if one exists
+                $decoded_value = is_null( $question['answer'] ) ? NULL : util::json_decode( $question['answer'] );
+                $print_answer = NULL;
+                if( !is_null( $question['answer'] ) )
+                {
+                  // Print in english if the base is french and the question language disagrees, or
+                  // the base is english and the question language does not disagree (XOR)
+                  $english = ( 'fr' == $db_language xor $question['language_id'] == $db_language->id );
+                  if( is_object( $decoded_value ) )
+                  {
+                    $print_answer = array_key_exists( 'dkna', $decoded_value ) && $decoded_value->dkna
+                                  ? ( $english ? 'Don\'t Know / No Answer' : 'Ne sais pas / pas de réponse' )
+                                  : ( $english ? 'Refused' : 'Refus' );
+                  }
+                  else if( 'boolean' == $question['type'] )
+                  {
+                    $print_answer = $decoded_value
+                                  ? ( $english ? 'Yes' : 'Oui' )
+                                  : ( $english ? 'No' : 'Non' );
+                  }
+                  else
+                  {
+                    $print_answer = $decoded_value;
+                  }
+                }
+
+                // the answer's language takes precedence over the response's
+                $question_data = array(
+                  'type' => $question['type'],
+                  'description' => $db_response->compile_description( $question['description'], true ),
+                  'answer' => is_null( $print_answer ) ? NULL : $print_answer
+                );
+
+                if( 'list' == $question['type'] )
+                {
+                  $question_data['option_list'] = array();
+
+                  $option_sel = lib::create( 'database\select' );
+                  $option_sel->from( 'question_option' );
+                  $option_sel->add_column( 'id' );
+                  $option_sel->add_column( 'precondition' );
+                  $option_sel->add_table_column( 'question_option_description', 'value', 'description' );
+
+                  $option_mod = lib::create( 'database\modifier' );
+                  $option_mod->where( 'question_id', '=', $question['id'] );
+                  $option_mod->order( 'question_option.rank' );
+
+                  $join_mod = lib::create( 'database\modifier' );
+                  $join_mod->where( 
+                    'question_option.id',
+                    '=',
+                    'question_option_description.question_option_id',
+                    false
+                  );
+                  $join_mod->where( 'question_option_description.language_id', '=', $question['language_id'] );
+                  $join_mod->where( 'question_option_description.type', '=', 'prompt' );
+                  $option_mod->join_modifier( 'question_option_description', $join_mod );
+
+                  foreach( $question_option_class_name::select( $option_sel, $option_mod ) as $option )
+                  {
+                    if( $expression_manager->evaluate( $option['precondition'] ) )
+                    {
+                      $option_data = array(
+                        'description' => $db_response->compile_description( $option['description'], true )
+                      );
+                      
+                      if( is_array( $decoded_value ) )
+                      {
+                        foreach( $decoded_value as $item )
+                        {
+                          if( is_object( $item ) )
+                          {
+                            $option_data['selected'] = $option['id'] == $item->id;
+                            if( $option['id'] == $item->id ) $option_data['value'] = $item->value;
+                          }
+                          else
+                          {
+                            $option_data['selected'] = $option['id'] == $item;
+                          }
+                        }
+                      }
+
+                      $question_data['option_list'][] = $option_data;
+                    }
+                  }
+                }
+
+                $page_data['question_list'][] = $question_data;
+              }
+            }
+
+            $module_data['page_list'][] = $page_data;
+          }
+        }
+
+        $this->data_list[] = $module_data;
+      }
+    }
+  }
+
+  /**
+   * Replace parent method
+   */
   protected function get_record_count()
   {
-    $db_response = $this->get_parent_record();
-    $modifier = clone $this->modifier;
-    $modifier->join( 'question', 'answer.question_id', 'question.id', '', NULL, true );
-    return $db_response->get_answer_count( $modifier );
+    // return the number of questions in the data_list
+    $count = 0;
+    foreach( $this->data_list as $module )
+      foreach( $module['page_list'] as $page )
+        $count += count( $page['question_list'] );
+
+    return $count;
   }
 
   /**
@@ -39,23 +248,12 @@ class query extends \cenozo\service\query
    */
   protected function get_record_list()
   {
-    $db_response = $this->get_parent_record();
-    $modifier = clone $this->modifier;
-    $modifier->join( 'language', 'answer.language_id', 'language.id' );
-    $modifier->join( 'question', 'answer.question_id', 'question.id', '', NULL, true );
-
-    foreach( $this->select->get_alias_list() as $alias )
-    {
-      if( '' === $this->select->get_alias_table( $alias ) )
-      {
-        $details = $this->select->get_alias_details( $alias );
-        if( $details['table_prefix'] )
-        {
-          $this->select->remove_column_by_alias( $alias );
-          $this->select->add_table_column( 'question', $details['column'], $alias, true, $details['type'], $details['format'] );
-        }
-      }
-    }
-    return $db_response->get_answer_list( $this->select, $modifier );
+    return $this->data_list;
   }
+
+  /**
+   * @var nested associative array
+   * @access private
+   */
+  private $data_list = array();
 }

@@ -1,34 +1,24 @@
-<div class="container-fluid">
-  <div class="form-group">
-    <label for="lang" class="control-label col-sm-3">Display Language:</label>
-    <div class="row col-sm-9">
-      <select id="lang"
-              name="lang"
-              class="form-control col-sm-9"
-              ng-options="language.code as language.name for language in model.displayModel.languageList"
-              ng-model="model.displayModel.lang"></select>
-    </div>
-  </div>
-  <hr/>
-  <div class="container-fluid" ng-repeat="module in model.displayModel.moduleList">
-    <div ng-if="module.prompts[model.displayModel.lang]" ng-bind-html="module.prompts[model.displayModel.lang]"></div>
-    <div class="container-fluid" ng-repeat="page in module.pageList">
-      <div ng-if="page.prompts[model.displayModel.lang]" ng-bind-html="page.prompts[model.displayModel.lang]"></div>
-      <div class="container-fuild" ng-repeat="question in page.questionList">
-        <div ng-if="question.prompts[model.displayModel.lang]">
-          <span ng-bind-html="question.prompts[model.displayModel.lang]"></span>
-          <strong ng-if="!['audio','list'].includes( question.type )"
+<cn-loading ng-if="model.displayModel.isDataLoading" message="Loading response details"></cn-loading>
+<div ng-if="!model.displayModel.isDataLoading" class="container-fluid">
+  <div class="container-fluid vertical-spacer" ng-repeat="module in model.displayModel.dataList">
+    <div ng-if="module.description" ng-bind-html="module.description"></div>
+    <div class="container-fluid vertical-spacer" ng-repeat="page in module.page_list">
+      <div ng-if="page.description" ng-bind-html="page.description"></div>
+      <div class="container-fluid vertical-spacer" ng-repeat="question in page.question_list">
+        <div ng-if="question.description">
+          <span ng-bind-html="question.description"></span>
+          <strong ng-if="!['audio','comment','device','list'].includes( question.type )"
                   style="padding: 0 4px; outline: black solid 1px;"
-                  ng-bind-html="question.value"></strong>
+                  ng-bind-html="null === question.answer ? '(empty)' : question.answer"></strong>
           <div ng-if="'audio' == question.type" class="container-fluid">
-            <audio ng-src="{{ question.value }}"
+            <audio ng-src="{{ question.answer }}"
                    class="full-width"
                    controls></audio>
           </div>
-          <div ng-if="'list' == question.type" class="container-fluid" ng-repeat="option in question.optionList">
-            <div ng-if="option.prompts[model.displayModel.lang]">
+          <div ng-if="'list' == question.type" class="container-fluid" ng-repeat="option in question.option_list">
+            <div ng-if="option.description">
               <strong>{{ option.selected ? "&#x2611;" : "&#x25a2;" }}</strong>
-              <span ng-bind-html="option.prompts[model.displayModel.lang]"></span>
+              <span ng-bind-html="option.description"></span>
               <strong ng-if="null != option.value"
                       style="padding: 0 4px; outline: black solid 1px;"
                       ng-bind-html="option.value"></strong>

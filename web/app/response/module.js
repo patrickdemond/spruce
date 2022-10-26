@@ -202,21 +202,20 @@ cenozoApp.defineModule({
       "$state",
       function (CnHttpFactory, CnTranslationHelper, $state) {
         var object = function (parentModel) {
-          var dknaPrompts = {
-            en: CnTranslationHelper.translate("misc.dkna", "en"),
-            fr: CnTranslationHelper.translate("misc.dkna", "fr"),
-          };
-          var refusePrompts = {
-            en: CnTranslationHelper.translate("misc.refuse", "en"),
-            fr: CnTranslationHelper.translate("misc.refuse", "fr"),
-          };
-
           angular.extend(this, {
             parentModel: parentModel,
-            languageList: [],
-            moduleList: [],
-            questionList: [],
+            isDataLoading: false,
+            dataList: [],
             onLoad: async function () {
+              angular.extend(this, {
+                isDataLoading: true,
+                dataList: [],
+                response_id: null,
+                respondent_id: null,
+                rank: null,
+                qnaire_id: null,
+              });
+
               // make sure the identifier is valid
               const identifier = this.parentModel.getQueryParameter("identifier");
               if( !identifier ) {
@@ -224,287 +223,46 @@ cenozoApp.defineModule({
                 return;
               }
 
-              // get a list of all modules
-              var response = await CnHttpFactory.instance({
-                path:
-                  "response/" +
-                  this.parentModel.getQueryParameter("identifier"),
-                data: {
-                  select: {
-                    column: [
-                      "respondent_id",
-                      "rank",
-                      { table: "respondent", column: "qnaire_id" },
-                      { table: "language", column: "code", alias: "lang" },
-                    ],
-                  },
-                },
-              }).get();
-
-              this.response_id = response.data.id;
-              this.respondent_id = response.data.respondent_id;
-              this.rank = response.data.rank;
-              this.qnaire_id = response.data.qnaire_id;
-              this.lang = response.data.lang;
-
-              // get a list of the qnaires languages
-              var [
-                languageResponse,
-                moduleResponse,
-                pageResponse,
-                questionResponse,
-                optionResponse,
-              ] = await Promise.all([
-                CnHttpFactory.instance({
-                  path: ["qnaire", this.qnaire_id, "language"].join("/"),
-                  data: { select: { column: ["code", "name"] } },
-                }).get(),
-
-                CnHttpFactory.instance({
-                  path: "module",
+              // get general information about the response (for the breadcrumb trail)
+              try {
+                var response = await CnHttpFactory.instance({
+                  path:
+                    "response/" +
+                    this.parentModel.getQueryParameter("identifier"),
                   data: {
-                    select: { column: ["id", "prompts"] },
-                    modifier: {
-                      where: {
-                        column: "qnaire.id",
-                        operator: "=",
-                        value: this.qnaire_id,
-                      },
-                      order: "module.rank",
-                    },
-                    limit: 1000000, // get all records
-                  },
-                }).query(),
-
-                CnHttpFactory.instance({
-                  path: "page",
-                  data: {
-                    select: { column: ["id", "module_id", "prompts"] },
-                    modifier: {
-                      where: {
-                        column: "qnaire.id",
-                        operator: "=",
-                        value: this.qnaire_id,
-                      },
-                      order: ["module.rank", "page.rank"],
-                      limit: 1000000, // get all records
+                    select: {
+                      column: [
+                        "respondent_id",
+                        "rank",
+                        { table: "respondent", column: "qnaire_id" },
+                      ],
                     },
                   },
-                }).query(),
+                  onError: async function (error) {
+                    
+                  },
+                }).get();
 
-                CnHttpFactory.instance({
+                angular.extend(this, {
+                  response_id: response.data.id,
+                  respondent_id: response.data.respondent_id,
+                  rank: response.data.rank,
+                  qnaire_id: response.data.qnaire_id,
+                });
+
+                // get a list of all response data
+                var response = await CnHttpFactory.instance({
                   path: [
                     "response",
                     this.parentModel.getQueryParameter("identifier"),
                     "question",
                   ].join("/"),
-                  data: {
-                    select: {
-                      column: [
-                        "id",
-                        "page_id",
-                        "prompts",
-                        "type",
-                        "dkna_allowed",
-                        "refuse_allowed",
-                        { table: "page", column: "module_id" },
-                        {
-                          table: "language",
-                          column: "code",
-                          alias: "language",
-                        },
-                        { table: "answer", column: "value" },
-                      ],
-                    },
-                    modifier: {
-                      order: ["module.rank", "page.rank", "question.rank"],
-                      limit: 1000000, // get all records
-                    },
-                  },
-                }).query(),
+                }).query();
 
-                CnHttpFactory.instance({
-                  path: "question_option",
-                  data: {
-                    select: {
-                      column: [
-                        "id",
-                        "question_id",
-                        "prompts",
-                        { table: "module", column: "id", alias: "module_id" },
-                        { table: "page", column: "id", alias: "page_id" },
-                      ],
-                    },
-                    modifier: {
-                      where: {
-                        column: "qnaire.id",
-                        operator: "=",
-                        value: this.qnaire_id,
-                      },
-                      order: [
-                        "module.rank",
-                        "page.rank",
-                        "question.rank",
-                        { "question_option.rank": true },
-                      ],
-                      limit: 1000000, // get all records
-                    },
-                  },
-                }).query(),
-              ]);
-
-              this.languageList = languageResponse.data;
-
-              this.moduleList = moduleResponse.data.map((module) => {
-                module.prompts = CnTranslationHelper.parseDescriptions(
-                  module.prompts
-                );
-                module.pageList = [];
-                return module;
-              });
-
-              pageResponse.data.forEach((page) => {
-                // store each page in its parent module
-                page.prompts = CnTranslationHelper.parseDescriptions(
-                  page.prompts
-                );
-                page.questionList = [];
-                this.moduleList
-                  .findByProperty("id", page.module_id)
-                  .pageList.push(page);
-              });
-
-              await Promise.all(
-                questionResponse.data.reduce((list, question) => {
-                  question.prompts = CnTranslationHelper.parseDescriptions(
-                    question.prompts
-                  );
-                  question.value = angular.fromJson(question.value);
-                  if (null != question.value) {
-                    // ignore questions which weren't answered
-                    if ("list" == question.type) {
-                      question.optionList = [];
-                    } else if ("audio" == question.type) {
-                      // audio needs to be converted to an object URL
-                      if (null != question.value) {
-                        // convert base64 to blob
-                        list.push(
-                          (async () => {
-                            const base64Response = await fetch(question.value);
-                            question.value = await base64Response.blob();
-
-                            // convert blob to object URL
-                            question.value = window.URL.createObjectURL(
-                              question.value
-                            );
-                          })()
-                        );
-                      }
-                    } else {
-                      if (angular.isObject(question.value)) {
-                        if (question.value.dkna) {
-                          question.value = CnTranslationHelper.translate(
-                            "misc.dkna",
-                            this.lang
-                          );
-                        } else if (question.value.refuse) {
-                          question.value = CnTranslationHelper.translate(
-                            "misc.refuse",
-                            this.lang
-                          );
-                        }
-                      } else if ("boolean" == question.type) {
-                        if (true === question.value) question.value = "Yes";
-                        else if (false === question.value)
-                          question.value = "No";
-                      }
-                    }
-
-                    // store each question in its parent page
-                    this.moduleList
-                      .findByProperty("id", question.module_id)
-                      .pageList.findByProperty("id", question.page_id)
-                      .questionList.push(question);
-                  }
-
-                  return list;
-                }, [])
-              );
-
-              optionResponse.data.forEach((option) => {
-                option.prompts = CnTranslationHelper.parseDescriptions(
-                  option.prompts
-                );
-
-                // store each option in its parent question, but ignore any questions which aren't found since it means
-                // the respondent never answered that question
-                var question = this.moduleList
-                  .findByProperty("id", option.module_id)
-                  .pageList.findByProperty("id", option.page_id)
-                  .questionList.findByProperty("id", option.question_id);
-                if (null != question) {
-                  // first make sure the dkna/refuse options are included
-                  if (0 == question.optionList.length) {
-                    if (question.dkna_allowed) {
-                      question.optionList.push({
-                        prompts: dknaPrompts,
-                        value: null,
-                        selected:
-                          angular.isObject(question.value) &&
-                          question.value.dkna,
-                      });
-                    }
-                    if (question.refuse_allowed) {
-                      question.optionList.push({
-                        prompts: refusePrompts,
-                        value: null,
-                        selected:
-                          angular.isObject(question.value) &&
-                          question.value.refuse,
-                      });
-                    }
-                  }
-
-                  question.optionList.unshift(option);
-                  option.selected = false;
-                  option.value = null;
-                  if (angular.isArray(question.value)) {
-                    var matchedValue = null;
-                    if (
-                      question.value.some((value) => {
-                        matchedValue = value;
-                        return (
-                          (angular.isObject(value) && value.id == option.id) ||
-                          (!angular.isObject(value) && value == option.id)
-                        );
-                      })
-                    ) {
-                      option.selected = true;
-                      if (angular.isObject(matchedValue)) {
-                        option.value = angular.isArray(matchedValue.value)
-                          ? matchedValue.value.join("; ")
-                          : matchedValue.value;
-                      }
-                    } else {
-                      var obj = question.value.findByProperty("id", option.id);
-                      if (null != obj) {
-                        option.selected = true;
-                        option.value = obj.value;
-                      }
-                    }
-                  }
-                }
-              });
-
-              // now remove empty modules and pages
-              this.moduleList.forEach((module, mIndex) => {
-                module.pageList = module.pageList.filter(
-                  (page) => 0 < page.questionList.length
-                );
-              });
-              this.moduleList = this.moduleList.filter(
-                (module) => 0 < module.pageList.length
-              );
+                this.dataList = response.data;
+              } finally {
+                this.isDataLoading = false;
+              }
             },
           });
         };
