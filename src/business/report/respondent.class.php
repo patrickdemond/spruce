@@ -21,11 +21,15 @@ class respondent extends \cenozo\business\report\base_report
   {
     $respondent_class_name = lib::get_class_name( 'database\respondent' );
 
+    $modifier = lib::create( 'database\modifier' );
+    $modifier->join( 'participant', 'respondent.participant_id', 'participant.id' );
+
     $select = lib::create( 'database\select' );
     $select->from( 'respondent' );
     $select->add_column( 'cohort.name', 'Cohort', false );
     $select->add_column( 'language.name', 'Language', false );
     $select->add_column( 'participant.uid', 'UID', false );
+    $this->add_application_identifier_columns( $select, $modifier );
     $select->add_column( 'IF( response.submitted, "Yes", "No" )', 'Submitted', false );
     $select->add_column( $this->get_datetime_column( 'respondent.start_datetime' ), 'Start', false );
     $select->add_column( $this->get_datetime_column( 'response.last_datetime' ), 'Last', false );
@@ -40,8 +44,6 @@ class respondent extends \cenozo\business\report\base_report
       false
     );
 
-    $modifier = lib::create( 'database\modifier' );
-    $modifier->join( 'participant', 'respondent.participant_id', 'participant.id' );
     $modifier->join( 'language', 'participant.language_id', 'language.id' );
     $modifier->join( 'cohort', 'participant.cohort_id', 'cohort.id' );
     $modifier->join( 'respondent_current_response', 'respondent.id', 'respondent_current_response.respondent_id' );
