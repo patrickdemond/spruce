@@ -3,7 +3,7 @@
  * get.class.php
  */
 
-namespace pine\service\image;
+namespace pine\service\embedded_file;
 use cenozo\lib, cenozo\log, pine\util;
 
 class get extends \cenozo\service\get

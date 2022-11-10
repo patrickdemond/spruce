@@ -5,7 +5,7 @@
  * @author Patrick Emond <emondpd@mcmaster.ca>
  */
 
-namespace pine\service\qnaire\image;
+namespace pine\service\qnaire\embedded_file;
 use cenozo\lib, cenozo\log, pine\util;
 
 class patch extends \cenozo\service\patch
@@ -26,14 +26,16 @@ class patch extends \cenozo\service\patch
       $filename = sprintf( '%s/%s', TEMPORARY_FILES_PATH, bin2hex( openssl_random_pseudo_bytes( 8 ) ) );
       $file = $this->get_file_as_raw();
       file_put_contents( $filename, $file );
-      $details = getimagesize( $filename );
-      $db_image = $this->get_leaf_record();
-      $db_image->mime_type = $details['mime'];
-      $db_image->size = filesize( $filename );
-      $db_image->width = $details[0];
-      $db_image->height = $details[1];
-      $db_image->data = base64_encode( $file );
-      $db_image->save();
+      // TODO: do we need finfo?
+      //$finfo = finfo_open( FILEINFO_MIME_TYPE );
+
+      $db_embedded_file = $this->get_leaf_record();
+      $db_embedded_file->size = filesize( $filename );
+      $db_embedded_file->data = base64_encode( $file );
+      $db_embedded_file->mime_type = mime_content_type( $filename ); //finfo_file( $finfo, $filename );
+      $db_embedded_file->save();
+
+      //finfo_close( $finfo );
       unlink( $filename );
     }
   }

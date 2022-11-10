@@ -245,18 +245,16 @@ class qnaire extends \cenozo\database\record
       $db_attribute->save();
     }
 
-    // copy all images
-    foreach( $db_source_qnaire->get_image_object_list() as $db_source_image )
+    // copy all embedded files
+    foreach( $db_source_qnaire->get_embedded_file_object_list() as $db_source_embedded_file )
     {
-      $db_image = lib::create( 'database\image' );
-      $db_image->qnaire_id = $this->id;
-      $db_image->name = $db_source_image->name;
-      $db_image->mime_type = $db_source_image->mime_type;
-      $db_image->size = $db_source_image->size;
-      $db_image->width = $db_source_image->width;
-      $db_image->height = $db_source_image->height;
-      $db_image->data = $db_source_image->data;
-      $db_image->save();
+      $db_embedded_file = lib::create( 'database\embedded_file' );
+      $db_embedded_file->qnaire_id = $this->id;
+      $db_embedded_file->name = $db_source_embedded_file->name;
+      $db_embedded_file->mime_type = $db_source_embedded_file->mime_type;
+      $db_embedded_file->size = $db_source_embedded_file->size;
+      $db_embedded_file->data = $db_source_embedded_file->data;
+      $db_embedded_file->save();
     }
 
     // copy all reminders
@@ -2407,20 +2405,28 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
-   * Compiles the images in any description
+   * Compiles embedded files in any description
    * @param string $description
    */
   public function compile_description( $description )
   {
-    $image_class_name = lib::get_class_name( 'database\image' );
+    $embedded_file_class_name = lib::get_class_name( 'database\embedded_file' );
 
     preg_match_all( '/@([A-Za-z0-9_]+)(\.width\( *([0-9]+%?) *\))?@/', $description, $matches );
     foreach( $matches[1] as $index => $match )
     {
       $name = $match;
+
+      // images may have a width argument, for example: @name.width(123)@
       $width = array_key_exists( 3, $matches ) ? $matches[3][$index] : NULL;
-      $db_image = $image_class_name::get_unique_record( array( 'qnaire_id', 'name' ), array( $this->id, $name ) );
-      if( !is_null( $db_image ) ) $description = str_replace( $matches[0][$index], $db_image->get_tag( $width ), $description );
+      $db_embedded_file = $embedded_file_class_name::get_unique_record(
+        array( 'qnaire_id', 'name' ),
+        array( $this->id, $name )
+      );
+      if( !is_null( $db_embedded_file ) )
+      {
+        $description = str_replace( $matches[0][$index], $db_embedded_file->get_tag( $width ), $description );
+      }
     }
 
     return $description;
@@ -2439,7 +2445,7 @@ class qnaire extends \cenozo\database\record
 
     $language_class_name = lib::get_class_name( 'database\language' );
     $attribute_class_name = lib::get_class_name( 'database\attribute' );
-    $image_class_name = lib::get_class_name( 'database\image' );
+    $embedded_file_class_name = lib::get_class_name( 'database\embedded_file' );
     $deviation_type_class_name = lib::get_class_name( 'database\deviation_type' );
     $reminder_description_class_name = lib::get_class_name( 'database\reminder_description' );
     $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
@@ -2872,67 +2878,65 @@ class qnaire extends \cenozo\database\record
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
         if( 0 < count( $diff_list ) ) $difference_list['attribute_list'] = $diff_list;
       }
-      else if( 'image_list' == $property )
+      else if( 'image_list' == $property || 'embedded_file_list' == $property )
       {
+        // Note: the embedded_file object used to be called image, so just assume they are the same
+
         // check every item in the patch object for additions and changes
         $add_list = array();
         $change_list = array();
-        foreach( $patch_object->image_list as $image )
+        foreach( $patch_object->embedded_file_list as $embedded_file )
         {
-          $db_image = $image_class_name::get_unique_record(
+          $db_embedded_file = $embedded_file_class_name::get_unique_record(
             array( 'qnaire_id', 'name' ),
-            array( $this->id, $image->name )
+            array( $this->id, $embedded_file->name )
           );
 
-          if( is_null( $db_image ) )
+          if( is_null( $db_embedded_file ) )
           {
             if( $apply )
             {
-              $db_image = lib::create( 'database\image' );
-              $db_image->qnaire_id = $this->id;
-              $db_image->name = $image->name;
-              $db_image->mime_type = $image->mime_type;
-              $db_image->size = $image->size;
-              $db_image->width = $image->width;
-              $db_image->height = $image->height;
-              $db_image->data = $image->data;
-              $db_image->save();
+              $db_embedded_file = lib::create( 'database\embedded_file' );
+              $db_embedded_file->qnaire_id = $this->id;
+              $db_embedded_file->name = $embedded_file->name;
+              $db_embedded_file->mime_type = $embedded_file->mime_type;
+              $db_embedded_file->size = $embedded_file->size;
+              $db_embedded_file->data = $embedded_file->data;
+              $db_embedded_file->save();
             }
-            else $add_list[] = $image;
+            else $add_list[] = $embedded_file;
           }
           else
           {
             // find and add all differences
             $diff = array();
-            foreach( $image as $property => $value )
-              if( $db_image->$property != $image->$property )
-                $diff[$property] = $image->$property;
+            foreach( $embedded_file as $property => $value )
+              if( $db_embedded_file->$property != $embedded_file->$property )
+                $diff[$property] = $embedded_file->$property;
 
             if( 0 < count( $diff ) )
             {
               if( $apply )
               {
-                $db_image->name = $image->name;
-                $db_image->mime_type = $image->mime_type;
-                $db_image->size = $image->size;
-                $db_image->width = $image->width;
-                $db_image->height = $image->height;
-                $db_image->data = $image->data;
-                $db_image->save();
+                $db_embedded_file->name = $embedded_file->name;
+                $db_embedded_file->mime_type = $embedded_file->mime_type;
+                $db_embedded_file->size = $embedded_file->size;
+                $db_embedded_file->data = $embedded_file->data;
+                $db_embedded_file->save();
               }
-              else $change_list[$db_image->name] = $diff;
+              else $change_list[$db_embedded_file->name] = $diff;
             }
           }
         }
 
         // check every item in this object for removals
         $remove_list = array();
-        foreach( $this->get_image_object_list() as $db_image )
+        foreach( $this->get_embedded_file_object_list() as $db_embedded_file )
         {
           $found = false;
-          foreach( $patch_object->image_list as $image )
+          foreach( $patch_object->embedded_file_list as $embedded_file )
           {
-            if( $db_image->name == $image->name )
+            if( $db_embedded_file->name == $embedded_file->name )
             {
               $found = true;
               break;
@@ -2941,8 +2945,8 @@ class qnaire extends \cenozo\database\record
 
           if( !$found )
           {
-            if( $apply ) $db_image->delete();
-            else $remove_list[] = $db_image->name;
+            if( $apply ) $db_embedded_file->delete();
+            else $remove_list[] = $db_embedded_file->name;
           }
         }
 
@@ -2950,7 +2954,7 @@ class qnaire extends \cenozo\database\record
         if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
         if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
-        if( 0 < count( $diff_list ) ) $difference_list['image_list'] = $diff_list;
+        if( 0 < count( $diff_list ) ) $difference_list['embedded_file_list'] = $diff_list;
       }
       else if( 'qnaire_description_list' == $property )
       {
@@ -3902,7 +3906,7 @@ class qnaire extends \cenozo\database\record
       'note' => $this->note,
       'language_list' => array(),
       'attribute_list' => array(),
-      'image_list' => array(),
+      'embedded_file_list' => array(),
       'reminder_list' => array(),
       'qnaire_description_list' => array(),
       'module_list' => array(),
@@ -3922,22 +3926,23 @@ class qnaire extends \cenozo\database\record
 
     $language_sel = lib::create( 'database\select' );
     $language_sel->add_column( 'code' );
-    foreach( $this->get_language_list( $language_sel ) as $item ) $qnaire_data['language_list'][] = $item['code'];
+    foreach( $this->get_language_list( $language_sel ) as $item )
+      $qnaire_data['language_list'][] = $item['code'];
 
     $attribute_sel = lib::create( 'database\select' );
     $attribute_sel->add_column( 'name' );
     $attribute_sel->add_column( 'code' );
     $attribute_sel->add_column( 'note' );
-    foreach( $this->get_attribute_list( $attribute_sel ) as $item ) $qnaire_data['attribute_list'][] = $item;
+    foreach( $this->get_attribute_list( $attribute_sel ) as $item )
+      $qnaire_data['attribute_list'][] = $item;
 
-    $image_sel = lib::create( 'database\select' );
-    $image_sel->add_column( 'name' );
-    $image_sel->add_column( 'mime_type' );
-    $image_sel->add_column( 'size' );
-    $image_sel->add_column( 'width' );
-    $image_sel->add_column( 'height' );
-    $image_sel->add_column( 'data' );
-    foreach( $this->get_image_list( $image_sel ) as $item ) $qnaire_data['image_list'][] = $item;
+    $embedded_file_sel = lib::create( 'database\select' );
+    $embedded_file_sel->add_column( 'name' );
+    $embedded_file_sel->add_column( 'mime_type' );
+    $embedded_file_sel->add_column( 'size' );
+    $embedded_file_sel->add_column( 'data' );
+    foreach( $this->get_embedded_file_list( $embedded_file_sel ) as $item )
+      $qnaire_data['embedded_file_list'][] = $item;
 
     if( $this->stages )
     {
@@ -4408,17 +4413,15 @@ class qnaire extends \cenozo\database\record
       $db_attribute->save();
     }
 
-    foreach( $qnaire_object->image_list as $image )
+    foreach( $qnaire_object->embedded_file_list as $embedded_file )
     {
-      $db_image = lib::create( 'database\image' );
-      $db_image->qnaire_id = $db_qnaire->id;
-      $db_image->name = $image->name;
-      $db_image->mime_type = $image->mime_type;
-      $db_image->size = $image->size;
-      $db_image->width = $image->width;
-      $db_image->height = $image->height;
-      $db_image->data = $image->data;
-      $db_image->save();
+      $db_embedded_file = lib::create( 'database\embedded_file' );
+      $db_embedded_file->qnaire_id = $db_qnaire->id;
+      $db_embedded_file->name = $embedded_file->name;
+      $db_embedded_file->mime_type = $embedded_file->mime_type;
+      $db_embedded_file->size = $embedded_file->size;
+      $db_embedded_file->data = $embedded_file->data;
+      $db_embedded_file->save();
     }
 
     if( $db_qnaire->stages )

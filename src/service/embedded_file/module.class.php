@@ -6,7 +6,7 @@
  * @filesource
  */
 
-namespace pine\service\image;
+namespace pine\service\embedded_file;
 use cenozo\lib, cenozo\log, pine\util;
 
 /**
@@ -21,6 +21,6 @@ class module extends \cenozo\service\module
   {
     parent::prepare_read( $select, $modifier );
 
-    $modifier->join( 'qnaire', 'image.qnaire_id', 'qnaire.id' );
+    $modifier->join( 'qnaire', 'embedded_file.qnaire_id', 'qnaire.id' );
   }
 }

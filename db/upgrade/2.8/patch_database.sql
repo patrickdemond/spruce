@@ -4,6 +4,7 @@ SET AUTOCOMMIT=0;
 
 SOURCE table_character_sets.sql
 
+SOURCE embedded_file.sql
 SOURCE image.sql
 SOURCE question.sql
 SOURCE answer.sql

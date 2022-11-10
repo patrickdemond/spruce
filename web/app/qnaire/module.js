@@ -983,16 +983,16 @@ cenozoApp.defineModule({
               };
             }
 
-            if (angular.isDefined(object.imageModel)) {
-              object.imageModel.getAddEnabled = function () {
+            if (angular.isDefined(object.embeddedFileModel)) {
+              object.embeddedFileModel.getAddEnabled = function () {
                 return (
-                  !object.record.readonly && object.imageModel.$$getAddEnabled()
+                  !object.record.readonly && object.embeddedFileModel.$$getAddEnabled()
                 );
               };
-              object.imageModel.getDeleteEnabled = function () {
+              object.embeddedFileModel.getDeleteEnabled = function () {
                 return (
                   !object.record.readonly &&
-                  object.imageModel.$$getDeleteEnabled()
+                  object.embeddedFileModel.$$getDeleteEnabled()
                 );
               };
             }

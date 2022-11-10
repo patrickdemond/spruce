@@ -1,5 +1,5 @@
 cenozoApp.defineModule({
-  name: "image",
+  name: "embedded_file",
   models: ["add", "list", "view"],
   create: (module) => {
     angular.extend(module, {
@@ -10,14 +10,14 @@ cenozoApp.defineModule({
         },
       },
       name: {
-        singular: "image",
-        plural: "images",
-        possessive: "image's",
+        singular: "embedded file",
+        plural: "embedded files",
+        possessive: "embedded file's",
       },
       columnList: {
         name: {
           title: "Name",
-          column: "image.name",
+          column: "embedded_file.name",
         },
         mime_type: {
           title: "Mime Type",
@@ -26,17 +26,9 @@ cenozoApp.defineModule({
           title: "Size",
           type: "size",
         },
-        width: {
-          title: "Width",
-          type: "string",
-        },
-        height: {
-          title: "Height",
-          type: "string",
-        },
       },
       defaultOrder: {
-        column: "image.name",
+        column: "embedded_file.name",
         reverse: false,
       },
     });
@@ -58,26 +50,14 @@ cenozoApp.defineModule({
         isExcluded: "add",
         isConstant: true,
       },
-      width: {
-        title: "Width",
-        type: "string",
-        isExcluded: "add",
-        isConstant: true,
-      },
-      height: {
-        title: "Height",
-        type: "string",
-        isExcluded: "add",
-        isConstant: true,
-      },
       data: {
-        title: "Image",
+        title: "Content",
         type: "base64_image",
       },
     });
 
     /* ############################################################################################## */
-    cenozo.providers.factory("CnImageAddFactory", [
+    cenozo.providers.factory("CnEmbeddedFileAddFactory", [
       "CnBaseAddFactory",
       function (CnBaseAddFactory) {
         var object = function (parentModel) {

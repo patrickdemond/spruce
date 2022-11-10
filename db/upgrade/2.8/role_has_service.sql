@@ -18,7 +18,7 @@ CREATE PROCEDURE patch_role_has_service()
       "FROM ", @cenozo, ".role, service ",
       "WHERE role.name = 'administrator' ",
       "AND service.subject IN( ",
-        "'alternate_consent_type', 'device_data', 'image', 'notation', 'proxy', 'proxy_type', ",
+        "'alternate_consent_type', 'device_data', 'embedded_file', 'notation', 'proxy', 'proxy_type', ",
         "'qnaire_alternate_consent_type_trigger', 'qnaire_participant_trigger', 'qnaire_proxy_type_trigger' ",
       ") ",
       "AND service.restricted = 1"

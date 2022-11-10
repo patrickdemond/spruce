@@ -35,7 +35,7 @@
         <div ng-if="model.viewModel.differenceIsEmpty">No differences found.</div>
         <div ng-repeat="(property, child) in model.viewModel.difference" class="row">
           <div ng-if="![
-              'stage_list', 'module_list', 'attribute_list', 'image_list', 'deviation_type_list', 'reminder_list',
+              'stage_list', 'module_list', 'attribute_list', 'embedded_file_list', 'deviation_type_list', 'reminder_list',
               'qnaire_consent_type_confirm_list', 'qnaire_participant_trigger_list', 'qnaire_consent_type_trigger_list',
               'qnaire_alternate_consent_type_trigger_list', 'qnaire_proxy_type_trigger_list'
             ].includes( property )">
@@ -59,9 +59,9 @@
             <label class="container-fluid">Attribute List</label>
             <div class="container-fluid"><cn-qnaire-part-patch subject="attribute" model="child"></cn-qnaire-part-patch></div>
           </div>
-          <div ng-if="'image_list' == property">
-            <label class="container-fluid">Image List</label>
-            <div class="container-fluid"><cn-qnaire-part-patch subject="image" model="child"></cn-qnaire-part-patch></div>
+          <div ng-if="'embedded_file_list' == property">
+            <label class="container-fluid">Embedded File List</label>
+            <div class="container-fluid"><cn-qnaire-part-patch subject="embedded_file" model="child"></cn-qnaire-part-patch></div>
           </div>
           <div ng-if="'deviation_type_list' == property">
             <label class="container-fluid">Deviation Type List</label>

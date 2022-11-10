@@ -13,11 +13,11 @@ INSERT IGNORE INTO service ( subject, method, resource, restricted ) VALUES
 ( 'device_data', 'GET', 1, 1 ),
 ( 'device_data', 'PATCH', 1, 1 ),
 ( 'device_data', 'POST', 0, 1 ),
-( 'image', 'DELETE', 1, 1 ),
-( 'image', 'GET', 0, 0 ),
-( 'image', 'GET', 1, 0 ),
-( 'image', 'PATCH', 1, 1 ),
-( 'image', 'POST', 0, 1 ),
+( 'embedded_file', 'DELETE', 1, 1 ),
+( 'embedded_file', 'GET', 0, 0 ),
+( 'embedded_file', 'GET', 1, 0 ),
+( 'embedded_file', 'PATCH', 1, 1 ),
+( 'embedded_file', 'POST', 0, 1 ),
 ( 'notation', 'DELETE', 1, 1 ),
 ( 'notation', 'PATCH', 1, 1 ),
 ( 'notation', 'POST', 0, 1 ),
@@ -46,3 +46,5 @@ INSERT IGNORE INTO service ( subject, method, resource, restricted ) VALUES
 ( 'qnaire_proxy_type_trigger', 'PATCH', 1, 1 ),
 ( 'qnaire_proxy_type_trigger', 'POST', 0, 1 ),
 ( 'stratum', 'GET', 0, 0 );
+
+DELETE FROM service WHERE subject = "image";
