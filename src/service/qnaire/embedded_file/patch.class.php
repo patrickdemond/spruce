@@ -26,16 +26,13 @@ class patch extends \cenozo\service\patch
       $filename = sprintf( '%s/%s', TEMPORARY_FILES_PATH, bin2hex( openssl_random_pseudo_bytes( 8 ) ) );
       $file = $this->get_file_as_raw();
       file_put_contents( $filename, $file );
-      // TODO: do we need finfo?
-      //$finfo = finfo_open( FILEINFO_MIME_TYPE );
 
       $db_embedded_file = $this->get_leaf_record();
       $db_embedded_file->size = filesize( $filename );
       $db_embedded_file->data = base64_encode( $file );
-      $db_embedded_file->mime_type = mime_content_type( $filename ); //finfo_file( $finfo, $filename );
+      $db_embedded_file->mime_type = mime_content_type( $filename );
       $db_embedded_file->save();
 
-      //finfo_close( $finfo );
       unlink( $filename );
     }
   }
