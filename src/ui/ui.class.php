@@ -92,12 +92,27 @@ class ui extends \cenozo\ui\ui
       $module->add_child( 'deviation_type' );
       $module->add_child( 'embedded_file' );
       $module->add_choose( 'language' );
+      $module->add_choose( 'lookup' );
       $module->add_action( 'clone', '/{identifier}' );
       $module->add_action( 'get_respondent', '/{identifier}' );
       $module->add_action( 'mass_respondent', '/{identifier}' );
       $module->add_action( 'import' );
       $module->add_action( 'patch', '/{identifier}' );
     }
+
+    $module = $this->get_module( 'lookup' );
+    if( !is_null( $module ) )
+    {
+      $module->add_child( 'indicator' );
+      $module->add_child( 'lookup_data' );
+      $module->add_action( 'upload', '/{identifier}' );
+    }
+
+    $module = $this->get_module( 'lookup_data' );
+    if( !is_null( $module ) ) $module->add_choose( 'indicator' );
+
+    $module = $this->get_module( 'indicator' );
+    if( !is_null( $module ) ) $module->add_choose( 'lookup_data' );
 
     $module = $this->get_module( 'device' );
     if( !is_null( $module ) ) $module->add_child( 'device_data' );
@@ -175,6 +190,7 @@ class ui extends \cenozo\ui\ui
 
     $db_role = lib::create( 'business\session' )->get_role();
 
+    $this->add_listitem( 'Lookups', 'lookup' );
     $this->add_listitem( 'Questionnaires', 'qnaire' );
     if( 'readonly' == $db_role->name ) $this->add_listitem( 'Overviews', 'overview' );
     $this->remove_listitem( 'Collections' );
