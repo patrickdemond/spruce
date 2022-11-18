@@ -146,6 +146,10 @@ class expression_manager extends \cenozo\singleton
    *   123 (number)
    *   "string" (may be delimited by ', " or `
 
+   * lookup:
+   *   @NAME.indicator("LOOKUP","INDICATOR")@ (true if attribute has a particular indicator for the given lookup)
+   *   $NAME.indicator("LOOKUP","INDICATOR")$ (true if answer has a particular indicator for the given lookup)
+
    * lists:
    *   $NAME:OPTION$ (always true if it is selected, false if not)
    *   $NAME:count()$ (always a number representing how many options are selected)
@@ -444,36 +448,98 @@ class expression_manager extends \cenozo\singleton
   private function process_attribute()
   {
     $attribute_class_name = lib::get_class_name( 'database\attribute' );
+    $lookup_class_name = lib::get_class_name( 'database\lookup' );
+    $lookup_data_class_name = lib::get_class_name( 'database\lookup_data' );
+    $indicator_class_name = lib::get_class_name( 'database\indicator' );
     $response_attribute_class_name = lib::get_class_name( 'database\response_attribute' );
+
+    $db_lookup = NULL;
+    $db_indicator = NULL;
+    $special_function = NULL;
+
+    // attributes may have the indicator function
+    if( preg_match( '/([^.]+)\.indicator\( *"([^"]+)" *, *"([^"]+)" *\)/', $this->term, $matches ) )
+    {
+      $special_function = 'indicator';
+      $attribute_name = $matches[1];
+
+      $db_lookup = $lookup_class_name::get_unique_record( 'name', $matches[2] );
+
+      if( is_null( $db_lookup ) )
+      {
+        throw lib::create( 'exception\runtime',
+          sprintf( 'No lookup named "%s" found.', $matches[2] ),
+          __METHOD__
+        );
+      }
+
+      $db_indicator = $indicator_class_name::get_unique_record(
+        array( 'lookup_id', 'name' ),
+        array( $db_lookup->id, $matches[3] )
+      );
+
+      if( is_null( $db_indicator ) )
+      {
+        throw lib::create( 'exception\runtime',
+          sprintf( 'No indicator named "%s" found for the lookup "%s".', $matches[3], $db_lookup->name ),
+          __METHOD__
+        );
+      }
+    }
+    else // attributes are defined by name
+    {
+      $attribute_name = $this->term;
+    }
 
     // make sure the attribute exists in the qnaire
     $db_attribute = $attribute_class_name::get_unique_record(
       array( 'qnaire_id', 'name' ),
-      array( $this->db_qnaire->id, $this->term )
+      array( $this->db_qnaire->id, $attribute_name )
     );
 
     if( is_null( $db_attribute ) )
-      throw lib::create( 'exception\runtime', sprintf( 'Invalid attribute "%s"', $this->term ), __METHOD__ );
+      throw lib::create( 'exception\runtime', sprintf( 'Invalid attribute "%s"', $attribute_name ), __METHOD__ );
 
     // test that the working item is an operator
     if( !is_null( $this->last_term ) && 'operator' != $this->last_term )
       throw lib::create( 'exception\runtime', 'Attribute found but expecting an operator', __METHOD__ );
 
     // if a response was provided replace the term with the attribute's value
-    $compiled = sprintf( '%%%s%%', $this->term );
+    $compiled = sprintf( '%%%s%%', $attribute_name );
     if( !is_null( $this->db_response ) )
     {
       $this->db_response_attribute = $response_attribute_class_name::get_unique_record(
         array( 'response_id', 'attribute_id' ),
         array( $this->db_response->id, $db_attribute->id )
       );
-      $compiled = is_null( $this->db_response_attribute->value )
-                ? 'null'
-                : sprintf( '%s', addslashes( $this->db_response_attribute->value ) );
 
-      // add quotes if required
-      if( 'null' != $compiled && !util::string_matches_int( $compiled ) && !util::string_matches_float( $compiled ) )
-        $compiled = sprintf( "'%s'", $compiled );
+      if( 'indicator' == $special_function )
+      {
+        $compiled = 'false';
+
+        $db_lookup_data = $lookup_data_class_name::get_unique_record(
+          array( 'lookup_id', 'identifier' ),
+          array( $db_lookup->id, $this->db_response_attribute->value )
+        );
+
+        if( !is_null( $db_lookup_data ) )
+        {
+          $lookup_data_mod = lib::create( 'database\modifier' );
+          $lookup_data_mod->where( 'lookup_data.id', '=', $db_lookup_data->id );
+          if( $db_indicator->get_lookup_data_count( $lookup_data_mod ) ) $compiled = 'true';
+        }
+      }
+      else
+      {
+        $compiled = is_null( $this->db_response_attribute->value )
+                  ? 'null'
+                  : sprintf( '%s', addslashes( $this->db_response_attribute->value ) );
+
+        // add quotes if required
+        if( 'null' != $compiled &&
+            !util::string_matches_int( $compiled ) &&
+            !util::string_matches_float( $compiled ) ) $compiled = sprintf( "'%s'", $compiled );
+      }
     }
 
     // if the last term was an operator then assume we now represent a boolean expression
@@ -508,10 +574,15 @@ class expression_manager extends \cenozo\singleton
 
     $answer_class_name = lib::get_class_name( 'database\answer' );
     $question_option_class_name = lib::get_class_name( 'database\question_option' );
+    $lookup_class_name = lib::get_class_name( 'database\lookup' );
+    $lookup_data_class_name = lib::get_class_name( 'database\lookup_data' );
+    $indicator_class_name = lib::get_class_name( 'database\indicator' );
 
     // figure out the question, and possibly the question option referred to by this term
     $db_question = NULL;
     $db_question_option = NULL;
+    $db_lookup = NULL;
+    $db_indicator = NULL;
     $special_function = NULL;
 
     // question-options and certain functions are defined by question:question_option
@@ -522,7 +593,7 @@ class expression_manager extends \cenozo\singleton
 
       $db_question = $this->db_qnaire->get_question( $matches[1] );
       if( is_null( $db_question ) )
-        throw lib::create( 'exception\runtime', sprintf( 'Invalid question "%s"', $matches[1] ), __METHOD__ );
+        throw lib::create( 'exception\runtime', sprintf( 'No question name "%s" found.', $matches[1] ), __METHOD__ );
 
       if( '.' == $matches[2] )
       {
@@ -552,11 +623,41 @@ class expression_manager extends \cenozo\singleton
             );
           }
         }
+        else if( 'indicator(' == substr( $matches[3], 0, 10 ) )
+        {
+          $special_function = 'indicator';
+
+          if( !preg_match( '/indicator\( *"([^"]+)" *, *"([^"]+)" *\)/', $matches[3], $sub_matches ) )
+            throw lib::create( 'exception\runtime', sprintf( 'Invalid syntax "%s"', $matches[3] ), __METHOD__ );
+
+          $db_lookup = $lookup_class_name::get_unique_record( 'name', $sub_matches[1] );
+
+          if( is_null( $db_lookup ) )
+          {
+            throw lib::create( 'exception\runtime',
+              sprintf( 'No lookup named "%s" found.', $sub_matches[1] ),
+              __METHOD__
+            );
+          }
+
+          $db_indicator = $indicator_class_name::get_unique_record(
+            array( 'lookup_id', 'name' ),
+            array( $db_lookup->id, $sub_matches[2] )
+          );
+
+          if( is_null( $db_indicator ) )
+          {
+            throw lib::create( 'exception\runtime',
+              sprintf( 'No indicator named "%s" found for the lookup "%s".', $sub_matches[2], $db_lookup->name ),
+              __METHOD__
+            );
+          }
+        }
         else if( in_array( $matches[3], ['empty()', 'dkna()', 'refuse()'] ) )
         {
           $special_function = substr( $matches[3], 0, -2 );
         }
-        else throw lib::create( 'exception\runtime', sprintf( 'Invalid function "%s"', $matches[3] ), __METHOD__ );
+        else throw lib::create( 'exception\runtime', sprintf( 'No such function "%s"', $matches[3] ), __METHOD__ );
       }
       else if( ':' == $matches[2] )
       {
@@ -574,7 +675,7 @@ class expression_manager extends \cenozo\singleton
           if( is_null( $db_question_option ) )
           {
             throw lib::create( 'exception\runtime',
-              sprintf( 'Invalid question option "%s" for question "%s"', $matches[3], $matches[1] ),
+              sprintf( 'No question option name "%s" found for question "%s".', $matches[3], $matches[1] ),
               __METHOD__
             );
           }
@@ -585,7 +686,7 @@ class expression_manager extends \cenozo\singleton
     {
       $db_question = $this->db_qnaire->get_question( $this->term );
       if( is_null( $db_question ) )
-        throw lib::create( 'exception\runtime', sprintf( 'Invalid question "%s"', $this->term ), __METHOD__ );
+        throw lib::create( 'exception\runtime', sprintf( 'No question name "%s" found.', $this->term ), __METHOD__ );
 
       if( 'list' == $db_question->type )
       {
@@ -595,7 +696,7 @@ class expression_manager extends \cenozo\singleton
         ), __METHOD__ );
       }
 
-      if( in_array( $db_question->type, ['comment', 'device', 'lookup', 'lookup-indicator', 'text'] ) )
+      if( in_array( $db_question->type, ['comment', 'device', 'text'] ) )
         throw lib::create( 'exception\runtime', sprintf( 'Cannot use question type "%s"', $db_question->type ), __METHOD__ );
     }
 
@@ -659,6 +760,22 @@ class expression_manager extends \cenozo\singleton
           }
         }
       }
+      else if( 'indicator' == $special_function )
+      {
+        $compiled = 'false';
+
+        $db_lookup_data = $lookup_data_class_name::get_unique_record(
+          array( 'lookup_id', 'identifier' ),
+          array( $db_lookup->id, $value )
+        );
+
+        if( !is_null( $db_lookup_data ) )
+        {
+          $lookup_data_mod = lib::create( 'database\modifier' );
+          $lookup_data_mod->where( 'lookup_data.id', '=', $db_lookup_data->id );
+          if( $db_indicator->get_lookup_data_count( $lookup_data_mod ) ) $compiled = 'true';
+        }
+      }
       else
       {
         if( 'boolean' == $db_question->type ) $compiled = $value ? 'true' : 'false';
@@ -709,7 +826,7 @@ class expression_manager extends \cenozo\singleton
         array( $this->db_qnaire->id, $matches[1] )
       );
       if( is_null( $db_stage ) )
-        throw lib::create( 'exception\runtime', sprintf( 'Invalid stage "%s"', $matches[1] ), __METHOD__ );
+        throw lib::create( 'exception\runtime', sprintf( 'No stage name "%s" found.', $matches[1] ), __METHOD__ );
 
       if( 'status()' == $matches[2] )
       {
@@ -724,7 +841,7 @@ class expression_manager extends \cenozo\singleton
         array( $this->db_qnaire->id, $this->term )
       );
       if( is_null( $db_stage ) )
-        throw lib::create( 'exception\runtime', sprintf( 'Invalid stage "%s"', $this->term ), __METHOD__ );
+        throw lib::create( 'exception\runtime', sprintf( 'No stage name "%s" found.', $this->term ), __METHOD__ );
     }
 
     // test that the working item is an operator
