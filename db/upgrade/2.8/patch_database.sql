@@ -19,9 +19,9 @@ SOURCE device_data.sql
 SOURCE qnaire.sql
 SOURCE lookup.sql
 SOURCE qnaire_has_lookup.sql
-SOURCE lookup_data.sql
+SOURCE lookup_item.sql
 SOURCE indicator.sql
-SOURCE indicator_has_lookup_data.sql
+SOURCE indicator_has_lookup_item.sql
 
 SOURCE update_version_number.sql
 

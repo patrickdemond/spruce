@@ -449,7 +449,7 @@ class expression_manager extends \cenozo\singleton
   {
     $attribute_class_name = lib::get_class_name( 'database\attribute' );
     $lookup_class_name = lib::get_class_name( 'database\lookup' );
-    $lookup_data_class_name = lib::get_class_name( 'database\lookup_data' );
+    $lookup_item_class_name = lib::get_class_name( 'database\lookup_item' );
     $indicator_class_name = lib::get_class_name( 'database\indicator' );
     $response_attribute_class_name = lib::get_class_name( 'database\response_attribute' );
 
@@ -517,16 +517,16 @@ class expression_manager extends \cenozo\singleton
       {
         $compiled = 'false';
 
-        $db_lookup_data = $lookup_data_class_name::get_unique_record(
+        $db_lookup_item = $lookup_item_class_name::get_unique_record(
           array( 'lookup_id', 'identifier' ),
           array( $db_lookup->id, $this->db_response_attribute->value )
         );
 
-        if( !is_null( $db_lookup_data ) )
+        if( !is_null( $db_lookup_item ) )
         {
-          $lookup_data_mod = lib::create( 'database\modifier' );
-          $lookup_data_mod->where( 'lookup_data.id', '=', $db_lookup_data->id );
-          if( $db_indicator->get_lookup_data_count( $lookup_data_mod ) ) $compiled = 'true';
+          $lookup_item_mod = lib::create( 'database\modifier' );
+          $lookup_item_mod->where( 'lookup_item.id', '=', $db_lookup_item->id );
+          if( $db_indicator->get_lookup_item_count( $lookup_item_mod ) ) $compiled = 'true';
         }
       }
       else
@@ -575,7 +575,7 @@ class expression_manager extends \cenozo\singleton
     $answer_class_name = lib::get_class_name( 'database\answer' );
     $question_option_class_name = lib::get_class_name( 'database\question_option' );
     $lookup_class_name = lib::get_class_name( 'database\lookup' );
-    $lookup_data_class_name = lib::get_class_name( 'database\lookup_data' );
+    $lookup_item_class_name = lib::get_class_name( 'database\lookup_item' );
     $indicator_class_name = lib::get_class_name( 'database\indicator' );
 
     // figure out the question, and possibly the question option referred to by this term
@@ -764,16 +764,16 @@ class expression_manager extends \cenozo\singleton
       {
         $compiled = 'false';
 
-        $db_lookup_data = $lookup_data_class_name::get_unique_record(
+        $db_lookup_item = $lookup_item_class_name::get_unique_record(
           array( 'lookup_id', 'identifier' ),
           array( $db_lookup->id, $value )
         );
 
-        if( !is_null( $db_lookup_data ) )
+        if( !is_null( $db_lookup_item ) )
         {
-          $lookup_data_mod = lib::create( 'database\modifier' );
-          $lookup_data_mod->where( 'lookup_data.id', '=', $db_lookup_data->id );
-          if( $db_indicator->get_lookup_data_count( $lookup_data_mod ) ) $compiled = 'true';
+          $lookup_item_mod = lib::create( 'database\modifier' );
+          $lookup_item_mod->where( 'lookup_item.id', '=', $db_lookup_item->id );
+          if( $db_indicator->get_lookup_item_count( $lookup_item_mod ) ) $compiled = 'true';
         }
       }
       else

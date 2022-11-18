@@ -149,7 +149,7 @@ cenozoApp.defineModule({
             },
             applyData: async function() {
               let proceed = true;
-              if( 0 == this.dataSummary.lookup_data.created ) {
+              if( 0 == this.dataSummary.lookup_item.created ) {
                 proceed = false;
                 for( const indicator in this.dataSummary.indicator_list ) {
                   if( 0 < this.dataSummary.indicator_list[indicator].created ) {

@@ -35,11 +35,11 @@
         <h3>Lookup Data</h3>
         <div class="form-group">
           <label class="col-sm-3 control-label">New records</label>
-          <div class="col-sm-9 form-text">{{ model.viewModel.dataSummary.lookup_data.created }}</div>
+          <div class="col-sm-9 form-text">{{ model.viewModel.dataSummary.lookup_item.created }}</div>
         </div>
         <div class="form-group">
           <label class="col-sm-3 control-label">Pre-existing records</label>
-          <div class="col-sm-9 form-text">{{ model.viewModel.dataSummary.lookup_data.exists }}</div>
+          <div class="col-sm-9 form-text">{{ model.viewModel.dataSummary.lookup_item.exists }}</div>
         </div>
         <h3>Indicators</h3>
         <div ng-repeat="(indicator, data) in model.viewModel.dataSummary.indicator_list" class="row">

@@ -104,15 +104,15 @@ class ui extends \cenozo\ui\ui
     if( !is_null( $module ) )
     {
       $module->add_child( 'indicator' );
-      $module->add_child( 'lookup_data' );
+      $module->add_child( 'lookup_item' );
       $module->add_action( 'upload', '/{identifier}' );
     }
 
-    $module = $this->get_module( 'lookup_data' );
+    $module = $this->get_module( 'lookup_item' );
     if( !is_null( $module ) ) $module->add_choose( 'indicator' );
 
     $module = $this->get_module( 'indicator' );
-    if( !is_null( $module ) ) $module->add_choose( 'lookup_data' );
+    if( !is_null( $module ) ) $module->add_choose( 'lookup_item' );
 
     $module = $this->get_module( 'device' );
     if( !is_null( $module ) ) $module->add_child( 'device_data' );

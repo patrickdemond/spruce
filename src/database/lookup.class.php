@@ -14,7 +14,7 @@ use cenozo\lib, cenozo\log, pine\util;
 class lookup extends \cenozo\database\record
 {
   /**
-   * Applies data from a CSV file which defines indicators and lookup_data
+   * Applies data from a CSV file which defines indicators and lookup_item
    * @param array $data An array of lookup data (with columns: indicator, name, description, indication)
    * @param boolean $apply Whether to apply or evaluate the patch
    * @return stdObject
@@ -24,11 +24,11 @@ class lookup extends \cenozo\database\record
     ini_set( 'memory_limit', '1G' );
     set_time_limit( 900 ); // 15 minutes max
 
-    $lookup_data_class_name = lib::get_class_name( 'database\lookup_data' );
+    $lookup_item_class_name = lib::get_class_name( 'database\lookup_item' );
     $indicator_class_name = lib::get_class_name( 'database\indicator' );
 
     $result_data = array(
-      'lookup_data' => array( 'exists' => 0, 'created' => 0 ),
+      'lookup_item' => array( 'exists' => 0, 'created' => 0 ),
       'indicator_list' => array()
     );
 
@@ -37,31 +37,31 @@ class lookup extends \cenozo\database\record
       // skip the header row
       if( 0 == $index && 'identifier' == $row[0] ) continue;
 
-      $lookup_data_is_new = false;
+      $lookup_item_is_new = false;
 
-      $db_lookup_data = $lookup_data_class_name::get_unique_record(
+      $db_lookup_item = $lookup_item_class_name::get_unique_record(
         array( 'lookup_id', 'identifier' ),
         array( $this->id, $row[0] )
       );
 
-      if( is_null( $db_lookup_data ) )
+      if( is_null( $db_lookup_item ) )
       {
-        $lookup_data_is_new = true;
-        $result_data['lookup_data']['created']++;
+        $lookup_item_is_new = true;
+        $result_data['lookup_item']['created']++;
 
         if( $apply )
         {
-          $db_lookup_data = lib::create( 'database\lookup_data' );
-          $db_lookup_data->lookup_id = $this->id;
-          $db_lookup_data->identifier = $row[0];
-          $db_lookup_data->name = $row[1];
-          $db_lookup_data->description = $row[2];
-          $db_lookup_data->save();
+          $db_lookup_item = lib::create( 'database\lookup_item' );
+          $db_lookup_item->lookup_id = $this->id;
+          $db_lookup_item->identifier = $row[0];
+          $db_lookup_item->name = $row[1];
+          $db_lookup_item->description = $row[2];
+          $db_lookup_item->save();
         }
       }
       else
       {
-        $result_data['lookup_data']['exists']++;
+        $result_data['lookup_item']['exists']++;
       }
 
       // process all indications
@@ -78,7 +78,7 @@ class lookup extends \cenozo\database\record
               'created' => 0
             );
           }
-          $result_data['indicator_list'][$indicator][$lookup_data_is_new ? 'created' : 'exists']++;
+          $result_data['indicator_list'][$indicator][$lookup_item_is_new ? 'created' : 'exists']++;
 
           $db_indicator = $indicator_class_name::get_unique_record(
             array( 'lookup_id', 'name' ),
@@ -103,7 +103,7 @@ class lookup extends \cenozo\database\record
 
         if( $apply && 0 < count( $indicator_id_list ) )
         {
-          $db_lookup_data->add_indicator( $indicator_id_list );
+          $db_lookup_item->add_indicator( $indicator_id_list );
         }
       }
     }

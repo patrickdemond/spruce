@@ -5,7 +5,7 @@
  * @author Patrick Emond <emondpd@mcmaster.ca>
  */
 
-namespace pine\service\lookup_data;
+namespace pine\service\lookup_item;
 use cenozo\lib, cenozo\log, pine\util;
 
 /**
@@ -17,7 +17,7 @@ class module extends \cenozo\service\module
   {
     parent::prepare_read( $select, $modifier );
 
-    $modifier->join( 'lookup', 'lookup_data.lookup_id', 'lookup.id' );
+    $modifier->join( 'lookup', 'lookup_item.lookup_id', 'lookup.id' );
     $this->add_list_column( 'indicator_list', 'indicator', 'name', $select, $modifier );
   }
 }

@@ -1,5 +1,5 @@
 cenozoApp.defineModule({
-  name: "lookup_data",
+  name: "lookup_item",
   models: ["add", "list", "view"],
   create: (module) => {
     angular.extend(module, {
@@ -10,9 +10,9 @@ cenozoApp.defineModule({
         }
       },
       name: {
-        singular: "lookup data",
-        plural: "lookup data",
-        possessive: "lookup data's",
+        singular: "lookup item",
+        plural: "lookup items",
+        possessive: "lookup item's",
       },
       columnList: {
         identifier: {

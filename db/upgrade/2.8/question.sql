@@ -6,17 +6,16 @@ CREATE PROCEDURE patch_question()
     SELECT "Adding new audio question type to type column in question table" AS "";
 
     SELECT LOCATE( "audio", column_type ),
-           LOCATE( "lookup", column_type ),
-           LOCATE( "lookup-indicator", column_type )
-    INTO @audio, @lookup, @indicator
+           LOCATE( "lookup", column_type )
+    INTO @audio, @lookup
     FROM information_schema.COLUMNS
     WHERE table_schema = DATABASE()
     AND table_name = "question"
     AND column_name = "type";
 
-    IF @audio = 0 OR @lookup = 0 OR @indicator = 0 THEN
+    IF @audio = 0 OR @lookup = 0 THEN
       ALTER TABLE question
-      MODIFY COLUMN type ENUM('audio', 'boolean', 'comment', 'date', 'device', 'list', 'lookup', 'lookup-indicator', 'number', 'string', 'text') NOT NULL;
+      MODIFY COLUMN type ENUM('audio', 'boolean', 'comment', 'date', 'device', 'list', 'lookup', 'number', 'string', 'text') NOT NULL;
     END IF;
 
     SELECT COUNT(*) INTO @test

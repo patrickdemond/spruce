@@ -1,6 +1,6 @@
-SELECT "Creating new lookup_data table" AS "";
+SELECT "Creating new lookup_item table" AS "";
 
-CREATE TABLE IF NOT EXISTS lookup_data (
+CREATE TABLE IF NOT EXISTS lookup_item (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   update_timestamp TIMESTAMP NOT NULL,
   create_timestamp TIMESTAMP NOT NULL,
@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS lookup_data (
   PRIMARY KEY (id),
   INDEX fk_lookup_id (lookup_id ASC),
   UNIQUE INDEX uq_lookup_id_identifier (lookup_id ASC, identifier ASC),
-  CONSTRAINT fk_lookup_data_lookup_id
+  CONSTRAINT fk_lookup_item_lookup_id
     FOREIGN KEY (lookup_id)
     REFERENCES lookup (id)
     ON DELETE CASCADE

@@ -18,7 +18,7 @@ cenozoApp.defineModule({
         name: {
           title: "Name",
         },
-        lookup_data_count: {
+        lookup_item_count: {
           title: "Lookup Data Count",
         },
       },

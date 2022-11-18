@@ -767,13 +767,13 @@ cenozoApp.defineModule({
               let retVal = undefined;
               try {
                 const response = await CnHttpFactory.instance({
-                  path: ["lookup",question.lookup.id,"lookup_data"].join("/"),
+                  path: ["lookup",question.lookup.id,"lookup_item"].join("/"),
                   data: {
                     select: {
                       column: [
                         "identifier",
                         {
-                          column: "CONCAT( lookup_data.identifier, ': ', lookup_data.description )",
+                          column: "CONCAT( lookup_item.identifier, ': ', lookup_item.description )",
                           alias: "description",
                           table_prefix: false,
                         },
@@ -781,11 +781,11 @@ cenozoApp.defineModule({
                     },
                     modifier: {
                       where: [{
-                        column: "lookup_data.identifier",
+                        column: "lookup_item.identifier",
                         operator: "like",
                         value: "%" + viewValue + "%"
                       },{
-                        column: "lookup_data.description",
+                        column: "lookup_item.description",
                         operator: "like",
                         value: "%" + viewValue + "%",
                         or: true
@@ -1377,11 +1377,11 @@ cenozoApp.defineModule({
                           })()
                         );
                       }
-                    } else if (['lookup', 'lookup-indicator'].includes(question.type)) {
+                    } else if ("lookup" == question.type) {
                       question.lookup = {
-                        'id': question.lookup_id,
-                        'name': question.lookup,
-                        'isLoading': false,
+                        "id": question.lookup_id,
+                        "name": question.lookup,
+                        "isLoading": false,
                       };
                       delete question.lookup_id;
                     }
@@ -1533,7 +1533,7 @@ cenozoApp.defineModule({
                   // now go get the formatted value from the server using the identifier
                   async function setFormattedValue( question ) {
                     const response = await CnHttpFactory.instance({
-                      path: "lookup_data/lookup_id=" + question.lookup.id + ";identifier=" + question.value
+                      path: "lookup_item/lookup_id=" + question.lookup.id + ";identifier=" + question.value
                     }).get();
                     question.answer.formattedValue = response.data.identifier + ": " + response.data.description;
                   }

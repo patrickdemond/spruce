@@ -84,7 +84,7 @@ cenozoApp.defineModule({
       title: "Lookup",
       type: "enum",
       isExcluded: function ($state, model) {
-        return !["lookup", "lookup-indicator"].includes(model.viewModel.record.type) ? true : "add";
+        return "lookup" != model.viewModel.record.type ? true : "add";
       },
     });
     module.addInput("", "minimum", {

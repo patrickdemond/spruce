@@ -18,6 +18,6 @@ class module extends \cenozo\service\module
     parent::prepare_read( $select, $modifier );
 
     $modifier->join( 'lookup', 'indicator.lookup_id', 'lookup.id' );
-    $this->add_count_column( 'lookup_data_count', 'lookup_data', $select, $modifier );
+    $this->add_count_column( 'lookup_item_count', 'lookup_item', $select, $modifier );
   }
 }
