@@ -13,6 +13,12 @@ cenozoApp.defineModule({
         name: {
           title: "Name",
         },
+        indicator_count: {
+          title: "Indicators",
+        },
+        lookup_item_count: {
+          title: "Items",
+        },
         description: {
           title: "Description",
           align: "left",
