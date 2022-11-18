@@ -370,6 +370,45 @@
                     {{ model.renderModel.isDeviceComplete( question ) ? 'Re-' : '' }}Launch {{ question.device }} Device
                   </button>
                 </div>
+                <div ng-switch-when="lookup">
+                  <h4 ng-if="null == question.lookup.id" class="text-danger text-center">
+                    Warning: Lookup question is not associated with a lookup!
+                  </h4>
+                  <div ng-if="null != question.lookup.id">
+                    <input
+                      id="lookup{{ question.lookup.id }}"
+                      ng-model="question.answer.formattedValue"
+                      uib-typeahead="item.identifier as item.description for item in model.renderModel.getLookupValues( question, $viewValue )"
+                      typeahead-editable="false"
+                      typeahead-on-select="model.renderModel.setAnswer( question, $item )"
+                      typeahead-min-length="3"
+                      cn-change="!question.answer.formattedValue && model.renderModel.setAnswer( question, null )"
+                      class="form-control"
+                      ng-class="{ 'loading-small': question.lookup.isLoading }"
+                      type="text"
+                      placeholder="(search possible values)"
+                      autocomplete="off"></input>
+
+                    <div ng-if="false">
+                      <div class="col-slim col-xs-11">
+                        <input ng-switch-when="string"
+                          cn-ignore-mouse-wheel
+                          type="string"
+                          id="lookup{{ question.lookup.id }}value1"
+                          name="answerValue"
+                          ng-class="{ 'color-red': true === question.incomplete }"
+                          ng-model="value"
+                          cn-change=""
+                          class="form-control rounded-bottom-left rounded-bottom-right larger"></input>
+                      </div>
+                      <button type="button"
+                              class="btn btn-danger col-slim col-xs-1 larger"
+                              ng-click="">
+                        <i class="glyphicon glyphicon-remove"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
                 <div ng-switch-when="list"
                      class="row row-no-gutters"
                      ng-repeat="option in model.renderModel.getVisibleOptionList( question )">

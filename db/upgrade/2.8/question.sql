@@ -5,15 +5,18 @@ CREATE PROCEDURE patch_question()
 
     SELECT "Adding new audio question type to type column in question table" AS "";
 
-    SELECT LOCATE( "audio", column_type ) INTO @test
+    SELECT LOCATE( "audio", column_type ),
+           LOCATE( "lookup", column_type ),
+           LOCATE( "lookup-indicator", column_type )
+    INTO @audio, @lookup, @indicator
     FROM information_schema.COLUMNS
     WHERE table_schema = DATABASE()
     AND table_name = "question"
     AND column_name = "type";
 
-    IF @test = 0 THEN
+    IF @audio = 0 OR @lookup = 0 OR @indicator = 0 THEN
       ALTER TABLE question
-      MODIFY COLUMN type ENUM('audio', 'boolean', 'comment', 'date', 'device', 'list', 'number', 'string', 'text') NOT NULL;
+      MODIFY COLUMN type ENUM('audio', 'boolean', 'comment', 'date', 'device', 'list', 'lookup', 'lookup-indicator', 'number', 'string', 'text') NOT NULL;
     END IF;
 
     SELECT COUNT(*) INTO @test
@@ -39,6 +42,25 @@ CREATE PROCEDURE patch_question()
       ALTER TABLE question
       ADD CONSTRAINT fk_question_device_id FOREIGN KEY (device_id) REFERENCES device (id)
       ON DELETE SET NULL ON UPDATE NO ACTION;
+    END IF;
+
+    SELECT "Adding new lookup_id column to question table" AS "";
+
+    SELECT COUNT(*) INTO @test
+    FROM information_schema.COLUMNS
+    WHERE table_schema = DATABASE()
+    AND table_name = "question"
+    AND column_name = "lookup_id";
+
+    IF @test = 0 THEN
+      ALTER TABLE question ADD COLUMN lookup_id INT(10) UNSIGNED NULL DEFAULT NULL AFTER device_id;
+      ALTER TABLE question
+      ADD INDEX fk_lookup_id (lookup_id ASC),
+      ADD CONSTRAINT fk_question_lookup_id
+            FOREIGN KEY (lookup_id)
+            REFERENCES lookup (id)
+            ON DELETE SET NULL
+            ON UPDATE NO ACTION;
     END IF;
 
   END //

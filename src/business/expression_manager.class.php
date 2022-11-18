@@ -595,7 +595,7 @@ class expression_manager extends \cenozo\singleton
         ), __METHOD__ );
       }
 
-      if( in_array( $db_question->type, ['comment', 'device', 'text'] ) )
+      if( in_array( $db_question->type, ['comment', 'device', 'lookup', 'lookup-indicator', 'text'] ) )
         throw lib::create( 'exception\runtime', sprintf( 'Cannot use question type "%s"', $db_question->type ), __METHOD__ );
     }
 

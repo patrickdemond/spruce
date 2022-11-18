@@ -80,6 +80,13 @@ cenozoApp.defineModule({
         return "device" != model.viewModel.record.type ? true : "add";
       },
     });
+    module.addInput("", "lookup_id", {
+      title: "Lookup",
+      type: "enum",
+      isExcluded: function ($state, model) {
+        return !["lookup", "lookup-indicator"].includes(model.viewModel.record.type) ? true : "add";
+      },
+    });
     module.addInput("", "minimum", {
       title: "Minimum",
       type: "string",
@@ -212,7 +219,6 @@ cenozoApp.defineModule({
 
             onView: async function (force) {
               await this.$$onView(force);
-              await this.parentModel.updateDeviceList();
             },
 
             onPatch: async function (data) {
@@ -304,6 +310,7 @@ cenozoApp.defineModule({
                 !["device", "date", "number"].includes(object.record.type)
               ) {
                 if (object.record.device_id) object.record.device_id = "";
+                if (object.record.lookup_id) object.record.lookup_id = "";
                 if (null != object.record.minimum) object.record.minimum = null;
                 if (null != object.record.maximum) object.record.maximum = null;
               }
@@ -351,25 +358,51 @@ cenozoApp.defineModule({
                 object.$$getDeleteEnabled()
               );
             },
-            // special function to update the device list
-            updateDeviceList: async function () {
-              var response = await CnHttpFactory.instance({
-                path: [
-                  "qnaire",
-                  this.viewModel.record.qnaire_id,
-                  "device",
-                ].join("/"),
-                data: {
-                  select: { column: ["id", "name"] },
-                  modifier: { order: "name" },
-                },
-              }).query();
+            getMetadata: async function () {
+              console.log( 'a' );
+              await this.$$getMetadata();
 
-              this.metadata.columnList.device_id.enumList =
-                response.data.reduce((list, item) => {
+              let queryList = [
+                CnHttpFactory.instance({
+                  path: "lookup",
+                  data: {
+                    select: { column: ["id", "name"] },
+                    modifier: { order: "name" },
+                  },
+                }).query()
+              ];
+
+              if( 'question' == this.getSubjectFromState() && 'view' == this.getActionFromState() ) {
+                queryList.push(
+                  CnHttpFactory.instance({
+                    path: [
+                      "qnaire",
+                      this.viewModel.record.qnaire_id,
+                      "device",
+                    ].join("/"),
+                    data: {
+                      select: { column: ["id", "name"] },
+                      modifier: { order: "name" },
+                    },
+                  }).query()
+                );
+              }
+              
+              const responseList = await Promise.all(queryList);
+
+              this.metadata.columnList.lookup_id.enumList =
+                responseList[0].data.reduce((list, item) => {
                   list.push({ value: item.id, name: item.name });
                   return list;
                 }, []);
+
+              if( 'question' == this.getSubjectFromState() && 'view' == this.getActionFromState() ) {
+                this.metadata.columnList.device_id.enumList =
+                  responseList[1].data.reduce((list, item) => {
+                    list.push({ value: item.id, name: item.name });
+                    return list;
+                  }, []);
+              }
             },
           });
           return object;

@@ -761,6 +761,47 @@ cenozoApp.defineModule({
               );
             },
 
+            getLookupValues: async function(question, viewValue) {
+              question.isLoading = true;
+
+              let retVal = undefined;
+              try {
+                const response = await CnHttpFactory.instance({
+                  path: ["lookup",question.lookup.id,"lookup_data"].join("/"),
+                  data: {
+                    select: {
+                      column: [
+                        "identifier",
+                        {
+                          column: "CONCAT( lookup_data.identifier, ': ', lookup_data.description )",
+                          alias: "description",
+                          table_prefix: false,
+                        },
+                      ],
+                    },
+                    modifier: {
+                      where: [{
+                        column: "lookup_data.identifier",
+                        operator: "like",
+                        value: "%" + viewValue + "%"
+                      },{
+                        column: "lookup_data.description",
+                        operator: "like",
+                        value: "%" + viewValue + "%",
+                        or: true
+                      }],
+                      order: { 'identifier': true },
+                    },
+                  }
+                }).get();
+                retVal = response.data;
+              } finally {
+                question.isLoading = false;
+              }
+
+              return retVal;
+            },
+
             onReady: async function () {
               this.previewMode =
                 "respondent" != parentModel.getSubjectFromState();
@@ -1180,6 +1221,8 @@ cenozoApp.defineModule({
                           "popups",
                           "device_id",
                           { table: "device", column: "name", alias: "device" },
+                          "lookup_id",
+                          { table: "lookup", column: "name", alias: "lookup" },
                         ],
                       },
                       modifier: { order: "question.rank" },
@@ -1334,6 +1377,13 @@ cenozoApp.defineModule({
                           })()
                         );
                       }
+                    } else if (['lookup', 'lookup-indicator'].includes(question.type)) {
+                      question.lookup = {
+                        'id': question.lookup_id,
+                        'name': question.lookup,
+                        'isLoading': false,
+                      };
+                      delete question.lookup_id;
                     }
                     return list;
                   }, [])
@@ -1466,6 +1516,34 @@ cenozoApp.defineModule({
                       ? window.URL.createObjectURL(question.value)
                       : null,
                 };
+              } else if ("lookup" == question.type) {
+
+                if( angular.isObject( question.value ) ) {
+                  question.answer = {
+                    value: question.value.identifier,
+                    formattedValue: question.value.description,
+                  };
+                } else if( angular.isString( question.value ) ) {
+                  // the value is the identifier only
+                  question.answer = {
+                    value: question.value,
+                    formattedValue: question.value,
+                  };
+
+                  // now go get the formatted value from the server using the identifier
+                  async function setFormattedValue( question ) {
+                    const response = await CnHttpFactory.instance({
+                      path: "lookup_data/lookup_id=" + question.lookup.id + ";identifier=" + question.value
+                    }).get();
+                    question.answer.formattedValue = response.data.identifier + ": " + response.data.description;
+                  }
+                  setFormattedValue( question );
+                } else {
+                  question.answer = {
+                    value: null,
+                    formattedValue: null,
+                  };
+                }
               } else {
                 question.answer = {
                   value:
@@ -1484,7 +1562,7 @@ cenozoApp.defineModule({
 
             // Returns true if complete, false if not and the option ID if an option's extra data is missing
             questionIsComplete: function (question) {
-              // comment and device questions are always complete
+              // comments are always complete
               if ("comment" == question.type) return true;
 
               // hidden questions are always complete
@@ -1945,11 +2023,14 @@ cenozoApp.defineModule({
                           if ("" === value) value = null;
 
                           if (!this.previewMode) {
-                            // audio blobs need to be converted to base64 strings before sending to the server
-                            var valueForPatch =
-                              "audio" == question.type && value instanceof Blob
-                                ? await cenozo.convertBlobToBase64(value)
-                                : value;
+                            var valueForPatch = value;
+                            if( "audio" == question.type ) {
+                              // audio blobs need to be converted to base64 strings before sending to the server
+                              if( value instanceof Blob ) valueForPatch = await cenozo.convertBlobToBase64(value);
+                            } else if( "lookup" == question.type ) {
+                              // lookups store the selected item's identifier as the answer
+                              if( null != value && angular.isObject( value ) ) valueForPatch = value.identifier;
+                            }
 
                             // first communicate with the server (if we're working with a respondent)
                             var self = this;
