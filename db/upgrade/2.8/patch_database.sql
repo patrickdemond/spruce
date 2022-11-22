@@ -6,6 +6,7 @@ SOURCE table_character_sets.sql
 
 SOURCE embedded_file.sql
 SOURCE image.sql
+SOURCE lookup.sql
 SOURCE question.sql
 SOURCE answer.sql
 SOURCE qnaire_consent_type_trigger.sql
@@ -17,7 +18,6 @@ SOURCE service.sql
 SOURCE role_has_service.sql
 SOURCE device_data.sql
 SOURCE qnaire.sql
-SOURCE lookup.sql
 SOURCE qnaire_has_lookup.sql
 SOURCE lookup_item.sql
 SOURCE indicator.sql
