@@ -156,6 +156,7 @@ abstract class base_qnaire_part extends \cenozo\database\has_rank
 
     $language_class_name = lib::get_class_name( 'database\language' );
     $device_class_name = lib::get_class_name( 'database\device' );
+    $lookup_class_name = lib::get_class_name( 'database\lookup' );
     $description_name = sprintf( 'database\%s_description', $subject );
     $description_class_name = lib::get_class_name( $description_name );
     $child_name = sprintf( 'database\%s', $child_subject );
@@ -351,6 +352,19 @@ abstract class base_qnaire_part extends \cenozo\database\has_rank
             array( $this->get_qnaire()->id, $patch_object->device_name )
           );
           $this->device_id = $db_device->id;
+        }
+      }
+      else if( 'lookup_name' == $property )
+      {
+        // questions may link to a lookup
+        if( is_null( $patch_object->lookup_name ) )
+        {
+          $this->lookup_id = NULL;
+        }
+        else
+        {
+          $db_lookup = $lookup_class_name::get_unique_record( 'name', $patch_object->lookup_name );
+          $this->lookup_id = $db_lookup->id;
         }
       }
       else

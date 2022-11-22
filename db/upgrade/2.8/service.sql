@@ -60,6 +60,7 @@ INSERT IGNORE INTO service ( subject, method, resource, restricted ) VALUES
 ( 'qnaire_proxy_type_trigger', 'GET', 1, 1 ),
 ( 'qnaire_proxy_type_trigger', 'PATCH', 1, 1 ),
 ( 'qnaire_proxy_type_trigger', 'POST', 0, 1 ),
-( 'stratum', 'GET', 0, 0 );
+( 'stratum', 'GET', 0, 0 ),
+( 'study', 'GET', 0, 0 );
 
 DELETE FROM service WHERE subject = "image";

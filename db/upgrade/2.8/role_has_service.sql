@@ -28,6 +28,19 @@ CREATE PROCEDURE patch_role_has_service()
     EXECUTE statement;
     DEALLOCATE PREPARE statement;
 
+    -- machine
+    SET @sql = CONCAT(
+      "INSERT IGNORE INTO role_has_service( role_id, service_id ) ",
+      "SELECT role.id, service.id ",
+      "FROM ", @cenozo, ".role, service ",
+      "WHERE role.name = 'machine' ",
+      "AND service.subject IN( 'indicator', 'lookup', 'lookup_item' ) ",
+      "AND service.restricted = 1"
+    );
+    PREPARE statement FROM @sql;
+    EXECUTE statement;
+    DEALLOCATE PREPARE statement;
+
     -- interviewer
     SET @sql = CONCAT(
       "INSERT IGNORE INTO role_has_service( role_id, service_id ) ",

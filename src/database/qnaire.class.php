@@ -774,10 +774,13 @@ class qnaire extends \cenozo\database\record
 
       // replace all role access
       $db_consent_type->remove_role( NULL );
-      foreach( preg_split( '/, */', $consent_type->role_list ) as $role )
+      if( !is_null( $consent_type->role_list ) )
       {
-        $db_role = $role_class_name::get_unique_record( 'name', $role );
-        if( !is_null( $db_role ) ) $db_consent_type->add_role( $db_role->id );
+        foreach( preg_split( '/, */', $consent_type->role_list ) as $role )
+        {
+          $db_role = $role_class_name::get_unique_record( 'name', $role );
+          if( !is_null( $db_role ) ) $db_consent_type->add_role( $db_role->id );
+        }
       }
     }
 
@@ -797,10 +800,13 @@ class qnaire extends \cenozo\database\record
 
       // replace all role access
       $db_aconsent_type->remove_role( NULL );
-      foreach( preg_split( '/, */', $alternate_consent_type->role_list ) as $role )
+      if( !is_null( $alternate_consent_type->role_list ) )
       {
-        $db_role = $role_class_name::get_unique_record( 'name', $role );
-        if( !is_null( $db_role ) ) $db_aconsent_type->add_role( $db_role->id );
+        foreach( preg_split( '/, */', $alternate_consent_type->role_list ) as $role )
+        {
+          $db_role = $role_class_name::get_unique_record( 'name', $role );
+          if( !is_null( $db_role ) ) $db_aconsent_type->add_role( $db_role->id );
+        }
       }
     }
 
@@ -821,10 +827,13 @@ class qnaire extends \cenozo\database\record
 
       // replace all role access
       $db_proxy_type->remove_role( NULL );
-      foreach( preg_split( '/, */', $proxy_type->role_list ) as $role )
+      if( !is_null( $proxy_type->role_list ) )
       {
-        $db_role = $role_class_name::get_unique_record( 'name', $role );
-        if( !is_null( $db_role ) ) $db_proxy_type->add_role( $db_role->id );
+        foreach( preg_split( '/, */', $proxy_type->role_list ) as $role )
+        {
+          $db_role = $role_class_name::get_unique_record( 'name', $role );
+          if( !is_null( $db_role ) ) $db_proxy_type->add_role( $db_role->id );
+        }
       }
     }
 
@@ -838,11 +847,11 @@ class qnaire extends \cenozo\database\record
         '"distinct":true'.
       '}'.
       '&modifier={'.
-        '"join":[{'.
-          '"table":"lookup",'.
-          '"onleft":"question.lookup_id",'.
-          '"onright","lookup.id"}'.
-        '],'.
+        '"where":[{'.
+          '"column":"question.lookup_id",'.
+          '"operator":"!=",'.
+          '"value":null'.
+        '}],'.
         '"limit":1000000'.
       '}';
     foreach( $this->get_parent_data( 'question', $url_postfix ) as $lookup )
@@ -864,10 +873,12 @@ class qnaire extends \cenozo\database\record
       if( $new_lookup )
       {
         // get the indicators
-        $url_postfix =
+        $url_postfix = sprintf(
           '/name=%s/indicator'.
           '?select={"column":[{"table":"indicator","column":"name"}]}'.
-          '&modifier={"limit":1000000}';
+          '&modifier={"limit":1000000}',
+          $db_lookup->name
+        );
         foreach( $this->get_parent_data( 'lookup', $url_postfix ) as $indicator )
         {
           $db_indicator = lib::create( 'database\indicator' );
@@ -877,17 +888,19 @@ class qnaire extends \cenozo\database\record
         }
 
         // get the items
-        $url_postfix =
+        $url_postfix = sprintf(
           '/name=%s/lookup_item'.
           '?select={'.
             '"column":['.
               '{"table":"lookup_item","column":"identifier"},'.
               '{"table":"lookup_item","column":"name"},'.
               '{"table":"lookup_item","column":"description"},'.
-              'indicator_list'.
+              '"indicator_list"'.
             ']'.
           '}'.
-          '&modifier={"limit":1000000}';
+          '&modifier={"limit":1000000}',
+          $db_lookup->name
+        );
         foreach( $this->get_parent_data( 'lookup', $url_postfix ) as $lookup_item )
         {
           $db_lookup_item = lib::create( 'database\lookup_item' );
@@ -900,7 +913,7 @@ class qnaire extends \cenozo\database\record
           if( !is_null( $lookup_item->indicator_list ) )
           {
             $indicator_id_list = array();
-            foreach( explode( ', ', $lookup_item->indicator_list ) as $indicator_name )
+            foreach( preg_split( '/, */', $lookup_item->indicator_list ) as $indicator_name )
             {
               $indicator_id_list[] = $indicator_class_name::get_unique_record(
                 array( 'lookup_id', 'name' ),
@@ -914,7 +927,7 @@ class qnaire extends \cenozo\database\record
     }
 
     // update the qnaire (but only if the version is different)
-    $url_postfix = '/name=%s?select={"column":["version"]}';
+    $url_postfix = sprintf( '/name=%s?select={"column":["version"]}', $this->name );
     $parent_qnaire = $this->get_parent_data( 'qnaire', $url_postfix );
 
     if( $this->version != $parent_qnaire->version )
@@ -923,7 +936,7 @@ class qnaire extends \cenozo\database\record
       $old_version = $this->version;
       $new_version = $parent_qnaire->version;
 
-      $url_postfix = '/name=%s?output=export&download=true';
+      $url_postfix = sprintf( '/name=%s?output=export&download=true', $this->name );
       $parent_qnaire = $this->get_parent_data( 'qnaire', $url_postfix );
       $this->process_patch( $parent_qnaire, true );
       log::info( sprintf(
@@ -4560,10 +4573,15 @@ class qnaire extends \cenozo\database\record
     if( curl_errno( $curl ) )
     {
       throw lib::create( 'exception\runtime',
-        sprintf( 'Got error code %s when synchronizing %s data with parent instance.  Message: %s',
-                 curl_errno( $curl ),
-                 $subject,
-                 curl_error( $curl ) ),
+        sprintf(
+          'Got error code %s when synchronizing %s data with parent instance.'."\n".
+          'URL: "%s"'."\n".
+          'Message: %s',
+          curl_errno( $curl ),
+          $subject,
+          curl_error( $curl ),
+          $url
+        ),
         __METHOD__
       );
     }
@@ -4592,9 +4610,11 @@ class qnaire extends \cenozo\database\record
     {
       throw lib::create( 'exception\runtime',
         sprintf(
-          'Got error code %s when synchronizing %s data with parent instance.',
+          'Got error code %s when synchronizing %s data with parent instance.'."\n".
+          'URL: "%s"',
           $code,
-          $subject
+          $subject,
+          $url
         ),
         __METHOD__
       );
