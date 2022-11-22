@@ -92,7 +92,6 @@ class ui extends \cenozo\ui\ui
       $module->add_child( 'deviation_type' );
       $module->add_child( 'embedded_file' );
       $module->add_choose( 'language' );
-      $module->add_choose( 'lookup' );
       $module->add_action( 'clone', '/{identifier}' );
       $module->add_action( 'get_respondent', '/{identifier}' );
       $module->add_action( 'mass_respondent', '/{identifier}' );
