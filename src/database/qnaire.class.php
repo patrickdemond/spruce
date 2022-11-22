@@ -3813,6 +3813,7 @@ class qnaire extends \cenozo\database\record
         foreach( $db_page->get_question_object_list( $question_mod ) as $db_question )
         {
           $db_device = $db_question->get_device();
+          $db_lookup = $db_question->get_lookup();
           $question = array(
             'rank' => $db_question->rank,
             'name' => $db_question->name,
@@ -3822,6 +3823,7 @@ class qnaire extends \cenozo\database\record
             'dkna_allowed' => $db_question->dkna_allowed,
             'refuse_allowed' => $db_question->refuse_allowed,
             'device_name' => is_null( $db_device ) ? NULL : $db_device->name,
+            'lookup_name' => is_null( $db_lookup ) ? NULL : $db_lookup->name,
             'minimum' => $db_question->minimum,
             'maximum' => $db_question->maximum,
             'default_answer' => $db_question->default_answer,
@@ -4118,6 +4120,7 @@ class qnaire extends \cenozo\database\record
     $proxy_type_class_name = lib::get_class_name( 'database\proxy_type' );
     $module_class_name = lib::get_class_name( 'database\module' );
     $device_class_name = lib::get_class_name( 'database\device' );
+    $lookup_class_name = lib::get_class_name( 'database\lookup' );
 
     $default_page_max_time = lib::create( 'business\setting_manager' )->get_setting( 'general', 'default_page_max_time' );
 
@@ -4270,6 +4273,10 @@ class qnaire extends \cenozo\database\record
                          array( $db_qnaire->id, $question_object->device_name )
                        );
 
+          $db_lookup = is_null( $question_object->lookup_name )
+                     ? NULL
+                     : $lookup_class_name::get_unique_record( 'name', $question_object->lookup_name );
+
           $db_question = lib::create( 'database\question' );
           $db_question->page_id = $db_page->id;
           $db_question->rank = $question_object->rank;
@@ -4280,6 +4287,7 @@ class qnaire extends \cenozo\database\record
           $db_question->dkna_allowed = $question_object->dkna_allowed;
           $db_question->refuse_allowed = $question_object->refuse_allowed;
           if( !is_null( $db_device ) ) $db_question->device_id = $db_device->id;
+          if( !is_null( $db_lookup ) ) $db_question->lookup_id = $db_lookup->id;
           $db_question->minimum = $question_object->minimum;
           $db_question->maximum = $question_object->maximum;
           $db_question->default_answer = $question_object->default_answer;
