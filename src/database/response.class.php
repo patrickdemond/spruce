@@ -694,18 +694,33 @@ class response extends \cenozo\database\has_rank
     $response_attribute_class_name = lib::get_class_name( 'database\response_attribute' );
     $answer_class_name = lib::get_class_name( 'database\answer' );
     $question_option_description_class_name = lib::get_class_name( 'database\question_option_description' );
+    $lookup_class_name = lib::get_class_name( 'database\lookup' );
+    $lookup_item_class_name = lib::get_class_name( 'database\lookup_item' );
 
     $db_qnaire = $this->get_qnaire();
 
     // Keep converting attributes and questions until there are none left to convert
     // This has to be done in a loop since a question's description may contain other attributes or questions
+    $attribute_regex = '/@[A-Za-z0-9_]+@/';
+    $attribute_regex =
+      '/@([A-Za-z0-9_]+)('.
+        '.(name|description)\( *"?[^)"]+"? *\)'.
+      ')?\@/';
     $attribute_test = preg_match_all(
-      '/@[A-Za-z0-9_]+@/',
+      $attribute_regex,
       $description,
       $attribute_matches
     );
+
+    $question_regex =
+      '/\$([A-Za-z0-9_]+)('.
+        ':[A-Za-z0-9_]+|'.
+        '.extra\([^)]+\)|'.
+        '.count\(\)|'.
+        '.(name|description)\( *"?[^)"]+"? *\)'.
+      ')?\$/';
     $question_test = preg_match_all(
-      '/\$([A-Za-z0-9_]+)(:[A-Za-z0-9_]+|.extra\([^)]+\)|.count\(\))?\$/',
+      $question_regex,
       $description,
       $question_matches
     );
@@ -724,7 +739,10 @@ class response extends \cenozo\database\has_rank
         );
         if( is_null( $db_attribute ) )
         {
-          if( $db_qnaire->debug ) log::warning( sprintf( 'Invalid attribute "%s" found while compiling description', $name ) );
+          if( $db_qnaire->debug )
+          {
+            log::warning( sprintf( 'Invalid attribute "%s" found while compiling description', $name ) );
+          }
         }
         else
         {
@@ -742,9 +760,6 @@ class response extends \cenozo\database\has_rank
       foreach( $question_matches[1] as $index => $question_name )
       {
         $matched_expression = $question_matches[0][$index];
-
-        $modifier = lib::create( 'database\modifier' );
-        $modifier->where( 'exclusive', '=', false );
         $db_question = $db_qnaire->get_question( $question_name );
         if( is_null( $db_question ) || in_array( $db_question->type, ['comment', 'device'] ) )
         {
@@ -777,8 +792,10 @@ class response extends \cenozo\database\has_rank
           );
           $value = is_null( $db_answer ) ? NULL : util::json_decode( $db_answer->value );
 
-          if( is_object( $value ) && property_exists( $value, 'dkna' ) && $value->dkna ) $compiled = '(no answer)';
-          else if( is_object( $value ) && property_exists( $value, 'refuse' ) && $value->refuse ) $compiled = '(no answer)';
+          if( is_object( $value ) && property_exists( $value, 'dkna' ) && $value->dkna )
+            $compiled = '(no answer)';
+          else if( is_object( $value ) && property_exists( $value, 'refuse' ) && $value->refuse )
+            $compiled = '(no answer)';
           else if( is_array( $value ) )
           {
             if( '.count' == $question_matches[2][$index] )
@@ -793,7 +810,10 @@ class response extends \cenozo\database\has_rank
               // we only used the matched option when getting the option's name or extra value
               foreach( $value as $option )
               {
-                $db_question_option = lib::create( 'database\question_option', is_object( $option ) ? $option->id : $option );
+                $db_question_option = lib::create(
+                  'database\question_option',
+                  is_object( $option ) ? $option->id : $option
+                );
                 if( $extra_option_name == $db_question_option->name )
                 {
                   $compiled = is_array( $option->value ) ? implode( ', ', $option->value ) : $option->value;
@@ -809,7 +829,10 @@ class response extends \cenozo\database\has_rank
               // we only used the matched option when getting the option's name or extra value
               foreach( $value as $option )
               {
-                $db_question_option = lib::create( 'database\question_option', is_object( $option ) ? $option->id : $option );
+                $db_question_option = lib::create(
+                  'database\question_option',
+                  is_object( $option ) ? $option->id : $option
+                );
                 if( $selected_option_name == $db_question_option->name )
                 {
                   $compiled = 'true';
@@ -852,8 +875,11 @@ class response extends \cenozo\database\has_rank
                 $description_mod->where( 'question_option_id', 'IN', $question_option_id_list );
                 $description_mod->where( 'type', '=', 'prompt' );
                 $description_mod->where( 'language_id', '=', $this->language_id );
-                foreach( $question_option_description_class_name::select( $description_sel, $description_mod ) as $row )
-                  $answers[] = $row['value'];
+                $description_list = $question_option_description_class_name::select(
+                  $description_sel,
+                  $description_mod
+                );
+                foreach( $description_list as $row ) $answers[] = $row['value'];
               }
 
               // append any extra option values to the list
@@ -864,7 +890,59 @@ class response extends \cenozo\database\has_rank
           else if( is_null( $value ) ) $compiled = '';
           else if( 'boolean' == $db_question->type ) $compiled = $value ? 'true' : 'false';
           else if( 'audio' == $db_question->type )
-            $compiled = sprintf( '<audio controls class="full-width" style="height: 40px;" src="%s"></audio>', $value );
+          {
+            $compiled = sprintf(
+              '<audio controls class="full-width" style="height: 40px;" src="%s"></audio>',
+              $value
+            );
+          }
+          else if( 'lookup' == $db_question->type )
+          {
+            $match = preg_match(
+              '/.(name|description)\( *"?([^)"]+)"? *\)/',
+              $question_matches[2][$index],
+              $lookup_matches
+            );
+            if( $match )
+            {
+              // assume the default of the value (in case the lookup below doesn't work)
+              $compiled = $value;
+
+              $property = $lookup_matches[1];
+              $lookup_name = $lookup_matches[2];
+              $db_lookup = $lookup_class_name::get_unique_record( 'name', $lookup_name );
+              if( !is_null( $db_lookup ) )
+              {
+                $db_lookup_item = $lookup_item_class_name::get_unique_record(
+                  array( 'lookup_id', 'identifier' ),
+                  array( $db_lookup->id, $value )
+                );
+
+                if( !is_null( $db_lookup_item ) )
+                {
+                  $compiled = $db_lookup_item->$property;
+                }
+                else if( $db_qnaire->debug )
+                {
+                  log::warning( sprintf(
+                    'Lookup identifier "%s" not found while compiling description',
+                    $value
+                  ) );
+                }
+              }
+              else if( $db_qnaire->debug )
+              {
+                log::warning( sprintf(
+                  'Invalid lookup "%s" found while compiling description',
+                  $lookup_name
+                ) );
+              }
+            }
+            else
+            {
+              $compiled = $value;
+            }
+          }
           else $compiled = $value;
 
           $description = str_replace( $matched_expression, $compiled, $description );
@@ -873,12 +951,12 @@ class response extends \cenozo\database\has_rank
 
       // now determine if there are more attributes or questions to decode in the description
       $attribute_test = preg_match_all(
-        '/@[A-Za-z0-9_]+@/',
+        $attribute_regex,
         $description,
         $attribute_matches
       );
       $question_test = preg_match_all(
-        '/\$([A-Za-z0-9_]+)(:[A-Za-z0-9_]+|.extra\([^)]+\)|.count\(\))?\$/',
+        $question_regex,
         $description,
         $question_matches
       );
