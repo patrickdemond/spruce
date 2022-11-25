@@ -52,7 +52,8 @@ cenozoApp.defineModule({
       },
       data: {
         title: "Content",
-        type: "base64_image",
+        type: "base64",
+        isConstant: true,
       },
     });
 
