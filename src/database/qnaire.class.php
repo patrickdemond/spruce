@@ -20,13 +20,15 @@ class qnaire extends \cenozo\database\record
   {
     // artificially create a relationship between response and qnaire
     $relationship_class_name = lib::get_class_name( 'database\relationship' );
-    return 'response' == $record_type ? $relationship_class_name::ONE_TO_MANY : parent::get_relationship( $record_type );
+    return 'response' == $record_type ?
+      $relationship_class_name::ONE_TO_MANY : parent::get_relationship( $record_type );
   }
 
   /**
    * Override the parent method
    */
-  protected function get_record_list( $record_type, $select = NULL, $modifier = NULL, $return_alt = '', $distinct = false )
+  protected function get_record_list(
+    $record_type, $select = NULL, $modifier = NULL, $return_alt = '', $distinct = false )
   {
     $response_class_name = lib::get_class_name( 'database\response' );
 
@@ -56,8 +58,16 @@ class qnaire extends \cenozo\database\record
 
         if( !$modifier->has_join( 'respondent_current_response' ) )
         {
-          $modifier->join( 'respondent_current_response', 'response.id', 'respondent_current_response.response_id' );
-          $modifier->join( 'respondent', 'respondent_current_response.respondent_id', 'respondent.id' );
+          $modifier->join(
+            'respondent_current_response',
+            'response.id',
+            'respondent_current_response.response_id'
+          );
+          $modifier->join(
+            'respondent',
+            'respondent_current_response.respondent_id',
+            'respondent.id'
+          );
         }
 
         if( !$modifier->has_join( 'qnaire' ) ) $modifier->join( 'qnaire', 'respondent.qnaire_id', 'qnaire.id' );
@@ -206,7 +216,8 @@ class qnaire extends \cenozo\database\record
       return NULL;
     }
 
-    return is_null( $this->base_language_id ) ? NULL : lib::create( 'database\language', $this->base_language_id );
+    return is_null( $this->base_language_id ) ?
+      NULL : lib::create( 'database\language', $this->base_language_id );
   }
 
   /**
@@ -231,7 +242,8 @@ class qnaire extends \cenozo\database\record
     $language_sel = lib::create( 'database\select' );
     $language_sel->add_table_column( 'language', 'id' );
     $language_id_list = array();
-    foreach( $db_source_qnaire->get_language_list( $language_sel ) as $language ) $language_id_list[] = $language['id'];
+    foreach( $db_source_qnaire->get_language_list( $language_sel ) as $language )
+      $language_id_list[] = $language['id'];
     $this->add_language( $language_id_list );
 
     // copy all attributes
@@ -270,7 +282,11 @@ class qnaire extends \cenozo\database\record
       {
         $db_reminder_description = $reminder_description_class_name::get_unique_record(
           array( 'reminder_id', 'language_id', 'type' ),
-          array( $db_reminder->id, $db_source_reminder_description->language_id, $db_source_reminder_description->type )
+          array(
+            $db_reminder->id,
+            $db_source_reminder_description->language_id,
+            $db_source_reminder_description->type
+          )
         );
         $db_reminder_description->value = $db_source_reminder_description->value;
         $db_reminder_description->save();
@@ -331,7 +347,8 @@ class qnaire extends \cenozo\database\record
     $deviation_sel->add_column( 'name' );
     $deviation_mod = lib::create( 'database\modifier' );
     $deviation_mod->order( 'deviation_type.id' );
-    foreach( $db_source_qnaire->get_deviation_type_list( $deviation_sel, $deviation_mod ) as $source_deviation_type )
+    foreach( $db_source_qnaire->get_deviation_type_list( $deviation_sel, $deviation_mod )
+      as $source_deviation_type )
     {
       $db_deviation_type = lib::create( 'database\deviation_type' );
       $db_deviation_type->qnaire_id = $this->id;
@@ -377,12 +394,14 @@ class qnaire extends \cenozo\database\record
     }
 
     // copy all alternate consent triggers
-    foreach( $db_source_qnaire->get_qnaire_alternate_consent_type_trigger_object_list() as $db_source_aconsent_type )
+    foreach( $db_source_qnaire->get_qnaire_alternate_consent_type_trigger_object_list()
+      as $db_source_aconsent_type )
     {
       $db_question = $this->get_question( $db_source_aconsent_type->get_question()->name );
       $db_qnaire_aconsent_type_trigger = lib::create( 'database\qnaire_alternate_consent_type_trigger' );
       $db_qnaire_aconsent_type_trigger->qnaire_id = $this->id;
-      $db_qnaire_aconsent_type_trigger->alternate_consent_type_id = $db_source_aconsent_type->alternate_consent_type_id;
+      $db_qnaire_aconsent_type_trigger->alternate_consent_type_id =
+        $db_source_aconsent_type->alternate_consent_type_id;
       $db_qnaire_aconsent_type_trigger->question_id = $db_question->id;
       $db_qnaire_aconsent_type_trigger->answer_value = $db_source_aconsent_type->answer_value;
       $db_qnaire_aconsent_type_trigger->accept = $db_source_aconsent_type->accept;
@@ -407,7 +426,9 @@ class qnaire extends \cenozo\database\record
     $update_mod->where( 'source.qnaire_id', '=', $db_source_qnaire->id );
     $sql = sprintf(
       'UPDATE qnaire_description AS destination '.
-      'JOIN qnaire_description AS source ON destination.language_id = source.language_id AND destination.type = source.type '.
+      'JOIN qnaire_description AS source '.
+        'ON destination.language_id = source.language_id '.
+        'AND destination.type = source.type '.
       'SET destination.value = source.value %s',
       $update_mod->get_sql()
     );
@@ -455,8 +476,11 @@ class qnaire extends \cenozo\database\record
   public function update_name_in_preconditions( $type, $old_name, $new_name )
   {
     // The sql regex match depends on what type of change we're making
-    // Questions will all start with a $ and end with either a $ (for direct references), : (for options), or . (for functions)
-    // Stages will all start and end with a #
+    // Questions will all start with a $ and end with either:
+    //   "$" (for direct references),
+    //   ":" (for options)
+    //   "." (for functions)
+    // Stages will all start and end with a "#"
     $match = '';
     if( 'stage' == $type )
     {
@@ -470,7 +494,11 @@ class qnaire extends \cenozo\database\record
       // The replacement syntax is also different for question or question-options
       $replace = 'question' == $type
                ? sprintf(
-                   'REPLACE( REPLACE( REPLACE( %%s.precondition, "$%s$", "$%s$" ), "$%s:", "$%s:" ), "$%s.", "$%s." )',
+                   'REPLACE( REPLACE( REPLACE( '.
+                     '%%s.precondition, '.
+                     '"$%s$", "$%s$" ), '.
+                     '"$%s:", "$%s:" ), '.
+                     '"$%s.", "$%s." )',
                    $old_name, $new_name, $old_name, $new_name, $old_name, $new_name
                  )
                : sprintf( 'REPLACE( %%s.precondition, ":%s$", ":%s$" )', $old_name, $new_name );
@@ -630,7 +658,8 @@ class qnaire extends \cenozo\database\record
    */
   public function test_connection()
   {
-    if( is_null( PARENT_INSTANCE_URL ) ) return 'This instance of Pine is not detached so there is no remote connection to test.';
+    if( is_null( PARENT_INSTANCE_URL ) )
+      return 'This instance of Pine is not detached so there is no remote connection to test.';
 
     // test the beartooth connection
     $url = sprintf( '%s/api/appointment', $this->beartooth_url );
@@ -715,7 +744,10 @@ class qnaire extends \cenozo\database\record
     }
     else if( 306 == $code )
     {
-      return sprintf( "Parent Pine instance responded with the following notice\n\n\"%s\"", util::json_decode($response ) );
+      return sprintf(
+        "Parent Pine instance responded with the following notice\n\n\"%s\"",
+        util::json_decode( $response )
+      );
     }
     else if( 204 == $code || 300 <= $code )
     {
@@ -791,7 +823,10 @@ class qnaire extends \cenozo\database\record
     foreach( $this->get_parent_data( 'alternate_consent_type', $url_postfix ) as $alternate_consent_type )
     {
       // see if the alternate_consent type exists and create it if it doesn't
-      $db_aconsent_type = $alternate_consent_type_class_name::get_unique_record( 'name', $alternate_consent_type->name );
+      $db_aconsent_type = $alternate_consent_type_class_name::get_unique_record(
+        'name',
+        $alternate_consent_type->name
+      );
       if( is_null( $db_aconsent_type ) ) $db_aconsent_type = lib::create( 'database\alternate_consent_type' );
 
       $db_aconsent_type->name = $alternate_consent_type->name;
@@ -1151,9 +1186,14 @@ class qnaire extends \cenozo\database\record
           $response_stage_mod = lib::create( 'database\modifier' );
           $response_stage_mod->join( 'stage', 'response_stage.stage_id', 'stage.id' );
           $response_stage_mod->join( 'user', 'response_stage.user_id', 'user.id' );
-          $response_stage_mod->left_join( 'deviation_type', 'response_stage.deviation_type_id', 'deviation_type.id' );
+          $response_stage_mod->left_join(
+            'deviation_type',
+            'response_stage.deviation_type_id',
+            'deviation_type.id'
+          );
           $response_stage_mod->order( 'stage.rank' );
-          $response['stage_list'] = $db_response->get_response_stage_list( $response_stage_sel, $response_stage_mod );
+          $response['stage_list'] =
+            $db_response->get_response_stage_list( $response_stage_sel, $response_stage_mod );
         }
 
         $respondent['response_list'][] = $response;
@@ -1169,7 +1209,11 @@ class qnaire extends \cenozo\database\record
     if( 0 < count( $data['respondent'] ) )
     {
       // First export the data to the master pine application
-      $url = sprintf( '%s/api/qnaire/name=%s/respondent?action=import', PARENT_INSTANCE_URL, util::full_urlencode( $this->name ) );
+      $url = sprintf(
+        '%s/api/qnaire/name=%s/respondent?action=import',
+        PARENT_INSTANCE_URL,
+        util::full_urlencode( $this->name )
+      );
       $curl = curl_init();
       curl_setopt( $curl, CURLOPT_URL, $url );
       curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
@@ -1211,14 +1255,20 @@ class qnaire extends \cenozo\database\record
       else if( 404 == $code )
       {
         throw lib::create( 'exception\notice',
-          sprintf( 'Unable to export respondent data, questionnaire "%s" was not found in parent instance.', $this->name ),
+          sprintf(
+            'Unable to export respondent data, questionnaire "%s" was not found in parent instance.',
+            $this->name
+          ),
           __METHOD__
         );
       }
       else if( 306 == $code )
       {
         throw lib::create( 'exception\notice',
-          sprintf( "Parent Pine instance responded with the following notice\n\n\"%s\"", util::json_decode($response ) ),
+          sprintf(
+            "Parent Pine instance responded with the following notice\n\n\"%s\"",
+            util::json_decode( $response )
+          ),
           __METHOD__
         );
       }
@@ -1430,14 +1480,19 @@ class qnaire extends \cenozo\database\record
               if( is_null( $db_user ) ) $db_user = $db_current_user;
 
               $db_deviation_type = NULL;
-              if( !is_null( $stage->deviation_type ) ) $db_deviation_type = $deviation_type_class_name::get_unique_record(
-                array( 'qnaire_id', 'type', 'name' ),
-                array( $this->id, $stage->deviation_type, $stage->deviation_name )
-              );
+              if( !is_null( $stage->deviation_type ) )
+              {
+                $db_deviation_type = $deviation_type_class_name::get_unique_record(
+                  array( 'qnaire_id', 'type', 'name' ),
+                  array( $this->id, $stage->deviation_type, $stage->deviation_name )
+                );
+              }
 
               $db_response_stage->user_id = $db_user->id;
               $db_response_stage->status = $stage->status;
-              $db_response_stage->deviation_type_id = is_null( $db_deviation_type ) ? NULL : $db_deviation_type->id;
+              $db_response_stage->deviation_type_id = is_null( $db_deviation_type )
+                                                    ? NULL
+                                                    : $db_deviation_type->id;
               $db_response_stage->deviation_comments = $stage->deviation_comments;
               $db_response_stage->start_datetime = $stage->start_datetime;
               $db_response_stage->end_datetime = $stage->end_datetime;
@@ -1486,7 +1541,9 @@ class qnaire extends \cenozo\database\record
     $study_class_name = lib::get_class_name( 'database\study' );
     $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
 
-    if( is_null( $this->beartooth_url ) || is_null( $this->beartooth_username ) || is_null( $this->beartooth_password ) )
+    if( is_null( $this->beartooth_url ) ||
+        is_null( $this->beartooth_username ) ||
+        is_null( $this->beartooth_password ) )
     {
       throw lib::create( 'expression\runtime',
         'Tried to get respondents from Beartooth without a URL, username and password.',
@@ -1556,7 +1613,8 @@ class qnaire extends \cenozo\database\record
       }
 
       $db_participant->cohort_id = $cohort_class_name::get_unique_record( 'name', $participant->cohort )->id;
-      $db_participant->language_id = $language_class_name::get_unique_record( 'code', $participant->language )->id;
+      $db_participant->language_id =
+        $language_class_name::get_unique_record( 'code', $participant->language )->id;
       $db_participant->honorific = $participant->honorific;
       $db_participant->first_name = $participant->first_name;
       $db_participant->other_name = $participant->other_name;
@@ -1751,7 +1809,11 @@ class qnaire extends \cenozo\database\record
         $question_mod->order( 'question.rank' );
         foreach( $db_page->get_question_object_list( $question_mod ) as $db_question )
         {
-          $prompt_list = array( 'module_prompt' => array(), 'page_prompt' => array(), 'question_prompt' => array() );
+          $prompt_list = array(
+            'module_prompt' => array(),
+            'page_prompt' => array(),
+            'question_prompt' => array()
+          );
           if( $descriptions )
           {
             // add the module's prompt
@@ -1802,7 +1864,8 @@ class qnaire extends \cenozo\database\record
             $column_name = $db_question->name;
 
             // if it exists then add the qnaire's variable suffix to the question name
-            if( !is_null( $this->variable_suffix ) ) $column_name = sprintf( '%s_%s', $column_name, $this->variable_suffix );
+            if( !is_null( $this->variable_suffix ) )
+              $column_name = sprintf( '%s_%s', $column_name, $this->variable_suffix );
 
             $db_device = $db_question->get_device();
             $column_list[$column_name] = array(
@@ -1819,13 +1882,19 @@ class qnaire extends \cenozo\database\record
               'question_precondition' => $db_question->precondition
             );
 
-            if( $descriptions ) $column_list[$column_name] = array_merge( $column_list[$column_name], $prompt_list );
+            if( $descriptions )
+              $column_list[$column_name] = array_merge( $column_list[$column_name], $prompt_list );
 
             if( 0 < count( $option_list ) )
             {
               $column_list[$column_name]['option_list'] = array();
               foreach( $option_list as $db_option )
-                $column_list[$column_name]['option_list'][] = array( 'id' => $db_option->id, 'name' => $db_option->name );
+              {
+                $column_list[$column_name]['option_list'][] = array(
+                  'id' => $db_option->id,
+                  'name' => $db_option->name
+                );
+              }
             }
           }
 
@@ -1838,7 +1907,8 @@ class qnaire extends \cenozo\database\record
               $column_name = sprintf( '%s_%s', $db_question->name, $db_option->name );
 
               // if it exists then add the qnaire's variable suffix to the question name
-              if( !is_null( $this->variable_suffix ) ) $column_name = sprintf( '%s_%s', $column_name, $this->variable_suffix );
+              if( !is_null( $this->variable_suffix ) )
+                $column_name = sprintf( '%s_%s', $column_name, $this->variable_suffix );
 
               $precondition = NULL;
               $precondition = $db_question->precondition;
@@ -1880,8 +1950,11 @@ class qnaire extends \cenozo\database\record
                 $description_mod = lib::create( 'database\modifier' );
                 $description_mod->join( 'language', 'question_option_description.language_id', 'language.id' );
                 $description_mod->where( 'question_option_description.type', '=', 'prompt' );
-                foreach( $db_option->get_question_option_description_list( $description_sel, $description_mod ) as $item )
+                foreach( $db_option->get_question_option_description_list( $description_sel, $description_mod )
+                  as $item )
+                {
                   $column_list[$column_name]['question_option_prompt'][$item['language']] = $item['value'];
+                }
               }
             }
           }
@@ -1893,7 +1966,8 @@ class qnaire extends \cenozo\database\record
             $column_name = sprintf( '%s_DK_NA', $db_question->name );
 
             // if it exists then add the qnaire's variable suffix to the question name
-            if( !is_null( $this->variable_suffix ) ) $column_name = sprintf( '%s_%s', $column_name, $this->variable_suffix );
+            if( !is_null( $this->variable_suffix ) )
+              $column_name = sprintf( '%s_%s', $column_name, $this->variable_suffix );
 
             $column_list[$column_name] = array(
               'module_name' => $db_module->name,
@@ -1923,7 +1997,8 @@ class qnaire extends \cenozo\database\record
             $column_name = sprintf( '%s_REFUSED', $db_question->name );
 
             // if it exists then add the qnaire's variable suffix to the question name
-            if( !is_null( $this->variable_suffix ) ) $column_name = sprintf( '%s_%s', $column_name, $this->variable_suffix );
+            if( !is_null( $this->variable_suffix ) )
+              $column_name = sprintf( '%s_%s', $column_name, $this->variable_suffix );
 
             $column_list[$column_name] = array(
               'module_name' => $db_module->name,
@@ -2216,7 +2291,8 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
-   * Applies a patch file to the qnaire and returns an object containing all elements which are affected by the patch
+   * Applies a patch file to the qnaire and returns an object containing all elements which are affected by
+   * the patch
    * @param stdObject $patch_object An object containing all (nested) parameters to change
    * @param boolean $apply Whether to apply or evaluate the patch
    * @return stdObject
@@ -2237,15 +2313,17 @@ class qnaire extends \cenozo\database\record
     $qnaire_consent_type_confirm_class_name = lib::get_class_name( 'database\qnaire_consent_type_confirm' );
     $qnaire_participant_trigger_class_name = lib::get_class_name( 'database\qnaire_participant_trigger' );
     $qnaire_consent_type_trigger_class_name = lib::get_class_name( 'database\qnaire_consent_type_trigger' );
-    $qnaire_alternate_consent_type_trigger_class_name = lib::get_class_name( 'database\qnaire_alternate_consent_type_trigger' );
+    $qnaire_aconsent_type_trigger_class_name =
+      lib::get_class_name( 'database\qnaire_alternate_consent_type_trigger' );
     $qnaire_proxy_type_trigger_class_name = lib::get_class_name( 'database\qnaire_proxy_type_trigger' );
     $qnaire_description_class_name = lib::get_class_name( 'database\qnaire_description' );
     $module_class_name = lib::get_class_name( 'database\module' );
     $stage_class_name = lib::get_class_name( 'database\stage' );
     $device_class_name = lib::get_class_name( 'database\device' );
 
-    // NOTE: since we want to avoid duplicate unique keys caused by re-naming or re-ordering modules we use the following
-    // offset and suffix values when setting rank and name, then after all changes have been made remove the offset/suffix
+    // NOTE: since we want to avoid duplicate unique keys caused by re-naming or re-ordering modules we use
+    // the following offset and suffix values when setting rank and name, then after all changes have been
+    // made remove the offset/suffix
     $name_suffix = bin2hex( openssl_random_pseudo_bytes( 5 ) );
 
     $difference_list = array();
@@ -2379,8 +2457,13 @@ class qnaire extends \cenozo\database\record
                     // find and add all differences
                     $diff = array();
                     foreach( $description as $property => $value )
-                      if( 'language' != $property && $db_reminder_description->$property != $description->$property )
+                    {
+                      if( 'language' != $property &&
+                          $db_reminder_description->$property != $description->$property )
+                      {
                         $diff[$property] = $description->$property;
+                      }
+                    }
 
                     if( 0 < count( $diff ) )
                     {
@@ -2418,7 +2501,11 @@ class qnaire extends \cenozo\database\record
                     if( $apply ) $db_reminder_description->delete();
                     else
                     {
-                      $index = sprintf( '%s [%s]', $db_reminder_description->type, $db_reminder_description->get_language()->code );
+                      $index = sprintf(
+                        '%s [%s]',
+                        $db_reminder_description->type,
+                        $db_reminder_description->get_language()->code
+                      );
                       $desc_remove_list[] = $index;
                     }
                   }
@@ -2564,7 +2651,8 @@ class qnaire extends \cenozo\database\record
           $found = false;
           foreach( $patch_object->deviation_type_list as $deviation_type )
           {
-            if( $db_deviation_type->type == $deviation_type->type && $db_deviation_type->name == $deviation_type->name )
+            if( $db_deviation_type->type == $deviation_type->type &&
+                $db_deviation_type->name == $deviation_type->name )
             {
               $found = true;
               break;
@@ -2809,7 +2897,11 @@ class qnaire extends \cenozo\database\record
             if( $apply ) $db_qnaire_description->delete();
             else
             {
-              $index = sprintf( '%s [%s]', $db_qnaire_description->type, $db_qnaire_description->get_language()->code );
+              $index = sprintf(
+                '%s [%s]',
+                $db_qnaire_description->type,
+                $db_qnaire_description->get_language()->code
+              );
               $remove_list[] = $index;
             }
           }
@@ -2829,15 +2921,23 @@ class qnaire extends \cenozo\database\record
         foreach( $patch_object->module_list as $module )
         {
           // match module by name or rank
-          $db_module = $module_class_name::get_unique_record( array( 'qnaire_id', 'name' ), array( $this->id, $module->name ) );
+          $db_module = $module_class_name::get_unique_record(
+            array( 'qnaire_id', 'name' ),
+            array( $this->id, $module->name )
+          );
           if( is_null( $db_module ) )
           {
             // we may have renamed the module, so see if it exists exactly the same under the same rank
-            $db_module = $module_class_name::get_unique_record( array( 'qnaire_id', 'rank' ), array( $this->id, $module->rank ) );
+            $db_module = $module_class_name::get_unique_record(
+              array( 'qnaire_id', 'rank' ),
+              array( $this->id, $module->rank )
+            );
             if( !is_null( $db_module ) )
             {
               // confirm that the name is the only thing that has changed
-              $properties = array_keys( get_object_vars( $db_module->process_patch( $module, $name_suffix, false ) ) );
+              $properties = array_keys( get_object_vars(
+                $db_module->process_patch( $module, $name_suffix, false )
+              ) );
               if( 1 != count( $properties ) || 'name' != current( $properties ) ) $db_module = NULL;
             }
           }
@@ -2880,7 +2980,9 @@ class qnaire extends \cenozo\database\record
           foreach( $patch_object->module_list as $module )
           {
             // see if the module exists in the patch or if we're already changing the module
-            $name = $apply ? preg_replace( sprintf( '/_%s$/', $name_suffix ), '', $db_module->name ) : $db_module->name;
+            $name = $apply
+                  ? preg_replace( sprintf( '/_%s$/', $name_suffix ), '', $db_module->name )
+                  : $db_module->name;
             if( $name == $module->name || in_array( $name, array_keys( $change_list ) ) )
             {
               $found = true;
@@ -2902,15 +3004,18 @@ class qnaire extends \cenozo\database\record
         if( 0 < count( $diff_list ) ) $difference_list['module_list'] = $diff_list;
 
         // get a list of all questions with new names (used by other properties)
-        if( array_key_exists( 'module_list', $difference_list ) && array_key_exists( 'change', $difference_list['module_list'] ) )
+        if( array_key_exists( 'module_list', $difference_list ) &&
+            array_key_exists( 'change', $difference_list['module_list'] ) )
         {
           foreach( $difference_list['module_list']['change'] as $module_change )
           {
-            if( property_exists( $module_change, 'page_list' ) && array_key_exists( 'change', $module_change->page_list ) )
+            if( property_exists( $module_change, 'page_list' ) &&
+                array_key_exists( 'change', $module_change->page_list ) )
             {
               foreach( $module_change->page_list['change'] as $page_change )
               {
-                if( property_exists( $page_change, 'question_list' ) && array_key_exists( 'change', $page_change->question_list ) )
+                if( property_exists( $page_change, 'question_list' ) &&
+                    array_key_exists( 'change', $page_change->question_list ) )
                 {
                   foreach( $page_change->question_list['change'] as $old_name => $question_change )
                   {
@@ -2933,15 +3038,23 @@ class qnaire extends \cenozo\database\record
         foreach( $patch_object->stage_list as $stage )
         {
           // match stage by name or rank
-          $db_stage = $stage_class_name::get_unique_record( array( 'qnaire_id', 'name' ), array( $this->id, $stage->name ) );
+          $db_stage = $stage_class_name::get_unique_record(
+            array( 'qnaire_id', 'name' ),
+            array( $this->id, $stage->name )
+          );
           if( is_null( $db_stage ) )
           {
             // we may have renamed the stage, so see if it exists exactly the same under the same rank
-            $db_stage = $stage_class_name::get_unique_record( array( 'qnaire_id', 'rank' ), array( $this->id, $stage->rank ) );
+            $db_stage = $stage_class_name::get_unique_record(
+              array( 'qnaire_id', 'rank' ),
+              array( $this->id, $stage->rank )
+            );
             if( !is_null( $db_stage ) )
             {
               // confirm that the name is the only thing that has changed
-              $properties = array_keys( get_object_vars( $db_stage->process_patch( $stage, $name_suffix, false ) ) );
+              $properties = array_keys( get_object_vars(
+                $db_stage->process_patch( $stage, $name_suffix, false )
+              ) );
               if( 1 != count( $properties ) || 'name' != current( $properties ) ) $db_stage = NULL;
             }
           }
@@ -2981,7 +3094,9 @@ class qnaire extends \cenozo\database\record
           foreach( $patch_object->stage_list as $stage )
           {
             // see if the stage exists in the patch or if we're already changing the stage
-            $name = $apply ? preg_replace( sprintf( '/_%s$/', $name_suffix ), '', $db_stage->name ) : $db_stage->name;
+            $name = $apply
+                  ? preg_replace( sprintf( '/_%s$/', $name_suffix ), '', $db_stage->name )
+                  : $db_stage->name;
             if( $name == $stage->name || in_array( $name, array_keys( $change_list ) ) )
             {
               $found = true;
@@ -3008,7 +3123,10 @@ class qnaire extends \cenozo\database\record
         $add_list = array();
         foreach( $patch_object->qnaire_consent_type_confirm_list as $qnaire_consent_type_confirm )
         {
-          $db_consent_type = $consent_type_class_name::get_unique_record( 'name', $qnaire_consent_type_confirm->consent_type_name );
+          $db_consent_type = $consent_type_class_name::get_unique_record(
+            'name',
+            $qnaire_consent_type_confirm->consent_type_name
+          );
 
           if( is_null( $db_consent_type ) )
           {
@@ -3088,11 +3206,24 @@ class qnaire extends \cenozo\database\record
 
           // check to see if the question has been renamed as part of the applied patch
           if( $apply && is_null( $db_question ) )
-            $db_question = $this->get_question( sprintf( '%s_%s', $qnaire_participant_trigger->question_name, $name_suffix ) );
+          {
+            $db_question = $this->get_question(
+              sprintf(
+                '%s_%s',
+                $qnaire_participant_trigger->question_name,
+                $name_suffix
+              )
+            );
+          }
 
           $db_qnaire_participant_trigger = $qnaire_participant_trigger_class_name::get_unique_record(
             array( 'qnaire_id', 'question_id', 'answer_value', 'column_name' ),
-            array( $this->id, $db_question->id, $qnaire_participant_trigger->answer_value, $qnaire_participant_trigger->column_name )
+            array(
+              $this->id,
+              $db_question->id,
+              $qnaire_participant_trigger->answer_value,
+              $qnaire_participant_trigger->column_name
+            )
           );
 
           if( is_null( $db_qnaire_participant_trigger ) )
@@ -3143,7 +3274,10 @@ class qnaire extends \cenozo\database\record
         $remove_list = array();
         foreach( $this->get_qnaire_participant_trigger_object_list() as $db_qnaire_participant_trigger )
         {
-          $changed_name = array_search( $db_qnaire_participant_trigger->get_question()->name, $change_question_name_list );
+          $changed_name = array_search(
+            $db_qnaire_participant_trigger->get_question()->name,
+            $change_question_name_list
+          );
           $question_name = $changed_name ? $changed_name : $db_qnaire_participant_trigger->get_question()->name;
           if( $apply ) $question_name = preg_replace( sprintf( '/_%s$/', $name_suffix ), '', $question_name );
 
@@ -3189,7 +3323,10 @@ class qnaire extends \cenozo\database\record
         $change_list = array();
         foreach( $patch_object->qnaire_consent_type_trigger_list as $qnaire_consent_type_trigger )
         {
-          $db_consent_type = $consent_type_class_name::get_unique_record( 'name', $qnaire_consent_type_trigger->consent_type_name );
+          $db_consent_type = $consent_type_class_name::get_unique_record(
+            'name',
+            $qnaire_consent_type_trigger->consent_type_name
+          );
 
           if( is_null( $db_consent_type ) )
           {
@@ -3213,11 +3350,24 @@ class qnaire extends \cenozo\database\record
 
             // check to see if the question has been renamed as part of the applied patch
             if( $apply && is_null( $db_question ) )
-              $db_question = $this->get_question( sprintf( '%s_%s', $qnaire_consent_type_trigger->question_name, $name_suffix ) );
+            {
+              $db_question = $this->get_question(
+                sprintf(
+                  '%s_%s',
+                  $qnaire_consent_type_trigger->question_name,
+                  $name_suffix
+                )
+              );
+            }
 
             $db_qnaire_consent_type_trigger = $qnaire_consent_type_trigger_class_name::get_unique_record(
               array( 'qnaire_id', 'consent_type_id', 'question_id', 'answer_value' ),
-              array( $this->id, $db_consent_type->id, $db_question->id, $qnaire_consent_type_trigger->answer_value )
+              array(
+                $this->id,
+                $db_consent_type->id,
+                $db_question->id,
+                $qnaire_consent_type_trigger->answer_value
+              )
             );
 
             if( is_null( $db_qnaire_consent_type_trigger ) )
@@ -3270,7 +3420,10 @@ class qnaire extends \cenozo\database\record
         foreach( $this->get_qnaire_consent_type_trigger_object_list() as $db_qnaire_consent_type_trigger )
         {
           $consent_type_name = $db_qnaire_consent_type_trigger->get_consent_type()->name;
-          $changed_name = array_search( $db_qnaire_consent_type_trigger->get_question()->name, $change_question_name_list );
+          $changed_name = array_search(
+            $db_qnaire_consent_type_trigger->get_question()->name,
+            $change_question_name_list
+          );
           $question_name = $changed_name ? $changed_name : $db_qnaire_consent_type_trigger->get_question()->name;
           if( $apply ) $question_name = preg_replace( sprintf( '/_%s$/', $name_suffix ), '', $question_name );
 
@@ -3327,7 +3480,8 @@ class qnaire extends \cenozo\database\record
             {
               $error = new \stdClass();
               $error->WARNING = sprintf(
-                'Alternate consent trigger for "%s" will be ignore since the alternate consent type does not exist.',
+                'Alternate consent trigger for "%s" will be ignore since the '.
+                'alternate consent type does not exist.',
                 $qnaire_aconsent_type_trigger->alternate_consent_type_name
               );
               $add_list[] = $error;
@@ -3343,18 +3497,32 @@ class qnaire extends \cenozo\database\record
 
             // check to see if the question has been renamed as part of the applied patch
             if( $apply && is_null( $db_question ) )
-              $db_question = $this->get_question( sprintf( '%s_%s', $qnaire_aconsent_type_trigger->question_name, $name_suffix ) );
+            {
+              $db_question = $this->get_question(
+                sprintf(
+                  '%s_%s',
+                  $qnaire_aconsent_type_trigger->question_name,
+                  $name_suffix
+                )
+              );
+            }
 
-            $db_qnaire_aconsent_type_trigger = $qnaire_alternate_consent_type_trigger_class_name::get_unique_record(
+            $db_qnaire_aconsent_type_trigger = $qnaire_aconsent_type_trigger_class_name::get_unique_record(
               array( 'qnaire_id', 'alternate_consent_type_id', 'question_id', 'answer_value' ),
-              array( $this->id, $db_aconsent_type->id, $db_question->id, $qnaire_aconsent_type_trigger->answer_value )
+              array(
+                $this->id,
+                $db_aconsent_type->id,
+                $db_question->id,
+                $qnaire_aconsent_type_trigger->answer_value
+              )
             );
 
             if( is_null( $db_qnaire_aconsent_type_trigger ) )
             {
               if( $apply )
               {
-                $db_qnaire_aconsent_type_trigger = lib::create( 'database\qnaire_alternate_consent_type_trigger' );
+                $db_qnaire_aconsent_type_trigger =
+                  lib::create( 'database\qnaire_alternate_consent_type_trigger' );
                 $db_qnaire_aconsent_type_trigger->qnaire_id = $this->id;
                 $db_qnaire_aconsent_type_trigger->alternate_consent_type_id = $db_aconsent_type->id;
                 $db_qnaire_aconsent_type_trigger->question_id = $db_question->id;
@@ -3397,10 +3565,14 @@ class qnaire extends \cenozo\database\record
 
         // check every item in this object for removals
         $remove_list = array();
-        foreach( $this->get_qnaire_alternate_consent_type_trigger_object_list() as $db_qnaire_aconsent_type_trigger )
+        foreach( $this->get_qnaire_alternate_consent_type_trigger_object_list()
+          as $db_qnaire_aconsent_type_trigger )
         {
           $alternate_consent_type_name = $db_qnaire_aconsent_type_trigger->get_alternate_consent_type()->name;
-          $changed_name = array_search( $db_qnaire_aconsent_type_trigger->get_question()->name, $change_question_name_list );
+          $changed_name = array_search(
+            $db_qnaire_aconsent_type_trigger->get_question()->name,
+            $change_question_name_list
+          );
           $question_name = $changed_name ? $changed_name : $db_qnaire_aconsent_type_trigger->get_question()->name;
           if( $apply ) $question_name = preg_replace( sprintf( '/_%s$/', $name_suffix ), '', $question_name );
 
@@ -3446,9 +3618,9 @@ class qnaire extends \cenozo\database\record
         $change_list = array();
         foreach( $patch_object->qnaire_proxy_type_trigger_list as $qnaire_proxy_type_trigger )
         {
-          $db_proxy_type = $qnaire_proxy_type_trigger->proxy_type_name
-                         ? $proxy_type_class_name::get_unique_record( 'name', $qnaire_proxy_type_trigger->proxy_type_name )
-                         : NULL;
+          $db_proxy_type = $qnaire_proxy_type_trigger->proxy_type_name ?
+            $proxy_type_class_name::get_unique_record( 'name', $qnaire_proxy_type_trigger->proxy_type_name ) :
+            NULL;
 
           if( is_null( $db_proxy_type ) && $qnaire_proxy_type_trigger->proxy_type_name )
           {
@@ -3472,7 +3644,15 @@ class qnaire extends \cenozo\database\record
 
             // check to see if the question has been renamed as part of the applied patch
             if( $apply && is_null( $db_question ) )
-              $db_question = $this->get_question( sprintf( '%s_%s', $qnaire_proxy_type_trigger->question_name, $name_suffix ) );
+            {
+              $db_question = $this->get_question(
+                sprintf(
+                  '%s_%s',
+                  $qnaire_proxy_type_trigger->question_name,
+                  $name_suffix
+                )
+              );
+            }
 
             $db_qnaire_proxy_type_trigger = $qnaire_proxy_type_trigger_class_name::get_unique_record(
               array( 'qnaire_id', 'proxy_type_id', 'question_id', 'answer_value' ),
@@ -3486,7 +3666,8 @@ class qnaire extends \cenozo\database\record
               {
                 $db_qnaire_proxy_type_trigger = lib::create( 'database\qnaire_proxy_type_trigger' );
                 $db_qnaire_proxy_type_trigger->qnaire_id = $this->id;
-                $db_qnaire_proxy_type_trigger->proxy_type_id = is_null( $db_proxy_type ) ? NULL : $db_proxy_type->id;
+                $db_qnaire_proxy_type_trigger->proxy_type_id = is_null( $db_proxy_type ) ?
+                  NULL : $db_proxy_type->id;
                 $db_qnaire_proxy_type_trigger->question_id = $db_question->id;
                 $db_qnaire_proxy_type_trigger->answer_value = $qnaire_proxy_type_trigger->answer_value;
                 $db_qnaire_proxy_type_trigger->save();
@@ -3494,7 +3675,8 @@ class qnaire extends \cenozo\database\record
               else
               {
                 // if the proxy type name is an empty string then show (empty) instead
-                if( !$qnaire_proxy_type_trigger->proxy_type_name ) $qnaire_proxy_type_trigger->proxy_type_name = '(empty)';
+                if( !$qnaire_proxy_type_trigger->proxy_type_name )
+                  $qnaire_proxy_type_trigger->proxy_type_name = '(empty)';
                 $add_list[] = $qnaire_proxy_type_trigger;
               }
             }
@@ -3518,7 +3700,8 @@ class qnaire extends \cenozo\database\record
                 {
                   $index = sprintf(
                     '%s [%s]',
-                    $qnaire_proxy_type_trigger->proxy_type_name ? $qnaire_proxy_type_trigger->proxy_type_name : '(empty)',
+                    $qnaire_proxy_type_trigger->proxy_type_name ?
+                      $qnaire_proxy_type_trigger->proxy_type_name : '(empty)',
                     $qnaire_proxy_type_trigger->question_name
                   );
                   $change_list[$index] = $diff;
@@ -3534,7 +3717,10 @@ class qnaire extends \cenozo\database\record
         {
           $db_proxy_type = $db_qnaire_proxy_type_trigger->get_proxy_type();
           $proxy_type_name = is_null( $db_proxy_type ) ? '' : $db_proxy_type->name;
-          $changed_name = array_search( $db_qnaire_proxy_type_trigger->get_question()->name, $change_question_name_list );
+          $changed_name = array_search(
+            $db_qnaire_proxy_type_trigger->get_question()->name,
+            $change_question_name_list
+          );
           $question_name = $changed_name ? $changed_name : $db_qnaire_proxy_type_trigger->get_question()->name;
           if( $apply ) $question_name = preg_replace( sprintf( '/_%s$/', $name_suffix ), '', $question_name );
 
@@ -3671,6 +3857,7 @@ class qnaire extends \cenozo\database\record
    */
   public function generate( $type = 'export', $return_value = false )
   {
+    $separator = "====================================================================================\n\n";
     $qnaire_data = array(
       'base_language' => $this->get_base_language()->code,
       'name' => $this->name,
@@ -3737,7 +3924,8 @@ class qnaire extends \cenozo\database\record
       $deviation_type_sel = lib::create( 'database\select' );
       $deviation_type_sel->add_column( 'type' );
       $deviation_type_sel->add_column( 'name' );
-      foreach( $this->get_deviation_type_list( $deviation_type_sel ) as $item ) $qnaire_data['deviation_type_list'][] = $item;
+      foreach( $this->get_deviation_type_list( $deviation_type_sel ) as $item )
+        $qnaire_data['deviation_type_list'][] = $item;
     }
 
     foreach( $this->get_reminder_object_list() as $db_reminder )
@@ -3748,29 +3936,32 @@ class qnaire extends \cenozo\database\record
         'reminder_description_list' => array()
       );
 
-      $reminder_description_sel = lib::create( 'database\select' );
-      $reminder_description_sel->add_table_column( 'language', 'code', 'language' );
-      $reminder_description_sel->add_column( 'type' );
-      $reminder_description_sel->add_column( 'value' );
-      $reminder_description_mod = lib::create( 'database\modifier' );
-      $reminder_description_mod->join( 'language', 'reminder_description.language_id', 'language.id' );
-      $reminder_description_mod->order( 'type' );
-      $reminder_description_mod->order( 'language.code' );
-      foreach( $db_reminder->get_reminder_description_list( $reminder_description_sel, $reminder_description_mod ) as $description )
+      $description_sel = lib::create( 'database\select' );
+      $description_sel->add_table_column( 'language', 'code', 'language' );
+      $description_sel->add_column( 'type' );
+      $description_sel->add_column( 'value' );
+      $description_mod = lib::create( 'database\modifier' );
+      $description_mod->join( 'language', 'reminder_description.language_id', 'language.id' );
+      $description_mod->order( 'type' );
+      $description_mod->order( 'language.code' );
+      foreach( $db_reminder->get_reminder_description_list( $description_sel, $description_mod )
+        as $description )
+      {
         $item['reminder_description_list'][] = $description;
+      }
 
       $qnaire_data['reminder_list'][] = $item;
     }
 
-    $qnaire_description_sel = lib::create( 'database\select' );
-    $qnaire_description_sel->add_table_column( 'language', 'code', 'language' );
-    $qnaire_description_sel->add_column( 'type' );
-    $qnaire_description_sel->add_column( 'value' );
-    $qnaire_description_mod = lib::create( 'database\modifier' );
-    $qnaire_description_mod->join( 'language', 'qnaire_description.language_id', 'language.id' );
-    $qnaire_description_mod->order( 'type' );
-    $qnaire_description_mod->order( 'language.code' );
-    foreach( $this->get_qnaire_description_list( $qnaire_description_sel, $qnaire_description_mod ) as $item )
+    $description_sel = lib::create( 'database\select' );
+    $description_sel->add_table_column( 'language', 'code', 'language' );
+    $description_sel->add_column( 'type' );
+    $description_sel->add_column( 'value' );
+    $description_mod = lib::create( 'database\modifier' );
+    $description_mod->join( 'language', 'qnaire_description.language_id', 'language.id' );
+    $description_mod->order( 'type' );
+    $description_mod->order( 'language.code' );
+    foreach( $this->get_qnaire_description_list( $description_sel, $description_mod ) as $item )
       $qnaire_data['qnaire_description_list'][] = $item;
 
     $module_mod = lib::create( 'database\modifier' );
@@ -3786,16 +3977,19 @@ class qnaire extends \cenozo\database\record
         'page_list' => array()
       );
 
-      $module_description_sel = lib::create( 'database\select' );
-      $module_description_sel->add_table_column( 'language', 'code', 'language' );
-      $module_description_sel->add_column( 'type' );
-      $module_description_sel->add_column( 'value' );
-      $module_description_mod = lib::create( 'database\modifier' );
-      $module_description_mod->join( 'language', 'module_description.language_id', 'language.id' );
-      $module_description_mod->order( 'type' );
-      $module_description_mod->order( 'language.code' );
-      foreach( $db_module->get_module_description_list( $module_description_sel, $module_description_mod ) as $item )
+      $description_sel = lib::create( 'database\select' );
+      $description_sel->add_table_column( 'language', 'code', 'language' );
+      $description_sel->add_column( 'type' );
+      $description_sel->add_column( 'value' );
+      $description_mod = lib::create( 'database\modifier' );
+      $description_mod->join( 'language', 'module_description.language_id', 'language.id' );
+      $description_mod->order( 'type' );
+      $description_mod->order( 'language.code' );
+      foreach( $db_module->get_module_description_list( $description_sel, $description_mod )
+        as $item )
+      {
         $module['module_description_list'][] = $item;
+      }
 
       $page_mod = lib::create( 'database\modifier' );
       $page_mod->order( 'page.rank' );
@@ -3805,20 +3999,21 @@ class qnaire extends \cenozo\database\record
           'rank' => $db_page->rank,
           'name' => $db_page->name,
           'precondition' => $db_page->precondition,
+          'tabulate' => $db_page->tabulate,
           'note' => $db_page->note,
           'page_description_list' => array(),
           'question_list' => array()
         );
 
-        $page_description_sel = lib::create( 'database\select' );
-        $page_description_sel->add_table_column( 'language', 'code', 'language' );
-        $page_description_sel->add_column( 'type' );
-        $page_description_sel->add_column( 'value' );
-        $page_description_mod = lib::create( 'database\modifier' );
-        $page_description_mod->join( 'language', 'page_description.language_id', 'language.id' );
-        $page_description_mod->order( 'type' );
-        $page_description_mod->order( 'language.code' );
-        foreach( $db_page->get_page_description_list( $page_description_sel, $page_description_mod ) as $item )
+        $description_sel = lib::create( 'database\select' );
+        $description_sel->add_table_column( 'language', 'code', 'language' );
+        $description_sel->add_column( 'type' );
+        $description_sel->add_column( 'value' );
+        $description_mod = lib::create( 'database\modifier' );
+        $description_mod->join( 'language', 'page_description.language_id', 'language.id' );
+        $description_mod->order( 'type' );
+        $description_mod->order( 'language.code' );
+        foreach( $db_page->get_page_description_list( $description_sel, $description_mod ) as $item )
           $page['page_description_list'][] = $item;
 
         $question_mod = lib::create( 'database\modifier' );
@@ -3846,16 +4041,19 @@ class qnaire extends \cenozo\database\record
             'question_option_list' => array()
           );
 
-          $question_description_sel = lib::create( 'database\select' );
-          $question_description_sel->add_table_column( 'language', 'code', 'language' );
-          $question_description_sel->add_column( 'type' );
-          $question_description_sel->add_column( 'value' );
-          $question_description_mod = lib::create( 'database\modifier' );
-          $question_description_mod->join( 'language', 'question_description.language_id', 'language.id' );
-          $question_description_mod->order( 'type' );
-          $question_description_mod->order( 'language.code' );
-          foreach( $db_question->get_question_description_list( $question_description_sel, $question_description_mod ) as $item )
+          $description_sel = lib::create( 'database\select' );
+          $description_sel->add_table_column( 'language', 'code', 'language' );
+          $description_sel->add_column( 'type' );
+          $description_sel->add_column( 'value' );
+          $description_mod = lib::create( 'database\modifier' );
+          $description_mod->join( 'language', 'question_description.language_id', 'language.id' );
+          $description_mod->order( 'type' );
+          $description_mod->order( 'language.code' );
+          foreach( $db_question->get_question_description_list( $description_sel, $description_mod )
+            as $item )
+          {
             $question['question_description_list'][] = $item;
+          }
 
           $question_option_mod = lib::create( 'database\modifier' );
           $question_option_mod->order( 'question_option.rank' );
@@ -3914,7 +4112,11 @@ class qnaire extends \cenozo\database\record
     $qnaire_cconfirm_sel = lib::create( 'database\select' );
     $qnaire_cconfirm_sel->add_table_column( 'consent_type', 'name', 'consent_type_name' );
     $qnaire_cconfirm_mod = lib::create( 'database\modifier' );
-    $qnaire_cconfirm_mod->join( 'consent_type', 'qnaire_consent_type_confirm.consent_type_id', 'consent_type.id' );
+    $qnaire_cconfirm_mod->join(
+      'consent_type',
+      'qnaire_consent_type_confirm.consent_type_id',
+      'consent_type.id'
+    );
     foreach( $this->get_qnaire_consent_type_confirm_list( $qnaire_cconfirm_sel, $qnaire_cconfirm_mod ) as $item )
       $qnaire_data['qnaire_consent_type_confirm_list'][] = $item;
 
@@ -3934,7 +4136,11 @@ class qnaire extends \cenozo\database\record
     $qnaire_ctrigger_sel->add_column( 'answer_value' );
     $qnaire_ctrigger_sel->add_column( 'accept' );
     $qnaire_ctrigger_mod = lib::create( 'database\modifier' );
-    $qnaire_ctrigger_mod->join( 'consent_type', 'qnaire_consent_type_trigger.consent_type_id', 'consent_type.id' );
+    $qnaire_ctrigger_mod->join(
+      'consent_type',
+      'qnaire_consent_type_trigger.consent_type_id',
+      'consent_type.id'
+    );
     $qnaire_ctrigger_mod->join( 'question', 'qnaire_consent_type_trigger.question_id', 'question.id' );
     foreach( $this->get_qnaire_consent_type_trigger_list( $qnaire_ctrigger_sel, $qnaire_ctrigger_mod ) as $item )
       $qnaire_data['qnaire_consent_type_trigger_list'][] = $item;
@@ -3951,8 +4157,11 @@ class qnaire extends \cenozo\database\record
       'alternate_consent_type.id'
     );
     $qnaire_ctrigger_mod->join( 'question', 'qnaire_alternate_consent_type_trigger.question_id', 'question.id' );
-    foreach( $this->get_qnaire_alternate_consent_type_trigger_list( $qnaire_ctrigger_sel, $qnaire_ctrigger_mod ) as $item )
+    foreach( $this->get_qnaire_alternate_consent_type_trigger_list( $qnaire_ctrigger_sel, $qnaire_ctrigger_mod )
+      as $item )
+    {
       $qnaire_data['qnaire_alternate_consent_type_trigger_list'][] = $item;
+    }
 
     $qnaire_ptrigger_sel = lib::create( 'database\select' );
     $qnaire_ptrigger_sel->add_column( 'IFNULL( proxy_type.name, "" )', 'proxy_type_name', false );
@@ -3975,26 +4184,27 @@ class qnaire extends \cenozo\database\record
       $contents = sprintf(
         "%s (%s)\n",
         $qnaire_data['name'],
-        is_null( $qnaire_data['version'] ) ? 'no version specified' : sprintf( 'version %s', $qnaire_data['version'] )
-      )
-                . sprintf( "====================================================================================\n\n" );
+        is_null( $qnaire_data['version'] ) ?
+          'no version specified' : sprintf( 'version %s', $qnaire_data['version'] )
+      ) . $separator;
       if( $qnaire_data['description'] )$contents .= sprintf( "%s\n\n", $qnaire_data['description'] );
 
       $description = array( 'introduction' => array(), 'conclusion' => array(), 'closed' => array() );
       foreach( $qnaire_data['qnaire_description_list'] as $d )
-        if( in_array( $d['type'], ['introduction', 'conclusion', 'closed'] ) ) $description[$d['type']][$d['language']] = $d['value'];
+        if( in_array( $d['type'], ['introduction', 'conclusion', 'closed'] ) )
+          $description[$d['type']][$d['language']] = $d['value'];
 
-      $contents .= sprintf( "INTRODUCTION\n" )
-                 . sprintf( "====================================================================================\n\n" );
-      foreach( $description['introduction'] as $language => $value ) $contents .= sprintf( "[%s] %s\n\n", $language, $value );
+      $contents .= sprintf( "INTRODUCTION\n" ) . $separator;
+      foreach( $description['introduction'] as $language => $value )
+        $contents .= sprintf( "[%s] %s\n\n", $language, $value );
 
-      $contents .= sprintf( "CONCLUSION\n" )
-                 . sprintf( "====================================================================================\n\n" );
-      foreach( $description['conclusion'] as $language => $value ) $contents .= sprintf( "[%s] %s\n\n", $language, $value );
+      $contents .= sprintf( "CONCLUSION\n" ) . $separator;
+      foreach( $description['conclusion'] as $language => $value )
+        $contents .= sprintf( "[%s] %s\n\n", $language, $value );
 
-      $contents .= sprintf( "CLOSED\n" )
-                 . sprintf( "====================================================================================\n\n" );
-      foreach( $description['closed'] as $language => $value ) $contents .= sprintf( "[%s] %s\n\n", $language, $value );
+      $contents .= sprintf( "CLOSED\n" ) . $separator;
+      foreach( $description['closed'] as $language => $value )
+        $contents .= sprintf( "[%s] %s\n\n", $language, $value );
 
       foreach( $qnaire_data['module_list'] as $module )
       {
@@ -4003,10 +4213,11 @@ class qnaire extends \cenozo\database\record
           $module['rank'],
           $module['name'],
           is_null( $module['precondition'] ) ? '' : sprintf( ' (precondition: %s)', $module['precondition'] )
-        ) . sprintf( "====================================================================================\n\n" );
+        ) . $separator;
 
         $description = array( 'prompt' => array(), 'popup' => array() );
-        foreach( $module['module_description_list'] as $d ) $description[$d['type']][$d['language']] = $d['value'];
+        foreach( $module['module_description_list'] as $d )
+          $description[$d['type']][$d['language']] = $d['value'];
 
         foreach( $description['prompt'] as $language => $value )
         {
@@ -4014,7 +4225,8 @@ class qnaire extends \cenozo\database\record
             "[%s] %s%s\n",
             $language,
             $value,
-            is_null( $description['popup'][$language] ) ? '' : sprintf( "\n\nPOPUP: %s", $description['popup'][$language] )
+            is_null( $description['popup'][$language] ) ?
+              '' : sprintf( "\n\nPOPUP: %s", $description['popup'][$language] )
           );
         }
         $contents .= "\n";
@@ -4027,7 +4239,7 @@ class qnaire extends \cenozo\database\record
             $page['rank'],
             $page['name'],
             is_null( $page['precondition'] ) ? '' : sprintf( ' (precondition: %s)', $page['precondition'] )
-          ) . sprintf( "====================================================================================\n\n" );
+          ) . $separator;
 
           $description = array( 'prompt' => array(), 'popup' => array() );
           foreach( $page['page_description_list'] as $d ) $description[$d['type']][$d['language']] = $d['value'];
@@ -4038,7 +4250,8 @@ class qnaire extends \cenozo\database\record
               "[%s] %s%s\n",
               $language,
               $value,
-              is_null( $description['popup'][$language] ) ? '' : sprintf( "\n\nPOPUP: %s", $description['popup'][$language] )
+              is_null( $description['popup'][$language] ) ?
+                '' : sprintf( "\n\nPOPUP: %s", $description['popup'][$language] )
             );
           }
           $contents .= "\n";
@@ -4051,11 +4264,15 @@ class qnaire extends \cenozo\database\record
               $page['rank'],
               $question['rank'],
               $question['name'],
-              is_null( $question['precondition'] ) ? '' : sprintf( ' (precondition: %s)', $question['precondition'] )
-            ) . sprintf( "====================================================================================\n\n" );
+              is_null(
+                $question['precondition'] ) ?
+                  '' : sprintf( ' (precondition: %s)', $question['precondition']
+              )
+            ) . $separator;
 
             $description = array( 'prompt' => array(), 'popup' => array() );
-            foreach( $question['question_description_list'] as $d ) $description[$d['type']][$d['language']] = $d['value'];
+            foreach( $question['question_description_list'] as $d )
+              $description[$d['type']][$d['language']] = $d['value'];
 
             foreach( $description['prompt'] as $language => $value )
             {
@@ -4063,12 +4280,14 @@ class qnaire extends \cenozo\database\record
                 "[%s] %s%s\n",
                 $language,
                 $value,
-                is_null( $description['popup'][$language] ) ? '' : sprintf( "\n\nPOPUP: %s", $description['popup'][$language] )
+                is_null( $description['popup'][$language] ) ?
+                  '' : sprintf( "\n\nPOPUP: %s", $description['popup'][$language] )
               );
             }
             $contents .= "\n";
 
-            if( array_key_exists( 'question_option_list', $question ) && 0 < count( $question['question_option_list'] ) )
+            if( array_key_exists( 'question_option_list', $question ) &&
+                0 < count( $question['question_option_list'] ) )
             {
               foreach( $question['question_option_list'] as $question_option )
               {
@@ -4077,7 +4296,8 @@ class qnaire extends \cenozo\database\record
                   $question_option['rank'],
                   $question_option['name'],
                   is_null(
-                    $question_option['precondition'] ? '' : sprintf( ' (precondition: %s)', $question_option['precondition'] )
+                    $question_option['precondition'] ? '' :
+                      sprintf( ' (precondition: %s)', $question_option['precondition'] )
                   )
                 );
 
@@ -4091,7 +4311,10 @@ class qnaire extends \cenozo\database\record
                     "[%s] %s%s\n",
                     $language,
                     $value,
-                    is_null( $description['popup'][$language] ) ? '' : sprintf( "\n\nPOPUP: %s", $description['popup'][$language] )
+                    is_null(
+                      $description['popup'][$language] ) ?
+                        '' : sprintf( "\n\nPOPUP: %s", $description['popup'][$language]
+                    )
                   );
                 }
                 $contents .= "\n";
@@ -4135,7 +4358,8 @@ class qnaire extends \cenozo\database\record
     $device_class_name = lib::get_class_name( 'database\device' );
     $lookup_class_name = lib::get_class_name( 'database\lookup' );
 
-    $default_page_max_time = lib::create( 'business\setting_manager' )->get_setting( 'general', 'default_page_max_time' );
+    $default_page_max_time =
+      lib::create( 'business\setting_manager' )->get_setting( 'general', 'default_page_max_time' );
 
     // make sure the qnaire doesn't already exist
     $db_qnaire = static::get_unique_record( 'name', $qnaire_object->name );
@@ -4153,7 +4377,8 @@ class qnaire extends \cenozo\database\record
     }
 
     $db_qnaire = lib::create( 'database\qnaire' );
-    $db_qnaire->base_language_id = $language_class_name::get_unique_record( 'code', $qnaire_object->base_language )->id;
+    $db_qnaire->base_language_id =
+      $language_class_name::get_unique_record( 'code', $qnaire_object->base_language )->id;
     $db_qnaire->name = $qnaire_object->name;
     $db_qnaire->version = property_exists( $qnaire_object, 'version' ) ? $qnaire_object->version : NULL;
     $db_qnaire->variable_suffix = $qnaire_object->variable_suffix;
@@ -4266,6 +4491,7 @@ class qnaire extends \cenozo\database\record
         $db_page->max_time = $default_page_max_time;
 
         $db_page->precondition = $page_object->precondition;
+        $db_page->tabulate = $page_object->tabulate;
         $db_page->note = $page_object->note;
         $db_page->save();
 
@@ -4334,7 +4560,8 @@ class qnaire extends \cenozo\database\record
 
               foreach( $question_option_object->question_option_description_list as $question_option_description )
               {
-                $db_language = $language_class_name::get_unique_record( 'code', $question_option_description->language );
+                $db_language =
+                  $language_class_name::get_unique_record( 'code', $question_option_description->language );
                 $db_question_option_description =
                   $db_question_option->get_description( $question_option_description->type, $db_language );
                 $db_question_option_description->value = $question_option_description->value;
@@ -4396,12 +4623,14 @@ class qnaire extends \cenozo\database\record
 
     foreach( $qnaire_object->qnaire_consent_type_confirm_list as $qnaire_consent_type_confirm )
     {
-      $db_consent_type = $consent_type_class_name::get_unique_record( 'name', $qnaire_consent_type_confirm->consent_type_name );
+      $db_consent_type =
+        $consent_type_class_name::get_unique_record( 'name', $qnaire_consent_type_confirm->consent_type_name );
       if( is_null( $db_consent_type ) )
       {
         throw lib::create( 'exception\notice',
           sprintf(
-            'Unable to import questionnaire since it has a consent confirm for consent type "%s" which does not exist.',
+            'Unable to import questionnaire since it has a consent confirm '.
+            'for consent type "%s" which does not exist.',
             $qnaire_consent_type_confirm->consent_type_name
           ),
           __METHOD__
@@ -4428,12 +4657,16 @@ class qnaire extends \cenozo\database\record
 
     foreach( $qnaire_object->qnaire_consent_type_trigger_list as $qnaire_consent_type_trigger )
     {
-      $db_consent_type = $consent_type_class_name::get_unique_record( 'name', $qnaire_consent_type_trigger->consent_type_name );
+      $db_consent_type = $consent_type_class_name::get_unique_record(
+        'name',
+        $qnaire_consent_type_trigger->consent_type_name
+      );
       if( is_null( $db_consent_type ) )
       {
         throw lib::create( 'exception\notice',
           sprintf(
-            'Unable to import questionnaire since it has a consent trigger for consent type "%s" which does not exist.',
+            'Unable to import questionnaire since it has a consent trigger '.
+            'for consent type "%s" which does not exist.',
             $qnaire_consent_type_trigger->consent_type_name
           ),
           __METHOD__
@@ -4450,7 +4683,8 @@ class qnaire extends \cenozo\database\record
       $db_qnaire_consent_type_trigger->save();
     }
 
-    foreach( $qnaire_object->qnaire_alternate_consent_type_trigger_list as $qnaire_alternate_consent_type_trigger )
+    foreach( $qnaire_object->qnaire_alternate_consent_type_trigger_list
+      as $qnaire_alternate_consent_type_trigger )
     {
       $db_alternate_consent_type = $alternate_consent_type_class_name::get_unique_record(
         'name',
@@ -4473,7 +4707,8 @@ class qnaire extends \cenozo\database\record
       $db_qnaire_alternate_consent_type_trigger->qnaire_id = $db_qnaire->id;
       $db_qnaire_alternate_consent_type_trigger->alternate_consent_type_id = $db_alternate_consent_type->id;
       $db_qnaire_alternate_consent_type_trigger->question_id = $db_question->id;
-      $db_qnaire_alternate_consent_type_trigger->answer_value = $qnaire_alternate_consent_type_trigger->answer_value;
+      $db_qnaire_alternate_consent_type_trigger->answer_value =
+        $qnaire_alternate_consent_type_trigger->answer_value;
       $db_qnaire_alternate_consent_type_trigger->accept = $qnaire_alternate_consent_type_trigger->accept;
       $db_qnaire_alternate_consent_type_trigger->save();
     }
@@ -4483,12 +4718,16 @@ class qnaire extends \cenozo\database\record
       $db_proxy_type = NULL;
       if( $qnaire_proxy_type_trigger->proxy_type_name )
       {
-        $db_proxy_type = $proxy_type_class_name::get_unique_record( 'name', $qnaire_proxy_type_trigger->proxy_type_name );
+        $db_proxy_type = $proxy_type_class_name::get_unique_record(
+          'name',
+          $qnaire_proxy_type_trigger->proxy_type_name
+        );
         if( is_null( $db_proxy_type ) )
         {
           throw lib::create( 'exception\notice',
             sprintf(
-              'Unable to import questionnaire since it has a proxy trigger for proxy type "%s" which does not exist.',
+              'Unable to import questionnaire since it has a proxy trigger '.
+              'for proxy type "%s" which does not exist.',
               $qnaire_proxy_type_trigger->proxy_type_name
             ),
             __METHOD__

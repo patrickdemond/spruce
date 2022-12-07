@@ -10,6 +10,11 @@ cenozoApp.defineModule({
       column: "module.id",
     };
 
+    module.addInput("", "tabulate", {
+      title: "Tabulate",
+      type: "boolean",
+      help: "Determines whether questions on this page should be organized into a table."
+    });
     module.addInput("", "average_time", {
       title: "Average Time (seconds)",
       type: "string",
@@ -53,6 +58,17 @@ cenozoApp.defineModule({
       column: "module.name",
       isExcluded: true,
     });
+
+    cenozo.insertPropertyAfter(
+      module.columnList,
+      "name",
+      "tabulate",
+      {
+        title: "Tabulate",
+        type: "boolean",
+      }
+    );
+
     cenozo.insertPropertyAfter(
       module.columnList,
       "question_count",

@@ -10,7 +10,7 @@
                 ng-options="lang.code as lang.name for lang in model.renderModel.languageList">
         </select>
       </div>
-      <div class="pull-right" style="margin-top: 3px; margin-right: 26px;;">
+      <div class="pull-right" style="margin-top: 3px; margin-right: 26px;">
         <i class="glyphicon glyphicon-refresh glyph-hover btn-primary btn-header"
            ng-click="model.renderModel.onReady()"
            uib-tooltip="Click to refresh data"
@@ -273,7 +273,12 @@
       </div>
       <form name="form" novalidate><fieldset ng-disabled="model.renderModel.working">
         <div class="spacer">
-          <div class="container-fluid vertical-spacer">
+          <div class="container-fluid vertical-spacer"
+               ng-class="{
+                 'no-horizontal-padding': model.viewModel.record.tabulate,
+                 'striped-rows': model.viewModel.record.tabulate,
+                 'hover-rows': model.viewModel.record.tabulate
+               }">
             <span class="text-info vertical-spacer larger"
                   ng-bind-html="model.renderModel.getModulePrompt()"
                   uib-tooltip-html="model.renderModel.getModulePopup()"></span>
@@ -283,290 +288,316 @@
             <div ng-class="{ 'highlight-no-bold': model.renderModel.focusQuestionId == question.id }"
                  ng-attr-id="baseQuestion{{ question.id }}"
                  ng-repeat="question in model.renderModel.getVisibleQuestionList()">
-              <hr ng-if="!$first" />
-              <div ng-if="model.viewModel.record.debug || model.renderModel.showHidden"
-                   class="small text-muted">[{{ question.variable_name }}]</div>
-              <div class="vertical-spacer larger"
-                   ng-class="{ 'text-info': 'comment' == question.type, 'text-danger': true === question.incomplete }"
-                   ng-bind-html="model.renderModel.getQuestionPrompt( question )"
-                   uib-tooltip-html="model.renderModel.getQuestionPopup( question )">
-              </div>
-              <div class="horizontal-spacer"
-                   ng-class="{ 'has-error': true === question.incomplete }"
-                   ng-if="'comment' != question.type"
-                   ng-switch="question.type">
-                <div ng-switch-when="audio">
-                  <button type="button"
-                          class="btn btn-default larger col-xs-3"
-                          ng-class="{ 'color-red': true === question.incomplete }"
-                          ng-click="question.audio.recordingInProgress ?
-                            model.renderModel.stopRecording( question ) : model.renderModel.startRecording( question )"
-                          ng-bind-html="text(
-                            question.audio.recordingInProgress ? 'misc.stop' :
-                            question.answer.formattedValue ? 'misc.reRecord' :
-                            'misc.record'
-                          )" />
-                  <div class="col-xs-9 col-slim-right">
-                    <div ng-if="!question.audio.recordingInProgress"
-                         ng-style="{
-                          'cursor': question.answer.formattedValue ? 'auto' : 'not-allowed',
-                          'opacity': question.answer.formattedValue ? 1.0 : 0.5
-                        }">
-                      <audio ng-attr-id="questionAudio{{ question.id }}"
-                             ng-src="{{ question.answer.formattedValue }}"
-                             class="full-width"
-                             ng-style="{
-                               'height': '40px',
-                               'pointer-events': question.answer.formattedValue ? 'auto' : 'none',
-                               'background': question.incomplete ? 'red' : 'none'
-                             }"
-                             controls></audio>
-                    </div>
-                    <div ng-if="question.audio.recordingInProgress"
-                         class="progress no-rounding"
-                         style="height: 40px; background-color: lightgrey; border: 4px solid darkslategrey; margin-bottom: 6.8px;">
-                      <div class="progress-bar larger"
-                           role="volumebar"
-                           style="background-color: red;
-                                  width: {{ question.audio.inputVolume*100 }}%;
-                                  -webkit-transition: none;
-                                  transition: none;"
-                           aria-valuenow="{{ question.audio.inputVolume*100  }}"
-                           aria-valuemin="0"
-                           aria-valuemax="100"></div>
+              <div class="container-fluid"
+                   ng-style="model.viewModel.record.tabulate ? { 'padding': '5px 0px 5px 5px' } : null">
+                <hr ng-if="!$first && !model.viewModel.record.tabulate" />
+                <div ng-if="model.viewModel.record.debug || model.renderModel.showHidden"
+                     class="spacer small text-muted"
+                     ng-class="{ 'float-left': model.viewModel.record.tabulate }"
+                     style="line-height: 26px"">[{{ question.variable_name }}]</div>
+                <div class="vertical-spacer larger"
+                     ng-class="{
+                       'text-info': 'comment' == question.type,
+                       'text-danger': true === question.incomplete,
+                       'float-left': model.viewModel.record.tabulate
+                     }"
+                     ng-bind-html="model.renderModel.getQuestionPrompt( question )"
+                     uib-tooltip-html="model.renderModel.getQuestionPopup( question )">
+                </div>
+                <div class="horizontal-spacer"
+                     ng-class="{
+                       'has-error': true === question.incomplete,
+                       'float-right': model.viewModel.record.tabulate
+                     }"
+                     ng-if="'comment' != question.type"
+                     ng-switch="question.type">
+                  <div ng-switch-when="audio">
+                    <button type="button"
+                            class="btn btn-default larger col-xs-3"
+                            ng-class="{ 'color-red': true === question.incomplete }"
+                            ng-click="question.audio.recordingInProgress ?
+                              model.renderModel.stopRecording( question ) : model.renderModel.startRecording( question )"
+                            ng-bind-html="text(
+                              question.audio.recordingInProgress ? 'misc.stop' :
+                              question.answer.formattedValue ? 'misc.reRecord' :
+                              'misc.record'
+                            )" />
+                    <div class="col-xs-9 col-slim-right">
+                      <div ng-if="!question.audio.recordingInProgress"
+                           ng-style="{
+                            'cursor': question.answer.formattedValue ? 'auto' : 'not-allowed',
+                            'opacity': question.answer.formattedValue ? 1.0 : 0.5
+                          }">
+                        <audio ng-attr-id="questionAudio{{ question.id }}"
+                               ng-src="{{ question.answer.formattedValue }}"
+                               class="full-width"
+                               ng-style="{
+                                 'height': '40px',
+                                 'pointer-events': question.answer.formattedValue ? 'auto' : 'none',
+                                 'background': question.incomplete ? 'red' : 'none'
+                               }"
+                               controls></audio>
+                      </div>
+                      <div ng-if="question.audio.recordingInProgress"
+                           class="progress no-rounding"
+                           style="height: 40px; background-color: lightgrey; border: 4px solid darkslategrey; margin-bottom: 6.8px;">
+                        <div class="progress-bar larger"
+                             role="volumebar"
+                             style="background-color: red;
+                                    width: {{ question.audio.inputVolume*100 }}%;
+                                    -webkit-transition: none;
+                                    transition: none;"
+                             aria-valuenow="{{ question.audio.inputVolume*100  }}"
+                             aria-valuemin="0"
+                             aria-valuemax="100"></div>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div ng-switch-when="boolean">
-                  <label class="btn btn-default full-width larger"
-                         ng-class="{ 'color-red': true === question.incomplete }"
-                         style="text-align: left; font-style: italic; font-weight: normal; white-space: normal;"
-                         ng-model="question.answer.yes"
-                         ng-click="model.renderModel.setAnswer( question, question.answer.yes ? true : null )"
-                         uib-btn-checkbox>
-                    {{ model.renderModel.getHotKey( question, true ) }}
-                    <i class="glyphicon" ng-class="question.answer.yes ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
-                    {{ text( 'misc.yes' ) }}
-                  </label>
-                  <label class="btn btn-default full-width larger"
-                         ng-class="{ 'color-red': true === question.incomplete }"
-                         style="text-align: left; font-style: italic; font-weight: normal; white-space: normal;"
-                         ng-model="question.answer.no"
-                         ng-click="model.renderModel.setAnswer( question, question.answer.no ? false : null )"
-                         uib-btn-checkbox>
-                    {{ model.renderModel.getHotKey( question, false ) }}
-                    <i class="glyphicon" ng-class="question.answer.no ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
-                    {{ text( 'misc.no' ) }}
-                  </label>
-                </div>
-                <div ng-switch-when="device">
-                  <h4 ng-if="null == question.device_id" class="text-danger text-center">
-                    Warning: Device question is not associated with a device!
-                  </h4>
-                  <button ng-if="null != question.device_id" class="btn btn-default larger full-width"
-                          ng-class="{ 'color-red': true === question.incomplete }"
-                          ng-disabled="model.renderModel.working"
-                          ng-click="model.renderModel.launchDevice( question )">
-                    {{ model.renderModel.isDeviceComplete( question ) ? 'Re-' : '' }}Launch {{ question.device }} Device
-                  </button>
-                </div>
-                <div ng-switch-when="lookup">
-                  <h4 ng-if="null == question.lookup.id" class="text-danger text-center">
-                    Warning: Lookup question is not associated with a lookup!
-                  </h4>
-                  <div ng-if="null != question.lookup.id">
-                    <input
-                      id="lookup{{ question.lookup.id }}"
-                      ng-model="question.answer.formattedValue"
-                      uib-typeahead="item.identifier as item.description for item in model.renderModel.getLookupValues( question, $viewValue )"
-                      typeahead-editable="false"
-                      typeahead-on-select="model.renderModel.setAnswer( question, $item )"
-                      typeahead-min-length="3"
-                      cn-change="!question.answer.formattedValue && model.renderModel.setAnswer( question, null )"
-                      class="form-control"
-                      ng-class="{ 'loading-small': question.lookup.isLoading }"
-                      type="text"
-                      placeholder="(search possible values)"
-                      autocomplete="off"></input>
+                  <div ng-switch-when="boolean"
+                       ng-class="{ 'float-left': model.viewModel.record.tabulate }">
+                    <label class="btn btn-default larger"
+                           ng-class="{
+                             'full-width': !model.viewModel.record.tabulate,
+                             'color-red': true === question.incomplete
+                           }"
+                           style="text-align: left; font-style: italic; font-weight: normal; white-space: normal;"
+                           ng-model="question.answer.yes"
+                           ng-click="model.renderModel.setAnswer( question, question.answer.yes ? true : null )"
+                           uib-btn-checkbox>
+                      {{ model.renderModel.getHotKey( question, true ) }}
+                      <i class="glyphicon" ng-class="question.answer.yes ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
+                      {{ text( 'misc.yes' ) }}
+                    </label>
+                    <label class="btn btn-default largear"
+                           ng-class="{
+                             'full-width': !model.viewModel.record.tabulate,
+                             'color-red': true === question.incomplete
+                           }"
+                           style="text-align: left; font-style: italic; font-weight: normal; white-space: normal;"
+                           ng-model="question.answer.no"
+                           ng-click="model.renderModel.setAnswer( question, question.answer.no ? false : null )"
+                           uib-btn-checkbox>
+                      {{ model.renderModel.getHotKey( question, false ) }}
+                      <i class="glyphicon" ng-class="question.answer.no ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
+                      {{ text( 'misc.no' ) }}
+                    </label>
+                  </div>
+                  <div ng-switch-when="device">
+                    <h4 ng-if="null == question.device_id" class="text-danger text-center">
+                      Warning: Device question is not associated with a device!
+                    </h4>
+                    <button ng-if="null != question.device_id" class="btn btn-default larger full-width"
+                            ng-class="{ 'color-red': true === question.incomplete }"
+                            ng-disabled="model.renderModel.working"
+                            ng-click="model.renderModel.launchDevice( question )">
+                      {{ model.renderModel.isDeviceComplete( question ) ? 'Re-' : '' }}Launch {{ question.device }} Device
+                    </button>
+                  </div>
+                  <div ng-switch-when="lookup">
+                    <h4 ng-if="null == question.lookup.id" class="text-danger text-center">
+                      Warning: Lookup question is not associated with a lookup!
+                    </h4>
+                    <div ng-if="null != question.lookup.id">
+                      <input
+                        id="lookup{{ question.lookup.id }}"
+                        ng-model="question.answer.formattedValue"
+                        uib-typeahead="item.identifier as item.description for item in model.renderModel.getLookupValues( question, $viewValue )"
+                        typeahead-editable="false"
+                        typeahead-on-select="model.renderModel.setAnswer( question, $item )"
+                        typeahead-min-length="3"
+                        cn-change="!question.answer.formattedValue && model.renderModel.setAnswer( question, null )"
+                        class="form-control"
+                        ng-class="{ 'loading-small': question.lookup.isLoading }"
+                        type="text"
+                        placeholder="(search possible values)"
+                        autocomplete="off"></input>
 
-                    <div ng-if="false">
-                      <div class="col-slim col-xs-11">
+                      <div ng-if="false">
+                        <div class="col-slim col-xs-11">
+                          <input ng-switch-when="string"
+                            cn-ignore-mouse-wheel
+                            type="string"
+                            id="lookup{{ question.lookup.id }}value1"
+                            name="answerValue"
+                            ng-class="{ 'color-red': true === question.incomplete }"
+                            ng-model="value"
+                            cn-change=""
+                            class="form-control rounded-bottom-left rounded-bottom-right larger"></input>
+                        </div>
+                        <button type="button"
+                                class="btn btn-danger col-slim col-xs-1 larger"
+                                ng-click="">
+                          <i class="glyphicon glyphicon-remove"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div ng-switch-when="list"
+                       class="row row-no-gutters"
+                       ng-class="{ 'float-left': model.viewModel.record.tabulate }"
+                       ng-repeat="option in model.renderModel.getVisibleOptionList( question )">
+                    <div ng-if="!option.multiple_answers" ng-class="{ 'col-xs-6 col-slim': null != option.extra }">
+                      <label
+                        class="btn btn-default full-width larger"
+                        style="text-align: left; white-space: normal;"
+                        ng-class="{
+                          'rounded-bottom-left rounded-top-left': null != option.extra,
+                          'color-red': true === question.incomplete || option.id === question.incomplete
+                        }"
+                        ng-model="question.answer.optionList[option.id].selected"
+                        ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal', 'font-weight': 'normal' }"
+                        ng-click="question.answer.optionList[option.id].selected ?
+                          model.renderModel.addOption( question, option ) :
+                          model.renderModel.removeOption( question, option )"
+                        ng-bind-html="model.renderModel.getOptionPrompt( question, option )"
+                        uib-tooltip-html="model.renderModel.getOptionPopup( option )"
+                        uib-btn-checkbox>
+                      </label>
+                    </div>
+                    <div ng-if="option.multiple_answers">
+                      <label
+                        class="btn btn-default full-width rounded-bottom-left rounded-top-left larger"
+                        ng-class="{ 'color-red': true === question.incomplete }"
+                        style="text-align: left; white-space: normal;"
+                        ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal', 'font-weight': 'normal' }"
+                        ng-bind-html="model.renderModel.getOptionPrompt( question, option )"
+                        uib-tooltip-html="model.renderModel.getOptionPopup( option )"
+                        ng-click="model.renderModel.addAnswerValue( question, option )">
+                      </label>
+                    </div>
+                    <div ng-if="null != option.extra"
+                         ng-repeat="value in question.answer.optionList[option.id].valueList">
+                      <div class="col-slim" ng-class="option.multiple_answers ? 'col-xs-11' : 'col-xs-6'" ng-switch="option.extra">
+                        <input ng-switch-when="date"
+                          cn-ignore-mouse-wheel
+                          type="text"
+                          id="option{{ option.id }}value{{ $index }}"
+                          name="answerValue"
+                          ng-class="{ 'color-red': true === question.incomplete || option.id === question.incomplete }"
+                          ng-model="question.answer.optionList[option.id].formattedValueList[$index]"
+                          onkeydown="return false"
+                          ng-click="model.renderModel.selectDateForOption( question, option, $index, value )"
+                          ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
+                          class="form-control rounded-bottom-left rounded-bottom-right larger"></input>
+                        <input ng-switch-when="number"
+                          cn-ignore-mouse-wheel
+                          type="number"
+                          id="option{{ option.id }}value{{ $index }}"
+                          name="answerValue"
+                          ng-class="{ 'color-red': true === question.incomplete || option.id === question.incomplete }"
+                          ng-model="value"
+                          cn-change="model.renderModel.setAnswerValue( question, option, $index, value )"
+                          ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
+                          class="form-control rounded-bottom-left rounded-bottom-right larger"></input>
                         <input ng-switch-when="string"
                           cn-ignore-mouse-wheel
                           type="string"
-                          id="lookup{{ question.lookup.id }}value1"
+                          id="option{{ option.id }}value{{ $index }}"
                           name="answerValue"
-                          ng-class="{ 'color-red': true === question.incomplete }"
+                          ng-class="{ 'color-red': true === question.incomplete || option.id === question.incomplete }"
                           ng-model="value"
-                          cn-change=""
+                          cn-change="model.renderModel.setAnswerValue( question, option, $index, value )"
+                          ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
                           class="form-control rounded-bottom-left rounded-bottom-right larger"></input>
+                        <textarea ng-switch-when="text"
+                          cn-elastic
+                          id="option{{ option.id }}value{{ $index }}"
+                          name="answerValue"
+                          ng-class="{ 'color-red': true === question.incomplete || option.id === question.incomplete }"
+                          ng-model="value"
+                          cn-change="model.renderModel.setAnswerValue( question, option, $index, value )"
+                          ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
+                          class="form-control rounded-bottom-left rounded-bottom-right larger"></textarea>
                       </div>
                       <button type="button"
                               class="btn btn-danger col-slim col-xs-1 larger"
-                              ng-click="">
+                              ng-if="option.multiple_answers"
+                              ng-click="model.renderModel.removeAnswerValue( question, option, $index )">
                         <i class="glyphicon glyphicon-remove"></i>
                       </button>
                     </div>
                   </div>
-                </div>
-                <div ng-switch-when="list"
-                     class="row row-no-gutters"
-                     ng-repeat="option in model.renderModel.getVisibleOptionList( question )">
-                  <div ng-if="!option.multiple_answers" ng-class="{ 'col-xs-6 col-slim': null != option.extra }">
-                    <label
-                      class="btn btn-default full-width larger"
-                      style="text-align: left; white-space: normal;"
-                      ng-class="{
-                        'rounded-bottom-left rounded-top-left': null != option.extra,
-                        'color-red': true === question.incomplete || option.id === question.incomplete
-                      }"
-                      ng-model="question.answer.optionList[option.id].selected"
-                      ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal', 'font-weight': 'normal' }"
-                      ng-click="question.answer.optionList[option.id].selected ?
-                        model.renderModel.addOption( question, option ) :
-                        model.renderModel.removeOption( question, option )"
-                      ng-bind-html="model.renderModel.getOptionPrompt( question, option )"
-                      uib-tooltip-html="model.renderModel.getOptionPopup( option )"
-                      uib-btn-checkbox>
+                  <input ng-switch-when="date"
+                    ng-attr-id="question{{ question.id }}"
+                    cn-ignore-mouse-wheel
+                    type="text"
+                    placeholder="{{ model.renderModel.getHotKey( question, null ) }}"
+                    class="form-control larger"
+                    ng-class="{ 'color-red': true === question.incomplete }"
+                    ng-model="question.answer.formattedValue"
+                    ng-click="model.renderModel.selectDate( question, question.answer.value )"
+                    onkeydown="return false">
+                  </input>
+                  <input ng-switch-when="number"
+                    ng-attr-id="question{{ question.id }}"
+                    cn-ignore-mouse-wheel
+                    type="number"
+                    placeholder="{{ model.renderModel.getHotKey( question, null ) }}"
+                    class="form-control larger"
+                    ng-class="{ 'color-red': true === question.incomplete }"
+                    ng-model="question.answer.value"
+                    cn-change="model.renderModel.setAnswer( question, question.answer.value )"
+                    autocomplete="off">
+                  </input>
+                  <input ng-switch-when="string"
+                    ng-attr-id="question{{ question.id }}"
+                    cn-ignore-mouse-wheel
+                    type="text"
+                    placeholder="{{ model.renderModel.getHotKey( question, null ) }}"
+                    class="form-control larger"
+                    ng-class="{ 'color-red': true === question.incomplete }"
+                    ng-model="question.answer.value"
+                    cn-change="model.renderModel.setAnswer( question, question.answer.value )"
+                    autocomplete="off">
+                  </input>
+                  <textarea ng-switch-when="text"
+                    ng-attr-id="question{{ question.id }}"
+                    placeholder="{{ model.renderModel.getHotKey( question, null ) }}"
+                    class="form-control larger"
+                    ng-class="{ 'color-red': true === question.incomplete }"
+                    ng-model="question.answer.value"
+                    cn-change="model.renderModel.setAnswer( question, question.answer.value )"
+                    cn-elastic>
+                  </textarea>
+                  <div ng-class="{
+                         'full-width': !model.viewModel.record.tabulate,
+                         'btn-group': !model.viewModel.record.tabulate,
+                         'float-right': model.viewModel.record.tabulate
+                       }"
+                       ng-if="'comment' != question.type && ( question.dkna_allowed || question.refuse_allowed )">
+                    <label class="btn btn-default larger"
+                           ng-if="question.dkna_allowed"
+                           ng-class="{
+                             'color-red': true === question.incomplete,
+                             'col-xs-6': question.refuse_allowed,
+                             'col-xs-12': !question.refuse_allowed
+                           }"
+                           style="text-align: left; font-style: italic; font-weight: normal; white-space: normal;"
+                           ng-style="model.viewModel.record.tabulate ? { 'width': 'auto' } : null"
+                           ng-model="question.answer.dkna"
+                           ng-click="model.renderModel.setAnswer( question, question.answer.dkna ? { dkna: true } : null )"
+                           uib-btn-checkbox>
+                      {{ model.renderModel.getHotKey( question, 'dkna' ) }}
+                      <i class="glyphicon" ng-class="question.answer.dkna ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
+                      {{ text( 'misc.dkna' ) }}
+                    </label>
+                    <label class="btn btn-default larger"
+                           ng-if="question.refuse_allowed"
+                           ng-class="{
+                             'color-red': true === question.incomplete,
+                             'col-xs-6': question.dkna_allowed,
+                             'col-xs-12': !question.dkna_allowed
+                           }"
+                           style="text-align: left; font-style: italic; font-weight: normal; white-space: normal;"
+                           ng-style="model.viewModel.record.tabulate ? { 'width': 'auto' } : null"
+                           ng-model="question.answer.refuse"
+                           ng-click="model.renderModel.setAnswer( question, question.answer.refuse ? { refuse: true } : null )"
+                           uib-btn-checkbox>
+                      {{ model.renderModel.getHotKey( question, 'refuse' ) }}
+                      <i class="glyphicon" ng-class="question.answer.refuse ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
+                      {{ text( model.renderModel.showHidden ? 'misc.refuse' : 'misc.preferNotToAnswer' ) }}
                     </label>
                   </div>
-                  <div ng-if="option.multiple_answers">
-                    <label
-                      class="btn btn-default full-width rounded-bottom-left rounded-top-left larger"
-                      ng-class="{ 'color-red': true === question.incomplete }"
-                      style="text-align: left; white-space: normal;"
-                      ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal', 'font-weight': 'normal' }"
-                      ng-bind-html="model.renderModel.getOptionPrompt( question, option )"
-                      uib-tooltip-html="model.renderModel.getOptionPopup( option )"
-                      ng-click="model.renderModel.addAnswerValue( question, option )">
-                    </label>
-                  </div>
-                  <div ng-if="null != option.extra"
-                       ng-repeat="value in question.answer.optionList[option.id].valueList">
-                    <div class="col-slim" ng-class="option.multiple_answers ? 'col-xs-11' : 'col-xs-6'" ng-switch="option.extra">
-                      <input ng-switch-when="date"
-                        cn-ignore-mouse-wheel
-                        type="text"
-                        id="option{{ option.id }}value{{ $index }}"
-                        name="answerValue"
-                        ng-class="{ 'color-red': true === question.incomplete || option.id === question.incomplete }"
-                        ng-model="question.answer.optionList[option.id].formattedValueList[$index]"
-                        onkeydown="return false"
-                        ng-click="model.renderModel.selectDateForOption( question, option, $index, value )"
-                        ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
-                        class="form-control rounded-bottom-left rounded-bottom-right larger"></input>
-                      <input ng-switch-when="number"
-                        cn-ignore-mouse-wheel
-                        type="number"
-                        id="option{{ option.id }}value{{ $index }}"
-                        name="answerValue"
-                        ng-class="{ 'color-red': true === question.incomplete || option.id === question.incomplete }"
-                        ng-model="value"
-                        cn-change="model.renderModel.setAnswerValue( question, option, $index, value )"
-                        ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
-                        class="form-control rounded-bottom-left rounded-bottom-right larger"></input>
-                      <input ng-switch-when="string"
-                        cn-ignore-mouse-wheel
-                        type="string"
-                        id="option{{ option.id }}value{{ $index }}"
-                        name="answerValue"
-                        ng-class="{ 'color-red': true === question.incomplete || option.id === question.incomplete }"
-                        ng-model="value"
-                        cn-change="model.renderModel.setAnswerValue( question, option, $index, value )"
-                        ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
-                        class="form-control rounded-bottom-left rounded-bottom-right larger"></input>
-                      <textarea ng-switch-when="text"
-                        cn-elastic
-                        id="option{{ option.id }}value{{ $index }}"
-                        name="answerValue"
-                        ng-class="{ 'color-red': true === question.incomplete || option.id === question.incomplete }"
-                        ng-model="value"
-                        cn-change="model.renderModel.setAnswerValue( question, option, $index, value )"
-                        ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
-                        class="form-control rounded-bottom-left rounded-bottom-right larger"></textarea>
-                    </div>
-                    <button type="button"
-                            class="btn btn-danger col-slim col-xs-1 larger"
-                            ng-if="option.multiple_answers"
-                            ng-click="model.renderModel.removeAnswerValue( question, option, $index )">
-                      <i class="glyphicon glyphicon-remove"></i>
-                    </button>
-                  </div>
-                </div>
-                <input ng-switch-when="date"
-                  ng-attr-id="question{{ question.id }}"
-                  cn-ignore-mouse-wheel
-                  type="text"
-                  placeholder="{{ model.renderModel.getHotKey( question, null ) }}"
-                  class="form-control larger"
-                  ng-class="{ 'color-red': true === question.incomplete }"
-                  ng-model="question.answer.formattedValue"
-                  ng-click="model.renderModel.selectDate( question, question.answer.value )"
-                  onkeydown="return false">
-                </input>
-                <input ng-switch-when="number"
-                  ng-attr-id="question{{ question.id }}"
-                  cn-ignore-mouse-wheel
-                  type="number"
-                  placeholder="{{ model.renderModel.getHotKey( question, null ) }}"
-                  class="form-control larger"
-                  ng-class="{ 'color-red': true === question.incomplete }"
-                  ng-model="question.answer.value"
-                  cn-change="model.renderModel.setAnswer( question, question.answer.value )"
-                  autocomplete="off">
-                </input>
-                <input ng-switch-when="string"
-                  ng-attr-id="question{{ question.id }}"
-                  cn-ignore-mouse-wheel
-                  type="text"
-                  placeholder="{{ model.renderModel.getHotKey( question, null ) }}"
-                  class="form-control larger"
-                  ng-class="{ 'color-red': true === question.incomplete }"
-                  ng-model="question.answer.value"
-                  cn-change="model.renderModel.setAnswer( question, question.answer.value )"
-                  autocomplete="off">
-                </input>
-                <textarea ng-switch-when="text"
-                  ng-attr-id="question{{ question.id }}"
-                  placeholder="{{ model.renderModel.getHotKey( question, null ) }}"
-                  class="form-control larger"
-                  ng-class="{ 'color-red': true === question.incomplete }"
-                  ng-model="question.answer.value"
-                  cn-change="model.renderModel.setAnswer( question, question.answer.value )"
-                  cn-elastic>
-                </textarea>
-                <div class="btn-group full-width"
-                     ng-if="'comment' != question.type && ( question.dkna_allowed || question.refuse_allowed )">
-                  <label class="btn btn-default larger"
-                         ng-if="question.dkna_allowed"
-                         ng-class="{
-                           'color-red': true === question.incomplete,
-                           'col-xs-6': question.refuse_allowed,
-                           'col-xs-12': !question.refuse_allowed
-                         }"
-                         style="text-align: left; font-style: italic; font-weight: normal; white-space: normal;"
-                         ng-model="question.answer.dkna"
-                         ng-click="model.renderModel.setAnswer( question, question.answer.dkna ? { dkna: true } : null )"
-                         uib-btn-checkbox>
-                    {{ model.renderModel.getHotKey( question, 'dkna' ) }}
-                    <i class="glyphicon" ng-class="question.answer.dkna ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
-                    {{ text( 'misc.dkna' ) }}
-                  </label>
-                  <label class="btn btn-default larger"
-                         ng-if="question.refuse_allowed"
-                         ng-class="{
-                           'color-red': true === question.incomplete,
-                           'col-xs-6': question.dkna_allowed,
-                           'col-xs-12': !question.dkna_allowed
-                         }"
-                         style="text-align: left; font-style: italic; font-weight: normal; white-space: normal"
-                         ng-model="question.answer.refuse"
-                         ng-click="model.renderModel.setAnswer( question, question.answer.refuse ? { refuse: true } : null )"
-                         uib-btn-checkbox>
-                    {{ model.renderModel.getHotKey( question, 'refuse' ) }}
-                    <i class="glyphicon" ng-class="question.answer.refuse ? 'glyphicon-check' : 'glyphicon-unchecked'"></i>
-                    {{ text( model.renderModel.showHidden ? 'misc.refuse' : 'misc.preferNotToAnswer' ) }}
-                  </label>
                 </div>
               </div>
             </div>
