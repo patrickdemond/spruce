@@ -1875,6 +1875,7 @@ class qnaire extends \cenozo\database\record
               'question_id' => $db_question->id,
               'type' => $db_question->type,
               'device' => is_null( $db_device ) ? NULL : $db_device->name,
+              'unit_list' => $db_question->unit_list,
               'minimum' => $db_question->minimum,
               'maximum' => $db_question->maximum,
               'module_precondition' => $db_module->precondition,
@@ -1927,6 +1928,7 @@ class qnaire extends \cenozo\database\record
                 'type' => $db_question->type,
                 'option_id' => $db_option->id,
                 'type' => $db_question->type,
+                'unit_list' => $db_option->unit_list,
                 'minimum' => $db_option->minimum,
                 'maximum' => $db_option->maximum,
                 'extra' => $db_option->extra,
@@ -4032,6 +4034,7 @@ class qnaire extends \cenozo\database\record
             'refuse_allowed' => $db_question->refuse_allowed,
             'device_name' => is_null( $db_device ) ? NULL : $db_device->name,
             'lookup_name' => is_null( $db_lookup ) ? NULL : $db_lookup->name,
+            'unit_list' => $db_question->unit_list,
             'minimum' => $db_question->minimum,
             'maximum' => $db_question->maximum,
             'default_answer' => $db_question->default_answer,
@@ -4065,6 +4068,7 @@ class qnaire extends \cenozo\database\record
               'exclusive' => $db_question_option->exclusive,
               'extra' => $db_question_option->extra,
               'multiple_answers' => $db_question_option->multiple_answers,
+              'unit_list' => $db_question_option->unit_list,
               'minimum' => $db_question_option->minimum,
               'maximum' => $db_question_option->maximum,
               'precondition' => $db_question_option->precondition,
@@ -4527,6 +4531,7 @@ class qnaire extends \cenozo\database\record
           $db_question->refuse_allowed = $question_object->refuse_allowed;
           if( !is_null( $db_device ) ) $db_question->device_id = $db_device->id;
           if( !is_null( $db_lookup ) ) $db_question->lookup_id = $db_lookup->id;
+          $db_question->unit_list = $question_object->unit_list;
           $db_question->minimum = $question_object->minimum;
           $db_question->maximum = $question_object->maximum;
           $db_question->default_answer = $question_object->default_answer;
@@ -4553,6 +4558,7 @@ class qnaire extends \cenozo\database\record
               $db_question_option->exclusive = $question_option_object->exclusive;
               $db_question_option->extra = $question_option_object->extra;
               $db_question_option->multiple_answers = $question_option_object->multiple_answers;
+              $db_question_option->unit_list = $question_option_object->unit_list;
               $db_question_option->minimum = $question_option_object->minimum;
               $db_question_option->maximum = $question_option_object->maximum;
               $db_question_option->precondition = $question_option_object->precondition;

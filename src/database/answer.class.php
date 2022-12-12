@@ -170,13 +170,14 @@ class answer extends \cenozo\database\record
 
     if( 'list' == $db_question->type )
     {
-      // get the list of all preconditions for all options belonging to this question
+      // get the list of all extra and preconditions for all options belonging to this question
       $question_option_sel = lib::create( 'database\select' );
       $question_option_sel->add_column( 'id' );
       $question_option_sel->add_column( 'precondition' );
-      $precondition_list = array();
+      $question_option_sel->add_column( 'extra' );
+      $option_list = array();
       foreach( $db_question->get_question_option_list( $question_option_sel ) as $question_option )
-        $precondition_list[$question_option['id']] = $question_option['precondition'];
+        $option_list[$question_option['id']] = $question_option;
 
       // make sure that any selected item with extra data has provided that data
       foreach( $value as $selected_option )
@@ -184,10 +185,24 @@ class answer extends \cenozo\database\record
         $selected_option_id = is_object( $selected_option ) ? $selected_option->id : $selected_option;
         if( is_object( $selected_option ) )
         {
-          if( $expression_manager->evaluate( $precondition_list[$selected_option_id] ) && (
+          $option = $option_list[$selected_option_id];
+          if( $expression_manager->evaluate( $option['precondition'] ) )
+          {
+            if(
               ( is_array( $selected_option->value ) && 0 == count( $selected_option->value ) ) ||
               is_null( $selected_option->value )
-          ) ) return false;
+            ) return false;
+
+            if(
+              'number with unit' == $option['extra'] && (
+                !is_object( $selected_option->value ) ||
+                !property_exists( $selected_option->value, 'value' ) ||
+                is_null( $selected_option->value->value ) ||
+                !property_exists( $selected_option->value, 'unit' ) ||
+                is_null( $selected_option->value->unit ) 
+              )
+            ) return false;
+          }
         }
       }
 
@@ -195,14 +210,16 @@ class answer extends \cenozo\database\record
       foreach( $value as $selected_option )
       {
         $selected_option_id = is_object( $selected_option ) ? $selected_option->id : $selected_option;
-        if( $expression_manager->evaluate( $precondition_list[$selected_option_id] ) )
+        $option = $option_list[$selected_option_id];
+        if( $expression_manager->evaluate( $option['precondition'] ) )
         {
           if( is_object( $selected_option ) )
           {
             if( is_array( $selected_option->value ) )
             {
               // make sure there is at least one option value
-              foreach( $selected_option->value as $selected_option_value ) if( !is_null( $selected_option_value ) ) return true;
+              foreach( $selected_option->value as $selected_option_value )
+                if( !is_null( $selected_option_value ) ) return true;
             }
             else if( !is_null( $selected_option->value ) ) return true;
           }
@@ -211,6 +228,13 @@ class answer extends \cenozo\database\record
       }
 
       return false;
+    }
+    else if( 'number with unit' == $db_question->type )
+    {
+      // make sure both the value and unit are filled out
+      if( !is_object( $value ) ||
+          !property_exists( $value, 'value' ) || is_null( $value->value ) ||
+          !property_exists( $value, 'unit' ) || is_null( $value->unit ) ) return false;
     }
 
     return true;

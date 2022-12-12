@@ -87,11 +87,19 @@ cenozoApp.defineModule({
         return "lookup" != model.viewModel.record.type ? true : "add";
       },
     });
+    module.addInput("", "unit_list", {
+      title: "Unit List",
+      type: "string",
+      help: 'Must be defined in JSON format.  For example:<br>\n["mg","lbs","%"]<br>\n{"MG":"mg","LBS":"lbs","PERCENT":"%"}<br>\n[{"MG":"mg"}, {"LBS":"lbs"}, {"PERCENT":"%"}]',
+      isExcluded: function ($state, model) {
+        return "number with unit" != model.viewModel.record.type ? true : "add";
+      },
+    });
     module.addInput("", "minimum", {
       title: "Minimum",
       type: "string",
       isExcluded: function ($state, model) {
-        return !["date", "number"].includes(model.viewModel.record.type)
+        return !["date", "number", "number with unit"].includes(model.viewModel.record.type)
           ? true
           : "add";
       },
@@ -101,7 +109,7 @@ cenozoApp.defineModule({
       title: "Maximum",
       type: "string",
       isExcluded: function ($state, model) {
-        return !["audio", "date", "number"].includes(
+        return !["audio", "date", "number", "number with unit"].includes(
           model.viewModel.record.type
         )
           ? true
@@ -217,10 +225,6 @@ cenozoApp.defineModule({
                 );
             },
 
-            onView: async function (force) {
-              await this.$$onView(force);
-            },
-
             onPatch: async function (data) {
               var proceed = true;
 
@@ -305,18 +309,20 @@ cenozoApp.defineModule({
                   object.record.type = object.backupRecord.type;
                   proceed = false;
                 }
-              } else if (
-                angular.isDefined(data.type) &&
-                !["device", "date", "number"].includes(object.record.type)
-              ) {
-                if (object.record.device_id) object.record.device_id = "";
-                if (object.record.lookup_id) object.record.lookup_id = "";
-                if (null != object.record.minimum) object.record.minimum = null;
-                if (null != object.record.maximum) object.record.maximum = null;
               }
 
               if (proceed) {
                 await object.$$onPatch(data);
+
+                if (angular.isDefined(data.type)) {
+                  if ("device" != object.record.type) object.record.device_id = null;
+                  if ("lookup" != object.record.type) object.record.lookup_id = null;
+                  if ("number with unit" != object.record.type) object.record.unit_list = null;
+                  if (!["date", "number","number with unit"].includes(object.record.type)) {
+                    object.record.minimum = null;
+                    object.record.maximum = null;
+                  }
+                }
 
                 if (removingOptions) {
                   // update the question option list since we may have deleted them

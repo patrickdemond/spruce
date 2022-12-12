@@ -452,7 +452,7 @@
                         <input ng-switch-when="date"
                           cn-ignore-mouse-wheel
                           type="text"
-                          id="option{{ option.id }}value{{ $index }}"
+                          ng-attr-id="option{{ option.id }}value{{ $index }}"
                           name="answerValue"
                           ng-class="{ 'color-red': true === question.incomplete || option.id === question.incomplete }"
                           ng-model="question.answer.optionList[option.id].formattedValueList[$index]"
@@ -463,17 +463,42 @@
                         <input ng-switch-when="number"
                           cn-ignore-mouse-wheel
                           type="number"
-                          id="option{{ option.id }}value{{ $index }}"
+                          ng-attr-id="option{{ option.id }}value{{ $index }}"
                           name="answerValue"
                           ng-class="{ 'color-red': true === question.incomplete || option.id === question.incomplete }"
                           ng-model="value"
                           cn-change="model.renderModel.setAnswerValue( question, option, $index, value )"
                           ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
                           class="form-control rounded-bottom-left rounded-bottom-right larger"></input>
+                        <div ng-switch-when="number with unit"
+                             ng-class="{'float-left': model.viewModel.record.tabulate}">
+                          <input
+                            ng-attr-id="option{{ option.id }}value{{ $index }}"
+                            cn-ignore-mouse-wheel
+                            type="number"
+                            class="form-control rounded-bottom-left rounded-bottom-right larger col-xs-6"
+                            style="width: 50%"
+                            ng-class="{ 'color-red': true === question.incomplete || option.id === question.incomplete }"
+                            ng-model="value.value"
+                            ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
+                            cn-change="model.renderModel.setAnswerValue( question, option, $index, value )"
+                            autocomplete="off">
+                          </input>
+                          <select
+                            ng-attr-id="option_unit{{ option.id }}value{{ $index }}"
+                            class="form-control rounded-bottom-left rounded-bottom-right larger col-xs-6"
+                            style="width: 50%"
+                            ng-class="{ 'color-red': true === question.incomplete || option.id === question.incomplete }"
+                            ng-model="value.unit"
+                            ng-options="item.value as item.name for item in option.unit_list"
+                            ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
+                            ng-change="model.renderModel.setAnswerValue( question, option, $index, value )">
+                          </select>
+                        </div>
                         <input ng-switch-when="string"
                           cn-ignore-mouse-wheel
                           type="string"
-                          id="option{{ option.id }}value{{ $index }}"
+                          ng-attr-id="option{{ option.id }}value{{ $index }}"
                           name="answerValue"
                           ng-class="{ 'color-red': true === question.incomplete || option.id === question.incomplete }"
                           ng-model="value"
@@ -482,7 +507,7 @@
                           class="form-control rounded-bottom-left rounded-bottom-right larger"></input>
                         <textarea ng-switch-when="text"
                           cn-elastic
-                          id="option{{ option.id }}value{{ $index }}"
+                          ng-attr-id="option{{ option.id }}value{{ $index }}"
                           name="answerValue"
                           ng-class="{ 'color-red': true === question.incomplete || option.id === question.incomplete }"
                           ng-model="value"
@@ -520,6 +545,35 @@
                     cn-change="model.renderModel.setAnswer( question, question.answer.value )"
                     autocomplete="off">
                   </input>
+                  <div ng-switch-when="number with unit"
+                       ng-class="{'float-left': model.viewModel.record.tabulate}">
+                    <input
+                      ng-attr-id="question{{ question.id }}"
+                      cn-ignore-mouse-wheel
+                      type="number"
+                      placeholder="{{ model.renderModel.getHotKey( question, null ) }}"
+                      class="form-control larger col-xs-6"
+                      style="width: 50%"
+                      ng-class="{ 'color-red': true === question.incomplete }"
+                      ng-model="question.answer.value"
+                      cn-change="model.renderModel.setAnswer(
+                        question,
+                        { value: question.answer.value, unit: question.answer.unit }
+                      )"
+                      autocomplete="off">
+                    </input>
+                    <select
+                      ng-attr-id="question_unit{{ question.id }}"
+                      class="form-control larger col-xs-6"
+                      style="width: 50%"
+                      ng-model="question.answer.unit"
+                      ng-options="item.value as item.name for item in question.unit_list"
+                      cn-change="model.renderModel.setAnswer(
+                        question,
+                        { value: question.answer.value, unit: question.answer.unit }
+                      )">
+                    </select>
+                  </div>
                   <input ng-switch-when="string"
                     ng-attr-id="question{{ question.id }}"
                     cn-ignore-mouse-wheel

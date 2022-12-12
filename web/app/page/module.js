@@ -441,6 +441,46 @@ cenozoApp.defineModule({
             return list;
           }
 
+          function isTooSmall(type, minimum, value) {
+            return (
+              null != minimum &&
+              null != value &&
+              (
+                (
+                  "number" == type &&
+                  !angular.isObject(value) &&
+                  value < minimum
+                ) || (
+                  "number with unit" == type &&
+                  angular.isObject(value) &&
+                  angular.isDefined(value.value) &&
+                  null != value.value &&
+                  value.value < minimum
+                )
+              )
+            );
+          }
+
+          function isTooLarge(type, maximum, value) {
+            return (
+              null != maximum &&
+              null != value &&
+              (
+                (
+                  "number" == type &&
+                  !angular.isObject(value) &&
+                  value > maximum
+                ) || (
+                  "number with unit" == type &&
+                  angular.isObject(value) &&
+                  angular.isDefined(value.value) &&
+                  null != value.value &&
+                  value.value > maximum
+                )
+              )
+            );
+          }
+
           async function focusElement(id) {
             // keep trying until the element exists (10 tries max)
             var promise = await $interval(
@@ -1230,6 +1270,7 @@ cenozoApp.defineModule({
                           "mandatory",
                           "dkna_allowed",
                           "refuse_allowed",
+                          "unit_list",
                           "minimum",
                           "maximum",
                           "precondition",
@@ -1340,6 +1381,7 @@ cenozoApp.defineModule({
                                   "exclusive",
                                   "extra",
                                   "multiple_answers",
+                                  "unit_list",
                                   "minimum",
                                   "maximum",
                                   "precondition",
@@ -1367,6 +1409,20 @@ cenozoApp.defineModule({
                                 this.evaluateDescription(option.rawPopups)
                               );
                             this.optionListById[option.id] = option;
+
+                            if ("number with unit" == option.extra) {
+                              // convert the unit_list property to an array used by the select element
+                              let unitList = [{value:null, name: this.text("misc.choose")}];
+                              const data = JSON.parse( option.unit_list );
+                              if (angular.isArray(data)) {
+                                unitList = unitList.concat( data.map(
+                                  d => ( angular.isObject(d) ? d : {value:d, name:d} )
+                                ) );
+                              } else if (angular.isObject(data)) {
+                                for( const key in data ) unitList.push( { value: key, name: data[key] } );
+                              }
+                              option.unit_list = unitList;
+                            }
                           });
                         })()
                       );
@@ -1400,6 +1456,16 @@ cenozoApp.defineModule({
                         "isLoading": false,
                       };
                       delete question.lookup_id;
+                    } else if ("number with unit" == question.type) {
+                      // convert the unit_list property to an array used by the select element
+                      let unitList = [{value:null, name: this.text("misc.choose")}];
+                      const data = JSON.parse( question.unit_list );
+                      if (angular.isArray(data)) {
+                        unitList = unitList.concat( data.map( d => ({value:d, name:d}) ) );
+                      } else if (angular.isObject(data)) {
+                        for( const key in data ) unitList.push( { value: key, name: data[key] } );
+                      }
+                      question.unit_list = unitList;
                     }
                     return list;
                   }, [])
@@ -1503,9 +1569,13 @@ cenozoApp.defineModule({
 
                     if (option.extra) {
                       if (null != optionIndex) {
-                        list[option.id].valueList = option.multiple_answers
-                          ? selectedOptions[optionIndex].value
-                          : [selectedOptions[optionIndex].value];
+                        let value = selectedOptions[optionIndex].value;
+
+                        if ("number with unit" == option.extra) {
+                          if( !angular.isObject( value ) ) value = { value: null, unit: null };
+                        }
+
+                        list[option.id].valueList = option.multiple_answers ? value : [value];
                         list[option.id].formattedValueList =
                           "date" != option.extra
                             ? null
@@ -1524,6 +1594,10 @@ cenozoApp.defineModule({
                     return list;
                   }, {}),
                 };
+              } else if ("number with unit" == question.type) {
+                question.answer = angular.isObject( question.value )
+                                ? question.value
+                                : { value: null, unit: null };
               } else if ("audio" == question.type) {
                 question.answer = {
                   value: question.value,
@@ -1608,15 +1682,26 @@ cenozoApp.defineModule({
                     : selectedOption;
 
                   if (angular.isObject(selectedOption)) {
-                    if (
-                      this.evaluate(preconditionListById[selectedOptionId]) &&
-                      ((angular.isArray(selectedOption.value) &&
-                        0 == selectedOption.value.length) ||
-                        null == selectedOption.value)
-                    )
-                      return null == selectedOption.value
-                        ? selectedOption.id
-                        : false;
+                    const extra = question.optionList.findByProperty( 'id', selectedOptionId ).extra;
+                    if ("number with unit" == extra) {
+                      // for number with unit both the value and unit need to be filled out
+                      if (!angular.isObject(selectedOption.value) ||
+                          angular.isUndefined(selectedOption.value.value) ||
+                          null == selectedOption.value.value ||
+                          angular.isUndefined(selectedOption.value.unit) ||
+                          null == selectedOption.value.unit) {
+                        return selectedOption.id;
+                      }
+                    } else {
+                      // for other extra types...
+                      if( null == selectedOption.value ) {
+                        // if the value is null then the extra value is missing
+                        return selectedOption.id;
+                      } else if( angular.isArray(selectedOption.value) && 0 == selectedOption.value.length ) {
+                        // and if there is an empty array then just mark the question as incomplete
+                        return false;
+                      }
+                    }
                   }
                 }
 
@@ -1644,6 +1729,13 @@ cenozoApp.defineModule({
                 }
 
                 return false;
+              } else if ("number with unit" == question.type) {
+                // both the value and unit must be filled out
+                return (
+                  angular.isObject(question.value) &&
+                  angular.isDefined(question.value.value) && null != question.value.value &&
+                  angular.isDefined(question.value.unit) && null != question.value.unit
+                );
               }
 
               return true;
@@ -1953,20 +2045,10 @@ cenozoApp.defineModule({
               if (angular.isUndefined(noCompleteCheck)) noCompleteCheck = false;
 
               // if the question's type is a number then make sure it falls within the min/max values
-              var minimum = this.evaluateLimit(question.minimum);
-              var maximum = this.evaluateLimit(question.maximum);
-              var tooSmall =
-                "number" == question.type &&
-                null != value &&
-                !angular.isObject(value) &&
-                null != minimum &&
-                value < minimum;
-              var tooLarge =
-                "number" == question.type &&
-                null != value &&
-                !angular.isObject(value) &&
-                null != maximum &&
-                value > maximum;
+              const minimum = this.evaluateLimit(question.minimum);
+              const maximum = this.evaluateLimit(question.maximum);
+              const tooSmall = isTooSmall(question.type, minimum, value);
+              const tooLarge = isTooLarge(question.type, maximum, value);
 
               await this.runQuery(
                 tooSmall || tooLarge
@@ -2294,18 +2376,10 @@ cenozoApp.defineModule({
               answerValue
             ) {
               // if the question option's extra type is a number then make sure it falls within the min/max values
-              var minimum = this.evaluateLimit(option.minimum);
-              var maximum = this.evaluateLimit(option.maximum);
-              var tooSmall =
-                "number" == option.extra &&
-                null != answerValue &&
-                null != minimum &&
-                answerValue < minimum;
-              var tooLarge =
-                "number" == option.extra &&
-                null != answerValue &&
-                null != maximum &&
-                answerValue > maximum;
+              const minimum = this.evaluateLimit(option.minimum);
+              const maximum = this.evaluateLimit(option.maximum);
+              const tooSmall = isTooSmall(option.extra, minimum, answerValue);
+              const tooLarge = isTooLarge(option.extra, maximum, answerValue);
 
               if (tooSmall || tooLarge) {
                 await this.runQuery(async () => {
@@ -2342,15 +2416,13 @@ cenozoApp.defineModule({
                   if (option.multiple_answers) {
                     if (
                       null == answerValue ||
-                      (angular.isString(answerValue) &&
-                        0 == answerValue.trim().length)
+                      ( angular.isString(answerValue) && 0 == answerValue.trim().length )
                     ) {
                       // if the value is blank then remove it
                       value[optionIndex].value.splice(valueIndex, 1);
                     } else {
                       // does the value already exist?
-                      var existingValueIndex =
-                        value[optionIndex].value.indexOf(answerValue);
+                      var existingValueIndex = value[optionIndex].value.indexOf(answerValue);
                       if (0 <= existingValueIndex) {
                         // don't add the answer, instead focus on the existing one and highlight it
                         document.getElementById(
@@ -2366,13 +2438,18 @@ cenozoApp.defineModule({
                       }
                     }
                   } else {
-                    value[optionIndex].value =
-                      "" !== answerValue ? answerValue : null;
-
-                    if ("date" == option.extra)
-                      question.answer.optionList[option.id].formattedValueList[
-                        valueIndex
-                      ] = formatDate(value[optionIndex].value);
+                    value[optionIndex].value = "" !== answerValue ? answerValue : null;
+                    if ("date" == option.extra) {
+                      question.answer.optionList[option.id].formattedValueList[valueIndex] =
+                        formatDate(value[optionIndex].value);
+                    } else if ("number with unit") {
+                      if (angular.isUndefined(value[optionIndex].value.value)) {
+                        value[optionIndex].value.value = null;
+                      }
+                      if (angular.isUndefined(value[optionIndex].value.unit)) {
+                        value[optionIndex].value.unit = null;
+                      }
+                    }
                   }
                 }
 
@@ -2631,10 +2708,10 @@ cenozoApp.defineModule({
                     await this.runQuery(async () => {
                       if (null === record.next_id) modal.show(); // show a wait dialog when submitting the qnaire
                       await CnHttpFactory.instance({
-                        path:
-                          "respondent/token=" +
-                          $state.params.token +
-                          "?action=proceed",
+                        path: "respondent/token=" + $state.params.token + "?action=proceed",
+                        onError: function (error) {
+                          console.log(error);
+                        }
                       }).patch();
                       await this.parentModel.reloadState(true);
                     });

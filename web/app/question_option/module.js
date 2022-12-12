@@ -24,11 +24,19 @@ cenozoApp.defineModule({
         return !model.viewModel.record.extra ? true : "add";
       },
     });
+    module.addInput("", "unit_list", {
+      title: "Unit List",
+      type: "string",
+      help: 'Must be defined in JSON format.  For example:<br>\n["mg","lbs","%"]<br>\n{"MG":"mg","LBS":"lbs","PERCENT":"%"}<br>\n[{"MG":"mg"}, {"LBS":"lbs"}, {"PERCENT":"%"}]',
+      isExcluded: function ($state, model) {
+        return "number with unit" != model.viewModel.record.extra ? true : "add";
+      },
+    });
     module.addInput("", "minimum", {
       title: "Minimum",
       type: "string",
       isExcluded: function ($state, model) {
-        return !["date", "number"].includes(model.viewModel.record.extra)
+        return !["date", "number", "number with unit"].includes(model.viewModel.record.extra)
           ? true
           : "add";
       },
@@ -37,7 +45,7 @@ cenozoApp.defineModule({
       title: "Maximum",
       type: "string",
       isExcluded: function ($state, model) {
-        return !["date", "number"].includes(model.viewModel.record.extra)
+        return !["date", "number", "number with unit"].includes(model.viewModel.record.extra)
           ? true
           : "add";
       },
@@ -182,7 +190,8 @@ cenozoApp.defineModule({
 
                 if (angular.isDefined(data.extra)) {
                   if (!data.extra) object.record.multiple_answers = false;
-                  if (!["date", "number"].includes(data.extra)) {
+                  if ("number with unit" != object.record.extra) object.record.unit_list = null;
+                  if (!["date", "number", "number with unit"].includes(data.extra)) {
                     object.record.minimum = "";
                     object.record.maximum = "";
                   }

@@ -782,6 +782,7 @@ cenozo.service("CnTranslationHelper", [
             en: "Prefer not to answer",
             fr: "Préfère ne pas répondre",
           },
+          choose: { en: "(choose)", fr: "(choisir)" },
           begin: { en: "Begin", fr: "Commencer" },
           next: { en: "Next", fr: "Suivant" },
           previous: { en: "Previous", fr: "Précédent" },
