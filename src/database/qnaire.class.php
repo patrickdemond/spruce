@@ -1860,8 +1860,12 @@ class qnaire extends \cenozo\database\record
           // only create a single column for this question if there are no options or they are all exclusive
           if( $all_exclusive )
           {
-            // get the base column name from the question's name
-            $column_name = $db_question->name;
+            // Get the base column name from the question's name
+            // Note that the "number with unit" question type needs two columns, one for the number and
+            // another for the unit.  We'll start by creating the number, and below the unit column.
+            $column_name = 'number with unit' == $db_question->type
+                         ? sprintf( '%s_NB', $db_question->name )
+                         : $db_question->name;
 
             // if it exists then add the qnaire's variable suffix to the question name
             if( !is_null( $this->variable_suffix ) )
@@ -1896,6 +1900,31 @@ class qnaire extends \cenozo\database\record
                   'name' => $db_option->name
                 );
               }
+            }
+
+            // now create the unit column if this is a "number with unit" question
+            if( 'number with unit' == $db_question->type )
+            {
+              $column_name = sprintf( '%s_UNIT', $db_question->name );
+
+              // if it exists then add the qnaire's variable suffix to the question name
+              if( !is_null( $this->variable_suffix ) )
+                $column_name = sprintf( '%s_%s', $column_name, $this->variable_suffix );
+
+              $column_list[$column_name] = array(
+                'module_name' => $db_module->name,
+                'page_name' => $db_page->name,
+                'question_name' => $db_question->name,
+                'question_id' => $db_question->id,
+                'type' => $db_question->type,
+                'device' => NULL,
+                'unit_list' => $db_question->unit_list,
+                'minimum' => $db_question->minimum,
+                'maximum' => $db_question->maximum,
+                'module_precondition' => $db_module->precondition,
+                'page_precondition' => $db_page->precondition,
+                'question_precondition' => $db_question->precondition
+              );
             }
           }
 
@@ -2233,6 +2262,11 @@ class qnaire extends \cenozo\database\record
                     }
                   }
                 }
+              }
+              else if( 'number with unit' == $column['type'] )
+              { // we need two variables, one for the number and another for the unit
+                // TODO: implement number vs unit
+                $row_value = $answer;
               }
               else // date, number, string and text are all just direct answers
               {

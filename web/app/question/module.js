@@ -92,11 +92,11 @@ cenozoApp.defineModule({
       type: "text",
       help:
         'Must be defined in JSON format.  For example:<br>\n' +
-        '[ "mg", "IU", ]<br>\n' +
+        '[ "mg", "IU" ]<br>\n' +
         'or<br>\n' +
-        '[ { "MG": "mg" }, { "IU": { "en": "IU", "fr": "U. I.", } }, ]<br>\n' +
+        '[ { "MG": "mg" }, { "IU": { "en": "IU", "fr": "U. I." } } ]<br>\n' +
         'or<br>\n' +
-        '{ "MG": "mg", "IU": { "en": "IU", "fr": "U. I." }, }',
+        '{ "MG": "mg", "IU": { "en": "IU", "fr": "U. I." } }',
       isExcluded: function ($state, model) {
         return "number with unit" != model.viewModel.record.type ? true : "add";
       },

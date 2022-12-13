@@ -907,8 +907,6 @@ cenozoApp.defineModule({
                 }
               });
 
-
-              console.log( unitListEnum );
               return unitListEnum;
             },
 
