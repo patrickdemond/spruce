@@ -490,7 +490,7 @@
                             style="width: 50%"
                             ng-class="{ 'color-red': true === question.incomplete || option.id === question.incomplete }"
                             ng-model="value.unit"
-                            ng-options="item.value as item.name for item in option.unit_list"
+                            ng-options="item.value as item.name for item in option.unitListEnum[model.renderModel.currentLanguage]"
                             ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
                             ng-change="model.renderModel.setAnswerValue( question, option, $index, value )">
                           </select>
@@ -567,7 +567,7 @@
                       class="form-control larger col-xs-6"
                       style="width: 50%"
                       ng-model="question.answer.unit"
-                      ng-options="item.value as item.name for item in question.unit_list"
+                      ng-options="item.value as item.name for item in question.unitListEnum[model.renderModel.currentLanguage]"
                       cn-change="model.renderModel.setAnswer(
                         question,
                         { value: question.answer.value, unit: question.answer.unit }

@@ -76,7 +76,7 @@ CREATE PROCEDURE patch_question()
 
     IF @test = 0 THEN
       ALTER TABLE question
-      ADD COLUMN unit_list VARCHAR(1023) NULL DEFAULT NULL
+      ADD COLUMN unit_list TEXT NULL DEFAULT NULL
       CHECK ( JSON_VALID( unit_list ) )
       AFTER lookup_id;
     END IF;

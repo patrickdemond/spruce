@@ -29,7 +29,7 @@ CREATE PROCEDURE patch_question_option()
 
     IF @test = 0 THEN
       ALTER TABLE question_option
-      ADD COLUMN unit_list VARCHAR(1023) NULL DEFAULT NULL
+      ADD COLUMN unit_list TEXT NULL DEFAULT NULL
       CHECK ( JSON_VALID( unit_list ) )
       AFTER multiple_answers;
     END IF;

@@ -858,6 +858,60 @@ cenozoApp.defineModule({
               return retVal;
             },
 
+            getUnitListEnum: function(unitList) {
+              function getName (input, lang) {
+                let nameObj = input;
+
+                // if a string is provided then convert it to an object
+                if( angular.isString( nameObj ) ) {
+                  nameObj = {};
+                  nameObj[baseLang] = input;
+                }
+
+                // get the name for the appropriate language, or the base language as a fall-back
+                return (
+                  angular.isDefined(nameObj[lang]) ? nameObj[lang] :
+                  angular.isDefined(nameObj[baseLang]) ? nameObj[baseLang] : null
+                );
+              }
+
+              // convert the unit_list property to an array used by the select element
+              const baseLang = this.parentModel.viewModel.record.base_language;
+              const data = JSON.parse(unitList);
+
+              let unitListEnum = {};
+              this.languageList.forEach( language => {
+                // first add the "choose" unselected option
+                unitListEnum[language.code] = [{
+                  value: null,
+                  name: CnTranslationHelper.lookupData.misc.choose[language.code]
+                }];
+
+                if (angular.isArray(data)) {
+                  data.forEach( item => {
+                    if (angular.isString(item)) {
+                      // if only a string is provided then use it as the key and value for all languages
+                      unitListEnum[language.code].push({ value: item, name: item });
+                    } else if (angular.isObject(item)) {
+                      for( const key in item ) {
+                        const name = getName(item[key], language.code);
+                        if (null != name) unitListEnum[language.code].push({ value: key, name: name });
+                      }
+                    }
+                  });
+                } else if (angular.isObject(data)) {
+                  for( const key in data ) {
+                    const name = getName(data[key], language.code);
+                    if (null != name) unitListEnum[language.code].push({ value: key, name: name });
+                  }
+                }
+              });
+
+
+              console.log( unitListEnum );
+              return unitListEnum;
+            },
+
             onReady: async function () {
               this.previewMode =
                 "respondent" != parentModel.getSubjectFromState();
@@ -1411,17 +1465,7 @@ cenozoApp.defineModule({
                             this.optionListById[option.id] = option;
 
                             if ("number with unit" == option.extra) {
-                              // convert the unit_list property to an array used by the select element
-                              let unitList = [{value:null, name: this.text("misc.choose")}];
-                              const data = JSON.parse( option.unit_list );
-                              if (angular.isArray(data)) {
-                                unitList = unitList.concat( data.map(
-                                  d => ( angular.isObject(d) ? d : {value:d, name:d} )
-                                ) );
-                              } else if (angular.isObject(data)) {
-                                for( const key in data ) unitList.push( { value: key, name: data[key] } );
-                              }
-                              option.unit_list = unitList;
+                              option.unitListEnum = this.getUnitListEnum( option.unit_list );
                             }
                           });
                         })()
@@ -1457,15 +1501,7 @@ cenozoApp.defineModule({
                       };
                       delete question.lookup_id;
                     } else if ("number with unit" == question.type) {
-                      // convert the unit_list property to an array used by the select element
-                      let unitList = [{value:null, name: this.text("misc.choose")}];
-                      const data = JSON.parse( question.unit_list );
-                      if (angular.isArray(data)) {
-                        unitList = unitList.concat( data.map( d => ({value:d, name:d}) ) );
-                      } else if (angular.isObject(data)) {
-                        for( const key in data ) unitList.push( { value: key, name: data[key] } );
-                      }
-                      question.unit_list = unitList;
+                      question.unitListEnum = this.getUnitListEnum( question.unit_list );
                     }
                     return list;
                   }, [])
@@ -2709,9 +2745,6 @@ cenozoApp.defineModule({
                       if (null === record.next_id) modal.show(); // show a wait dialog when submitting the qnaire
                       await CnHttpFactory.instance({
                         path: "respondent/token=" + $state.params.token + "?action=proceed",
-                        onError: function (error) {
-                          console.log(error);
-                        }
                       }).patch();
                       await this.parentModel.reloadState(true);
                     });
