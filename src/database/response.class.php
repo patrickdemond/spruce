@@ -731,20 +731,15 @@ class response extends \cenozo\database\has_rank
       // convert attributes
       foreach( $attribute_matches[0] as $match )
       {
+        // Note: embedded files also use @ as delimiters, so if the attribute isn't found it's likely
+        // an embedded file and not an attribute (so we can safely ignore it)
         $name = substr( $match, 1, -1 );
         $value = '';
         $db_attribute = $attribute_class_name::get_unique_record(
           array( 'qnaire_id', 'name' ),
           array( $db_qnaire->id, $name )
         );
-        if( is_null( $db_attribute ) )
-        {
-          if( $db_qnaire->debug )
-          {
-            log::warning( sprintf( 'Invalid attribute "%s" found while compiling description', $name ) );
-          }
-        }
-        else
+        if( !is_null( $db_attribute ) )
         {
           $db_response_attribute = $response_attribute_class_name::get_unique_record(
             array( 'response_id', 'attribute_id' ),

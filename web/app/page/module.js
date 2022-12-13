@@ -481,6 +481,59 @@ cenozoApp.defineModule({
             );
           }
 
+          function getUnitListEnum(unitList, languageList, baseLang) {
+            if (null == unitList) return null;
+
+            function getName (input, lang, baseLang) {
+              let nameObj = input;
+
+              // if a string is provided then convert it to an object
+              if (angular.isString(nameObj)) {
+                nameObj = {};
+                nameObj[baseLang] = input;
+              }
+
+              // get the name for the appropriate language, or the base language as a fall-back
+              return (
+                angular.isDefined(nameObj[lang]) ? nameObj[lang] :
+                angular.isDefined(nameObj[baseLang]) ? nameObj[baseLang] : null
+              );
+            }
+
+            // convert the unit_list property to an array used by the select element
+            const data = JSON.parse(unitList);
+
+            let unitListEnum = {};
+            languageList.forEach( language => {
+              // first add the "choose" unselected option
+              unitListEnum[language.code] = [{
+                value: null,
+                name: CnTranslationHelper.lookupData.misc.choose[language.code]
+              }];
+
+              if (angular.isArray(data)) {
+                data.forEach( item => {
+                  if (angular.isString(item)) {
+                    // if only a string is provided then use it as the key and value for all languages
+                    unitListEnum[language.code].push({ value: item, name: item });
+                  } else if (angular.isObject(item)) {
+                    for( const key in item ) {
+                      const name = getName(item[key], language.code, baseLang);
+                      if (null != name) unitListEnum[language.code].push({ value: key, name: name });
+                    }
+                  }
+                });
+              } else if (angular.isObject(data)) {
+                for( const key in data ) {
+                  const name = getName(data[key], language.code, baseLang);
+                  if (null != name) unitListEnum[language.code].push({ value: key, name: name });
+                }
+              }
+            });
+
+            return unitListEnum;
+          }
+
           async function focusElement(id) {
             // keep trying until the element exists (10 tries max)
             var promise = await $interval(
@@ -856,58 +909,6 @@ cenozoApp.defineModule({
               }
 
               return retVal;
-            },
-
-            getUnitListEnum: function(unitList) {
-              function getName (input, lang) {
-                let nameObj = input;
-
-                // if a string is provided then convert it to an object
-                if (angular.isString(nameObj)) {
-                  nameObj = {};
-                  nameObj[baseLang] = input;
-                }
-
-                // get the name for the appropriate language, or the base language as a fall-back
-                return (
-                  angular.isDefined(nameObj[lang]) ? nameObj[lang] :
-                  angular.isDefined(nameObj[baseLang]) ? nameObj[baseLang] : null
-                );
-              }
-
-              // convert the unit_list property to an array used by the select element
-              const baseLang = this.parentModel.viewModel.record.base_language;
-              const data = JSON.parse(unitList);
-
-              let unitListEnum = {};
-              this.languageList.forEach( language => {
-                // first add the "choose" unselected option
-                unitListEnum[language.code] = [{
-                  value: null,
-                  name: CnTranslationHelper.lookupData.misc.choose[language.code]
-                }];
-
-                if (angular.isArray(data)) {
-                  data.forEach( item => {
-                    if (angular.isString(item)) {
-                      // if only a string is provided then use it as the key and value for all languages
-                      unitListEnum[language.code].push({ value: item, name: item });
-                    } else if (angular.isObject(item)) {
-                      for( const key in item ) {
-                        const name = getName(item[key], language.code);
-                        if (null != name) unitListEnum[language.code].push({ value: key, name: name });
-                      }
-                    }
-                  });
-                } else if (angular.isObject(data)) {
-                  for( const key in data ) {
-                    const name = getName(data[key], language.code);
-                    if (null != name) unitListEnum[language.code].push({ value: key, name: name });
-                  }
-                }
-              });
-
-              return unitListEnum;
             },
 
             onReady: async function () {
@@ -1463,7 +1464,11 @@ cenozoApp.defineModule({
                             this.optionListById[option.id] = option;
 
                             if ("number with unit" == option.extra) {
-                              option.unitListEnum = this.getUnitListEnum( option.unit_list );
+                              option.unitListEnum = getUnitListEnum(
+                                option.unit_list,
+                                this.languageList,
+                                this.parentModel.viewModel.record.base_language
+                              );
                             }
                           });
                         })()
@@ -1499,7 +1504,11 @@ cenozoApp.defineModule({
                       };
                       delete question.lookup_id;
                     } else if ("number with unit" == question.type) {
-                      question.unitListEnum = this.getUnitListEnum( question.unit_list );
+                      question.unitListEnum = getUnitListEnum(
+                        question.unit_list,
+                        this.languageList,
+                        this.parentModel.viewModel.record.base_language
+                      );
                     }
                     return list;
                   }, [])

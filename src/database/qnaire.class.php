@@ -1863,9 +1863,10 @@ class qnaire extends \cenozo\database\record
             // Get the base column name from the question's name
             // Note that the "number with unit" question type needs two columns, one for the number and
             // another for the unit.  We'll start by creating the number, and below the unit column.
-            $column_name = 'number with unit' == $db_question->type
-                         ? sprintf( '%s_NB', $db_question->name )
-                         : $db_question->name;
+            $column_name = sprintf(
+              'number with unit' == $db_question->type ? '%s_NB' : '%s',
+              $db_question->name
+            );
 
             // if it exists then add the qnaire's variable suffix to the question name
             if( !is_null( $this->variable_suffix ) )
@@ -1879,7 +1880,6 @@ class qnaire extends \cenozo\database\record
               'question_id' => $db_question->id,
               'type' => $db_question->type,
               'device' => is_null( $db_device ) ? NULL : $db_device->name,
-              'unit_list' => $db_question->unit_list,
               'minimum' => $db_question->minimum,
               'maximum' => $db_question->maximum,
               'module_precondition' => $db_module->precondition,
@@ -1917,13 +1917,7 @@ class qnaire extends \cenozo\database\record
                 'question_name' => $db_question->name,
                 'question_id' => $db_question->id,
                 'type' => $db_question->type,
-                'device' => NULL,
-                'unit_list' => $db_question->unit_list,
-                'minimum' => $db_question->minimum,
-                'maximum' => $db_question->maximum,
-                'module_precondition' => $db_module->precondition,
-                'page_precondition' => $db_page->precondition,
-                'question_precondition' => $db_question->precondition
+                'unit_list' => $db_question->unit_list
               );
             }
           }
@@ -1935,6 +1929,14 @@ class qnaire extends \cenozo\database\record
             {
               // get the base column name from the question's name and add the option's name as a suffix
               $column_name = sprintf( '%s_%s', $db_question->name, $db_option->name );
+              // Get the base column name from the question's name and add the option's name as a suffix
+              // Note that the "number with unit" extra type needs two columns, one for the number and
+              // another for the unit.  We'll start by creating the number, and below the unit column.
+              $column_name = sprintf(
+                'number with unit' == $db_option->extra ? '%s_%s_NB' : '%s_%s',
+                $db_question->name,
+                $db_option->name
+              );
 
               // if it exists then add the qnaire's variable suffix to the question name
               if( !is_null( $this->variable_suffix ) )
@@ -1954,10 +1956,8 @@ class qnaire extends \cenozo\database\record
                 'question_name' => $db_question->name,
                 'question_option_name' => $db_option->name,
                 'question_id' => $db_question->id,
-                'type' => $db_question->type,
                 'option_id' => $db_option->id,
                 'type' => $db_question->type,
-                'unit_list' => $db_option->unit_list,
                 'minimum' => $db_option->minimum,
                 'maximum' => $db_option->maximum,
                 'extra' => $db_option->extra,
@@ -1986,6 +1986,29 @@ class qnaire extends \cenozo\database\record
                 {
                   $column_list[$column_name]['question_option_prompt'][$item['language']] = $item['value'];
                 }
+              }
+
+              // now create the unit column if this is a "number with unit" extra option
+              if( 'number with unit' == $db_option->extra )
+              {
+                $column_name = sprintf( '%s_%s_UNIT', $db_question->name, $db_option->name );
+
+                // if it exists then add the qnaire's variable suffix to the question name
+                if( !is_null( $this->variable_suffix ) )
+                  $column_name = sprintf( '%s_%s', $column_name, $this->variable_suffix );
+
+                $column_list[$column_name] = array(
+                  'module_name' => $db_module->name,
+                  'page_name' => $db_page->name,
+                  'question_name' => $db_question->name,
+                  'question_option_name' => $db_option->name,
+                  'question_id' => $db_question->id,
+                  'option_id' => $db_option->id,
+                  'type' => $db_question->type,
+                  'extra' => $db_option->extra,
+                  'all_exclusive' => $all_exclusive,
+                  'unit_list' => $db_question->unit_list
+                );
               }
             }
           }
@@ -2233,9 +2256,22 @@ class qnaire extends \cenozo\database\record
                       ( !is_object( $a ) && $column['option_id'] == $a ) )
                   {
                     // use the value if the option asks for extra data
-                    $row_value = is_null( $column['extra'] ) ? 'YES' : (
-                      property_exists( $a, 'value' ) ? $a->value : NULL
-                    );
+                    $row_value = 'YES';
+
+                    if( !is_null( $column['extra'] ) )
+                    {
+                      if( 'number with unit' == $column['extra'] )
+                      {
+                        $row_value = property_exists( $a, 'value' )
+                                   ? array_key_exists( 'unit_list', $column ) ? $a->value->unit : $a->value->value
+                                   : NULL;
+                      }
+                      else
+                      {
+                        $row_value = property_exists( $a, 'value' ) ? $a->value : NULL;
+                      }
+                    }
+
                     break;
                   }
                 }
@@ -2264,9 +2300,9 @@ class qnaire extends \cenozo\database\record
                 }
               }
               else if( 'number with unit' == $column['type'] )
-              { // we need two variables, one for the number and another for the unit
-                // TODO: implement number vs unit
-                $row_value = $answer;
+              {
+                // if the column has a unit_list property then this is the UNIT column, otherwise it's the value
+                $row_value = array_key_exists( 'unit_list', $column ) ? $answer->unit : $answer->value;
               }
               else // date, number, string and text are all just direct answers
               {

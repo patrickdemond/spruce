@@ -35,11 +35,15 @@ class query extends \cenozo\service\query
 
     parent::setup();
 
-    // generate a list of all visible questions and any answers
     $db_response = $this->get_parent_record();
     $db_language = $db_response->get_language();
     $db_qnaire = $db_response->get_respondent()->get_qnaire();
     $expression_manager = lib::create( 'business\expression_manager', $db_response );
+
+    // get a list of this qnaire's languages
+    $language_list = $db_qnaire->get_language_object_list();
+
+    // generate a list of all visible questions and any answers
     $this->data_list = array();
 
     $module_sel = lib::create( 'database\select' );
@@ -51,7 +55,7 @@ class query extends \cenozo\service\query
     $module_mod = lib::create( 'database\modifier' );
     $module_mod->where( 'qnaire_id', '=', $db_qnaire->id );
     $module_mod->order( 'module.rank' );
-    
+
     $join_mod = lib::create( 'database\modifier' );
     $join_mod->where( 'module.id', '=', 'module_description.module_id', false );
     $join_mod->where( 'module_description.language_id', '=', $db_language->id );
@@ -76,7 +80,7 @@ class query extends \cenozo\service\query
         $page_mod = lib::create( 'database\modifier' );
         $page_mod->where( 'module_id', '=', $module['id'] );
         $page_mod->order( 'page.rank' );
-        
+
         $join_mod = lib::create( 'database\modifier' );
         $join_mod->where( 'page.id', '=', 'page_description.page_id', false );
         $join_mod->where( 'page_description.language_id', '=', $db_language->id );
@@ -97,6 +101,7 @@ class query extends \cenozo\service\query
             $question_sel->add_column( 'id' );
             $question_sel->add_column( 'type' );
             $question_sel->add_column( 'precondition' );
+            $question_sel->add_column( 'unit_list' );
             $question_sel->add_table_column( 'question_description', 'value', 'description' );
             $question_sel->add_table_column( 'answer', 'value', 'answer' );
             $question_sel->add_column(
@@ -104,15 +109,22 @@ class query extends \cenozo\service\query
               'language_id',
               false
             );
+            $question_sel->add_column(
+              sprintf( 'IFNULL( language.code, %d )', $db_language->code ),
+              'language_code',
+              false
+            );
 
             $question_mod = lib::create( 'database\modifier' );
             $question_mod->where( 'page_id', '=', $page['id'] );
             $question_mod->order( 'question.rank' );
-            
+
             $join_mod = lib::create( 'database\modifier' );
             $join_mod->where( 'question.id', '=', 'answer.question_id', false );
             $join_mod->where( 'answer.response_id', '=', $db_response->id );
             $question_mod->join_modifier( 'answer', $join_mod, 'left' );
+
+            $question_mod->left_join( 'language', 'answer.language_id', 'language.id' );
 
             $join_mod = lib::create( 'database\modifier' );
             $join_mod->where( 'question.id', '=', 'question_description.question_id', false );
@@ -136,12 +148,38 @@ class query extends \cenozo\service\query
                 {
                   // Print in english if the base is french and the question language disagrees, or
                   // the base is english and the question language does not disagree (XOR)
-                  $english = ( 'fr' == $db_language xor $question['language_id'] == $db_language->id );
+                  $english = ( 'fr' == $db_language->code xor $question['language_id'] == $db_language->id );
                   if( is_object( $decoded_value ) )
                   {
-                    $print_answer = array_key_exists( 'dkna', $decoded_value ) && $decoded_value->dkna
-                                  ? ( $english ? 'Don\'t Know / No Answer' : 'Ne sais pas / pas de réponse' )
-                                  : ( $english ? 'Refused' : 'Refus' );
+                    if( property_exists( $decoded_value, 'dkna' ) && $decoded_value->dkna )
+                    {
+                      $print_answer = $english ? 'Don\'t Know / No Answer' : 'Ne sais pas / pas de réponse';
+                    }
+                    else if( property_exists( $decoded_value, 'refuse' ) && $decoded_value->refuse )
+                    {
+                      $print_answer = $english ? 'Refused' : 'Refus';
+                    }
+                    else if(
+                      property_exists( $decoded_value, 'value' ) &&
+                      property_exists( $decoded_value, 'unit' )
+                    ) {
+                      $unit_list_enum = util::get_unit_list_enum(
+                        $question['unit_list'],
+                        $language_list,
+                        $db_qnaire->get_base_language()->code
+                      );
+
+                      $lang = $question['language_code'];
+                      $unit = $decoded_value->unit;
+                      $print_answer = sprintf(
+                        '%s %s',
+                        $decoded_value->value,
+                        !is_null( $unit_list_enum ) &&
+                        array_key_exists( $lang, $unit_list_enum ) &&
+                        array_key_exists( $unit, $unit_list_enum[$lang] ) ?
+                          $unit_list_enum[$lang][$unit] : $unit
+                      );
+                    }
                   }
                   else if( 'boolean' == $question['type'] )
                   {
@@ -170,6 +208,7 @@ class query extends \cenozo\service\query
                   $option_sel->from( 'question_option' );
                   $option_sel->add_column( 'id' );
                   $option_sel->add_column( 'precondition' );
+                  $option_sel->add_column( 'unit_list' );
                   $option_sel->add_table_column( 'question_option_description', 'value', 'description' );
 
                   $option_mod = lib::create( 'database\modifier' );
@@ -177,7 +216,7 @@ class query extends \cenozo\service\query
                   $option_mod->order( 'question_option.rank' );
 
                   $join_mod = lib::create( 'database\modifier' );
-                  $join_mod->where( 
+                  $join_mod->where(
                     'question_option.id',
                     '=',
                     'question_option_description.question_option_id',
@@ -194,7 +233,7 @@ class query extends \cenozo\service\query
                       $option_data = array(
                         'description' => $db_response->compile_description( $option['description'], true )
                       );
-                      
+
                       if( is_array( $decoded_value ) )
                       {
                         foreach( $decoded_value as $item )
@@ -202,7 +241,33 @@ class query extends \cenozo\service\query
                           if( is_object( $item ) )
                           {
                             $option_data['selected'] = $option['id'] == $item->id;
-                            if( $option['id'] == $item->id ) $option_data['value'] = $item->value;
+                            if( $option['id'] == $item->id )
+                            {
+                              $option_data['value'] = $item->value;
+
+                              if(
+                                is_object( $item->value ) &&
+                                property_exists( $item->value, 'value' ) &&
+                                property_exists( $item->value, 'unit' )
+                              ) {
+                                $unit_list_enum = util::get_unit_list_enum(
+                                  $option['unit_list'],
+                                  $language_list,
+                                  $db_qnaire->get_base_language()->code
+                                );
+
+                                $lang = $question['language_code'];
+                                $unit = $item->value->unit;
+                                $option_data['value'] = sprintf(
+                                  '%s %s',
+                                  $item->value->value,
+                                  !is_null( $unit_list_enum ) &&
+                                  array_key_exists( $lang, $unit_list_enum ) &&
+                                  array_key_exists( $unit, $unit_list_enum[$lang] ) ?
+                                    $unit_list_enum[$lang][$unit] : $unit
+                                );
+                              }
+                            }
                           }
                           else
                           {
