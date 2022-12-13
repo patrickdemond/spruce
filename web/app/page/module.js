@@ -2161,7 +2161,9 @@ cenozoApp.defineModule({
                               if( value instanceof Blob ) valueForPatch = await cenozo.convertBlobToBase64(value);
                             } else if( "lookup" == question.type ) {
                               // lookups store the selected item's identifier as the answer
-                              if( null != value && angular.isObject( value ) ) valueForPatch = value.identifier;
+                              if( null != value &&
+                                  angular.isObject( value ) &&
+                                  angular.isDefined( value.identifier ) ) valueForPatch = value.identifier;
                             }
 
                             // first communicate with the server (if we're working with a respondent)
