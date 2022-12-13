@@ -863,7 +863,7 @@ cenozoApp.defineModule({
                 let nameObj = input;
 
                 // if a string is provided then convert it to an object
-                if( angular.isString( nameObj ) ) {
+                if (angular.isString(nameObj)) {
                   nameObj = {};
                   nameObj[baseLang] = input;
                 }
