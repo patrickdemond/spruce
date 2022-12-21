@@ -4180,6 +4180,7 @@ class qnaire extends \cenozo\database\record
       $stage_mod = lib::create( 'database\modifier' );
       $stage_mod->join( 'module', 'stage.first_module_id', 'first_module.id', '', 'first_module' );
       $stage_mod->join( 'module', 'stage.last_module_id', 'last_module.id', '', 'last_module' );
+      $stage_mod->order( 'stage.rank' );
       foreach( $this->get_stage_list( $stage_sel, $stage_mod ) as $item ) $qnaire_data['stage_list'][] = $item;
     }
 
@@ -4694,6 +4695,22 @@ class qnaire extends \cenozo\database\record
         $db_stage->last_module_id = $db_last_module->id;
         $db_stage->precondition = $stage->precondition;
         $db_stage->save();
+      }
+
+      // now delete any stages which weren't in the import object
+      foreach( $db_qnaire->get_stage_object_list() as $db_stage )
+      {
+        $found = false;
+        foreach( $qnaire_object->stage_list as $stage )
+        {
+          if( $stage->rank == $db_stage->rank )
+          {
+            $found = true;
+            break;
+          }
+        }
+
+        if( !$found ) $db_stage->delete();
       }
     }
 
