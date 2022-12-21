@@ -2048,7 +2048,9 @@ cenozoApp.defineModule({
                 proceed = response;
               }
 
-              if (proceed) question.audio.start();
+              if (proceed) {
+                await question.audio.start();
+              }
             },
 
             stopRecording: async function (question) {
