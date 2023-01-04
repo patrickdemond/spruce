@@ -12,7 +12,8 @@
             <input id="token"
                    name="token"
                    ng-model="model.token"
-                   cn-change="checkToken()"
+                   ng-change="checkToken()"
+                   cn-autofocus
                    class="form-control"
                    autocomplete="off"
                    required></input>
@@ -78,6 +79,6 @@
   </div>
   <div class="modal-footer bg-info">
     <button type="button" class="btn btn-default" ng-click="cancel()">Cancel</button>
-    <button type="submit" class="btn btn-primary">OK</button>
+    <button type="submit" class="btn btn-primary" ng-disabled="!form.$valid">OK</button>
   </div>
 </form>

@@ -3944,6 +3944,8 @@ class qnaire extends \cenozo\database\record
       'email_from_name' => $this->email_from_name,
       'email_from_address' => $this->email_from_address,
       'email_invitation' => $this->email_invitation,
+      'token_regex' => $this->token_regex,
+      'token_check' => $this->token_check,
       'description' => $this->description,
       'note' => $this->note,
       'language_list' => array(),
@@ -4465,6 +4467,8 @@ class qnaire extends \cenozo\database\record
     $db_qnaire->email_from_name = $qnaire_object->email_from_name;
     $db_qnaire->email_from_address = $qnaire_object->email_from_address;
     $db_qnaire->email_invitation = $qnaire_object->email_invitation;
+    $db_qnaire->token_regex = $qnaire_object->token_regex;
+    $db_qnaire->token_check = $qnaire_object->token_check;
     $db_qnaire->description = $qnaire_object->description;
     $db_qnaire->note = $qnaire_object->note;
     $db_qnaire->save();

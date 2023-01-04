@@ -1287,8 +1287,7 @@ cenozo.factory("CnQnairePartCloneFactory", [
 /* ############################################################################################## */
 cenozo.service("CnModalPreStageFactory", [
   "$uibModal",
-  "$window",
-  function ($uibModal, $window) {
+  function ($uibModal) {
     var object = function (params) {
       angular.extend(this, {
         title: "",
@@ -1322,43 +1321,43 @@ cenozo.service("CnModalPreStageFactory", [
             keyboard: !this.block,
             size: "lg",
             modalFade: true,
-            templateUrl: cenozoApp.getFileUrl(
-              "pine",
-              "modal-pre-stage.tpl.html"
-            ),
+            templateUrl: cenozoApp.getFileUrl("pine", "modal-pre-stage.tpl.html"),
             controller: [
               "$scope",
               "$uibModalInstance",
               function ($scope, $uibModalInstance) {
-                $scope.model = self;
-
-                ($scope.showDeviationComments = function () {
-                  if (!$scope.model.deviationTypeId) return false;
-                  var deviationType =
-                    $scope.model.deviationTypeList.findByProperty(
-                      "id",
-                      $scope.model.deviationTypeId
+                angular.extend($scope, {
+                  model: self,
+                  showDeviationComments: function () {
+                    if (!$scope.model.deviationTypeId) return false;
+                    var deviationType =
+                      $scope.model.deviationTypeList.findByProperty(
+                        "id",
+                        $scope.model.deviationTypeId
+                      );
+                    return (
+                      null != deviationType &&
+                      "other" == deviationType.name.toLowerCase()
                     );
-                  return (
-                    null != deviationType &&
-                    "other" == deviationType.name.toLowerCase()
-                  );
-                }),
-                  ($scope.checkToken = function () {
+                  },
+                  checkToken: function () {
+                    const element = $scope.form.token;
                     if ($scope.model.validToken == $scope.model.token) {
                       // the token is valid
-                      $scope.form.token.$invalid = false;
-                      $scope.form.token.$error.mismatch = false;
+                      element.$error.mismatch = false;
+                      element.$invalid = false;
+                      $scope.form.$valid = true;
                     } else {
                       if ($scope.model.token) {
-                        $scope.form.token.$error.mismatch = true;
-                        $scope.form.token.$invalid = true;
+                        element.$error.mismatch = true;
+                        element.$invalid = true;
+                        $scope.form.$valid = false;
                       } else {
-                        $scope.form.token.$error.mismatch = false;
+                        element.$error.mismatch = false;
                       }
                     }
-                  }),
-                  ($scope.ok = function () {
+                  },
+                  ok: function () {
                     if (!$scope.form.$valid) {
                       // dirty all relevant inputs so we can find the problem
                       $scope.form.token.$dirty = true;
@@ -1378,10 +1377,11 @@ cenozo.service("CnModalPreStageFactory", [
                       }
                       $uibModalInstance.close(response);
                     }
-                  }),
-                  ($scope.cancel = function () {
+                  },
+                  cancel: function () {
                     $uibModalInstance.close(null);
-                  });
+                  }
+                });
               },
             ],
           }).result;

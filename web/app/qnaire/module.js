@@ -251,6 +251,24 @@ cenozoApp.defineModule({
           return model.isRole("interviewer") || !model.isDetached();
         },
       },
+      token_regex: {
+        title: "Token Regex",
+        type: "string",
+        help:
+          "A regular expression that restricts the format of tokens when in stage-mode.",
+        isExcluded: function ($state, model) {
+          return model.isRole("interviewer") ? true : "add";
+        },
+      },
+      token_check: {
+        title: "Token Check",
+        type: "boolean",
+        help:
+          "Whether to check the token before launching a stage.",
+        isExcluded: function ($state, model) {
+          return model.isRole("interviewer") ? true : "add";
+        },
+      },
       description: {
         title: "Description",
         type: "text",
@@ -346,19 +364,13 @@ cenozoApp.defineModule({
               var mainInputGroup =
                 $scope.model.module.inputGroupList.findByProperty("title", "");
 
-              mainInputGroup.inputList.repeat_offset.isExcluded = function (
-                $state,
-                model
-              ) {
+              mainInputGroup.inputList.repeat_offset.isExcluded = function ($state, model) {
                 return !("add" == model.getActionFromState()
                   ? cnRecordAddScope.record.repeated
                   : model.viewModel.record.repeated);
               };
 
-              mainInputGroup.inputList.max_responses.isExcluded = function (
-                $state,
-                model
-              ) {
+              mainInputGroup.inputList.max_responses.isExcluded = function ($state, model) {
                 return !("add" == model.getActionFromState()
                   ? cnRecordAddScope.record.repeated
                   : model.viewModel.record.repeated);
@@ -555,6 +567,17 @@ cenozoApp.defineModule({
               var cnRecordViewScope = data;
               cnRecordViewScope.basePatchFn = cnRecordViewScope.patch;
 
+              var mainInputGroup =
+                $scope.model.module.inputGroupList.findByProperty("title", "");
+
+              mainInputGroup.inputList.token_regex.isExcluded = function ($state, model) {
+                return "add" == model.getActionFromState() || !model.viewModel.record.stages;
+              };
+
+              mainInputGroup.inputList.token_check.isExcluded = function ($state, model) {
+                return "add" == model.getActionFromState() || !model.viewModel.record.stages;
+              };
+
               cnRecordViewScope.patch = async function (property) {
                 var proceed = true;
 
@@ -575,7 +598,12 @@ cenozoApp.defineModule({
                   }
                 }
 
-                if (proceed) await cnRecordViewScope.basePatchFn(property);
+                if (proceed) {
+                  await cnRecordViewScope.basePatchFn(property);
+
+                  // after changing the state always reload the page (due to changes in UI)
+                  if ("stages" == property) $scope.model.reloadState(true);
+                }
               };
             });
           },

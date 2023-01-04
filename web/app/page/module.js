@@ -953,33 +953,19 @@ cenozoApp.defineModule({
                         { table: "participant", column: "last_name" },
                         { table: "qnaire", column: "stages" },
                         { table: "qnaire", column: "closed" },
-                        {
-                          table: "qnaire",
-                          column: "name",
-                          alias: "qnaire_name",
-                        },
-                        {
-                          table: "response",
-                          column: "id",
-                          alias: "response_id",
-                        },
+                        { table: "qnaire", column: "name", alias: "qnaire_name", },
+                        { table: "qnaire", column: "token_regex", },
+                        { table: "qnaire", column: "token_check", },
+                        { table: "response", column: "id", alias: "response_id", },
                         { table: "response", column: "checked_in" },
                         { table: "response", column: "page_id" },
                         { table: "response", column: "stage_selection" },
                         { table: "response", column: "submitted" },
                         { table: "response", column: "comments" },
-                        {
-                          table: "response_stage",
-                          column: "id",
-                          alias: "response_stage_id",
-                        },
+                        { table: "response_stage", column: "id", alias: "response_stage_id", },
                         { table: "response_stage", column: "stage_id" },
                         { table: "participant", column: "uid" },
-                        {
-                          table: "language",
-                          column: "code",
-                          alias: "base_language",
-                        },
+                        { table: "language", column: "code", alias: "base_language", },
                       ],
                     },
                   },
@@ -2673,16 +2659,17 @@ cenozoApp.defineModule({
                   title: responseStage.name + ": " + operationName.ucWords(),
                   warning: warning,
                   deviationTypeList: deviation
-                    ? this.deviationTypeList.filter(
-                        (dt) => deviation == dt.type
-                      )
+                    ? this.deviationTypeList.filter((dt) => deviation == dt.type)
                     : null,
                   validToken: $state.params.token,
+                  // if we're not checking the token then set it now so the user doesn't have to
+                  token: this.data.token_check ? null : $state.params.token,
                   deviationTypeId: responseStage.deviation_type_id,
                   deviationComments: responseStage.deviation_comments,
                   comments: responseStage.comments,
                 }).show();
 
+                console.log( response );
                 if (null != response) {
                   patchData = response;
                   proceed = true;
