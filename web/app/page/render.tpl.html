@@ -101,9 +101,10 @@
                   <input
                     id="token"
                     type="text"
-                    placeholder="(Scan the interview barcode here)"
+                    placeholder="(Scan or enter the interview barcode/ID here)"
                     class="form-control"
                     ng-model="model.renderModel.data.scanned_token"
+                    cn-change="model.renderModel.checkToken()"
                     ng-readonly="model.renderModel.data.token == model.renderModel.data.scanned_token"
                     autocomplete="off">
                   </input>

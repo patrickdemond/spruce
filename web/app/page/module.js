@@ -641,6 +641,35 @@ cenozoApp.defineModule({
               }
             },
 
+            checkToken: function () {
+              // only check the regex if the token has been provided
+              if(this.data.scanned_token && this.data.token_regex) {
+                try {
+                  const re = new RegExp(this.data.token_regex);
+                  if(!re.test(this.data.scanned_token)) {
+                    CnModalMessageFactory.instance({
+                      title: "Invalid Token Format",
+                      message:
+                        'The token you have provided, "' + this.data.scanned_token +
+                        '", does not match the correct format.  Please check that you have entered it correctly.',
+                      error: true,
+                    }).show();
+                    this.data.scanned_token = null;
+                  }
+                } catch(err) {
+                  if (this.data.debug) {
+                    CnModalMessageFactory.instance({
+                      title: "Invalid Token Regex",
+                      message:
+                        'WARNING: The questionnaire\'s token regex, "' + this.data.token_regex +
+                        '", is not a valid regular expression so it will be ignored.',
+                      error: true,
+                    }).show();
+                  }
+                }
+              }
+            },
+
             reopen: async function () {
               await CnHttpFactory.instance({
                 path:
@@ -951,6 +980,7 @@ cenozoApp.defineModule({
                         "closed_list",
                         { table: "participant", column: "first_name" },
                         { table: "participant", column: "last_name" },
+                        { table: "qnaire", column: "debug" },
                         { table: "qnaire", column: "stages" },
                         { table: "qnaire", column: "closed" },
                         { table: "qnaire", column: "name", alias: "qnaire_name", },
@@ -2669,7 +2699,6 @@ cenozoApp.defineModule({
                   comments: responseStage.comments,
                 }).show();
 
-                console.log( response );
                 if (null != response) {
                   patchData = response;
                   proceed = true;
