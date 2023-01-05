@@ -82,15 +82,16 @@ class module extends base_qnaire_part
    * This function will return the next module whose precondition matches the given response, not necessarily the
    * next module in the qnaire
    * @param database\response $db_response
+   * @param boolean $include_current Test the current module, otherwise start with the next one
    * @return database\module
    */
-  public function get_next_for_response( $db_response = NULL )
+  public function get_next_for_response( $db_response, $include_current = false )
   {
     $answer_class_name = lib::get_class_name( 'database\answer' );
     $expression_manager = lib::create( 'business\expression_manager', $db_response );
 
     // start by getting the module one rank higher than the current
-    $db_next_module = $this->get_next();
+    $db_next_module = $include_current ? $this : $this->get_next();
 
     // if there is a next module then make sure to test its precondition if a response is included in the request
     if( !is_null( $db_next_module ) && !is_null( $db_next_module->precondition ) )
@@ -120,7 +121,7 @@ class module extends base_qnaire_part
       }
       catch( \cenozo\exception\runtime $e )
       {
-        if( is_null( $db_response ) || $db_response->get_qnaire()->debug )
+        if( $db_response->get_qnaire()->debug )
           throw lib::create( 'exception\notice', $e->get_raw_message(), __METHOD__ );
 
         // if we're not in debug mode then log it and assume the precondition failed

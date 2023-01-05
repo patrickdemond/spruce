@@ -68,6 +68,27 @@ class stage extends \cenozo\database\has_rank
   }
 
   /**
+   * Returns the stage's first module for a response
+   * 
+   * @param database\response $db_response
+   * @return database\module
+   */
+  public function get_first_module_for_response( $db_response )
+  {
+    // start by getting the first module
+    $db_first_module = $this->get_first_module();
+    if( is_null( $db_first_module ) ) return NULL;
+
+    // Get the first module whose precondition meets the response (starting by testing the first)
+    $db_module = $db_first_module->get_next_for_response( $db_response, true );
+
+    // It's possible there is no next module, or the module doesn't belong to this stage
+    if( is_null( $db_module ) || $this->id != $db_module->get_stage()->id ) return NULL;
+
+    return $db_module;
+  }
+
+  /**
    * Returns the total number of pages in the stage
    * @return integer
    */

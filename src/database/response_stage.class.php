@@ -92,10 +92,12 @@ class response_stage extends \cenozo\database\record
    */
   public function launch()
   {
+    $db_response = $this->get_response();
+
     if( is_null( $this->page_id ) )
     {
-      $db_module = $this->get_stage()->get_first_module();
-      $this->page_id = $db_module->get_first_page()->id;
+      $db_module = $this->get_stage()->get_first_module_for_response( $db_response );
+      if( !is_null( $db_module ) ) $this->page_id = $db_module->get_first_page()->id;
 
       // if we're re-launching the stage then remove the end datetime
       if( 'completed' == $this->status ) $this->end_datetime = NULL;
@@ -105,7 +107,6 @@ class response_stage extends \cenozo\database\record
       $this->save();
     }
 
-    $db_response = $this->get_response();
     $db_response->stage_selection = false;
     $db_response->page_id = $this->page_id;
     $db_response->save();
