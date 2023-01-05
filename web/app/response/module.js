@@ -200,7 +200,8 @@ cenozoApp.defineModule({
       "CnHttpFactory",
       "CnTranslationHelper",
       "$state",
-      function (CnHttpFactory, CnTranslationHelper, $state) {
+      "$sce",
+      function (CnHttpFactory, CnTranslationHelper, $state, $sce) {
         var object = function (parentModel) {
           angular.extend(this, {
             parentModel: parentModel,
@@ -260,6 +261,18 @@ cenozoApp.defineModule({
                 }).query();
 
                 this.dataList = response.data;
+                this.dataList.forEach( module => {
+                  module.page_list.forEach( page => {
+                    page.question_list.forEach( question => {
+                      if( "audio" == question.type ) {
+                        question.answer = $sce.trustAsHtml(
+                          '<audio controls class="full-width" style="height: 40px;" src="' +
+                          question.answer + '"></audio>'
+                        );
+                      }
+                    })
+                  })
+                });
               } finally {
                 this.isDataLoading = false;
               }

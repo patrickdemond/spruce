@@ -7,14 +7,9 @@
       <div class="container-fluid vertical-spacer" ng-repeat="question in page.question_list">
         <div ng-if="question.description">
           <span ng-bind-html="question.description"></span>
-          <strong ng-if="!['audio','comment','device','list'].includes( question.type )"
-                  style="padding: 0 4px; outline: black solid 1px;"
+          <strong ng-if="!['comment','device','list'].includes( question.type )"
+                  ng-style="'audio' == question.type ? null : { 'padding': '0 4px', 'outline': 'black solid 1px' }"
                   ng-bind-html="null === question.answer ? '(empty)' : question.answer"></strong>
-          <div ng-if="'audio' == question.type" class="container-fluid">
-            <audio ng-src="{{ question.answer }}"
-                   class="full-width"
-                   controls></audio>
-          </div>
           <div ng-if="'list' == question.type" class="container-fluid" ng-repeat="option in question.option_list">
             <div ng-if="option.description">
               <strong>{{ option.selected ? "&#x2611;" : "&#x25a2;" }}</strong>
