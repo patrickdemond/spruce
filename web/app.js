@@ -1294,6 +1294,7 @@ cenozo.service("CnModalPreStageFactory", [
         deviationTypeList: null,
         validToken: null,
         token: null,
+        tokenReadOnly: false,
         deviationTypeId: null,
         deviationComments: null,
         comments: null,

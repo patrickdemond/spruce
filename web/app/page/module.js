@@ -2694,6 +2694,7 @@ cenozoApp.defineModule({
                   validToken: $state.params.token,
                   // if we're not checking the token then set it now so the user doesn't have to
                   token: this.data.token_check ? null : $state.params.token,
+                  tokenReadOnly: !this.data.token_check,
                   deviationTypeId: responseStage.deviation_type_id,
                   deviationComments: responseStage.deviation_comments,
                   comments: responseStage.comments,
