@@ -1540,6 +1540,11 @@ cenozoApp.defineModule({
                     this.evaluateDescription(question.rawPopups)
                   );
                   this.convertValueToModel(question);
+                  if ('audio' == question.type) {
+                    question.maximumAsTime = question.maximum
+                                           ? moment.utc(question.maximum*1000).format("mm:ss")
+                                           : null;
+                  }
                 });
 
                 // sort active attribute and make a unique list
