@@ -410,9 +410,9 @@
                         typeahead-editable="false"
                         typeahead-on-select="model.renderModel.setAnswer( question, $item )"
                         typeahead-min-length="3"
-                        cn-change="!question.answer.formattedValue && model.renderModel.setAnswer( question, null )"
-                        class="form-control"
+                        cn-change="model.renderModel.typeaheadChanged( question )"
                         ng-class="{ 'loading-small': question.lookup.isLoading }"
+                        class="form-control"
                         type="text"
                         placeholder="(search possible values)"
                         autocomplete="off"></input>

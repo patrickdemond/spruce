@@ -1690,6 +1690,9 @@ cenozoApp.defineModule({
                       path: "lookup_item/lookup_id=" + question.lookup.id + ";identifier=" + question.value
                     }).get();
                     question.answer.formattedValue = response.data.identifier + ": " + response.data.description;
+
+                    // track the formatted value (it gets used if the user backs out of a change)
+                    question.answer.backupFormattedValue = question.answer.formattedValue;
                   }
                   setFormattedValue( question );
                 } else {
@@ -1698,6 +1701,9 @@ cenozoApp.defineModule({
                     formattedValue: null,
                   };
                 }
+
+                // track the formatted value (it gets used if the user backs out of a change)
+                question.answer.backupFormattedValue = question.answer.formattedValue;
               } else {
                 question.answer = {
                   value:
@@ -2107,7 +2113,23 @@ cenozoApp.defineModule({
               }
             },
 
+            typeaheadChanged: function( question ) {
+              // don't do anything if setAnswer is in progress
+              if(!this.setAnswerInProgress) {
+                if(null === question.answer.formattedValue) {
+                  // the formatted value will be null if the user cleared the typeahead
+                  this.setAnswer(question, null);
+                } else {
+                  // If the formattedValue isn't null (it may be undefined) then put back the backup value.
+                  // If we don't do this then the UI may show a different value to what's on the server.
+                  question.answer.formattedValue = question.answer.backupFormattedValue;
+                }
+              }
+            },
+
+            setAnswerInProgress: false, // track whether setAnswer is in progress
             setAnswer: async function (question, value, noCompleteCheck) {
+              this.setAnswerInProgress = true;
               if (angular.isUndefined(noCompleteCheck)) noCompleteCheck = false;
 
               // if the question's type is a number then make sure it falls within the min/max values
@@ -2116,194 +2138,162 @@ cenozoApp.defineModule({
               const tooSmall = isTooSmall(question.type, minimum, value);
               const tooLarge = isTooLarge(question.type, maximum, value);
 
-              await this.runQuery(
-                tooSmall || tooLarge
-                  ? // When the number is out of bounds then alert the user
-                    async () => {
-                      await CnModalMessageFactory.instance({
-                        title: this.text(
-                          tooSmall ? "misc.minimumTitle" : "misc.maximumTitle"
-                        ),
-                        message:
-                          this.text("misc.limitMessage") +
-                          " " +
-                          (null == maximum
-                            ? this.text("misc.equalOrGreater") +
-                              " " +
-                              minimum +
-                              "."
-                            : null == minimum
-                            ? this.text("misc.equalOrLess") +
-                              " " +
-                              maximum +
-                              "."
-                            : [
-                                this.text("misc.between"),
-                                minimum,
-                                this.text("misc.and"),
-                                maximum + ".",
-                              ].join(" ")),
-                      }).show();
+              if (tooSmall || tooLarge) {
+                // When the number is out of bounds then alert the user
+                await this.runQuery( async () => {
+                  await CnModalMessageFactory.instance({
+                    title: this.text(tooSmall ? "misc.minimumTitle" : "misc.maximumTitle"),
+                    message: this.text("misc.limitMessage") + " " + (
+                      null == maximum ?
+                      this.text("misc.equalOrGreater") + " " + minimum + "." :
+                      null == minimum ?
+                      this.text("misc.equalOrLess") + " " + maximum + "." :
+                      [ this.text("misc.between"), minimum, this.text("misc.and"), maximum + ".", ].join(" ")
+                    ),
+                  }).show();
 
-                      question.value = angular.copy(question.backupValue);
+                  question.value = angular.copy(question.backupValue);
+                  this.convertValueToModel(question);
+                });
+              } else {
+                // No out of bounds detected, so proceed with setting the value
+                await this.runQuery( async () => {
+                  // Note that we need to treat entering text values a bit differently than other question types.
+                  // Some participants may wish to fill in a value after they have already selected dkna or refuse.
+                  // When entering their text they may then immediatly click the selected dkna/refuse button to
+                  // cancel its selection.  To prevent this button press from immediately clearing their text anwer
+                  // we must briefly ignore the answer for this question being set to null.
+                  if ("text" == question.type) {
+                    if (angular.isString(value)) {
+                      var ignore = null;
+                      if (isDkna(question.value)) ignore = "ignoreDkna";
+                      else if (isRefuse(question.value)) ignore = "ignoreRefuse";
+
+                      if (null != ignore) question[ignore] = true;
+                      $timeout(() => { if (null != ignore) delete question[ignore]; }, 500);
+                    } else if (
+                      ( question.ignoreDkna && (null === value || isDkna(value)) ) ||
+                      ( question.ignoreRefuse && (null === value || isRefuse(value)) )
+                    ) {
+                      // we may have tried setting dkna or refuse when it should be ignored, so change it in the model
                       this.convertValueToModel(question);
+                      return;
                     }
-                  : // No out of bounds detected, so proceed with setting the value
-                    async () => {
-                      var proceed = true;
+                  }
 
-                      // Note that we need to treat entering text values a bit differently than other question types.
-                      // Some participants may wish to fill in a value after they have already selected dkna or refuse.
-                      // When entering their text they may then immediatly click the selected dkna/refuse button to
-                      // cancel its selection.  To prevent this button press from immediately clearing their text anwer
-                      // we must briefly ignore the answer for this question being set to null.
-                      if ("text" == question.type) {
-                        if (angular.isString(value)) {
-                          var ignore = null;
-                          if (isDkna(question.value)) ignore = "ignoreDkna";
-                          else if (isRefuse(question.value))
-                            ignore = "ignoreRefuse";
-                          if (null != ignore) {
-                            question[ignore] = true;
-                          }
-                          $timeout(() => {
-                            if (null != ignore) delete question[ignore];
-                          }, 500);
-                        } else if (
-                          (question.ignoreDkna &&
-                            (null === value || isDkna(value))) ||
-                          (question.ignoreRefuse &&
-                            (null === value || isRefuse(value)))
-                        ) {
-                          // we may have tried setting dkna or refuse when it should be ignored, so change it in the model
-                          this.convertValueToModel(question);
-                          proceed = false;
-                        }
+                  try {
+                    this.working = true;
+                    if ("" === value) value = null;
+
+                    if (!this.previewMode) {
+                      var valueForPatch = value;
+                      if( "audio" == question.type ) {
+                        // audio blobs need to be converted to base64 strings before sending to the server
+                        if( value instanceof Blob ) valueForPatch = await cenozo.convertBlobToBase64(value);
+                      } else if( "lookup" == question.type ) {
+                        // lookups store the selected item's identifier as the answer
+                        if(null != value && angular.isObject( value ) && angular.isDefined( value.identifier ))
+                          valueForPatch = value.identifier;
                       }
 
-                      if (proceed) {
-                        try {
-                          this.working = true;
-                          if ("" === value) value = null;
+                      // first communicate with the server (if we're working with a respondent)
+                      var self = this;
+                      await CnHttpFactory.instance({
+                        path: "answer/" + question.answer_id,
+                        data: {
+                          value: angular.toJson(valueForPatch),
+                          alternate_id: this.alternateId,
+                        },
+                        onError: function (error) {
+                          question.value = angular.copy(
+                            question.backupValue
+                          );
+                          self.convertValueToModel(question);
+                        },
+                      }).patch();
+                    }
 
-                          if (!this.previewMode) {
-                            var valueForPatch = value;
-                            if( "audio" == question.type ) {
-                              // audio blobs need to be converted to base64 strings before sending to the server
-                              if( value instanceof Blob ) valueForPatch = await cenozo.convertBlobToBase64(value);
-                            } else if( "lookup" == question.type ) {
-                              // lookups store the selected item's identifier as the answer
-                              if( null != value &&
-                                  angular.isObject( value ) &&
-                                  angular.isDefined( value.identifier ) ) valueForPatch = value.identifier;
-                            }
+                    question.value = value;
+                    question.backupValue = angular.copy(question.value);
+                    this.convertValueToModel(question);
 
-                            // first communicate with the server (if we're working with a respondent)
-                            var self = this;
-                            await CnHttpFactory.instance({
-                              path: "answer/" + question.answer_id,
-                              data: {
-                                value: angular.toJson(valueForPatch),
-                                alternate_id: this.alternateId,
-                              },
-                              onError: function (error) {
-                                question.value = angular.copy(
-                                  question.backupValue
-                                );
-                                self.convertValueToModel(question);
-                              },
-                            }).patch();
-                          }
+                    // now blank out answers to questions which are no longer visible
+                    // (this is done automatically on the server side)
+                    this.questionList.forEach((q) => {
+                      if (!this.evaluate(q.precondition)) {
+                        if (null != q.value) {
+                          q.value = null;
+                          this.convertValueToModel(q);
+                        }
+                      } else {
+                        // re-evaluate descriptions as they may have changed based on the new answer
+                        q.prompts = CnTranslationHelper.parseDescriptions(
+                          this.evaluateDescription(q.rawPrompts)
+                        );
+                        q.popups = CnTranslationHelper.parseDescriptions(
+                          this.evaluateDescription(q.rawPopups)
+                        );
 
-                          question.value = value;
-                          question.backupValue = angular.copy(question.value);
-                          this.convertValueToModel(question);
+                        if ("list" == q.type) {
+                          q.optionList.forEach((o) => {
+                            o.prompts = CnTranslationHelper.parseDescriptions(
+                              this.evaluateDescription(o.rawPrompts)
+                            );
+                            o.popups = CnTranslationHelper.parseDescriptions(
+                              this.evaluateDescription(o.rawPopups)
+                            );
+                          });
+                        }
 
-                          // now blank out answers to questions which are no longer visible
-                          // (this is done automatically on the server side)
-                          this.questionList.forEach((q) => {
-                            if (!this.evaluate(q.precondition)) {
-                              if (null != q.value) {
-                                q.value = null;
-                                this.convertValueToModel(q);
-                              }
-                            } else {
-                              // re-evaluate descriptions as they may have changed based on the new answer
-                              q.prompts = CnTranslationHelper.parseDescriptions(
-                                this.evaluateDescription(q.rawPrompts)
-                              );
-                              q.popups = CnTranslationHelper.parseDescriptions(
-                                this.evaluateDescription(q.rawPopups)
-                              );
+                        if ("list" == q.type) {
+                          q.optionList.forEach((o) => {
+                            o.prompts = CnTranslationHelper.parseDescriptions(
+                              this.evaluateDescription(o.rawPrompts)
+                            );
+                            o.popups = CnTranslationHelper.parseDescriptions(
+                              this.evaluateDescription(o.rawPopups)
+                            );
+                          });
+                        }
 
-                              if ("list" == q.type) {
-                                q.optionList.forEach((o) => {
-                                  o.prompts =
-                                    CnTranslationHelper.parseDescriptions(
-                                      this.evaluateDescription(o.rawPrompts)
-                                    );
-                                  o.popups =
-                                    CnTranslationHelper.parseDescriptions(
-                                      this.evaluateDescription(o.rawPopups)
-                                    );
-                                });
-                              }
-
-                              if ("list" == q.type) {
-                                q.optionList.forEach((o) => {
-                                  o.prompts =
-                                    CnTranslationHelper.parseDescriptions(
-                                      this.evaluateDescription(o.rawPrompts)
-                                    );
-                                  o.popups =
-                                    CnTranslationHelper.parseDescriptions(
-                                      this.evaluateDescription(o.rawPopups)
-                                    );
-                                });
-                              }
-
-                              // q is visible, now check its options (assuming we haven't selected dkna/refused)
-                              if (
-                                "list" == q.type &&
-                                !isDknaOrRefuse(q.value)
-                              ) {
-                                var visibleOptionList =
-                                  this.getVisibleOptionList(q);
-                                q.optionList.forEach((o) => {
-                                  if (
-                                    null ==
-                                    visibleOptionList.findByProperty("id", o.id)
-                                  ) {
-                                    // o isn't visible so make sure it isn't selected
-                                    if (angular.isArray(q.value)) {
-                                      var i = searchOptionList(q.value, o.id);
-                                      if (null != i) {
-                                        q.value.splice(i, 1);
-                                        if (0 == q.value.length) q.value = null;
-                                        this.convertValueToModel(q);
-                                      }
-                                    }
-                                  }
-                                });
+                        // q is visible, now check its options (assuming we haven't selected dkna/refused)
+                        if (
+                          "list" == q.type &&
+                          !isDknaOrRefuse(q.value)
+                        ) {
+                          var visibleOptionList =
+                            this.getVisibleOptionList(q);
+                          q.optionList.forEach((o) => {
+                            if (
+                              null ==
+                              visibleOptionList.findByProperty("id", o.id)
+                            ) {
+                              // o isn't visible so make sure it isn't selected
+                              if (angular.isArray(q.value)) {
+                                var i = searchOptionList(q.value, o.id);
+                                if (null != i) {
+                                  q.value.splice(i, 1);
+                                  if (0 == q.value.length) q.value = null;
+                                  this.convertValueToModel(q);
+                                }
                               }
                             }
                           });
-
-                          if (!noCompleteCheck) {
-                            var complete = this.questionIsComplete(question);
-                            question.incomplete =
-                              false === complete
-                                ? true
-                                : true === complete
-                                ? false
-                                : complete;
-                          }
-                        } finally {
-                          this.working = false;
                         }
                       }
+                    });
+
+                    if (!noCompleteCheck) {
+                      var complete = this.questionIsComplete(question);
+                      question.incomplete = false === complete ?  true :
+                        true === complete ?  false : complete;
                     }
-              );
+                  } finally {
+                    this.working = false;
+                  }
+                });
+              }
+              this.setAnswerInProgress = false;
             },
 
             getValueForNewOption: function (question, option) {
