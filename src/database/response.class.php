@@ -788,12 +788,20 @@ class response extends \cenozo\database\has_rank
           $value = is_null( $db_answer ) ? NULL : util::json_decode( $db_answer->value );
 
           if( is_object( $value ) && property_exists( $value, 'dkna' ) && $value->dkna )
-            $compiled = '(no answer)';
+          {
+            $compiled = 'fr' == $this->get_language()->code
+                      ? 'Ne sais pas / pas de réponse'
+                      : 'Don\'t Know / No Answer';
+          }
           else if( is_object( $value ) && property_exists( $value, 'refuse' ) && $value->refuse )
-            $compiled = '(no answer)';
+          {
+            $compiled = 'fr' == $this->get_language()->code
+                      ? 'Refus'
+                      : 'Refused';
+          }
           else if( is_array( $value ) )
           {
-            if( '.count' == $question_matches[2][$index] )
+            if( '.count()' == $question_matches[2][$index] )
             {
               $compiled = count( $value );
             }
@@ -883,7 +891,17 @@ class response extends \cenozo\database\has_rank
             }
           }
           else if( is_null( $value ) ) $compiled = '';
-          else if( 'boolean' == $db_question->type ) $compiled = $value ? 'true' : 'false';
+          else if( 'boolean' == $db_question->type )
+          {
+            if( 'fr' == $this->get_language()->code )
+            {
+              $compiled = $value ? 'Oui' : 'Non';
+            }
+            else
+            {
+              $compiled = $value ? 'Yes' : 'No';
+            }
+          }
           else if( 'audio' == $db_question->type )
           {
             $compiled = sprintf(
