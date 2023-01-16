@@ -592,6 +592,7 @@ cenozoApp.defineModule({
               { value: false, name: "No", disabled: false },
             ],
             deviationTypeList: null,
+            qnaireReportList: null,
             languageList: null,
             showHidden: false,
             alternateId: null,
@@ -718,6 +719,13 @@ cenozoApp.defineModule({
               }
             },
 
+            downloadReport: async function () {
+              await CnHttpFactory.instance({
+                path: ["response", this.data.response_id].join("/"),
+                format: "pdf",
+              }).file();
+            },
+
             text: function (address) {
               return CnTranslationHelper.translate(
                 address,
@@ -793,6 +801,11 @@ cenozoApp.defineModule({
 
               // enclose with square brackets
               return null == key ? "" : "[" + key + "]";
+            },
+
+            isReportAvailable: function () {
+              return null != this.qnaireReportList &&
+                     this.qnaireReportList.includes(this.currentLanguage);
             },
 
             getModulePrompt: function () {
@@ -1028,15 +1041,12 @@ cenozoApp.defineModule({
                     responseStageResponse,
                     consentResponse,
                     deviationTypeResponse,
+                    qnaireReportResponse,
                     participantResponse,
                     addressResponse,
                   ] = await Promise.all([
                     CnHttpFactory.instance({
-                      path: [
-                        "response",
-                        this.data.response_id,
-                        "response_stage",
-                      ].join("/"),
+                      path: ["response", this.data.response_id, "response_stage"].join("/"),
                       data: {
                         select: {
                           column: [
@@ -1061,11 +1071,7 @@ cenozoApp.defineModule({
                     }).query(),
 
                     CnHttpFactory.instance({
-                      path: [
-                        "respondent",
-                        "token=" + $state.params.token,
-                        "consent",
-                      ].join("/"),
+                      path: ["respondent", "token=" + $state.params.token, "consent"].join("/"),
                       data: {
                         select: {
                           column: [
@@ -1096,11 +1102,16 @@ cenozoApp.defineModule({
                     }).query(),
 
                     CnHttpFactory.instance({
-                      path: [
-                        "qnaire",
-                        this.data.qnaire_id,
-                        "deviation_type",
-                      ].join("/"),
+                      path: ["qnaire", this.data.qnaire_id, "deviation_type"].join("/"),
+                    }).query(),
+
+                    CnHttpFactory.instance({
+                      path: ["qnaire", this.data.qnaire_id, "qnaire_report"].join("/"),
+                      data: {
+                        select: {
+                          column: [{ table: 'language', column: 'code', alias: 'lang' }],
+                        },
+                      },
                     }).query(),
 
                     this.participantModel.viewModel.onView(true),
@@ -1183,6 +1194,8 @@ cenozoApp.defineModule({
                   );
 
                   this.deviationTypeList = deviationTypeResponse.data;
+
+                  this.qnaireReportList = qnaireReportResponse.data.map(qnaireReport => qnaireReport.lang);
 
                   // enum lists use value, so set the value to the deviation type's ID
                   this.deviationTypeList.forEach((deviationType) => {

@@ -168,19 +168,28 @@
                        null == model.renderModel.data.end_datetime ? 'In Progress' : 'Completed' }}
                   </div>
                 </div>
-                <div class="vertical-spacer">
-                  <button type="button"
-                          class="btn btn-default btn-thin full-width"
-                          ng-if="null == model.renderModel.data.end_datetime"
-                          ng-click="model.renderModel.setCheckIn( false )">
-                    Re-open Check-In
-                  </button>
-                  <button type="button"
-                          class="btn btn-default btn-thin full-width"
-                          ng-if="null != model.renderModel.data.end_datetime"
-                          ng-click="model.renderModel.reopen()">
-                    Re-open Interview
-                  </button>
+                <div class="row vertical-spacer">
+                  <div ng-class="model.renderModel.isReportAvailable() ? 'col-xs-6' : 'col-xs-12'">
+                    <button type="button"
+                            class="btn btn-default btn-thin full-width"
+                            ng-if="null == model.renderModel.data.end_datetime"
+                            ng-click="model.renderModel.setCheckIn( false )">
+                      Re-open Check-In
+                    </button>
+                    <button type="button"
+                            class="btn btn-default btn-thin full-width"
+                            ng-if="null != model.renderModel.data.end_datetime"
+                            ng-click="model.renderModel.reopen()">
+                      Re-open Interview
+                    </button>
+                  </div>
+                  <div ng-if="model.renderModel.isReportAvailable()" class="col-xs-6 col-slim">
+                    <button type="button"
+                            class="btn btn-default btn-thin full-width"
+                            ng-click="model.renderModel.downloadReport()">
+                      Download Report
+                    </button>
+                  </div>
                 </div>
               </div>
               <div class="col-sm-7">

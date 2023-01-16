@@ -88,6 +88,7 @@ class ui extends \cenozo\ui\ui
       $module->add_child( 'qnaire_alternate_consent_type_trigger' );
       $module->add_child( 'qnaire_proxy_type_trigger' );
       $module->add_child( 'stage' );
+      $module->add_child( 'qnaire_report' );
       $module->add_child( 'device' );
       $module->add_child( 'deviation_type' );
       $module->add_child( 'embedded_file' );
@@ -112,6 +113,9 @@ class ui extends \cenozo\ui\ui
 
     $module = $this->get_module( 'indicator' );
     if( !is_null( $module ) ) $module->add_choose( 'lookup_item' );
+
+    $module = $this->get_module( 'qnaire_report' );
+    if( !is_null( $module ) ) $module->add_child( 'qnaire_report_data' );
 
     $module = $this->get_module( 'device' );
     if( !is_null( $module ) ) $module->add_child( 'device_data' );

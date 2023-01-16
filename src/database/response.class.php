@@ -684,6 +684,59 @@ class response extends \cenozo\database\has_rank
   }
 
   /**
+   * Generates the qnaire report for this response and returns the local filename of the resulting PDF
+   * @return string
+   */
+  public function generate_report()
+  {
+    $qnaire_report_class_name = lib::get_class_name( 'database\qnaire_report' );
+
+    $language = $this->get_language()->code;
+
+    // get the qnaire report for the response's qnaire and language
+    $db_qnaire_report = $qnaire_report_class_name::get_unique_record(
+      array( 'qnaire_id', 'language_id' ),
+      array( $this->get_respondent()->qnaire_id, $this->language_id )
+    );
+    if( is_null( $db_qnaire_report ) ) return NULL;
+
+    // create the data array to apply to the PDF template
+    $data = [];
+    $data_sel = lib::create( 'database\select' );
+    $data_sel->add_column( 'name' );
+    $data_sel->add_column( 'code' );
+    foreach( $db_qnaire_report->get_qnaire_report_data_list( $data_sel ) as $report_data )
+    {
+      $data[$report_data['name']] = $this->compile_description( $report_data['code'], true );
+    }
+
+    // write the PDF template to disk (it's the only way for the pdf_writer class to read it)
+    $random_string = bin2hex( openssl_random_pseudo_bytes( 5 ) );
+    $template_filename = sprintf( '%s/qnaire_report_template_%s.pdf', TEMPORARY_FILES_PATH, $language );
+    $report_filename = sprintf( '%s/qnaire_report_%s.pdf', TEMPORARY_FILES_PATH, $random_string );
+    $pdf_file = base64_decode( $db_qnaire_report->data );
+    file_put_contents( $template_filename, $pdf_file, LOCK_EX );
+
+    $pdf_writer = lib::create( 'business\pdf_writer' );
+    $pdf_writer->set_template( $template_filename );
+    $pdf_writer->fill_form( $data );
+    if( !$pdf_writer->save( $report_filename ) )
+    {
+      $db_respondent = $this->get_respondent();
+      throw lib::create( 'exception\runtime',
+        sprintf(
+          'Failed to generate PDF qnaire report for %s response to "%s"',
+          $db_respondent->get_participant()->uid,
+          $db_respondent->get_qnaire()->name
+        ),
+        __METHOD__
+      );
+    }
+
+    return $report_filename;
+  }
+
+  /**
    * Compiles a question's or option's description
    * @param string $description
    * @param boolean $force Whether to force compile values even if they are on the current page

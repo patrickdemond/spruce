@@ -294,18 +294,56 @@ class qnaire extends \cenozo\database\record
     }
 
     // copy all devices
-    $device_sel = lib::create( 'database\select' );
-    $device_sel->add_column( 'name' );
-    $device_sel->add_column( 'url' );
     $device_mod = lib::create( 'database\modifier' );
     $device_mod->order( 'device.id' );
-    foreach( $db_source_qnaire->get_device_list( $device_sel, $device_mod ) as $db_source_device )
+    foreach( $db_source_qnaire->get_device_object_list( $device_mod ) as $db_source_device )
     {
       $db_device = lib::create( 'database\device' );
       $db_device->qnaire_id = $this->id;
       $db_device->name = $db_source_device->name;
       $db_device->url = $db_source_device->url;
       $db_device->save();
+
+      // copy all device data
+      $device_data_sel = lib::create( 'database\select' );
+      $device_data_sel->add_column( 'name' );
+      $device_data_sel->add_column( 'code' );
+      $device_mod->order( 'device_data.id' );
+      foreach( $db_source_device->get_device_data_list( $device_data_sel, $device_data_mod ) as $device_data )
+      {
+        $db_device_data = lib::create( 'database\device_data' );
+        $db_device_data->device_id = $db_device->id;
+        $db_device_data->name = $device_data['name'];
+        $db_device_data->code = $device_data['code'];
+        $db_device_data->save();
+      }
+    }
+
+    // copy all reports
+    $qnaire_report_mod = lib::create( 'database\modifier' );
+    $qnaire_report_mod->order( 'qnaire_report.language_id' );
+    $report_list = $db_source_qnaire->get_qnaire_report_object_list( $qnaire_report_mod );
+    foreach( $report_list as $db_source_qnaire_report )
+    {
+      $db_qnaire_report = lib::create( 'database\qnaire_report' );
+      $db_qnaire_report->qnaire_id = $this->id;
+      $db_qnaire_report->language_id = $db_source_qnaire_report->language_id;
+      $db_qnaire_report->data = $db_source_qnaire_report->data;
+      $db_qnaire_report->save();
+
+      // copy all qnaire_report data
+      $rdata_sel = lib::create( 'database\select' );
+      $rdata_sel->add_column( 'name' );
+      $rdata_sel->add_column( 'code' );
+      $rdata_mod->order( 'qnaire_report_data.id' );
+      foreach( $db_source_qnaire_report->get_report_data_list( $rdata_sel, $rdata_mod ) as $report_data )
+      {
+        $db_qnaire_report_data = lib::create( 'database\qnaire_report_data' );
+        $db_qnaire_report_data->qnaire_report_id = $db_qnaire_report->id;
+        $db_qnaire_report_data->name = $report_data['name'];
+        $db_qnaire_report_data->code = $report_data['code'];
+        $db_qnaire_report_data->save();
+      }
     }
 
     // remove any existing stages and modules
@@ -2392,6 +2430,7 @@ class qnaire extends \cenozo\database\record
     $module_class_name = lib::get_class_name( 'database\module' );
     $stage_class_name = lib::get_class_name( 'database\stage' );
     $device_class_name = lib::get_class_name( 'database\device' );
+    $qnaire_report_class_name = lib::get_class_name( 'database\qnaire_report' );
 
     // NOTE: since we want to avoid duplicate unique keys caused by re-naming or re-ordering modules we use
     // the following offset and suffix values when setting rank and name, then after all changes have been
@@ -2660,6 +2699,16 @@ class qnaire extends \cenozo\database\record
               $db_device->name = $device->name;
               $db_device->url = $device->url;
               $db_device->save();
+
+              // add all device data
+              foreach( $device->device_data_list as $device_data )
+              {
+                $db_device_data = lib::create( 'database\device' );
+                $db_device_data->device_id = $db_device->id;
+                $db_device_data->name = $device_data->name;
+                $db_device_data->code = $device_data->code;
+                $db_device_data->save();
+              }
             }
             else $add_list[] = $device;
           }
@@ -2690,6 +2739,69 @@ class qnaire extends \cenozo\database\record
         if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
         if( 0 < count( $diff_list ) ) $difference_list['device_list'] = $diff_list;
+      }
+      else if( 'qnaire_report_list' == $property )
+      {
+        // check every item in the patch object for additions and changes
+        $add_list = array();
+        foreach( $patch_object->qnaire_report_list as $qnaire_report )
+        {
+          $db_language = $language_class_name::get_unique_record( 'code', $qnaire_report->language );
+          $db_qnaire_report = $qnaire_report_class_name::get_unique_record(
+            array( 'qnaire_id', 'language_id' ),
+            array( $this->id, $db_language->id )
+          );
+
+          if( is_null( $db_qnaire_report ) )
+          {
+            if( $apply )
+            {
+              $db_qnaire_report = lib::create( 'database\qnaire_report' );
+              $db_qnaire_report->qnaire_id = $this->id;
+              $db_qnaire_report->language_id = $db_language->id;
+              $db_qnaire_report->data = $qnaire_report->data;
+              $db_qnaire_report->save();
+
+              // add all qnaire_report data
+              foreach( $qnaire_report->qnaire_report_data_list as $qnaire_report_data )
+              {
+                $db_qnaire_report_data = lib::create( 'database\qnaire_report' );
+                $db_qnaire_report_data->qnaire_report_id = $db_qnaire_report->id;
+                $db_qnaire_report_data->name = $qnaire_report_data->name;
+                $db_qnaire_report_data->code = $qnaire_report_data->code;
+                $db_qnaire_report_data->save();
+              }
+            }
+            else $add_list[] = $qnaire_report;
+          }
+        }
+
+        // check every item in this object for removals
+        $remove_list = array();
+        foreach( $this->get_qnaire_report_object_list() as $db_qnaire_report )
+        {
+          $language = $db_qnaire_report->get_language()->code;
+          $found = false;
+          foreach( $patch_object->qnaire_report_list as $qnaire_report )
+          {
+            if( $language == $qnaire_report->language )
+            {
+              $found = true;
+              break;
+            }
+          }
+
+          if( !$found )
+          {
+            if( $apply ) $db_qnaire_report->delete();
+            else $remove_list[] = $language;
+          }
+        }
+
+        $diff_list = array();
+        if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
+        if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
+        if( 0 < count( $diff_list ) ) $difference_list['qnaire_report_list'] = $diff_list;
       }
       else if( 'deviation_type_list' == $property )
       {
@@ -3964,6 +4076,7 @@ class qnaire extends \cenozo\database\record
     if( $this->stages )
     {
       $qnaire_data['device_list'] = array();
+      $qnaire_data['qnaire_report_list'] = array();
       $qnaire_data['deviation_type_list'] = array();
       $qnaire_data['stage_list'] = array();
     }
@@ -3990,10 +4103,37 @@ class qnaire extends \cenozo\database\record
 
     if( $this->stages )
     {
-      $device_sel = lib::create( 'database\select' );
-      $device_sel->add_column( 'name' );
-      $device_sel->add_column( 'url' );
-      foreach( $this->get_device_list( $device_sel ) as $item ) $qnaire_data['device_list'][] = $item;
+      foreach( $this->get_device_object_list( $device_sel ) as $db_device )
+      {
+        $item = [
+          'name' => $db_device->name,
+          'url' => $db_device->url,
+          'device_data_list' => []
+        ];
+
+        $data_sel = lib::create( 'database\select' );
+        $data_sel->add_column( 'name' );
+        $data_sel->add_column( 'code' );
+        foreach( $db_device->get_device_data_list( $data_sel ) as $data )
+          $item['device_data_list'][] = $data;
+        $qnaire_data['device_list'][] = $item;
+      }
+
+      foreach( $this->get_qnaire_report_object_list( $qnaire_report_sel ) as $db_qnaire_report )
+      {
+        $item = [
+          'language' => $db_qnaire_report->get_language()->code,
+          'data' => $db_qnaire_report->data,
+          'qnaire_report_data_list' => []
+        ];
+
+        $data_sel = lib::create( 'database\select' );
+        $data_sel->add_column( 'name' );
+        $data_sel->add_column( 'code' );
+        foreach( $db_qnaire_report->get_qnaire_report_data_list( $data_sel ) as $data )
+          $item['qnaire_report_data_list'][] = $data;
+        $qnaire_data['qnaire_report_list'][] = $item;
+      }
 
       $deviation_type_sel = lib::create( 'database\select' );
       $deviation_type_sel->add_column( 'type' );
@@ -4520,9 +4660,37 @@ class qnaire extends \cenozo\database\record
       {
         $db_device = lib::create( 'database\device' );
         $db_device->qnaire_id = $db_qnaire->id;
-        $db_device->name = $device->name;
-        $db_device->url = $device->url;
+        $db_device->name = $device['name'];
+        $db_device->url = $device['url'];
         $db_device->save();
+
+        foreach( $device['device_data_list'] as $data )
+        {
+          $db_device_data = lib::create( 'database\device' );
+          $db_device_data->device_id = $db_device->id;
+          $db_device_data->name = $data['name'];
+          $db_device_data->code = $data['code'];
+          $db_device_data->save();
+        }
+      }
+
+      foreach( $qnaire_object->qnaire_report_list as $qnaire_report )
+      {
+        $db_language = $language_class_name::get_unique_record( 'code', $qnaire_report['language'] );
+        $db_qnaire_report = lib::create( 'database\qnaire_report' );
+        $db_qnaire_report->qnaire_id = $db_qnaire->id;
+        $db_qnaire_report->language_id = $db_language->id;
+        $db_qnaire_report->data = $qnaire_report['data'];
+        $db_qnaire_report->save();
+
+        foreach( $qnaire_report['qnaire_report_data_list'] as $data )
+        {
+          $db_qnaire_report_data = lib::create( 'database\qnaire_report' );
+          $db_qnaire_report_data->qnaire_report_id = $db_qnaire_report->id;
+          $db_qnaire_report_data->name = $data['name'];
+          $db_qnaire_report_data->code = $data['code'];
+          $db_qnaire_report_data->save();
+        }
       }
 
       foreach( $qnaire_object->deviation_type_list as $deviation_type )

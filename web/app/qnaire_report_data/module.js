@@ -1,31 +1,31 @@
 cenozoApp.defineModule({
-  name: "device_data",
+  name: "qnaire_report_data",
   models: ["add", "list", "view"],
   create: (module) => {
     angular.extend(module, {
       identifier: {
         parent: {
-          subject: "device",
-          column: "device.id",
+          subject: "qnaire_report",
+          column: "qnaire_report.id",
         },
       },
       name: {
-        singular: "device data",
-        plural: "device data",
-        possessive: "device data's",
+        singular: "report data",
+        plural: "report data",
+        possessive: "report data's",
       },
       columnList: {
         name: {
           title: "Name",
-          column: "device_data.name",
+          column: "qnaire_report_data.name",
         },
         code: {
           title: "Code",
-          column: "device_data.code",
+          column: "qnaire_report_data.code",
         },
       },
       defaultOrder: {
-        column: "device_data.name",
+        column: "qnaire_report_data.name",
         reverse: false,
       },
     });

@@ -141,6 +141,10 @@ class expression_manager extends \cenozo\singleton
    *   #NAME# (stage: true if the stage is either skipped or complete)
    *   #NAME.status()# (gets a stage's current status)
    *   showhidden true if showing hidden elements (launched by phone) false if not (launched by web)
+   *   current_year The current year in YYYY format
+   *   current_month The current month in MM format
+   *   current_day The current day in DD format
+   *   today The current date in YYYY-MM-DD format
    *   null (when a question has no answer - it's skipped)
    *   true|false (boolean)
    *   123 (number)
@@ -369,7 +373,7 @@ class expression_manager extends \cenozo\singleton
     $type = NULL;
     if( 'null' == $this->term ) $type = 'null';
     else if( in_array( $this->term, ['true', 'false', 'showhidden'] ) ) $type = 'boolean';
-    else if( in_array( $this->term, ['current_year', 'current_month', 'current_day'] ) ) $type = 'string';
+    else if( in_array( $this->term, ['current_year', 'current_month', 'current_day', 'today'] ) ) $type = 'string';
 
     if( is_null( $type ) )
       throw lib::create( 'exception\runtime', sprintf( 'Invalid constant "%s"', $this->term ), __METHOD__ );
@@ -382,7 +386,9 @@ class expression_manager extends \cenozo\singleton
     $this->last_term = 'operator' == $this->last_term ? 'boolean' : $type;
     $this->active_term = NULL;
 
-    return 'showhidden' == $this->term ? ( $this->show_hidden ? 'true' : 'false' ) : $this->term;
+    if( 'showhidden' == $this->term ) return $this->show_hidden ? 'true' : 'false';
+    if( 'today' == $this->term ) return util::get_datetime_object()->format( 'YYYY-MM-DD' );
+    return $this->term;
   }
 
   /**
