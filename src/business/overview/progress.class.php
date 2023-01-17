@@ -16,7 +16,7 @@ class progress extends \cenozo\business\overview\base_overview
   /**
    * Implements abstract method
    */
-  protected function build()
+  protected function build( $modifier = NULL )
   {
     $qnaire_class_name = lib::get_class_name( 'database\qnaire' );
 
