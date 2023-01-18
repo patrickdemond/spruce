@@ -1,6 +1,6 @@
 <?php
 /**
- * juniper_manager.class.php
+ * cypress_manager.class.php
  * 
  * @author Patrick Emond <emondpd@mcmaster.ca>
  */
@@ -9,9 +9,9 @@ namespace pine\business;
 use cenozo\lib, cenozo\log, pine\util;
 
 /**
- * Manages communication with Juniper services for communication with medical devices
+ * Manages communication with Cypress services for communication with medical devices
  */
-class juniper_manager extends \cenozo\base_object
+class cypress_manager extends \cenozo\base_object
 {
   /**
    * Constructor.
@@ -42,9 +42,9 @@ class juniper_manager extends \cenozo\base_object
     {
       try
       {
-        // call the base of the URL to test if Juniper is online, if there is no exception
+        // call the base of the URL to test if Cypress is online
         $response = $this->send( preg_replace( '#/.*#', '', $this->db_device->url ) );
-        $is_online = 'Juniper is online' == $response;
+        $is_online = 'Cypress is online' == $response;
       }
       catch ( \cenozo\exception\runtime $e )
       {
@@ -56,7 +56,7 @@ class juniper_manager extends \cenozo\base_object
   }
 
   /**
-   * Attempts to launch a device by sending a POST request to the juniper service
+   * Attempts to launch a device by sending a POST request to the cypress service
    * 
    * @return varies
    * @access public

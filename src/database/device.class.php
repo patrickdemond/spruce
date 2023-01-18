@@ -18,18 +18,18 @@ class device extends \cenozo\database\record
    */
   public function test_connection()
   {
-    $juniper_manager = lib::create( 'business\juniper_manager', $this );
-    return $juniper_manager->is_online();
+    $cypress_manager = lib::create( 'business\cypress_manager', $this );
+    return $cypress_manager->is_online();
   }
 
   /**
-   * Launches the device by communicating with the Juniper service
+   * Launches the device by communicating with the cypress service
    * 
    * @argument database\answer $db_answer
    */
   public function launch( $db_answer )
   {
-    $juniper_manager = lib::create( 'business\juniper_manager', $this );
+    $cypress_manager = lib::create( 'business\cypress_manager', $this );
     
     // always include the token and language
     $db_response = $db_answer->get_response();
@@ -43,6 +43,6 @@ class device extends \cenozo\database\record
     foreach( $this->get_device_data_object_list() as $db_device_data )
       $data[$db_device_data->name] = $db_device_data->get_compiled_value( $db_answer );
 
-    return $juniper_manager->launch( $data );
+    return $cypress_manager->launch( $data );
   }
 }
