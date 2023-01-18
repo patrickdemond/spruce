@@ -241,8 +241,10 @@ cenozoApp.defineModule({
             stageList: null,
 
             updateStageAndModuleList: async function () {
+              const parent = this.getParentIdentifier();
+
               var response = await CnHttpFactory.instance({
-                path: this.getServiceCollectionPath(),
+                path: [parent.subject, parent.identifier, 'stage'].join("/"),
                 data: {
                   select: {
                     column: [
@@ -259,29 +261,12 @@ cenozoApp.defineModule({
                       },
                     ],
                   },
-                  modifier: {
-                    join: [
-                      {
-                        table: "module",
-                        onleft: "stage.first_module_id",
-                        onright: "first_module.id",
-                        alias: "first_module",
-                      },
-                      {
-                        table: "module",
-                        onleft: "stage.last_module_id",
-                        onright: "last_module.id",
-                        alias: "last_module",
-                      },
-                    ],
-                    order: "stage.rank",
-                  },
+                  modifier: { order: "stage.rank", },
                 },
               }).query();
 
               this.stageList = response.data;
 
-              var parent = this.getParentIdentifier();
               var response = await CnHttpFactory.instance({
                 path: angular.isDefined(parent.subject)
                   ? [parent.subject, parent.identifier, "module"].join("/")
