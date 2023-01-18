@@ -49,6 +49,16 @@ class module extends \pine\service\base_qnaire_part_module
         if( !is_null( $db_first_page) ) $first_page_id = $db_first_page->id;
         $select->add_constant( $first_page_id, 'first_page_id', 'integer' );
       }
+
+      if( $select->has_column( 'stage_rank' ) )
+      {
+        $db_stage = $db_module->get_stage();
+        $select->add_constant(
+          $db_module->rank - $db_stage->get_first_module()->rank + 1,
+          'stage_rank',
+          'integer'
+        );
+      }
     }
 
     if( $select->has_column( 'prompts' ) )

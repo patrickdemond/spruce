@@ -41,6 +41,125 @@ class module extends base_qnaire_part
   }
 
   /**
+   * Create a method to handle changing the module's stage or rank in stage 
+   * @param string $column_name The name of the column
+   * @param mixed $value The value to set the contents of a column to
+   * @throws exception\argument
+   * @access public
+   */
+  public function __set( $column_name, $value )
+  {
+    if( 'stage_id' != $column_name && 'stage_rank' != $column_name )
+    {
+      parent::__set( $column_name, $value );
+      return;
+    }
+
+    $this->db_old_stage = $this->get_stage();
+    if( is_null( $this->db_old_stage ) )
+    {
+      throw lib::create( 'exception\runtime',
+        sprintf(
+          'Tried to change stage details for module ID, "%d", but parent qnaire, "%s", does not have stages activated',
+          $this->id,
+          $this->get_qnaire()->name
+        ),
+        __METHOD__
+      );
+    }
+
+    if( 'stage_id' == $column_name )
+    {
+      $this->db_new_stage = lib::create( 'database\stage', $value );
+      if( is_null( $this->db_new_stage ) )
+      {
+        throw lib::create( 'exception\runtime',
+          sprintf(
+            'Tried to move module to new stage ID, "%d", which doesn\'t exist',
+            $value
+          ),
+          __METHOD__
+        );
+      }
+
+      // get the rank of the last module in the new stage, set the rank to one after that rank
+      $this->rank = $this->db_new_stage->get_last_module()->rank + 1;
+    }
+    else if( 'stage_rank' == $column_name )
+    {
+      // set the rank based on the parent stage
+      $this->rank = $this->db_old_stage->get_first_module()->rank + $value - 1;
+      $this->new_stage_rank = $value;
+    }
+  }
+
+  /**
+   * Extend parent method
+   */
+  public function save()
+  {
+    if( !is_null( $this->db_new_stage ) || !is_null( $this->new_stage_rank ) )
+    {
+      // get the (current) parent stage's lowest and highest ranking modules (not including this module)
+      $module_sel = lib::create( 'database\select' );
+      $module_sel->add_column( 'id' );
+      $module_sel->add_column( 'rank' );
+      $module_mod = lib::create( 'database\modifier' );
+      $module_mod->where( 'module.id', '!=', $this->id );
+      $module_mod->order( 'module.rank' );
+      $module_list = $this->db_old_stage->get_module_list( $module_sel, $module_mod );
+      
+      $lowest_module = NULL;
+      $highest_module = NULL;
+      $count = count( $module_list );
+      if( 0 < $count )
+      {
+        $lowest_module = $module_list[0];
+        $highest_module = $module_list[$count-1];
+      }
+
+      // update the new stage's last module, then delete the old stage if it is empty
+      if( !is_null( $this->db_new_stage ) )
+      {
+        // If either the lowest and highest module are null then the old stage is empty, so delete it
+        // Note: in practice they should always either both be null or neither be null
+        if( is_null( $lowest_module ) || is_null( $highest_module ) )
+        {
+          $this->db_old_stage->delete();
+        }
+        else
+        {
+          // make sure the old stage has valid first/last modules (since we're potentially removing the first/last)
+          $this->db_old_stage->first_module_id = $lowest_module['id'];
+          $this->db_old_stage->last_module_id = $highest_module['id'];
+          $this->db_old_stage->save();
+        }
+
+        // now change the new stage's last module
+        // Note: the first will never change since the new stage is guaranteed to have at least one module already
+        $this->db_new_stage->last_module_id = $this->id;
+        $this->db_new_stage->save();
+        $this->db_new_stage = NULL;
+      }
+
+      // update the parent stage's first/last module if it has changed
+      if( !is_null( $this->new_stage_rank ) )
+      {
+        $this->db_old_stage->first_module_id = 1 == $this->new_stage_rank
+                                             ? $this->id
+                                             : $lowest_module['id'];
+        $this->db_old_stage->last_module_id = ($count+1) == $this->new_stage_rank
+                                            ? $this->id
+                                            : $highest_module['id'];
+        $this->new_stage_rank = NULL;
+        $this->db_old_stage->save();
+      }
+    }
+
+    parent::save();
+  }
+
+  /**
    * Returns the previous module for a response
    * 
    * This function will return the previous module whose precondition matches the given response, not necessarily the
@@ -228,4 +347,25 @@ class module extends base_qnaire_part
       $modifier->get_sql()
     ) );
   }
+
+  /**
+   * Tracks the module's current stage (before changing any stage or rank details)
+   * @var database\stage
+   * @access private
+   */
+  private $db_old_stage = NULL;
+
+  /**
+   * Tracks the new stage that the module is being moved to (when "stage_id" is set)
+   * @var database\stage
+   * @access private
+   */
+  private $db_new_stage = NULL;
+
+  /**
+   * Tracks when the module's stage rank has changed (when "stage_rank" is set)
+   * @var integer
+   * @access private
+   */
+  private $new_stage_rank = NULL;
 }

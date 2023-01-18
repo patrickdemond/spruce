@@ -10,17 +10,37 @@ cenozoApp.defineModule({
       column: "qnaire.name",
     };
 
+    module.inputGroupList.findByProperty( "title", "" ).inputList.rank.isExcluded = function($state, model) {
+      // don't show rank when qnaire has stages
+      return "view" == model.getActionFromState() ? null != model.viewModel.record.stage_id : false;
+    };
+
+    module.addInput( "", "qnaire_id", { type: "hidden" } );
     module.addInput(
       "",
-      "Stage",
+      "stage_id",
       {
-        column: "stage.name",
+        column: "stage.id",
         title: "Stage",
-        type: "string",
-        isConstant: true,
-        isExcluded: "add",
+        type: "enum",
+        isExcluded: function($state, model) {
+          // only show stage when qnaire has stages
+          return "view" == model.getActionFromState() ? null == model.viewModel.record.stage_id : true;
+        },
       },
-      "name"
+    );
+    module.addInput(
+      "",
+      "stage_rank",
+      {
+        title: "Rank in Stage",
+        type: "rank",
+        isExcluded: function($state, model) {
+          // only show stage-rank when qnaire has stages
+          return "view" == model.getActionFromState() ? null == model.viewModel.record.stage_id : true;
+        }
+      },
+      "stage_id"
     );
     module.addInput("", "average_time", {
       title: "Average Time (seconds)",
@@ -164,17 +184,55 @@ cenozoApp.defineModule({
     cenozo.providers.decorator("CnModuleViewFactory", [
       "$delegate",
       "$filter",
-      function ($delegate, $filter) {
+      "CnHttpFactory",
+      function ($delegate, $filter, CnHttpFactory) {
         var instance = $delegate.instance;
         $delegate.instance = function (parentModel, root) {
           var object = instance(parentModel, root);
 
           angular.extend(object, {
             onView: async function (force) {
+              if( angular.isDefined( this.parentModel.metadata.columnList ) )
+                this.parentModel.metadata.columnList.stage_id.enumList = [];
               await this.$$onView(force);
               this.record.average_time = $filter("cnSeconds")(
                 Math.round(this.record.average_time)
               );
+
+              if( this.record.stage_id ) {
+                const [stageResponse, moduleCountResponse] = await Promise.all([
+                  CnHttpFactory.instance({
+                    path: ['qnaire', this.record.qnaire_id, 'stage'].join("/"),
+                    data: {
+                      select: { column: ['id', 'rank', 'name'] },
+                      modifier: { order: 'stage.rank' },
+                    }
+                  }).query(),
+
+                  CnHttpFactory.instance({
+                    path: ['stage', this.record.stage_id, 'module'].join( "/" ),
+                  }).count()
+                ]);
+
+                this.parentModel.metadata.columnList.stage_id.enumList =
+                  stageResponse.data.reduce((list, item) => {
+                    list.push({ value: item.id, name: item.rank + ") " + item.name });
+                    return list;
+                  }, []);
+
+                this.parentModel.metadata.columnList.stage_rank.enumList = [];
+                const maxRank = parseInt(moduleCountResponse.headers("Total"));
+                for( var rank = 1; rank <= maxRank; rank++ ) {
+                  this.parentModel.metadata.columnList.stage_rank.enumList.push({
+                    value: rank,
+                    name: $filter("cnOrdinal")(rank),
+                  });
+                }
+              }
+            },
+            onPatch: async function (data) {
+              await this.$$onPatch(data);
+              await this.parentModel.reloadState(true);
             },
           });
 
