@@ -49,7 +49,6 @@ cenozoApp.defineModule({
       rank: {
         title: "Rank",
         type: "rank",
-        isConstant: "view",
       },
       name: {
         title: "Name",
