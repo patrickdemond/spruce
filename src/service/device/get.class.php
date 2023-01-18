@@ -16,11 +16,11 @@ class get extends \cenozo\service\get
   public function execute()
   {
     $action = $this->get_argument( 'action', NULL );
-    if( 'test_connection' == $action )
+    if( 'status' == $action )
     {
       // instead of returning the device's details test the connection and return the result
       $db_device = $this->get_leaf_record();
-      $this->set_data( $db_device->test_connection() );
+      $this->set_data( util::json_encode( $db_device->get_status() ) );
     }
     else
     {

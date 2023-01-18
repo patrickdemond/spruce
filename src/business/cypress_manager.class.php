@@ -31,20 +31,19 @@ class cypress_manager extends \cenozo\base_object
   }
 
   /**
-   * Determines whether the device exists and is online
-   * @return boolean
+   * Returns the Cypress server's status (NULL
+   * @return object (NULL if server is unreachable)
    * @access public
    */
-  public function is_online()
+  public function get_status()
   {
-    $is_online = false;
+    $status = NULL;
     if( !is_null( $this->db_device ) )
     {
       try
       {
         // call the base of the URL to test if Cypress is online
-        $response = $this->send( preg_replace( '#/.*#', '', $this->db_device->url ) );
-        $is_online = 'Cypress is online' == $response;
+        $status = $this->send( preg_replace( '#/.*#', '', $this->db_device->url ) );
       }
       catch ( \cenozo\exception\runtime $e )
       {
@@ -52,7 +51,7 @@ class cypress_manager extends \cenozo\base_object
       }
     }
 
-    return $is_online;
+    return $status;
   }
 
   /**
@@ -75,8 +74,6 @@ class cypress_manager extends \cenozo\base_object
    */
   private function send( $api_path, $method = 'GET', $data = NULL )
   {
-    //if( !$this->exists() ) return NULL;
-
     $setting_manager = lib::create( 'business\setting_manager' );
     $user = $setting_manager->get_setting( 'utility', 'username' );
     $pass = $setting_manager->get_setting( 'utility', 'password' );
@@ -132,7 +129,7 @@ class cypress_manager extends \cenozo\base_object
         __METHOD__ );
     }
 
-    return json_decode( $response );
+    return util::json_decode( $response );
   }
   /**
    * The device to connect to

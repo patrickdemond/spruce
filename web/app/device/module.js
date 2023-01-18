@@ -42,11 +42,11 @@ cenozoApp.defineModule({
     });
 
     module.addExtraOperation("view", {
-      title: "Test Connection",
+      title: "Check Status",
       operation: async function ($state, model) {
         try {
           this.working = true;
-          await model.viewModel.testConnection();
+          await model.viewModel.getDeviceStatus();
         } finally {
           this.working = false;
         }
@@ -65,25 +65,25 @@ cenozoApp.defineModule({
         var object = function (parentModel, root) {
           CnBaseViewFactory.construct(this, parentModel, root);
 
-          this.testConnection = async function () {
+          this.getDeviceStatus = async function () {
             var modal = CnModalMessageFactory.instance({
-              title: "Test Connection",
+              title: "Device Status",
               message:
-                "Please wait while the connection to this device is tested.",
+                "Please wait while communicating with the device.",
               block: true,
             });
 
             modal.show();
             var response = await CnHttpFactory.instance({
-              path: "device/" + this.record.id + "?action=test_connection",
+              path: "device/" + this.record.id + "?action=status",
             }).get();
             modal.close();
 
+            const status = angular.fromJson(response.data);
             await CnModalMessageFactory.instance({
-              title: "Test Connection",
-              message: response.data
-                ? "Connection succesful."
-                : "Connection failed.",
+              title: "Device Status " + ( null == status ? "(Offline)" : "(Online)" ),
+              message: null == status ? "ERROR: There was no response from the device." : angular.toJson(status),
+              error: null == status,
             }).show();
           };
         };

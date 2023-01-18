@@ -16,10 +16,10 @@ class device extends \cenozo\database\record
   /**
    * Test a detached instance's connection to the parent beartooth and pine servers
    */
-  public function test_connection()
+  public function get_status()
   {
     $cypress_manager = lib::create( 'business\cypress_manager', $this );
-    return $cypress_manager->is_online();
+    return $cypress_manager->get_status();
   }
 
   /**
