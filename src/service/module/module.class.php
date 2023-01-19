@@ -54,7 +54,7 @@ class module extends \pine\service\base_qnaire_part_module
       {
         $db_stage = $db_module->get_stage();
         $select->add_constant(
-          $db_module->rank - $db_stage->get_first_module()->rank + 1,
+          is_null( $db_stage ) ? NULL : $db_module->rank - $db_stage->get_first_module()->rank + 1,
           'stage_rank',
           'integer'
         );

@@ -12,10 +12,11 @@ cenozoApp.defineModule({
 
     module.inputGroupList.findByProperty( "title", "" ).inputList.rank.isExcluded = function($state, model) {
       // don't show rank when qnaire has stages
-      return "view" == model.getActionFromState() ? null != model.viewModel.record.stage_id : false;
+      return "view" == model.getActionFromState() ? model.viewModel.record.stages : false;
     };
 
     module.addInput( "", "qnaire_id", { type: "hidden" } );
+    module.addInput( "", "stages", { column: "qnaire.stages", type: "hidden" } );
     module.addInput(
       "",
       "stage_id",
@@ -25,7 +26,7 @@ cenozoApp.defineModule({
         type: "enum",
         isExcluded: function($state, model) {
           // only show stage when qnaire has stages
-          return "view" == model.getActionFromState() ? null == model.viewModel.record.stage_id : true;
+          return "view" == model.getActionFromState() ? !model.viewModel.record.stages : true;
         },
       },
     );
@@ -37,7 +38,7 @@ cenozoApp.defineModule({
         type: "rank",
         isExcluded: function($state, model) {
           // only show stage-rank when qnaire has stages
-          return "view" == model.getActionFromState() ? null == model.viewModel.record.stage_id : true;
+          return "view" == model.getActionFromState() ? !model.viewModel.record.stages : true;
         }
       },
       "stage_id"
@@ -199,7 +200,7 @@ cenozoApp.defineModule({
                 Math.round(this.record.average_time)
               );
 
-              if( this.record.stage_id ) {
+              if( this.record.stages ) {
                 const [stageResponse, moduleCountResponse] = await Promise.all([
                   CnHttpFactory.instance({
                     path: ['qnaire', this.record.qnaire_id, 'stage'].join("/"),
