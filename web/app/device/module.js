@@ -80,9 +80,19 @@ cenozoApp.defineModule({
             modal.close();
 
             const status = angular.fromJson(response.data);
+            let message = "";
+            if( null == status || '' == status ) {
+              message = "ERROR: There was no response from the device.";
+            } else {
+              message = Object.keys(status).reduce( (str, key) => {
+                str += "<li>" + key.ucWords() + ": " + status[key] + "</li>";
+                return str;
+              }, "The device responded with the following parameters:<br/><ul>" ) + "</ul>";
+            }
             await CnModalMessageFactory.instance({
               title: "Device Status " + ( null == status ? "(Offline)" : "(Online)" ),
-              message: null == status ? "ERROR: There was no response from the device." : angular.toJson(status),
+              html: true,
+              message: message,
               error: null == status,
             }).show();
           };
