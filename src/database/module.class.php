@@ -49,12 +49,15 @@ class module extends base_qnaire_part
    */
   public function __set( $column_name, $value )
   {
-    if( 'stage_id' != $column_name && 'stage_rank' != $column_name )
+    // setting the stage_id to null or setting any column other than stage_id or stage_rank is normal...
+    if( ( 'stage_id' == $column_name && is_null( $value ) ) ||
+        ( 'stage_id' != $column_name && 'stage_rank' != $column_name ) )
     {
       parent::__set( $column_name, $value );
       return;
     }
 
+    // ...otherwise we need to manipulate stage/module ranks
     $this->db_old_stage = $this->get_stage();
     if( is_null( $this->db_old_stage ) )
     {
