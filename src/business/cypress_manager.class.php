@@ -43,7 +43,7 @@ class cypress_manager extends \cenozo\base_object
       try
       {
         // call the base of the URL to test if Cypress is online
-        $status = $this->send( preg_replace( '#/.*#', '', $this->db_device->url ) );
+        $status = $this->send( sprintf( '%s/status', $this->db_device->url ) );
       }
       catch ( \cenozo\exception\runtime $e )
       {
