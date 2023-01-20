@@ -746,9 +746,8 @@ cenozoApp.defineModule({
             },
 
             getVisibleOptionList: function (question) {
-              return question.optionList.filter((option) =>
-                this.evaluate(option.precondition)
-              );
+              return angular.isDefined( question.optionList ) ?
+                question.optionList.filter((option) => this.evaluate(option.precondition)) : [];
             },
 
             getFocusableQuestionList: function () {
@@ -880,7 +879,7 @@ cenozoApp.defineModule({
                   (option.multiple_answers
                     ? ""
                     : ' <i class="glyphicon ' +
-                      (question.answer.optionList[option.id].selected
+                      (angular.isDefined(question.answer) && question.answer.optionList[option.id].selected
                         ? "glyphicon-check"
                         : "glyphicon-unchecked") +
                       '"></i> ') +
