@@ -1847,47 +1847,70 @@ class qnaire extends \cenozo\database\record
         $question_mod->order( 'question.rank' );
         foreach( $db_page->get_question_object_list( $question_mod ) as $db_question )
         {
-          $prompt_list = array(
+          $description_list = array(
             'module_prompt' => array(),
+            'module_popup' => array(),
             'page_prompt' => array(),
-            'question_prompt' => array()
+            'page_popup' => array(),
+            'question_prompt' => array(),
+            'question_popup' => array()
           );
           if( $descriptions )
           {
-            // add the module's prompt
+            // add the module's descriptions
             $description_sel = lib::create( 'database\select' );
             $description_sel->add_table_column( 'language', 'code', 'language' );
+            $description_sel->add_column( 'type' );
             $description_sel->add_column( 'value' );
             $description_mod = lib::create( 'database\modifier' );
             $description_mod->join( 'language', 'module_description.language_id', 'language.id' );
-            $description_mod->where( 'module_description.type', '=', 'prompt' );
             foreach( $db_module->get_module_description_list( $description_sel, $description_mod ) as $item )
-              $prompt_list['module_prompt'][$item['language']] = $item['value'];
+              $description_list[sprintf( 'module_%s', $item['type'] )][$item['language']] = $item['value'];
 
-            // add the page's prompt
+            // add the page's descriptions
             $description_sel = lib::create( 'database\select' );
             $description_sel->add_table_column( 'language', 'code', 'language' );
+            $description_sel->add_column( 'type' );
             $description_sel->add_column( 'value' );
             $description_mod = lib::create( 'database\modifier' );
             $description_mod->join( 'language', 'page_description.language_id', 'language.id' );
-            $description_mod->where( 'page_description.type', '=', 'prompt' );
             foreach( $db_page->get_page_description_list( $description_sel, $description_mod ) as $item )
-              $prompt_list['page_prompt'][$item['language']] = $item['value'];
+              $description_list[sprintf( 'page_%s', $item['type'] )][$item['language']] = $item['value'];
 
-            // add the question's prompt
+            // add the question's descriptions
             $description_sel = lib::create( 'database\select' );
             $description_sel->add_table_column( 'language', 'code', 'language' );
+            $description_sel->add_column( 'type' );
             $description_sel->add_column( 'value' );
             $description_mod = lib::create( 'database\modifier' );
             $description_mod->join( 'language', 'question_description.language_id', 'language.id' );
-            $description_mod->where( 'question_description.type', '=', 'prompt' );
             foreach( $db_question->get_question_description_list( $description_sel, $description_mod ) as $item )
-              $prompt_list['question_prompt'][$item['language']] = $item['value'];
+              $description_list[sprintf( 'question_%s', $item['type'] )][$item['language']] = $item['value'];
           }
 
           $option_mod = lib::create( 'database\modifier' );
           $option_mod->order( 'question_option.rank' );
           $option_list = $db_question->get_question_option_object_list( $option_mod );
+
+          // create the base column array to be used throughout
+          $db_device = $db_question->get_device();
+          $base_column = array(
+            'module_name' => $db_module->name,
+            'page_name' => $db_page->name,
+            'question_name' => $db_question->name,
+            'question_id' => $db_question->id,
+            'type' => $db_question->type,
+            'device' => is_null( $db_device ) ? NULL : $db_device->name,
+            'minimum' => $db_question->minimum,
+            'maximum' => $db_question->maximum,
+            'dkna_allowed' => $db_question->dkna_allowed,
+            'refuse_allowed' => $db_question->refuse_allowed,
+            'module_precondition' => $db_module->precondition,
+            'page_precondition' => $db_page->precondition,
+            'question_precondition' => $db_question->precondition
+          );
+
+          if( $descriptions ) $base_column = array_merge( $base_column, $description_list );
 
           // only create a variable for all options if at least one is not exclusive
           $all_exclusive = true;
@@ -1910,23 +1933,7 @@ class qnaire extends \cenozo\database\record
             if( !is_null( $this->variable_suffix ) )
               $column_name = sprintf( '%s_%s', $column_name, $this->variable_suffix );
 
-            $db_device = $db_question->get_device();
-            $column_list[$column_name] = array(
-              'module_name' => $db_module->name,
-              'page_name' => $db_page->name,
-              'question_name' => $db_question->name,
-              'question_id' => $db_question->id,
-              'type' => $db_question->type,
-              'device' => is_null( $db_device ) ? NULL : $db_device->name,
-              'minimum' => $db_question->minimum,
-              'maximum' => $db_question->maximum,
-              'module_precondition' => $db_module->precondition,
-              'page_precondition' => $db_page->precondition,
-              'question_precondition' => $db_question->precondition
-            );
-
-            if( $descriptions )
-              $column_list[$column_name] = array_merge( $column_list[$column_name], $prompt_list );
+            $column_list[$column_name] = $base_column;
 
             if( 0 < count( $option_list ) )
             {
@@ -1943,20 +1950,16 @@ class qnaire extends \cenozo\database\record
             // now create the unit column if this is a "number with unit" question
             if( 'number with unit' == $db_question->type )
             {
-              $column_name = sprintf( '%s_UNIT', $db_question->name );
+              $unit_column_name = sprintf( '%s_UNIT', $db_question->name );
 
               // if it exists then add the qnaire's variable suffix to the question name
               if( !is_null( $this->variable_suffix ) )
-                $column_name = sprintf( '%s_%s', $column_name, $this->variable_suffix );
+                $unit_column_name = sprintf( '%s_%s', $unit_column_name, $this->variable_suffix );
 
-              $column_list[$column_name] = array(
-                'module_name' => $db_module->name,
-                'page_name' => $db_page->name,
-                'question_name' => $db_question->name,
-                'question_id' => $db_question->id,
-                'type' => $db_question->type,
-                'unit_list' => $db_question->unit_list
-              );
+              $column_list[$unit_column_name] = $base_column;
+              $column_list[$unit_column_name]['minimum'] = NULL;
+              $column_list[$unit_column_name]['maximum'] = NULL;
+              $column_list[$unit_column_name]['unit_list'] = $db_question->unit_list;
             }
           }
 
@@ -1988,65 +1991,46 @@ class qnaire extends \cenozo\database\record
                 else $precondition = sprintf( '(%s) && (%s)', $precondition, $db_option->precondition );
               }
 
-              $column_list[$column_name] = array(
-                'module_name' => $db_module->name,
-                'page_name' => $db_page->name,
-                'question_name' => $db_question->name,
-                'question_option_name' => $db_option->name,
-                'question_id' => $db_question->id,
-                'option_id' => $db_option->id,
-                'type' => $db_question->type,
-                'minimum' => $db_option->minimum,
-                'maximum' => $db_option->maximum,
-                'extra' => $db_option->extra,
-                'all_exclusive' => $all_exclusive,
-                'module_precondition' => $db_module->precondition,
-                'page_precondition' => $db_page->precondition,
-                'question_precondition' => $db_question->precondition,
-                'question_option_precondition' => $db_option->precondition
-              );
+              $column_list[$column_name] = $base_column;
+              $column_list[$column_name]['question_option_name'] = $db_option->name;
+              $column_list[$column_name]['option_id'] = $db_option->id;
+              $column_list[$column_name]['extra'] = $db_option->extra;
+              $column_list[$column_name]['all_exclusive'] = $all_exclusive;
+              $column_list[$column_name]['question_option_precondition'] = $db_option->precondition;
 
               if( $descriptions )
               {
-                $column_list[$column_name] = array_merge( $column_list[$column_name], $prompt_list );
-
                 $column_list[$column_name]['question_option_prompt'] = array();
+                $column_list[$column_name]['question_option_popup'] = array();
 
-                // add the question option's prompt
+                // add the question option's descriptions
                 $description_sel = lib::create( 'database\select' );
                 $description_sel->add_table_column( 'language', 'code', 'language' );
+                $description_sel->add_column( 'type' );
                 $description_sel->add_column( 'value' );
                 $description_mod = lib::create( 'database\modifier' );
                 $description_mod->join( 'language', 'question_option_description.language_id', 'language.id' );
-                $description_mod->where( 'question_option_description.type', '=', 'prompt' );
                 foreach( $db_option->get_question_option_description_list( $description_sel, $description_mod )
                   as $item )
                 {
-                  $column_list[$column_name]['question_option_prompt'][$item['language']] = $item['value'];
+                  $column_list[$column_name][sprintf( 'question_option_%s', $item['type'] )][$item['language']] =
+                    $item['value'];
                 }
               }
 
               // now create the unit column if this is a "number with unit" extra option
               if( 'number with unit' == $db_option->extra )
               {
-                $column_name = sprintf( '%s_%s_UNIT', $db_question->name, $db_option->name );
+                $unit_column_name = sprintf( '%s_%s_UNIT', $db_question->name, $db_option->name );
 
                 // if it exists then add the qnaire's variable suffix to the question name
                 if( !is_null( $this->variable_suffix ) )
-                  $column_name = sprintf( '%s_%s', $column_name, $this->variable_suffix );
+                  $unit_column_name = sprintf( '%s_%s', $unit_column_name, $this->variable_suffix );
 
-                $column_list[$column_name] = array(
-                  'module_name' => $db_module->name,
-                  'page_name' => $db_page->name,
-                  'question_name' => $db_question->name,
-                  'question_option_name' => $db_option->name,
-                  'question_id' => $db_question->id,
-                  'option_id' => $db_option->id,
-                  'type' => $db_question->type,
-                  'extra' => $db_option->extra,
-                  'all_exclusive' => $all_exclusive,
-                  'unit_list' => $db_question->unit_list
-                );
+                $column_list[$unit_column_name] = $column_list[$column_name];
+                $column_list[$unit_column_name]['minimum'] = NULL;
+                $column_list[$unit_column_name]['maximum'] = NULL;
+                $column_list[$unit_column_name]['unit_list'] = $db_question->unit_list;
               }
             }
           }
@@ -2055,65 +2039,45 @@ class qnaire extends \cenozo\database\record
           if( !$all_exclusive )
           {
             // get the base column name from the question's name and add DK_NA as a suffix
-            $column_name = sprintf( '%s_DK_NA', $db_question->name );
+            $dkna_column_name = sprintf( '%s_DK_NA', $db_question->name );
 
             // if it exists then add the qnaire's variable suffix to the question name
             if( !is_null( $this->variable_suffix ) )
-              $column_name = sprintf( '%s_%s', $column_name, $this->variable_suffix );
+              $dkna_column_name = sprintf( '%s_%s', $dkna_column_name, $this->variable_suffix );
 
-            $column_list[$column_name] = array(
-              'module_name' => $db_module->name,
-              'page_name' => $db_page->name,
-              'question_name' => $db_question->name,
-              'question_option_name' => 'DK_NA',
-              'question_id' => $db_question->id,
-              'type' => $db_question->type,
-              'option_id' => 'dkna',
-              'all_exclusive' => $all_exclusive,
-              'module_precondition' => $db_module->precondition,
-              'page_precondition' => $db_page->precondition,
-              'question_precondition' => $db_question->precondition
-            );
+            $column_list[$dkna_column_name] = $base_column;
+            $column_list[$dkna_column_name]['question_option_name'] = 'DK_NA';
+            $column_list[$dkna_column_name]['option_id'] = 'dkna';
+            $column_list[$dkna_column_name]['all_exclusive'] = $all_exclusive;
 
             if( $descriptions )
             {
-              $column_list[$column_name] = array_merge( $column_list[$column_name], $prompt_list );
-
               $prompt = array();
               if( in_array( 'en', $language_list ) ) $prompt['en'] = 'Don\'t Know / No Answer';
               if( in_array( 'fr', $language_list ) ) $prompt['fr'] = 'Ne sais pas / pas de réponse';
-              $column_list[$column_name]['question_option_prompt'] = $prompt;
+              $column_list[$dkna_column_name]['question_option_popup'] = ['en'=>NULL, 'fr'=>NULL];
+              $column_list[$dkna_column_name]['question_option_prompt'] = $prompt;
             }
 
             // get the base column name from the question's name and add REFUSED as a suffix
-            $column_name = sprintf( '%s_REFUSED', $db_question->name );
+            $refused_column_name = sprintf( '%s_REFUSED', $db_question->name );
 
             // if it exists then add the qnaire's variable suffix to the question name
             if( !is_null( $this->variable_suffix ) )
-              $column_name = sprintf( '%s_%s', $column_name, $this->variable_suffix );
+              $refused_column_name = sprintf( '%s_%s', $refused_column_name, $this->variable_suffix );
 
-            $column_list[$column_name] = array(
-              'module_name' => $db_module->name,
-              'page_name' => $db_page->name,
-              'question_name' => $db_question->name,
-              'question_option_name' => 'REFUSED',
-              'question_id' => $db_question->id,
-              'type' => $db_question->type,
-              'option_id' => 'refuse',
-              'all_exclusive' => $all_exclusive,
-              'module_precondition' => $db_module->precondition,
-              'page_precondition' => $db_page->precondition,
-              'question_precondition' => $db_question->precondition,
-            );
+            $column_list[$refused_column_name] = $base_column;
+            $column_list[$refused_column_name]['question_option_name'] = 'REFUSED';
+            $column_list[$refused_column_name]['option_id'] = 'refuse';
+            $column_list[$refused_column_name]['all_exclusive'] = $all_exclusive;
 
             if( $descriptions )
             {
-              $column_list[$column_name] = array_merge( $column_list[$column_name], $prompt_list );
-
               $prompt = array();
               if( in_array( 'en', $language_list ) ) $prompt['en'] = 'Prefer not to answer';
               if( in_array( 'fr', $language_list ) ) $prompt['fr'] = 'Préfère ne pas répondre';
-              $column_list[$column_name]['question_option_prompt'] = $prompt;
+              $column_list[$refused_column_name]['question_option_popup'] = ['en'=>NULL, 'fr'=>NULL];
+              $column_list[$refused_column_name]['question_option_prompt'] = $prompt;
             }
           }
         }
