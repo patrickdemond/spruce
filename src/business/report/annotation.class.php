@@ -116,7 +116,7 @@ class annotation extends \cenozo\business\report\base_report
         }
 
         if( 'string' == $type ) $type = 'text';
-        else if( 'number' == $type ) $type = 'float';
+        else if( 'number' == $type ) $type = 'decimal';
 
         // if there is more than one precondition then append them using (a) && (b) format
         $precondition_list = [];
