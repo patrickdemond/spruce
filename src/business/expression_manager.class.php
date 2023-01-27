@@ -185,6 +185,8 @@ class expression_manager extends \cenozo\singleton
    */
   public function compile( $precondition, $override_question_object = NULL )
   {
+    $stage_class_name = lib::get_class_name( 'database\stage' );
+
     // if an override object is proided then make sure it's either a question or question_option
     if( !is_null( $override_question_object ) &&
         !is_a( $override_question_object, lib::get_class_name( 'database\question' ) ) &&
