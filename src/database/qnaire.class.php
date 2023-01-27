@@ -2098,7 +2098,7 @@ class qnaire extends \cenozo\database\record
   public function get_response_data(
     $modifier = NULL, $exporting = false, $attributes = false, $answers_only = false )
   {
-    ini_set( 'memory_limit', '1G' );
+    ini_set( 'memory_limit', '-1' ); // unlimited memory
     set_time_limit( 900 ); // 15 minutes max
 
     $response_class_name = lib::get_class_name( 'database\response' );
