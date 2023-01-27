@@ -134,12 +134,13 @@ class expression_manager extends \cenozo\singleton
    * 
    * values:
    *   @NAME@ (response attribute)
-   *   $NAME$ (question)
+   *   $NAME$ (question value or stage: true if the stage is either skipped or complete)
    *   $NAME.empty()$ (true if question hasn't been answered, false if it has)
    *   $NAME.dkna()$ (true if a question's answer is don't know or no answer)
    *   $NAME.refuse()$ (true if a question is refused)
-   *   #NAME# (stage: true if the stage is either skipped or complete)
-   *   #NAME.status()# (gets a stage's current status)
+   *   $NAME.status()$ (gets a stage's current status)
+   *   $respondent.token$ (gets the respondent's token)
+   *   $respondent.language$ (gets the current language code)
    *   showhidden true if showing hidden elements (launched by phone) false if not (launched by web)
    *   current_year The current year in YYYY format
    *   current_month The current month in MM format
@@ -188,7 +189,13 @@ class expression_manager extends \cenozo\singleton
     if( !is_null( $override_question_object ) &&
         !is_a( $override_question_object, lib::get_class_name( 'database\question' ) ) &&
         !is_a( $override_question_object, lib::get_class_name( 'database\question_option' ) ) )
-      throw lib::create( 'exception\argument', 'override_question_object', $override_question_object, __METHOD__ );
+    {
+      throw lib::create( 'exception\argument',
+        'override_question_object',
+        $override_question_object,
+        __METHOD__
+      );
+    }
 
     $this->reset();
 
@@ -255,16 +262,43 @@ class expression_manager extends \cenozo\singleton
           else $compiled .= $this->process_attribute();
           $process_char = false;
         }
-        else if( 'question' == $this->active_term )
+        else if( 'variable' == $this->active_term )
         {
           if( '$' != $char ) $this->term .= $char;
-          else $compiled .= $this->process_question( $override_question_object );
-          $process_char = false;
-        }
-        else if( 'stage' == $this->active_term )
-        {
-          if( '#' != $char ) $this->term .= $char;
-          else $compiled .= $this->process_stage();
+          else
+          {
+            $question = true;
+
+            // determine if this is a respondent, stage or question variable
+            if( preg_match( '/^respondent\.(.+)$/', $this->term, $matches ) )
+            {
+              $compiled .= $this->process_response_value( $matches[1] );
+              $question = false;
+            }
+            else
+            {
+              if( $this->db_qnaire->stages && preg_match( '/^([^.]+)(\.([^.]+))?$/', $this->term, $matches ) )
+              {
+                // see if the first part of the argument is a stage name
+                $stage_name = $matches[1];
+
+                $db_stage = $stage_class_name::get_unique_record(
+                  array( 'qnaire_id', 'name' ),
+                  array( $this->db_qnaire->id, $matches[1] )
+                );
+                if( !is_null( $db_stage ) )
+                {
+                  $compiled .= $this->process_stage(
+                    $db_stage,
+                    array_key_exists( 3, $matches ) ? $matches[3] : NULL
+                  );
+                  $question = false;
+                }
+              }
+
+              if( $question ) $compiled .= $this->process_question( $override_question_object );
+            }
+          }
           $process_char = false;
         }
 
@@ -288,10 +322,8 @@ class expression_manager extends \cenozo\singleton
         throw lib::create( 'exception\runtime', 'Expression has an unclosed string', __METHOD__ );
       else if( 'attribute' == $this->active_term )
         throw lib::create( 'exception\runtime', 'Expression has an unclosed attribute', __METHOD__ );
-      else if( 'question' == $this->active_term )
-        throw lib::create( 'exception\runtime', 'Expression has an unclosed question', __METHOD__ );
-      else if( 'stage' == $this->active_term )
-        throw lib::create( 'exception\runtime', 'Expression has an unclosed stage', __METHOD__ );
+      else if( 'variable' == $this->active_term )
+        throw lib::create( 'exception\runtime', 'Expression has an unclosed variable', __METHOD__ );
       else if( 'number' == $this->active_term ) $compiled .= $this->process_number();
       else if( 'constant' == $this->active_term ) $compiled .= $this->process_constant();
       else if( 'operator' == $this->active_term ) $compiled .= $this->process_operator();
@@ -373,7 +405,8 @@ class expression_manager extends \cenozo\singleton
     $type = NULL;
     if( 'null' == $this->term ) $type = 'null';
     else if( in_array( $this->term, ['true', 'false', 'showhidden'] ) ) $type = 'boolean';
-    else if( in_array( $this->term, ['current_year', 'current_month', 'current_day', 'today'] ) ) $type = 'string';
+    else if( in_array( $this->term, ['current_year', 'current_month', 'current_day', 'today'] ) )
+      $type = 'string';
 
     if( is_null( $type ) )
       throw lib::create( 'exception\runtime', sprintf( 'Invalid constant "%s"', $this->term ), __METHOD__ );
@@ -408,9 +441,9 @@ class expression_manager extends \cenozo\singleton
     }
     else if( in_array( $this->term, ['<', '<=', '>', '>='] ) )
     { // quantity operator
-      // Note that boolean was added to the acceptible list since attributes are sometimes interpreted as boolean when they
-      // come immediately after a logical operator.  This isn't ideal, but quantity operators can work with boolean values
-      // without an error so it's the best compromise.
+      // Note that boolean was added to the acceptible list since attributes are sometimes interpreted
+      // as boolean when they come immediately after a logical operator.  This isn't ideal, but quantity
+      // operators can work with boolean values without an error so it's the best compromise.
       if( !in_array( $this->last_term, ['boolean', 'number', 'string', 'attribute'] ) )
       {
         throw lib::create( 'exception\runtime', sprintf(
@@ -556,6 +589,37 @@ class expression_manager extends \cenozo\singleton
   }
 
   /**
+   * Processes the current term as a respondent variable
+   * @param string $variable The selected respondent variable (either 'token', or 'language')
+   * @return string
+   */
+  private function process_response_value( $variable )
+  {
+    if( 'token' == $variable )
+    {
+      $compiled = is_null( $this->db_response ) ? '' : $this->db_response->get_respondent()->token;
+    }
+    else if( 'language' == $variable )
+    {
+      $compiled = is_null( $this->db_response )
+                ? $this->db_qnaire->get_base_language()->code
+                : $this->db_response->get_language()->code;
+    }
+    else
+    {
+      throw lib::create( 'exception\runtime',
+        sprintf( 'Invalid expression, "%s"', $this->term ),
+        __METHOD__
+      );
+    }
+
+    // if the last term was an operator then assume we now represent a boolean expression
+    $this->last_term = 'operator' == $this->last_term ? 'boolean' : $this->active_term;
+
+    return $compiled;
+  }
+
+  /**
    * Processes the current term as a question
    * @param database\question|database\question_option $override_question_object A question or option to leave uncompiled
    * @return string
@@ -574,9 +638,17 @@ class expression_manager extends \cenozo\singleton
       {
         $db_override_question_option = $override_question_object;
       }
-      else throw lib::create( 'exception\argument', 'override_question_object', $override_question_object, __METHOD__ );
+      else
+      {
+        throw lib::create( 'exception\argument',
+          'override_question_object',
+          $override_question_object,
+          __METHOD__
+        );
+      }
     }
-    if( !is_null( $db_override_question_option ) ) $db_override_question = $db_override_question_option->get_question();
+    if( !is_null( $db_override_question_option ) )
+      $db_override_question = $db_override_question_option->get_question();
 
     $answer_class_name = lib::get_class_name( 'database\answer' );
     $question_option_class_name = lib::get_class_name( 'database\question_option' );
@@ -599,7 +671,12 @@ class expression_manager extends \cenozo\singleton
 
       $db_question = $this->db_qnaire->get_question( $matches[1] );
       if( is_null( $db_question ) )
-        throw lib::create( 'exception\runtime', sprintf( 'No question name "%s" found.', $matches[1] ), __METHOD__ );
+      {
+        throw lib::create( 'exception\runtime',
+          sprintf( 'No question name "%s" found.', $matches[1] ),
+          __METHOD__
+        );
+      }
 
       if( '.' == $matches[2] )
       {
@@ -624,7 +701,11 @@ class expression_manager extends \cenozo\singleton
           else if( is_null( $db_question_option->extra ) )
           {
             throw lib::create( 'exception\runtime',
-              sprintf( 'Question option "%s" for question "%s" does not have extra values.', $sub_matches[1], $matches[1] ),
+              sprintf(
+                'Question option "%s" for question "%s" does not have extra values.',
+                $sub_matches[1],
+                $matches[1]
+              ),
               __METHOD__
             );
           }
@@ -663,7 +744,10 @@ class expression_manager extends \cenozo\singleton
         {
           $special_function = substr( $matches[3], 0, -2 );
         }
-        else throw lib::create( 'exception\runtime', sprintf( 'No such function "%s"', $matches[3] ), __METHOD__ );
+        else
+        {
+          throw lib::create( 'exception\runtime', sprintf( 'No such function "%s"', $matches[3] ), __METHOD__ );
+        }
       }
       else if( ':' == $matches[2] )
       {
@@ -692,18 +776,32 @@ class expression_manager extends \cenozo\singleton
     {
       $db_question = $this->db_qnaire->get_question( $this->term );
       if( is_null( $db_question ) )
-        throw lib::create( 'exception\runtime', sprintf( 'No question name "%s" found.', $this->term ), __METHOD__ );
+      {
+        throw lib::create( 'exception\runtime',
+          sprintf( 'No question name "%s" found.', $this->term ),
+          __METHOD__
+        );
+      }
 
       if( 'list' == $db_question->type )
       {
-        throw lib::create( 'exception\runtime', sprintf(
-          'Question "%s" is a list type so you must reference a question option using the QUESTION:OPTION format.',
-          $this->term
-        ), __METHOD__ );
+        throw lib::create( 'exception\runtime',
+          sprintf(
+            'Question "%s" is a list type so you must reference a question option using '.
+            'the QUESTION:OPTION format.',
+            $this->term
+          ),
+          __METHOD__
+        );
       }
 
       if( in_array( $db_question->type, ['comment', 'device', 'text'] ) )
-        throw lib::create( 'exception\runtime', sprintf( 'Cannot use question type "%s"', $db_question->type ), __METHOD__ );
+      {
+        throw lib::create( 'exception\runtime',
+          sprintf( 'Cannot use question type "%s"', $db_question->type ),
+          __METHOD__
+        );
+      }
     }
 
     // test that the working item is an operator
@@ -785,13 +883,15 @@ class expression_manager extends \cenozo\singleton
       else
       {
         if( 'boolean' == $db_question->type ) $compiled = $value ? 'true' : 'false';
-        else if( 'string' == $db_question->type ) $compiled = sprintf( "'%s'", str_replace( "'", "\\'", $value ) );
+        else if( 'string' == $db_question->type )
+          $compiled = sprintf( "'%s'", str_replace( "'", "\\'", $value ) );
         else $compiled = $value;
       }
     }
 
     // determine the last term
-    if( is_null( $special_function ) ) $this->last_term = !is_null( $db_question_option ) ? 'boolean' : $db_question->type;
+    if( is_null( $special_function ) )
+      $this->last_term = !is_null( $db_question_option ) ? 'boolean' : $db_question->type;
     else if( 'extra' == $special_function ) $this->last_term = $db_question_option->extra;
     else $this->last_term = 'count' == $special_function ? 'number' : 'boolean';
 
@@ -802,11 +902,12 @@ class expression_manager extends \cenozo\singleton
 
   /**
    * Processes the current term as a stage
+   * @param database\stage $db_stage The selected stage
+   * @param string $special_function The stage function (can either be NULL or 'status()')
    * @return string
    */
-  private function process_stage()
+  private function process_stage( $db_stage, $special_function = NULL )
   {
-    $stage_class_name = lib::get_class_name( 'database\stage' );
     $response_stage_class_name = lib::get_class_name( 'database\response_stage' );
 
     if( !$this->db_qnaire->stages )
@@ -817,39 +918,6 @@ class expression_manager extends \cenozo\singleton
       );
     }
 
-    // figure out the stage
-    $db_stage = NULL;
-    $special_function = NULL;
-
-    // check for functions
-    if( preg_match( '/([^.]+)\.([^.]+)/', $this->term, $matches ) )
-    {
-      if( 3 != count( $matches ) )
-        throw lib::create( 'exception\runtime', sprintf( 'Invalid stage "%s"', $this->term ), __METHOD__ );
-
-      $db_stage = $stage_class_name::get_unique_record(
-        array( 'qnaire_id', 'name' ),
-        array( $this->db_qnaire->id, $matches[1] )
-      );
-      if( is_null( $db_stage ) )
-        throw lib::create( 'exception\runtime', sprintf( 'No stage name "%s" found.', $matches[1] ), __METHOD__ );
-
-      if( 'status()' == $matches[2] )
-      {
-        $special_function = substr( $matches[2], 0, -2 );
-      }
-      else throw lib::create( 'exception\runtime', sprintf( 'Invalid function "%s"', $matches[2] ), __METHOD__ );
-    }
-    else // stages are defined by name
-    {
-      $db_stage = $stage_class_name::get_unique_record(
-        array( 'qnaire_id', 'name' ),
-        array( $this->db_qnaire->id, $this->term )
-      );
-      if( is_null( $db_stage ) )
-        throw lib::create( 'exception\runtime', sprintf( 'No stage name "%s" found.', $this->term ), __METHOD__ );
-    }
-
     // test that the working item is an operator
     if( !is_null( $this->last_term ) && 'operator' != $this->last_term )
       throw lib::create( 'exception\runtime', 'Stage found but expecting an operator', __METHOD__ );
@@ -857,7 +925,7 @@ class expression_manager extends \cenozo\singleton
     // determine the last term
     $this->last_term = is_null( $special_function ) ? 'boolean' : 'string';
 
-    $compiled = sprintf( '#%s#', $this->term );
+    $compiled = sprintf( '$%s$', $this->term );
     if( !is_null( $this->db_response ) )
     {
       $db_response_stage = $response_stage_class_name::get_unique_record(
@@ -865,7 +933,7 @@ class expression_manager extends \cenozo\singleton
         array( $this->db_response->id, $db_stage->id )
       );
 
-      $compiled = 'status' == $special_function
+      $compiled = 'status()' == $special_function
                 ? sprintf( "'%s'", $db_response_stage->status )
                 : ( in_array( $db_response_stage->status, ['skipped', 'completed'] ) ? 'true' : 'false' );
     }
@@ -889,7 +957,12 @@ class expression_manager extends \cenozo\singleton
       $compiled .= $char;
       $this->open_bracket += '(' == $char ? 1 : -1;
       if( 0 > $this->open_bracket )
-        throw lib::create( 'exception\runtime', 'Found closing bracket without a matching opening bracket.', __METHOD__ );
+      {
+        throw lib::create( 'exception\runtime',
+          'Found closing bracket without a matching opening bracket.',
+          __METHOD__
+        );
+      }
     }
     else if( '{' == $char || '}' == $char )
     {
@@ -902,13 +975,12 @@ class expression_manager extends \cenozo\singleton
     }
     else if( ' ' == $char ) ; // ignore spaces
     else if( '@' == $char ) $this->active_term = 'attribute';
-    else if( '$' == $char ) $this->active_term = 'question';
-    else if( '#' == $char ) $this->active_term = 'stage';
+    else if( '$' == $char ) $this->active_term = 'variable';
     else if( preg_match( '/[0-9.]/', $char ) ) $this->active_term = 'number';
     else if( preg_match( '/[a-z_]/', $char ) ) $this->active_term = 'constant';
     else if( preg_match( '/[-+*\/<>!=~&|?:]/', $char ) ) $this->active_term = 'operator';
 
-    $this->term = in_array( $char, ['(', ')', "'", '"', '`', ' ', '@', '$', '#'] ) ? '' : $char;
+    $this->term = in_array( $char, ['(', ')', "'", '"', '`', ' ', '@', '$'] ) ? '' : $char;
     return $compiled;
   }
 
@@ -931,7 +1003,7 @@ class expression_manager extends \cenozo\singleton
   private $quote;
   
   /**
-   * Stores whether some element is being declared (string, number, attribute, question, constant or operator)
+   * Stores whether some element is being declared (string, number, attribute, variable, constant or operator)
    * @var string $active_term
    */
   private $active_term;
