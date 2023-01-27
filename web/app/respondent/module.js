@@ -48,10 +48,12 @@ cenozoApp.defineModule({
           }, // this is changed by the qnaire module
         },
         start_datetime: {
+          column: 'respondent.start_datetime',
           title: "Start Date",
           type: "datetime",
         },
         end_datetime: {
+          column: 'respondent.end_datetime',
           title: "End Date",
           type: "datetime",
         },
