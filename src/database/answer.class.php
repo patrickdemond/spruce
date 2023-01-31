@@ -304,9 +304,12 @@ class answer extends \cenozo\database\record
 
   /** 
    * Launches this answer's device
+   * @return database/response_device The resulting response_device object referring to the launch request
    */
   public function launch_device()
   {
+    $response_device_class_name = lib::get_class_name( 'database\response_device' );
+
     $db_device = $this->get_question()->get_device();
     if( is_null( $db_device ) )
     {
@@ -316,7 +319,14 @@ class answer extends \cenozo\database\record
       );
     }
 
-    $this->value = util::json_encode( $db_device->launch( $this ) );
-    $this->save();
+    $db_response_device = $db_device->launch( $this );
+    if( 'in progress' == $db_response_device->status )
+    {
+      // remove the answer's value since the device is in progress
+      $this->value = 'null';
+      $this->save();
+    }
+
+    return $db_response_device;
   }
 }

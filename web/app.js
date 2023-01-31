@@ -843,6 +843,18 @@ cenozo.service("CnTranslationHelper", [
             en: "You must complete all questions before you can proceed.",
             fr: "Vous devez répondre à toutes les questions avant de continuer.",
           },
+          launch: {
+            en: "Launch",
+            fr: "Lancer",
+          },
+          reLaunch: {
+            en: "Re-Launch",
+            fr: "Relancer",
+          },
+          inProgress: {
+            en: "In Progress",
+            fr: "en cours",
+          },
         },
       },
       // used by services below to convert a list of descriptions into an object

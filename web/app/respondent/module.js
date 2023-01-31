@@ -119,6 +119,7 @@ cenozoApp.defineModule({
         type: "string",
         isExcluded: true,
       },
+      has_devices: { type: "hidden", },
     });
 
     module.addInputGroup(
@@ -411,21 +412,25 @@ cenozoApp.defineModule({
             },
 
             getChildList: function () {
-              return this.$$getChildList().filter(
-                (child) =>
-                  // show the response list if the qnaire is answered more than once
-                  ("response" == child.subject.snake &&
-                    null != this.record.repeated) ||
-                  // show mail list if the qnaire sends mail
-                  ("respondent_mail" == child.subject.snake &&
-                    this.record.sends_mail) ||
-                  // show stage list if the qnaire has stages and the qnaire is only answered once
-                  ("response_stage" == child.subject.snake &&
-                    this.record.stages &&
-                    null == this.record.repeated) ||
-                  // show attribute list if the qnaire is only answered once
-                  ("response_attribute" == child.subject.snake &&
-                    null == this.record.repeated)
+              return this.$$getChildList().filter( (child) =>
+                // show the response list if the qnaire is answered more than once
+                ("response" == child.subject.snake && null != this.record.repeated) ||
+                // show mail list if the qnaire sends mail
+                ("respondent_mail" == child.subject.snake && this.record.sends_mail) ||
+                // show stage list if the qnaire has stages and the qnaire is only answered once
+                (
+                  "response_stage" == child.subject.snake &&
+                  this.record.stages &&
+                  null == this.record.repeated
+                ) ||
+                // show attribute list if the qnaire is only answered once
+                ("response_attribute" == child.subject.snake && null == this.record.repeated) ||
+                // show device list if the qnaire has devices and the qnaire is only answered once
+                (
+                  "response_device" == child.subject.snake &&
+                  this.record.has_devices &&
+                  null == this.record.repeated
+                )
               );
             },
 

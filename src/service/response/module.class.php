@@ -97,8 +97,18 @@ class module extends \cenozo\service\module
       );
     }
 
-    if( !is_null( $this->get_resource() ) )
+    $db_response = $this->get_resource();
+    if( !is_null( $db_response ) )
     {
+      if( $select->has_column( 'has_devices' ) )
+      {
+        $select->add_constant(
+          0 < $db_response->get_respondent()->get_qnaire()->get_device_count(),
+          'has_devices',
+          'boolean'
+        );
+      }
+
       // include the language first/last/uid as supplemental data
       $select->add_column(
         'CONCAT( language.name, " [", language.code, "]" )',

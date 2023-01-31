@@ -16,10 +16,11 @@ class cypress_manager extends \cenozo\base_object
   /**
    * Constructor.
    * 
-   * @param database\device|string $db_device
+   * @param database\device $db_device
+   * @param database\response_device $db_response_device
    * @access protected
    */
-  public function __construct( $db_device )
+  public function __construct( $db_device, $db_response_device = NULL )
   {
     if( is_string( $db_device ) )
     {
@@ -28,6 +29,7 @@ class cypress_manager extends \cenozo\base_object
     }
 
     $this->db_device = $db_device;
+    $this->db_response_device = $db_response_device;
   }
 
   /**
@@ -58,11 +60,53 @@ class cypress_manager extends \cenozo\base_object
    * Attempts to launch a device by sending a POST request to the cypress service
    * 
    * @return varies
+   * @param array $data An associative array of data to send to Cypress
+   * @param database\response $db_response The response record launching the device
+   * @return database\response_device The resulting response_device record
    * @access public
    */
-  public function launch( $data = NULL )
+  public function launch( $data, $db_response )
   {
-    return $this->send( $this->db_device->url, 'POST', $data );
+    $response_device_class_name = lib::get_class_name( 'database\response_device' );
+    if( !$uuid )
+    {
+      throw lib::create( 'exception\runtime',
+        sprintf( 'Invalid UUID returned from Cypress while launching %s', $this->db_device->name ),
+        __METHOD__
+      );
+    }
+
+    // Cypress will respond with a UUID that will be used to refer to this respondent/device in the future
+    $db_response_device = $response_device_class_name::get_unique_record( 'uuid', $uuid );
+
+    if( is_null( $db_response_device ) )
+    {
+      $db_response_device = lib::create( 'database\response_device' );
+      $db_response_device->response_id = $db_response->id;
+      $db_response_device->device_id = $this->db_device->id;
+      $db_response_device->uuid = $uuid;
+      $db_response_device->status = 'in progress';
+      $db_response_device->start_datetime = util::get_datetime_object();
+      $db_response_device->save();
+    }
+    else
+    {
+      if( $db_response_device->response_id != $db_response->id ||
+          $db_response_device->device_id != $this->db_device->id )
+      {
+        throw lib::create( 'exception\runtime',
+          sprintf(
+            'Cypress responded with conflicting UUID "%s" while launching device "%s" for participant "%s"',
+            $uuid,
+            $this->db_device->name,
+            $db_response->get_respondent()->get_participant()->uid
+          ),
+          __METHOD__
+        );
+      }
+    }
+
+    return $db_response_device;
   }
 
   /**
@@ -131,12 +175,20 @@ class cypress_manager extends \cenozo\base_object
 
     return util::json_decode( $response );
   }
+
   /**
    * The device to connect to
    * @var database\device
    * @access protected
    */
   protected $db_device = NULL;
+
+  /**
+   * The active device_response record
+   * @var database\device_response
+   * @access protected
+   */
+  protected $db_device_response = NULL;
 
   /**
    * The number of seconds to wait before giving up on connecting to the device

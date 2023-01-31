@@ -87,8 +87,13 @@ class module extends \cenozo\service\module
     }
     else
     {
+      $db_qnaire = $db_respondent->get_qnaire();
+
+      if( $select->has_column( 'has_devices' ) )
+        $select->add_constant( 0 < $db_qnaire->get_device_count(), 'has_devices', 'boolean' );
+
       if( $select->has_column( 'sends_mail' ) )
-        $select->add_constant( $db_respondent->get_qnaire()->sends_mail(), 'sends_mail', 'boolean' );
+        $select->add_constant( $db_qnaire->sends_mail(), 'sends_mail', 'boolean' );
 
       // include the participant first/last/uid as supplemental data
       $select->add_column(

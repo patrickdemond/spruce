@@ -24,5 +24,11 @@ class module extends \cenozo\service\module
     $modifier->join( 'question', 'answer.question_id', 'question.id' );
     $modifier->join( 'language', 'answer.language_id', 'language.id' );
     $modifier->left_join( 'user', 'answer.user_id', 'user.id' );
+    $modifier->left_join( 'device', 'question.device_id', 'device.id' );
+    
+    $join_mod = lib::create( 'database\modifier' );
+    $join_mod->where( 'response.id', '=', 'response_device.response_id', false );
+    $join_mod->where( 'question.device_id', '=', 'response_device.device_id', false );
+    $modifier->join_modifier( 'response_device', $join_mod, 'left' );
   }
 }

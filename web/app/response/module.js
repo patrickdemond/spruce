@@ -133,6 +133,7 @@ cenozoApp.defineModule({
       qnaire_id: { column: "qnaire.id", isExcluded: true },
       lang: { column: "language.code", isExcluded: true },
       respondent_id: { column: "respondent.id", isExcluded: true },
+      has_devices: { type: "hidden", },
     });
 
     module.addExtraOperation("view", {
@@ -300,10 +301,12 @@ cenozoApp.defineModule({
           );
 
           this.getChildList = function () {
-            // show stage list if the qnaire has stages
-            return this.$$getChildList().filter(
-              (child) =>
-                "response_stage" != child.subject.snake || this.record.stages
+            return this.$$getChildList().filter( (child) =>
+              (!["response_stage", "response_device"].includes(child.subject.snake)) ||
+              // show stage list if the qnaire has stages
+              ("response_stage" == child.subject.snake && this.record.stages) ||
+              // show device list if the qnaire has devices and the qnaire is only answered once
+              ("response_device" == child.subject.snake && this.record.has_devices)
             );
           };
         };

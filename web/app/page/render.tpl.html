@@ -402,9 +402,9 @@
                     </h4>
                     <button ng-if="null != question.device_id" class="btn btn-default larger full-width"
                             ng-class="{ 'color-red': true === question.incomplete }"
-                            ng-disabled="model.renderModel.working"
+                            ng-bind-html="model.renderModel.getDevicePrompt( question )"
+                            ng-disabled="model.renderModel.working || 'in progress' == question.device_status"
                             ng-click="model.renderModel.launchDevice( question )">
-                      {{ model.renderModel.isDeviceComplete( question ) ? 'Re-' : '' }}Launch {{ question.device }} Device
                     </button>
                   </div>
                   <div ng-switch-when="lookup">

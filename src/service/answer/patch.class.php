@@ -28,7 +28,7 @@ class patch extends \cenozo\service\patch
           $this->set_data( 'Cannot launch since the question has not been associated with any device.' );
           $this->get_status()->set_code( 306 );
         }
-        else if( !$db_device->test_connection() )
+        else if( !$db_device->get_status() )
         {
           $this->set_data( 'Cannot launch since the device service is not responding.' );
           $this->get_status()->set_code( 306 );
@@ -47,9 +47,11 @@ class patch extends \cenozo\service\patch
     if( 'launch_device' == $this->get_argument( 'action', NULL ) )
     {
       // launch the associated device
-      $db_answer = $this->get_leaf_record();
-      $db_answer->launch_device();
-      $this->set_data( $db_answer->value );
+      $db_response_device = $this->get_leaf_record()->launch_device();
+      $this->set_data( [
+        'uuid' => $db_response_device->uuid,
+        'status' => $db_response_device->status
+      ] );
     }
   }
 }

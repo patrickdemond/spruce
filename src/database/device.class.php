@@ -26,10 +26,12 @@ class device extends \cenozo\database\record
    * Launches the device by communicating with the cypress service
    * 
    * @argument database\answer $db_answer
+   * @return database/response_device The resulting response_device object referring to the launch request
    */
   public function launch( $db_answer )
   {
-    $cypress_manager = lib::create( 'business\cypress_manager', $this );
+    $response_device_class_name = lib::get_class_name( 'database\response_device' );
+    $cypress_manager = lib::create( 'business\cypress_manager', $this, $db_answer );
     
     // always include the token and language
     $db_response = $db_answer->get_response();
@@ -43,6 +45,13 @@ class device extends \cenozo\database\record
     foreach( $this->get_device_data_object_list() as $db_device_data )
       $data[$db_device_data->name] = $db_device_data->get_compiled_value( $db_answer );
 
-    return $cypress_manager->launch( $data );
+    // if a response device already exists for this response/device, then a response_device record will be found
+    $db_response_device = $response_device_class_name::get_unique_record(
+      array( 'response_id', 'device_id' ),
+      array( $db_response->id, $this->id )
+    );
+
+    if( is_null( $db_response_device ) ) $db_response_device = $cypress_manager->launch( $data, $db_response );
+    return $db_response_device;
   }
 }

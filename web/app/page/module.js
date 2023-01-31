@@ -200,6 +200,11 @@ cenozoApp.defineModule({
           templateUrl: module.getFileUrl("render.tpl.html"),
           restrict: "E",
           scope: { model: "=?" },
+          link: function (scope, element) {
+            element.on("$destroy", () =>
+              angular.isDefined(scope.model) && scope.model.renderModel.cancelDevicePromises()
+            );
+          },
           controller: async function ($scope) {
             if (angular.isUndefined($scope.model))
               $scope.model = CnPageModelFactory.root;
@@ -613,7 +618,50 @@ cenozoApp.defineModule({
                 prevModuleList: [],
                 nextModuleList: [],
                 focusQuestionId: null,
+                devicePromiseList: [],
               });
+            },
+
+            cancelDevicePromises: function() {
+              if( angular.isDefined( this.devicePromiseList ) ) {
+                this.devicePromiseList.forEach( promise => $interval.cancel(promise) );
+                this.devicePromiseList = [];
+              }
+            },
+
+            addDevicePromise: function(question) {
+              if ('device' == question.type && 'in progress' == question.device_status ) {
+                const promise = $interval(
+                  async () => {
+                    if( question.device_uuid ) {
+                      // update question answer and device details (status/UUID)
+                      const response = await CnHttpFactory.instance({
+                        path: "answer/" + ["token="+$state.params.token, "question_id="+question.id].join(";"),
+                        data: {
+                          select: {
+                            column: [
+                              'value',
+                              { table: 'response_device', column: 'uuid' },
+                              { table: 'response_device', column: 'status' },
+                            ],
+                          },
+                        },
+                      }).get();
+
+                      question.value = angular.fromJson(response.data.value);
+                      var complete = this.questionIsComplete(question);
+                      question.incomplete = false === complete ? true : true === complete ? false : complete;
+                      question.backupValue = angular.copy(response.data.value);
+                      question.device_status = response.data.status;
+                      question.device_uuid = response.data.uuid;
+
+                      if( 'in progress' != question.device_status ) $interval.cancel(promise);
+                    }
+                  },
+                  4000, // update every 4 seconds
+                );
+                this.devicePromiseList.push(promise);
+              }
             },
 
             setConsent: async function (consent) {
@@ -1543,6 +1591,7 @@ cenozoApp.defineModule({
                 );
 
                 this.questionList.forEach((question) => {
+                  // parse descriptions
                   question.rawPrompts = question.prompts;
                   question.prompts = CnTranslationHelper.parseDescriptions(
                     this.evaluateDescription(question.rawPrompts)
@@ -1552,11 +1601,16 @@ cenozoApp.defineModule({
                     this.evaluateDescription(question.rawPopups)
                   );
                   this.convertValueToModel(question);
+
+                  // convert audio maximum times
                   if ('audio' == question.type) {
                     question.maximumAsTime = question.maximum
                                            ? moment.utc(question.maximum*1000).format("mm:ss")
                                            : null;
                   }
+
+                  // start listening for changes to device status (only applies to in progress devices)
+                  this.addDevicePromise(question);
                 });
 
                 // sort active attribute and make a unique list
@@ -2096,11 +2150,15 @@ cenozoApp.defineModule({
               question.audio.stop();
             },
 
-            isDeviceComplete: function (question) {
-              return (
-                angular.isObject(question.value) &&
-                !isDknaOrRefuse(question.value)
-              );
+            getDevicePrompt: function (question) {
+              let prompt = this.text( 'misc.launch' ) + " " + question.device;
+              if( 'in progress' == question.device_status ) {
+                prompt = question.device + " " + this.text( 'misc.inProgress' );
+              } else if( 'completed' == question.device_status ) {
+                prompt = this.text( 'misc.reLaunch' ) + " " + question.device;
+              }
+
+              return prompt;
             },
 
             launchDevice: async function (question) {
@@ -2114,10 +2172,11 @@ cenozoApp.defineModule({
                 modal.show();
 
                 var response = await CnHttpFactory.instance({
-                  path:
-                    "answer/" + question.answer_id + "?action=launch_device",
+                  path: "answer/" + question.answer_id + "?action=launch_device",
                 }).patch();
-                question.value = response;
+                question.device_status = response.data.status;
+                question.device_uuid = response.data.uuid;
+                this.addDevicePromise(question);
               } finally {
                 this.convertValueToModel(question);
                 modal.close();
