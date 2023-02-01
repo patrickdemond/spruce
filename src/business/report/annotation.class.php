@@ -110,9 +110,10 @@ class annotation extends \cenozo\business\report\base_report
         $type = $question['type'];
         if( 'list' == $type )
         {
-          $type = array_key_exists( 'extra', $question ) && !is_null( $question['extra'] )
-                ? $question['extra']
-                : 'boolean';
+          $type = 'boolean';
+          if( array_key_exists( 'extra', $question ) && !is_null( $question['extra'] ) )
+            $type = $question['extra'];
+          else if( array_key_exists( 'option_list', $question ) ) $type = 'string';
         }
 
         if( 'string' == $type ) $type = 'text';
