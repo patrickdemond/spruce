@@ -2,7 +2,7 @@
 <html ng-app="cenozoApp" ng-controller="LangCtrl" lang="{{ lang }}">
 <head ng-controller="HeadCtrl">
   <meta charset="utf-8">
-  <title><?php echo APP_TITLE; ?>{{ getPageTitle() }}</title>
+  <title><?php echo APP_TITLE; ?></title>
   <link rel="shortcut icon" href="<?php print ROOT_URL; ?>/img/favicon.ico">
   <link rel="stylesheet" href="<?php print LIB_URL; ?>/bootstrap/dist/css/bootstrap.min.css?build=<?php print CENOZO_BUILD; ?>">
   <link rel="stylesheet" href="<?php print LIB_URL; ?>/fullcalendar/dist/fullcalendar.min.css?build=<?php print CENOZO_BUILD; ?>">
@@ -32,6 +32,7 @@
   <base href="/"></base>
 </head>
 <body class="background">
+  <div id="root"></div>
   <script>
     // display an error to IE users
     if( window.document.documentMode ) {
@@ -81,13 +82,36 @@
         }
       ] );
     }
+
+    // determine if the browser is compatible
+    var root = document.getElementById("root");
+    var matches = navigator.userAgent.match( "OS ([0-9]+)_[0-9_]+ like Mac OS X" );
+    if( window.document.documentMode || (null != matches && 12 > parseInt(matches[1])) ) {
+      root.innerHTML = 
+        '<div class="container-fluid headerless-outer-view-frame fade-transition">\n' +
+        '  <div class="inner-view-frame">\n' +
+        '    <div class="container-fluid bg-white">\n' +
+        '      <h3 class="text-primary">Incompatible Browser</h3>\n' +
+        '      <div class="container-fluid">\n' +
+        '      <blockquote>\n' +
+        '        Your web browser is not compatible with this application.\n' +
+        '        Please try using a different device, computer, or browser.\n' +
+        '      </blockquote>\n' +
+        '    </div>\n' +
+        '    <div>\n' +
+        '      <h3 class="text-primary">Navigateur incompatible</h3>\n' +
+        '      <div class="container-fluid">\n' +
+        '      <blockquote>\n' +
+        '        Votre navigateur Web n’est pas compatible avec cette application.\n' +
+        '        Veuillez essayer de changer d’appareil, d’ordinateur ou de navigateur.\n' +
+        '      </blockquote>\n' +
+        '    </div>\n' +
+        '  </div>\n' +
+        '</div>\n';
+    } else {
+      root.innerHTML =
+        '<div id="view" ui-view class="container-fluid headerless-outer-view-frame fade-transition noselect"></div>';
+    }
   </script>
-
-  <div class="container-fluid headerless-outer-view-frame fade-transition noselect" ng-if="isLoading">
-    <div class="inner-view-frame"><cn-loading></cn-loading></div>
-    <div class="gradient-footer"></div>
-  </div>
-
-  <div id="view" ui-view class="container-fluid headerless-outer-view-frame fade-transition noselect"></div>
 </body>
 </html>
