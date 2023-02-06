@@ -68,6 +68,9 @@ class cypress_manager extends \cenozo\base_object
   public function launch( $data, $db_response )
   {
     $response_device_class_name = lib::get_class_name( 'database\response_device' );
+
+    // send a post request to cypress to start the device, it should respond with a UUID
+    $uuid = $this->send( $this->db_device->url, 'POST', $data );
     if( !$uuid )
     {
       throw lib::create( 'exception\runtime',
