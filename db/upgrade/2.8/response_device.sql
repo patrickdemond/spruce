@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS response_device (
   response_id INT(10) UNSIGNED NOT NULL,
   device_id INT(10) UNSIGNED NOT NULL,
   uuid VARCHAR(45) NOT NULL,
-  status ENUM('in progress', 'failed', 'completed') NOT NULL DEFAULT 'in progress'
+  status ENUM('in progress', 'failed', 'completed') NOT NULL DEFAULT 'in progress',
   start_datetime DATETIME NOT NULL,
   end_datetime DATETIME NULL DEFAULT NULL,
   PRIMARY KEY (id),
