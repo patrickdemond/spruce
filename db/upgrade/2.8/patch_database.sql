@@ -10,6 +10,8 @@ SOURCE lookup.sql
 SOURCE question.sql
 SOURCE question_option.sql
 SOURCE answer.sql
+SOURCE qnaire_description.sql
+SOURCE qnaire_has_language.sql
 SOURCE qnaire_consent_type_trigger.sql
 SOURCE qnaire_proxy_type_trigger.sql
 SOURCE qnaire_alternate_consent_type_trigger.sql
@@ -25,7 +27,6 @@ SOURCE indicator_has_lookup_item.sql
 SOURCE page.sql
 SOURCE qnaire_report.sql
 SOURCE qnaire_report_data.sql
-SOURCE report_restriction.sql
 
 SOURCE update_version_number.sql
 
