@@ -40,9 +40,6 @@ class query extends \cenozo\service\query
     $db_qnaire = $db_response->get_respondent()->get_qnaire();
     $expression_manager = lib::create( 'business\expression_manager', $db_response );
 
-    // get a list of this qnaire's languages
-    $language_list = $db_qnaire->get_language_object_list();
-
     // generate a list of all visible questions and any answers
     $this->data_list = array();
 
@@ -163,12 +160,7 @@ class query extends \cenozo\service\query
                       property_exists( $decoded_value, 'value' ) &&
                       property_exists( $decoded_value, 'unit' )
                     ) {
-                      $unit_list_enum = util::get_unit_list_enum(
-                        $question['unit_list'],
-                        $language_list,
-                        $db_qnaire->get_base_language()->code
-                      );
-
+                      $unit_list_enum = $db_qnaire->get_unit_list_enum( $question['unit_list'] );
                       $lang = $question['language_code'];
                       $unit = $decoded_value->unit;
                       $print_answer = sprintf(
@@ -250,12 +242,7 @@ class query extends \cenozo\service\query
                                 property_exists( $item->value, 'value' ) &&
                                 property_exists( $item->value, 'unit' )
                               ) {
-                                $unit_list_enum = util::get_unit_list_enum(
-                                  $option['unit_list'],
-                                  $language_list,
-                                  $db_qnaire->get_base_language()->code
-                                );
-
+                                $unit_list_enum = $db_qnaire->get_unit_list_enum( $option['unit_list'] );
                                 $lang = $question['language_code'];
                                 $unit = $item->value->unit;
                                 $option_data['value'] = sprintf(
