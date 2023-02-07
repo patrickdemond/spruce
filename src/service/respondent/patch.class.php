@@ -39,7 +39,11 @@ class patch extends \cenozo\service\patch
 
       if( 'reopen' == $action )
       {
-        $db_respondent->reopen();
+        try { $db_respondent->reopen(); }
+        catch( \cenozo\exception\runtime $e )
+        {
+          throw lib::create( 'exception\notice', $e->get_raw_message(), __METHOD__, $e );
+        }
       }
       else if( 'resend_mail' == $action )
       {
@@ -85,12 +89,37 @@ class patch extends \cenozo\service\patch
           $db_qnaire->sync_with_parent();
           $db_qnaire->export_respondent_data( $db_respondent );
         }
-        else if( 'proceed' == $action ) $db_response->move_forward();
-        else if( 'backup' == $action ) $db_response->move_backward();
+        else if( 'proceed' == $action )
+        {
+          try { $db_response->move_forward(); }
+          catch( \cenozo\exception\runtime $e )
+          {
+            throw lib::create( 'exception\notice', $e->get_raw_message(), __METHOD__, $e );
+          }
+        }
+        else if( 'backup' == $action )
+        {
+          try { $db_response->move_backward(); }
+          catch( \cenozo\exception\runtime $e )
+          {
+            throw lib::create( 'exception\notice', $e->get_raw_message(), __METHOD__, $e );
+          }
+        }
         else if( 'jump' == $action )
         {
           $db_module = lib::create( 'database\module', $this->get_argument( 'module_id' ) );
-          $db_response->page_id = $db_module->get_first_page()->id;
+          $db_page = is_null( $db_module )
+                   ? NULL
+                   : $db_module->get_first_page_for_response( $db_response );
+          if( is_null( $db_page ) )
+          {
+            throw lib::create( 'exception\notice',
+              'Unable to start jump to the selected module as there are no valid pages to display.',
+              __METHOD__
+            );
+          }
+
+          $db_response->page_id = $db_page->id;
           $db_response->save();
         }
         else if( 'set_language' == $action )

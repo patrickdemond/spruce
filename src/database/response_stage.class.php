@@ -97,7 +97,18 @@ class response_stage extends \cenozo\database\record
     if( is_null( $this->page_id ) )
     {
       $db_module = $this->get_stage()->get_first_module_for_response( $db_response );
-      if( !is_null( $db_module ) ) $this->page_id = $db_module->get_first_page()->id;
+      $db_page = is_null( $db_module )
+               ? NULL
+               : $db_module->get_first_page_for_response( $db_response );
+      if( is_null( $db_page ) )
+      {
+        throw lib::create( 'exception\runtime',
+          'Unable to start stage as there are no valid pages to display.',
+          __METHOD__
+        );
+      }
+
+      $this->page_id = $db_page->id;
 
       // if we're re-launching the stage then remove the end datetime
       if( 'completed' == $this->status ) $this->end_datetime = NULL;

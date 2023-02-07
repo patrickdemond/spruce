@@ -81,7 +81,13 @@ class patch extends \cenozo\service\patch
     {
       $db_qnaire = $this->get_leaf_record();
       $patch_object = util::json_decode( $this->get_file_as_raw() );
-      if( is_null( $patch_object ) ) throw lib::create( 'exception\notice', 'The patch file provided is not valid.', __METHOD__ );
+      if( is_null( $patch_object ) )
+      {
+        throw lib::create( 'exception\notice',
+          'The patch file provided is not valid.',
+          __METHOD__
+        );
+      }
       else $this->set_data( $db_qnaire->process_patch( $patch_object, 'apply' == $patch ) );
     }
     else

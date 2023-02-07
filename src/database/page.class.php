@@ -231,7 +231,7 @@ class page extends base_qnaire_part
             $db_module = $db_module->get_next();
           }
           while( !is_null( $db_module ) && !$expression_manager->evaluate( $db_module->precondition ) );
-          $db_next_page = is_null( $db_module ) ? NULL : $db_module->get_first_page();
+          $db_next_page = is_null( $db_module ) ? NULL : $db_module->get_first_page_for_response( $db_response );
         }
 
         // if there is a next page then make sure to test its precondition if a response is included in the request

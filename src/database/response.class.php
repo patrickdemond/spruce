@@ -384,7 +384,18 @@ class response extends \cenozo\database\has_rank
       }
       else
       {
-        $db_next_page = $this->get_qnaire()->get_first_module()->get_first_page();
+        $db_next_module = $this->get_qnaire()->get_first_module_for_response( $this );
+        $db_next_page = is_null( $db_next_module )
+                      ? NULL
+                      : $db_next_module->get_first_page_for_response( $this );
+        if( is_null( $db_next_page ) )
+        {
+          throw lib::create( 'exception\runtime',
+            'Unable to start questionnaire as there are no valid pages to display.',
+            __METHOD__
+          );
+        }
+
         $this->page_id = $db_next_page->id;
         $this->start_datetime = util::get_datetime_object();
       }
@@ -538,7 +549,14 @@ class response extends \cenozo\database\has_rank
     $db_page_time->save();
 
     $db_previous_page = $db_page->get_previous_for_response( $this );
-    if( !is_null( $db_previous_page ) )
+    if( is_null( $db_previous_page ) )
+    {
+      throw lib::create( 'exception\runtime',
+        'Unable to move to the previous page as there are no valid pages to display.',
+        __METHOD__
+      );
+    }
+    else
     {
       if( $this->get_qnaire()->stages )
       {
