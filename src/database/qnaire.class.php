@@ -1837,20 +1837,98 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
+   * Transforms a JSON-encoded unit-list string into an associative array.
+   * 
+   * Note that the response depends on the questionnaire's languages, so only unit lists from
+   * questions or options belonging to this qnaire should be passed to this method.
+   * 
+   * Unit lists are used by the "number with unit" question type and question option extra types.
+   * Data is stored in a JSON-encoded string using multiple different formats, for example:
+   *   [ "mg", "IU" ]
+   *   [ { "MG": "mg" }, { "IU": { "en": "IU", "fr": "U. I." } } ]
+   *   { "MG": "mg", "IU": { "en": "IU", "fr": "U. I." } }
+   * 
+   * @param string $unit_list A JSON-encoded unit list
+   * @return associative array
+   * @static
+   * @access public
+   */
+  public function get_unit_list_enum( $unit_list )
+  {
+    if( is_null( $unit_list ) ) return NULL;
+
+    $get_name = function( $input, $lang, $base_lang ) {
+      $name_list = $input;
+
+      // if a string is provided then convert it to an object
+      if( is_string( $name_list ) )
+      {
+        $name_list = [];
+        $name_list[$base_lang] = $input;
+      }
+      else if( is_object( $name_list ) )
+      {
+        $name_list = (array) $name_list;
+      }
+
+      // get the name for the appropriate language, or the base language as a fall-back
+      return (
+        array_key_exists( $lang, $name_list ) ? $name_list[$lang] : (
+          array_key_exists( $base_lang, $name_list ) ? $name_list[$base_lang] : NULL
+        )
+      );
+    };
+
+    $base_lang = $this->get_base_language()->code;
+    $data = util::json_decode( $unit_list );
+
+    $unit_list_enum = [];
+    foreach( $this->get_language_object_list() as $db_language )
+    {
+      // make sure every language has an array
+      $unit_list_enum[$db_language->code] = [];
+
+      if( is_array( $data ) )
+      {
+        foreach( $data as $item )
+        {
+          if( is_string( $item ) )
+          {
+            // if only a string is provided then use it as the key and value for all languages
+            $unit_list_enum[$db_language->code][$item] = $item;
+          }
+          else if( is_object( $item ) )
+          {
+            foreach( $item as $key => $value )
+            {
+              $name = $get_name( $value, $db_language->code, $base_lang );
+              if( !is_null( $name ) ) $unit_list_enum[$db_language->code][$key] = $name;
+            }
+          }
+        }
+      }
+      else if( is_object( $data ) )
+      {
+        foreach( $data as $key => $value )
+        {
+          $name = $get_name( $value, $db_language->code, $base_lang );
+          if( !is_null( $name ) ) $unit_list_enum[$db_language->code][$key] = $name;
+        }
+      }
+    }
+
+    return $unit_list_enum;
+  }
+
+  /**
    * Returns an array of all questions belonging to this qnaire
    * @param boolean $descriptions If true then include module, page and question descriptions
    * @param boolean $export_only Whether to restrict to questions marked for export only
    * @return array
    */
-  public function get_all_questions( $descriptions = false, $export_only = false )
+  public function get_output_column_list( $descriptions = false, $export_only = false )
   {
     $column_list = array();
-
-    // determine which languages the qnaire uses
-    $language_list = array();
-    $language_sel = lib::create( 'database\select' );
-    $language_sel->add_column( 'code' );
-    foreach( $this->get_language_list( $language_sel ) as $language ) $language_list[] = $language['code'];
 
     // first get a list of all columns to include in the data
     $module_mod = lib::create( 'database\modifier' );
@@ -1867,239 +1945,7 @@ class qnaire extends \cenozo\database\record
         $question_mod->order( 'question.rank' );
         foreach( $db_page->get_question_object_list( $question_mod ) as $db_question )
         {
-          $description_list = array(
-            'module_prompt' => array(),
-            'module_popup' => array(),
-            'page_prompt' => array(),
-            'page_popup' => array(),
-            'question_prompt' => array(),
-            'question_popup' => array()
-          );
-          if( $descriptions )
-          {
-            // add the module's descriptions
-            $description_sel = lib::create( 'database\select' );
-            $description_sel->add_table_column( 'language', 'code', 'language' );
-            $description_sel->add_column( 'type' );
-            $description_sel->add_column( 'value' );
-            $description_mod = lib::create( 'database\modifier' );
-            $description_mod->join( 'language', 'module_description.language_id', 'language.id' );
-            foreach( $db_module->get_module_description_list( $description_sel, $description_mod ) as $item )
-              $description_list[sprintf( 'module_%s', $item['type'] )][$item['language']] = $item['value'];
-
-            // add the page's descriptions
-            $description_sel = lib::create( 'database\select' );
-            $description_sel->add_table_column( 'language', 'code', 'language' );
-            $description_sel->add_column( 'type' );
-            $description_sel->add_column( 'value' );
-            $description_mod = lib::create( 'database\modifier' );
-            $description_mod->join( 'language', 'page_description.language_id', 'language.id' );
-            foreach( $db_page->get_page_description_list( $description_sel, $description_mod ) as $item )
-              $description_list[sprintf( 'page_%s', $item['type'] )][$item['language']] = $item['value'];
-
-            // add the question's descriptions
-            $description_sel = lib::create( 'database\select' );
-            $description_sel->add_table_column( 'language', 'code', 'language' );
-            $description_sel->add_column( 'type' );
-            $description_sel->add_column( 'value' );
-            $description_mod = lib::create( 'database\modifier' );
-            $description_mod->join( 'language', 'question_description.language_id', 'language.id' );
-            foreach( $db_question->get_question_description_list( $description_sel, $description_mod ) as $item )
-              $description_list[sprintf( 'question_%s', $item['type'] )][$item['language']] = $item['value'];
-          }
-
-          $option_mod = lib::create( 'database\modifier' );
-          $option_mod->order( 'question_option.rank' );
-          $option_list = $db_question->get_question_option_object_list( $option_mod );
-
-          // create the base column array to be used throughout
-          $db_device = $db_question->get_device();
-          $base_column = array(
-            'module_name' => $db_module->name,
-            'page_name' => $db_page->name,
-            'question_name' => $db_question->name,
-            'question_id' => $db_question->id,
-            'type' => $db_question->type,
-            'device' => is_null( $db_device ) ? NULL : $db_device->name,
-            'minimum' => $db_question->minimum,
-            'maximum' => $db_question->maximum,
-            'dkna_allowed' => $db_question->dkna_allowed,
-            'refuse_allowed' => $db_question->refuse_allowed,
-            'module_precondition' => $db_module->precondition,
-            'page_precondition' => $db_page->precondition,
-            'question_precondition' => $db_question->precondition
-          );
-
-          if( $descriptions ) $base_column = array_merge( $base_column, $description_list );
-
-          // only create a variable for all options if at least one is not exclusive
-          $all_exclusive = true;
-          if( 'list' == $db_question->type )
-            foreach( $option_list as $db_option )
-              if( !$db_option->exclusive ) $all_exclusive = false;
-
-          // only create a single column for this question if there are no options or they are all exclusive
-          if( $all_exclusive )
-          {
-            // Get the base column name from the question's name
-            // Note that the "number with unit" question type needs two columns, one for the number and
-            // another for the unit.  We'll start by creating the number, and below the unit column.
-            $column_name = sprintf(
-              'number with unit' == $db_question->type ? '%s_NB' : '%s',
-              $db_question->name
-            );
-
-            // if it exists then add the qnaire's variable suffix to the question name
-            if( !is_null( $this->variable_suffix ) )
-              $column_name = sprintf( '%s_%s', $column_name, $this->variable_suffix );
-
-            $column_list[$column_name] = $base_column;
-
-            if( 0 < count( $option_list ) )
-            {
-              $column_list[$column_name]['option_list'] = array();
-              foreach( $option_list as $db_option )
-              {
-                $column_list[$column_name]['option_list'][] = array(
-                  'id' => $db_option->id,
-                  'name' => $db_option->name
-                );
-              }
-            }
-
-            // now create the unit column if this is a "number with unit" question
-            if( 'number with unit' == $db_question->type )
-            {
-              $unit_column_name = sprintf( '%s_UNIT', $db_question->name );
-
-              // if it exists then add the qnaire's variable suffix to the question name
-              if( !is_null( $this->variable_suffix ) )
-                $unit_column_name = sprintf( '%s_%s', $unit_column_name, $this->variable_suffix );
-
-              $column_list[$unit_column_name] = $base_column;
-              $column_list[$unit_column_name]['minimum'] = NULL;
-              $column_list[$unit_column_name]['maximum'] = NULL;
-              $column_list[$unit_column_name]['unit_list'] = $db_question->unit_list;
-            }
-          }
-
-          foreach( $option_list as $db_option )
-          {
-            // add an additional column for all options if any are not exclusive, or for all which have extra data
-            if( !$all_exclusive || $db_option->extra )
-            {
-              // get the base column name from the question's name and add the option's name as a suffix
-              $column_name = sprintf( '%s_%s', $db_question->name, $db_option->name );
-              // Get the base column name from the question's name and add the option's name as a suffix
-              // Note that the "number with unit" extra type needs two columns, one for the number and
-              // another for the unit.  We'll start by creating the number, and below the unit column.
-              $column_name = sprintf(
-                'number with unit' == $db_option->extra ? '%s_%s_NB' : '%s_%s',
-                $db_question->name,
-                $db_option->name
-              );
-
-              // if it exists then add the qnaire's variable suffix to the question name
-              if( !is_null( $this->variable_suffix ) )
-                $column_name = sprintf( '%s_%s', $column_name, $this->variable_suffix );
-
-              $precondition = NULL;
-              $precondition = $db_question->precondition;
-              if( !is_null( $db_option->precondition ) )
-              {
-                if( is_null( $precondition ) ) $precondition = $db_option->precondition;
-                else $precondition = sprintf( '(%s) && (%s)', $precondition, $db_option->precondition );
-              }
-
-              $column_list[$column_name] = $base_column;
-              $column_list[$column_name]['question_option_name'] = $db_option->name;
-              $column_list[$column_name]['option_id'] = $db_option->id;
-              $column_list[$column_name]['extra'] = $db_option->extra;
-              $column_list[$column_name]['all_exclusive'] = $all_exclusive;
-              $column_list[$column_name]['question_option_precondition'] = $db_option->precondition;
-
-              if( $descriptions )
-              {
-                $column_list[$column_name]['question_option_prompt'] = array();
-                $column_list[$column_name]['question_option_popup'] = array();
-
-                // add the question option's descriptions
-                $description_sel = lib::create( 'database\select' );
-                $description_sel->add_table_column( 'language', 'code', 'language' );
-                $description_sel->add_column( 'type' );
-                $description_sel->add_column( 'value' );
-                $description_mod = lib::create( 'database\modifier' );
-                $description_mod->join( 'language', 'question_option_description.language_id', 'language.id' );
-                foreach( $db_option->get_question_option_description_list( $description_sel, $description_mod )
-                  as $item )
-                {
-                  $column_list[$column_name][sprintf( 'question_option_%s', $item['type'] )][$item['language']] =
-                    $item['value'];
-                }
-              }
-
-              // now create the unit column if this is a "number with unit" extra option
-              if( 'number with unit' == $db_option->extra )
-              {
-                $unit_column_name = sprintf( '%s_%s_UNIT', $db_question->name, $db_option->name );
-
-                // if it exists then add the qnaire's variable suffix to the question name
-                if( !is_null( $this->variable_suffix ) )
-                  $unit_column_name = sprintf( '%s_%s', $unit_column_name, $this->variable_suffix );
-
-                $column_list[$unit_column_name] = $column_list[$column_name];
-                $column_list[$unit_column_name]['minimum'] = NULL;
-                $column_list[$unit_column_name]['maximum'] = NULL;
-                $column_list[$unit_column_name]['unit_list'] = $db_question->unit_list;
-              }
-            }
-          }
-
-          // finally, if not all exclusive then create these options as columns as well
-          if( !$all_exclusive )
-          {
-            // get the base column name from the question's name and add DK_NA as a suffix
-            $dkna_column_name = sprintf( '%s_DK_NA', $db_question->name );
-
-            // if it exists then add the qnaire's variable suffix to the question name
-            if( !is_null( $this->variable_suffix ) )
-              $dkna_column_name = sprintf( '%s_%s', $dkna_column_name, $this->variable_suffix );
-
-            $column_list[$dkna_column_name] = $base_column;
-            $column_list[$dkna_column_name]['question_option_name'] = 'DK_NA';
-            $column_list[$dkna_column_name]['option_id'] = 'dkna';
-            $column_list[$dkna_column_name]['all_exclusive'] = $all_exclusive;
-
-            if( $descriptions )
-            {
-              $prompt = array();
-              if( in_array( 'en', $language_list ) ) $prompt['en'] = 'Don\'t Know / No Answer';
-              if( in_array( 'fr', $language_list ) ) $prompt['fr'] = 'Ne sais pas / pas de réponse';
-              $column_list[$dkna_column_name]['question_option_popup'] = ['en'=>NULL, 'fr'=>NULL];
-              $column_list[$dkna_column_name]['question_option_prompt'] = $prompt;
-            }
-
-            // get the base column name from the question's name and add REFUSED as a suffix
-            $refused_column_name = sprintf( '%s_REFUSED', $db_question->name );
-
-            // if it exists then add the qnaire's variable suffix to the question name
-            if( !is_null( $this->variable_suffix ) )
-              $refused_column_name = sprintf( '%s_%s', $refused_column_name, $this->variable_suffix );
-
-            $column_list[$refused_column_name] = $base_column;
-            $column_list[$refused_column_name]['question_option_name'] = 'REFUSED';
-            $column_list[$refused_column_name]['option_id'] = 'refuse';
-            $column_list[$refused_column_name]['all_exclusive'] = $all_exclusive;
-
-            if( $descriptions )
-            {
-              $prompt = array();
-              if( in_array( 'en', $language_list ) ) $prompt['en'] = 'Prefer not to answer';
-              if( in_array( 'fr', $language_list ) ) $prompt['fr'] = 'Préfère ne pas répondre';
-              $column_list[$refused_column_name]['question_option_popup'] = ['en'=>NULL, 'fr'=>NULL];
-              $column_list[$refused_column_name]['question_option_prompt'] = $prompt;
-            }
-          }
+          $column_list = array_merge( $column_list, $db_question->get_output_column_list( $descriptions ) );
         }
       }
     }
@@ -2124,7 +1970,7 @@ class qnaire extends \cenozo\database\record
     $response_class_name = lib::get_class_name( 'database\response' );
     $answer_class_name = lib::get_class_name( 'database\answer' );
     $response_attribute_class_name = lib::get_class_name( 'database\response_attribute' );
-    $column_list = $this->get_all_questions( false, $exporting ); // exclude questions not marked for export
+    $column_list = $this->get_output_column_list( false, $exporting ); // exclude questions not marked for export
     $attribute_list = array();
 
     // now loop through all responses and fill in the data array
@@ -2237,48 +2083,57 @@ class qnaire extends \cenozo\database\record
 
         if( !is_null( $answer_list ) && array_key_exists( $column['question_id'], $answer_list ) )
         {
+          $non_exclusive_list = 'list' == $column['type'] && !$column['all_exclusive'];
           $answer = util::json_decode( $answer_list[$column['question_id']] );
           if( is_object( $answer ) && property_exists( $answer, 'dkna' ) && $answer->dkna )
           {
-            if( array_key_exists( 'option_id', $column ) )
-            { // this is a multiple-answer question, so set the value to no unless this is the DN_KA column
-              $row_value = 'dkna' == $column['option_id'] ? 'YES' : 'NO';
+            if( $non_exclusive_list && array_key_exists( 'option_id', $column ) )
+            { // this is a multiple-answer question, so set the value to false unless this is the DN_KA column
+              $row_value = 'dkna' == $column['option_id'] ? 1 : 0;
             }
-            else
+            else if( $non_exclusive_list ||
+                     array_key_exists( 'option_list', $column ) ||
+                     array_key_exists( 'missing_list', $column ) )
             {
               $row_value = 'DK_NA';
             }
           }
           else if( is_object( $answer ) && property_exists( $answer, 'refuse' ) && $answer->refuse )
           {
-            if( array_key_exists( 'option_id', $column ) )
-            { // this is a multiple-answer question, so set the value to no unless this is the REFUSED column
-              $row_value = 'refuse' == $column['option_id'] ? 'YES' : 'NO';
+            if( $non_exclusive_list && array_key_exists( 'option_id', $column ) )
+            { // this is a multiple-answer question, so set the value to false unless this is the REFUSED column
+              $row_value = 'refuse' == $column['option_id'] ? 1 : 0;
             }
-            else
+            else if( $non_exclusive_list ||
+                     array_key_exists( 'option_list', $column ) ||
+                     array_key_exists( 'missing_list', $column ) )
             {
               $row_value = 'REFUSED';
             }
           }
           else
           {
-            if( array_key_exists( 'option_id', $column ) )
-            { // this is a multiple-answer question, so every answer is its own variable
+            if( array_key_exists( 'missing_list', $column ) )
+            {
+              // leave the row value null
+            }
+            else if( array_key_exists( 'option_id', $column ) )
+            { // this is a multiple-answer question, so every possible answer has its own variable
               if( 'dkna' == $column['option_id'] || 'refuse' == $column['option_id'] )
               {
                 // whatever the answer is it isn't dkna or refused
-                $row_value = 'NO';
+                $row_value = 0;
               }
               else
               {
-                $row_value = !$column['all_exclusive'] ? 'NO' : NULL;
+                $row_value = $non_exclusive_list ? 0 : NULL;
                 if( is_array( $answer ) ) foreach( $answer as $a )
                 {
                   if( ( is_object( $a ) && $column['option_id'] == $a->id ) ||
                       ( !is_object( $a ) && $column['option_id'] == $a ) )
                   {
                     // use the value if the option asks for extra data
-                    $row_value = 'YES';
+                    $row_value = 1;
 
                     if( !is_null( $column['extra'] ) )
                     {
@@ -2303,6 +2158,7 @@ class qnaire extends \cenozo\database\record
             {
               if( 'boolean' == $column['type'] )
               {
+                // boolean values have values YES or NO instead of 1 and 0 (since DK_NA and REFUSED is possible)
                 $row_value = $answer ? 'YES' : 'NO';
               }
               else if( 'list' == $column['type'] )

@@ -25,6 +25,7 @@ SOURCE lookup_item.sql
 SOURCE indicator.sql
 SOURCE indicator_has_lookup_item.sql
 SOURCE page.sql
+SOURCE report_type.sql
 SOURCE qnaire_report.sql
 SOURCE qnaire_report_data.sql
 
