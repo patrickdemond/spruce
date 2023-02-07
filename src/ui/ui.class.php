@@ -22,7 +22,8 @@ class ui extends \cenozo\ui\ui
     $session = lib::create( 'business\session' );
 
     // If we're loading the qnaire run then show a special interface if we're logged in as the qnaire user
-    if( !is_null( $session->get_response() ) )
+    $db_response = $session->get_response();
+    if( !is_null( $db_response ) )
     {
       $setting_manager = lib::create( 'business\setting_manager' );
       $qnaire_username = $setting_manager->get_setting( 'utility', 'qnaire_username' );
@@ -30,6 +31,25 @@ class ui extends \cenozo\ui\ui
 
       if( !is_null( $db_user ) && $qnaire_username == $db_user->name )
       {
+        // get the incompatible description, if there is one
+        $qnaire_description_class_name = lib::get_class_name( 'database\qnaire_description' );
+        $db_language = $db_response->get_language();
+        $db_qnaire_description = $qnaire_description_class_name::get_unique_record(
+          ['qnaire_id', 'language_id', 'type'],
+          [$db_response->get_respondent()->qnaire_id, $db_language->id, 'incompatible']
+        );
+        $incompatible_title = 'fr' == $db_language->code ? 'Navigateur incompatible' : 'Incompatible Browser';
+        if( is_null( $db_qnaire_description->value ) )
+        {
+          $incompatible_message = 'fr' == $db_language->code
+                                ? 'Votre navigateur Web n’est pas compatible avec cette application.  Veuillez essayer de changer d’appareil, d’ordinateur ou de navigateur.'
+                                : 'Your web browser is not compatible with this application.  Please try using a different device, computer, or browser.';
+        }
+        else
+        {
+          $incompatible_message = addslashes( preg_replace( '/[\r\n]/', '', $db_qnaire_description->value ) );
+        }
+
         // prepare the framework module list (used to identify which modules are provided by the framework)
         $framework_module_list = $this->get_framework_module_list();
         sort( $framework_module_list );
@@ -220,7 +240,7 @@ class ui extends \cenozo\ui\ui
   protected function get_utility_items()
   {
     $list = parent::get_utility_items();
-    
+
     $db_role = lib::create( 'business\session' )->get_role();
 
     // remove participant utilities

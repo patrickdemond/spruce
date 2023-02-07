@@ -86,31 +86,17 @@
     // determine if the browser is compatible
     var root = document.getElementById("root");
     var matches = navigator.userAgent.match( "OS ([0-9]+)_[0-9_]+ like Mac OS X" );
-    if( window.document.documentMode || (null != matches && 12 > parseInt(matches[1])) ) {
+    if( true || window.document.documentMode || (null != matches && 12 > parseInt(matches[1])) ) {
       root.innerHTML = 
         '<div class="container-fluid headerless-outer-view-frame fade-transition">\n' +
         '  <div class="inner-view-frame">\n' +
         '    <div class="container-fluid bg-white">\n' +
-        '      <h3 class="text-primary">Incompatible Browser</h3>\n' +
+        '      <h3 class="text-primary"><?php print $incompatible_title; ?></h3>\n' +
         '      <div class="container-fluid">\n' +
-        '      <blockquote>\n' +
-        '        Your web browser is not compatible with this application.\n' +
-        '        Please try using a different device, computer, or browser.\n' +
-        '      </blockquote>\n' +
-        '    </div>\n' +
-        '    <div>\n' +
-        '      <h3 class="text-primary">Navigateur incompatible</h3>\n' +
-        '      <div class="container-fluid">\n' +
-        '      <blockquote>\n' +
-        '        Votre navigateur Web n’est pas compatible avec cette application.\n' +
-        '        Veuillez essayer de changer d’appareil, d’ordinateur ou de navigateur.\n' +
-        '      </blockquote>\n' +
+        '      <blockquote><?php print $incompatible_message; ?></blockquote>\n' +
         '    </div>\n' +
         '  </div>\n' +
         '</div>\n';
-    } else {
-      root.innerHTML =
-        '<div id="view" ui-view class="container-fluid headerless-outer-view-frame fade-transition noselect"></div>';
     }
   </script>
 </body>
