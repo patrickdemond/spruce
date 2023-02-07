@@ -25,7 +25,11 @@ class patch extends \cenozo\service\patch
       if( in_array( $action, ['launch', 'pause', 'skip', 'reset'] ) )
       {
         // run response_stage launch(), skip() or reset()
-        $db_response_stage->$action();
+        try { $db_response_stage->$action(); }
+        catch( \cenozo\exception\runtime $e )
+        {
+          throw lib::create( 'exception\notice', $e->get_raw_message(), __METHOD__, $e );
+        }
 
         // update the last datetime anytime the response is changed
         $db_response = $db_response_stage->get_response();

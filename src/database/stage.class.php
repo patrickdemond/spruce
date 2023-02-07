@@ -76,14 +76,16 @@ class stage extends \cenozo\database\has_rank
   public function get_first_module_for_response( $db_response )
   {
     // start by getting the first module
-    $db_first_module = $this->get_first_module();
-    if( is_null( $db_first_module ) ) return NULL;
+    $db_module = $this->get_first_module();
+    if( is_null( $db_module ) ) return NULL;
 
-    // Get the first module whose precondition meets the response (starting by testing the first)
-    $db_module = $db_first_module->get_next_for_response( $db_response, true );
+    // make sure the first module is valid for this response
+    $expression_manager = lib::create( 'business\expression_manager', $db_response );
+    if( !$expression_manager->evaluate( $db_module->precondition ) )
+      $db_module = $db_module->get_next_for_response( $db_response, true );
 
     // It's possible there is no next module, or the module doesn't belong to this stage
-    if( is_null( $db_module ) || $this->id != $db_module->get_stage()->id ) return NULL;
+    if( !is_null( $db_module ) && $this->id != $db_module->get_stage()->id ) $db_module = NULL;
 
     return $db_module;
   }

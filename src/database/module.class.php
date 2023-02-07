@@ -269,7 +269,8 @@ class module extends base_qnaire_part
       $modifier->order( 'rank' );
       foreach( $db_qnaire->get_stage_object_list( $modifier ) as $db_test_stage )
       {
-        if( $db_test_stage->get_first_module()->rank <= $this->rank && $this->rank <= $db_test_stage->get_last_module()->rank )
+        if( $db_test_stage->get_first_module()->rank <= $this->rank &&
+            $this->rank <= $db_test_stage->get_last_module()->rank )
         {
           $db_stage = $db_test_stage;
           break;
@@ -304,6 +305,29 @@ class module extends base_qnaire_part
       array( 'module_id', 'rank' ),
       array( $this->id, $this->get_page_count() )
     );
+  }
+
+  /**
+   * Returns the module's first page for a response
+   * 
+   * @param database\response $db_response
+   * @return database\page
+   */
+  public function get_first_page_for_response( $db_response )
+  {
+    // start by getting the first page
+    $db_page = $this->get_first_page();
+    if( is_null( $db_page ) ) return NULL;
+
+    // make sure the first page is valid for this response
+    $expression_manager = lib::create( 'business\expression_manager', $db_response );
+    if( !$expression_manager->evaluate( $db_page->precondition ) )
+      $db_page = $db_page->get_next_for_response( $db_response, true );
+
+    // It's possible there is no next page, or the page doesn't belong to this module
+    if( !is_null( $db_page ) && $this->id != $db_page->get_module()->id ) $db_page = NULL;
+
+    return $db_page;
   }
 
   /**

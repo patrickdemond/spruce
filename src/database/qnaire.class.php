@@ -182,6 +182,26 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
+   * Returns the qnaire's first module for a response
+   * 
+   * @param database\response $db_response
+   * @return database\module
+   */
+  public function get_first_module_for_response( $db_response )
+  {
+    // start by getting the first module
+    $db_module = $this->get_first_module();
+    if( is_null( $db_module ) ) return NULL;
+
+    // make sure the first module is valid for this response
+    $expression_manager = lib::create( 'business\expression_manager', $db_response );
+    if( !$expression_manager->evaluate( $db_module->precondition ) )
+      $db_module = $db_module->get_next_for_response( $db_response, true );
+
+    return $db_module;
+  }
+
+  /**
    * Returns a question belonging to the qnaire by name
    * @param string $name The question's name
    * @return database\question
