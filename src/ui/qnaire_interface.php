@@ -86,7 +86,7 @@
     // determine if the browser is compatible
     var root = document.getElementById("root");
     var matches = navigator.userAgent.match( "OS ([0-9]+)_[0-9_]+ like Mac OS X" );
-    if( true || window.document.documentMode || (null != matches && 12 > parseInt(matches[1])) ) {
+    if( window.document.documentMode || (null != matches && 12 > parseInt(matches[1])) ) {
       root.innerHTML = 
         '<div class="container-fluid headerless-outer-view-frame fade-transition">\n' +
         '  <div class="inner-view-frame">\n' +
