@@ -97,6 +97,9 @@
         '    </div>\n' +
         '  </div>\n' +
         '</div>\n';
+    } else {
+      root.innerHTML =
+        '<div id="view" ui-view class="container-fluid headerless-outer-view-frame fade-transition noselect"></div>';
     }
   </script>
 </body>
