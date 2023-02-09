@@ -99,15 +99,26 @@ class respondent extends \cenozo\database\record
     $response_id = static::db()->get_one( sprintf( '%s %s', $select->get_sql(), $modifier->get_sql() ) );
 
     // if asked create a response if one doesn't exist yet
-    if( !$response_id && $create )
+    $db_response = NULL;
+    if( $response_id )
     {
+      $db_response = lib::create( 'database\response', $response_id );
+    }
+    else if( $create )
+    {
+      // We need a semaphore to guard against duplicate responses.  The semaphore is specific to the parent
+      // respondent id so that other respondents are not slowed down.
+      $semaphore = lib::create( 'business\semaphore', $this->id );
+      $semaphore->acquire();
+
       $db_response = lib::create( 'database\response' );
       $db_response->respondent_id = $this->id;
       $db_response->save();
-      $response_id = $db_response->id;
+
+      $semaphore->release();
     }
 
-    return $response_id ? lib::create( 'database\response', $response_id ) : NULL;
+    return $db_response;
   }
 
   /**
