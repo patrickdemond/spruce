@@ -50,7 +50,7 @@ class query extends \cenozo\service\query
         $modifier,
         true, // exporting data
         $this->get_argument( 'attributes', false ), // whether to include attributes
-        true // only include responses with answers
+        $this->get_argument( 'submitted_only', false ) // only include responses with answers
       );
       $data = $response_data['data'];
       foreach( $data as $index => $row ) $data[$index] = array_combine( $response_data['header'], $data[$index] );
