@@ -70,14 +70,12 @@ abort( <uuid> )
   {
     return 404
   }
-  else
+
+  if( role is not cypress )
   {
-    if( role is not cypress )
-    {
-      server sends DELETE to CYPRESS:<device_path>/<uuid>
-    }
-    server deletes the response_device record
+    server sends DELETE to CYPRESS:<device_path>/<uuid>
   }
+  server deletes the response_device record
 }
 
 complete( <uuid> )
@@ -87,20 +85,20 @@ complete( <uuid> )
   {
     return 404
   }
-  else
-  {
-    JSON data is stored to the answer
+  JSON data is stored to the answer
 
-    Cypress sends PATCH to PINE:response_device/<uuid> with body { "status": "completed" }
-    if( response_device record doesn't exist )
-    {
-      return 404
-    }
-    else
-    {
-      server updates response_device.status to "completed"
-    }
+  for all data files in Cypress
+  {
+    Cypress sends PATCH to PINE:answer/<answer_id>?filename=<FILENAME> with raw file contents as body
   }
+
+  Cypress sends PATCH to PINE:response_device/<uuid> with body { "status": "completed" }
+  if( response_device record doesn't exist )
+  {
+    return 404
+  }
+
+  server updates response_device.status to "completed"
 }
 
 
@@ -111,6 +109,7 @@ API
 Pine:
   PATCH answer/<answer_id>?action=launch_device returns { "uuid": <uuid>, "status": "in progress" }
   PATCH answer/<answer_id> with body { "value": <DEVICE_JSON_OUTPUT> }
+  PATCH answer/<answer_id>?filename=<FILENAME> with raw file contents as body
   DELETE response_device/<uuid> returns 200 or 404
   PATCH response_device/<uuid> with body { "status": "completed" } returns 200 or 404
 
