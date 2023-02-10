@@ -232,7 +232,7 @@ class annotation extends \cenozo\business\report\base_report
                 'table' => $row['table'],
                 'variable' => $row['name'],
                 'name' => $option['name'],
-                'missing' => 0
+                'missing' => in_array( $option['name'], ['REFUSED','DK_NA'] ) ? 1 : 0
               ];
               foreach( $option['prompt'] as $lang => $prompt ) $category[sprintf('label:%s', $lang)] = $prompt;
 
@@ -270,7 +270,7 @@ class annotation extends \cenozo\business\report\base_report
               'table' => $row['table'],
               'variable' => $row['name'],
               'name' => $option['name'],
-              'missing' => 0
+              'missing' => in_array( $option['name'], ['REFUSED','DK_NA'] ) ? 1 : 0
             ];
             foreach( $option['prompt'] as $lang => $prompt ) $category[sprintf('label:%s', $lang)] = $prompt;
 
