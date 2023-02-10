@@ -13,7 +13,7 @@ global $SETTINGS;
 $SETTINGS['general']['application_name'] = 'pine';
 $SETTINGS['general']['instance_name'] = $SETTINGS['general']['application_name'];
 $SETTINGS['general']['version'] = '2.8';
-$SETTINGS['general']['build'] = '1e7f57e';
+$SETTINGS['general']['build'] = '97f73dd';
 
 // the default maximum number of seconds that a page should take to complete
 $SETTINGS['general']['default_page_max_time'] = 60;
@@ -38,6 +38,9 @@ $SETTINGS['path']['QNAIRE_EXPORT'] = str_replace( 'settings.ini.php', 'doc/qnair
 
 // the location of qnaire print files
 $SETTINGS['path']['QNAIRE_PRINT'] = str_replace( 'settings.ini.php', 'doc/qnaire_print', __FILE__ );
+
+// the location to store device files
+$SETTINGS['path']['DEVICE_FILES'] = str_replace( 'settings.ini.php', 'doc/device_files', __FILE__ );
 
 // add modules used by the application
 $SETTINGS['module']['pdf'] = true;

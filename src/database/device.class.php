@@ -18,6 +18,9 @@ class device extends \cenozo\database\record
    */
   public function get_status()
   {
+    // when in emulate mode the status will always be 
+    if( $this->emulate ) return util::json_decode( '{ "status": "emulation mode" }' );
+
     $cypress_manager = lib::create( 'business\cypress_manager', $this );
     return $cypress_manager->get_status();
   }
@@ -36,6 +39,7 @@ class device extends \cenozo\database\record
     // always include the token and language
     $db_response = $db_answer->get_response();
     $data = array(
+      'answer_id' => $this->id,
       'barcode' => $db_response->get_respondent()->token,
       'language' => $db_response->get_language()->code,
       'interviewer' => $db_answer->get_user()->name
@@ -51,7 +55,27 @@ class device extends \cenozo\database\record
       array( $db_response->id, $this->id )
     );
 
-    if( is_null( $db_response_device ) ) $db_response_device = $cypress_manager->launch( $data, $db_response );
+    if( is_null( $db_response_device ) )
+    {
+      if( $this->emulate )
+      {
+        // emulate a response from cypress
+        $db_response_device = lib::create( 'database\response_device' );
+        $db_response_device->response_id = $db_response->id;
+        $db_response_device->device_id = $this->id;
+        $db_response_device->uuid = str_replace( '.', '-', uniqid( 'emulate.', true ) );
+        $db_response_device->save();
+      }
+      else
+      {
+        $db_response_device = $cypress_manager->launch( $data, $db_response );
+      }
+    }
+
+    $db_response_device->start_datetime = util::get_datetime_object();
+    $db_response_device->status = 'in progress';
+    $db_response_device->save();
+
     return $db_response_device;
   }
 }

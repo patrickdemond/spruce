@@ -61,11 +61,11 @@ class cypress_manager extends \cenozo\base_object
    * 
    * @return varies
    * @param array $data An associative array of data to send to Cypress
-   * @param database\response $db_response The response record launching the device
+   * @param database\response $db_answer The answer that the device is to return it's data to
    * @return database\response_device The resulting response_device record
    * @access public
    */
-  public function launch( $data, $db_response )
+  public function launch( $data, $db_answer )
   {
     $response_device_class_name = lib::get_class_name( 'database\response_device' );
 
@@ -80,6 +80,7 @@ class cypress_manager extends \cenozo\base_object
     }
 
     // Cypress will respond with a UUID that will be used to refer to this respondent/device in the future
+    $db_response = $db_answer->get_response();
     $db_response_device = $response_device_class_name::get_unique_record( 'uuid', $uuid );
 
     if( is_null( $db_response_device ) )
@@ -88,9 +89,6 @@ class cypress_manager extends \cenozo\base_object
       $db_response_device->response_id = $db_response->id;
       $db_response_device->device_id = $this->db_device->id;
       $db_response_device->uuid = $uuid;
-      $db_response_device->status = 'in progress';
-      $db_response_device->start_datetime = util::get_datetime_object();
-      $db_response_device->save();
     }
     else
     {

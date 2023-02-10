@@ -44,7 +44,33 @@ class patch extends \cenozo\service\patch
   {
     parent::execute();
 
-    if( 'launch_device' == $this->get_argument( 'action', NULL ) )
+    $filename = $this->get_argument( 'filename', NULL );
+    if( !is_null( $filename ) )
+    {
+      $db_respondent = $this->get_leaf_record()->get_response()->get_respondent();
+
+      $directory = sprintf(
+        '%s/%s/%s',
+        DEVICE_FILES_PATH,
+        $db_respondent->get_participant()->uid,
+        $db_respondent->get_qnaire()->name
+      );
+      $local_filename = sprintf( '%s/%s', $directory, $filename );
+      $file_contents = $this->get_file_as_raw();
+
+      if( is_null( $file_contents ) || !$file_contents )
+      {
+        // remove the file instead of writing it
+        if( file_exists( $local_filename ) ) unlink( $local_filename );
+      }
+      else
+      {
+        // make sure the directory exists before writing the file
+        if( !file_exists( $directory ) ) mkdir( $directory, 0755, true );
+        file_put_contents( $local_filename, $this->get_file_as_raw() );
+      }
+    }
+    else if( 'launch_device' == $this->get_argument( 'action', NULL ) )
     {
       // launch the associated device
       $db_response_device = $this->get_leaf_record()->launch_device();

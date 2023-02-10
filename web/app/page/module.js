@@ -648,10 +648,13 @@ cenozoApp.defineModule({
                         },
                       }).get();
 
-                      question.value = angular.fromJson(response.data.value);
-                      var complete = this.questionIsComplete(question);
-                      question.incomplete = false === complete ? true : true === complete ? false : complete;
-                      question.backupValue = angular.copy(response.data.value);
+                      const newValue = angular.fromJson( response.data.value );
+                      if( newValue != question.value ) {
+                        question.value = angular.fromJson(response.data.value);
+                        var complete = this.questionIsComplete(question);
+                        question.incomplete = false === complete ? true : true === complete ? false : complete;
+                        question.backupValue = angular.copy(response.data.value);
+                      }
                       question.device_status = response.data.status;
                       question.device_uuid = response.data.uuid;
 
@@ -2153,7 +2156,7 @@ cenozoApp.defineModule({
             getDevicePrompt: function (question) {
               let prompt = this.text( 'misc.launch' ) + " " + question.device;
               if( 'in progress' == question.device_status ) {
-                prompt = question.device + " " + this.text( 'misc.inProgress' );
+                prompt = this.text( 'misc.abort' ) + " " + question.device;
               } else if( 'completed' == question.device_status ) {
                 prompt = this.text( 'misc.reLaunch' ) + " " + question.device;
               }
@@ -2180,6 +2183,19 @@ cenozoApp.defineModule({
               } finally {
                 this.convertValueToModel(question);
                 modal.close();
+                this.working = false;
+              }
+            },
+
+            abortDevice: async function (question) {
+              try {
+                this.working = true;
+                var response = await CnHttpFactory.instance({
+                  path: "response_device/uuid=" + question.device_uuid
+                }).delete();
+                question.device_status = null;
+                question.device_uuid = null;
+              } finally {
                 this.working = false;
               }
             },

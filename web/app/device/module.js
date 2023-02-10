@@ -23,6 +23,11 @@ cenozoApp.defineModule({
           title: "URL",
           column: "device.url",
         },
+        emulate: {
+          title: "Emulate",
+          column: "device.emulate",
+          type: "boolean",
+        },
       },
       defaultOrder: {
         column: "device.name",
@@ -38,6 +43,10 @@ cenozoApp.defineModule({
       url: {
         title: "URL",
         type: "string",
+      },
+      emulate: {
+        title: "Emulate Mode",
+        type: "boolean",
       },
     });
 

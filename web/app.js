@@ -851,6 +851,10 @@ cenozo.service("CnTranslationHelper", [
             en: "Re-Launch",
             fr: "Relancer",
           },
+          abort: {
+            en: "Abort",
+            fr: "TODO: TRANSLATE",
+          },
           inProgress: {
             en: "In Progress",
             fr: "en cours",

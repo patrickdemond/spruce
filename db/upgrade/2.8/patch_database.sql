@@ -19,6 +19,7 @@ SOURCE qnaire_participant_trigger.sql
 SOURCE module.sql
 SOURCE service.sql
 SOURCE role_has_service.sql
+SOURCE device.sql
 SOURCE device_data.sql
 SOURCE response_device.sql
 SOURCE qnaire.sql

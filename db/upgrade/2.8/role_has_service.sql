@@ -20,7 +20,8 @@ CREATE PROCEDURE patch_role_has_service()
       "AND service.subject IN( ",
         "'alternate_consent_type', 'device_data', 'embedded_file', 'indicator', 'lookup', 'lookup_item', ",
         "'notation', 'proxy', 'proxy_type', 'qnaire_alternate_consent_type_trigger', ",
-        "'qnaire_participant_trigger', 'qnaire_proxy_type_trigger', 'qnaire_report', 'qnaire_report_data' ",
+        "'qnaire_participant_trigger', 'qnaire_proxy_type_trigger', 'qnaire_report', 'qnaire_report_data', ",
+        "'response_device' "
       ") ",
       "AND service.restricted = 1"
     );
@@ -28,18 +29,27 @@ CREATE PROCEDURE patch_role_has_service()
     EXECUTE statement;
     DEALLOCATE PREPARE statement;
 
-    -- machine
+    -- machine (used for cypress, not interviewing instances)
+    SET @sql = CONCAT(
+      "DELETE FROM role_has_service ",
+      "WHERE role_id = ( SELECT id FROM ", @cenozo, ".role WHERE name = 'machine' )"
+    );
+    PREPARE statement FROM @sql;
+    EXECUTE statement;
+    DEALLOCATE PREPARE statement;
+
     SET @sql = CONCAT(
       "INSERT IGNORE INTO role_has_service( role_id, service_id ) ",
       "SELECT role.id, service.id ",
       "FROM ", @cenozo, ".role, service ",
       "WHERE role.name = 'machine' ",
-      "AND service.subject IN( 'indicator', 'lookup', 'lookup_item' ) ",
+      "AND service.subject IN( 'response_device' ) ",
       "AND service.restricted = 1"
     );
     PREPARE statement FROM @sql;
     EXECUTE statement;
     DEALLOCATE PREPARE statement;
+
 
     -- interviewer
     SET @sql = CONCAT(
@@ -47,7 +57,7 @@ CREATE PROCEDURE patch_role_has_service()
       "SELECT role.id, service.id ",
       "FROM ", @cenozo, ".role, service ",
       "WHERE role.name = 'interviewer' ",
-      "AND service.subject = 'proxy' ",
+      "AND service.subject IN( 'indicator', 'lookup', 'lookup_item', 'proxy', 'response_device' ) ",
       "AND service.restricted = 1"
     );
     PREPARE statement FROM @sql;
@@ -75,10 +85,11 @@ CREATE PROCEDURE patch_role_has_service()
       "SELECT role.id, service.id ",
       "FROM ", @cenozo, ".role, service ",
       "WHERE role.name = 'respondent' ",
-      "AND service.subject = 'response' ",
-      "AND service.method = 'DELETE' ",
-      "AND service.resource = 1 ",
-      "AND service.restricted = 1"
+      "AND service.restricted = 1 ",
+      "AND ( ",
+        "( service.subject = 'response' AND service.method = 'DELETE' AND service.resource = 1 ) OR ",
+        "( service.subject IN ( 'indicator', 'lookup', 'lookup_item', 'response_device' ) ) ",
+      ")"
     );
     PREPARE statement FROM @sql;
     EXECUTE statement;

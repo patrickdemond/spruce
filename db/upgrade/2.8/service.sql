@@ -70,8 +70,10 @@ INSERT IGNORE INTO service ( subject, method, resource, restricted ) VALUES
 ( 'qnaire_proxy_type_trigger', 'GET', 1, 1 ),
 ( 'qnaire_proxy_type_trigger', 'PATCH', 1, 1 ),
 ( 'qnaire_proxy_type_trigger', 'POST', 0, 1 ),
+( 'response_device', 'DELETE', 1, 1 ),
 ( 'response_device', 'GET', 0, 0 ),
 ( 'response_device', 'GET', 1, 0 ),
+( 'response_device', 'PATCH', 1, 1 ),
 ( 'stratum', 'GET', 0, 0 ),
 ( 'study', 'GET', 0, 0 );
 
