@@ -853,7 +853,7 @@ cenozo.service("CnTranslationHelper", [
           },
           abort: {
             en: "Abort",
-            fr: "TODO: TRANSLATE",
+            fr: "Abandonner",
           },
           inProgress: {
             en: "In Progress",
