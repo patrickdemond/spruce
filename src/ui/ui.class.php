@@ -39,7 +39,7 @@ class ui extends \cenozo\ui\ui
           [$db_response->get_respondent()->qnaire_id, $db_language->id, 'incompatible']
         );
         $incompatible_title = 'fr' == $db_language->code ? 'Navigateur incompatible' : 'Incompatible Browser';
-        if( is_null( $db_qnaire_description->value ) )
+        if( is_null( $db_qnaire_description ) || is_null( $db_qnaire_description->value ) )
         {
           $incompatible_message = 'fr' == $db_language->code
                                 ? 'Votre navigateur Web n’est pas compatible avec cette application.  Veuillez essayer de changer d’appareil, d’ordinateur ou de navigateur.'
