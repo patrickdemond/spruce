@@ -53,18 +53,42 @@ class query extends \cenozo\service\query
 
     $list = parent::get_record_list();
 
+    $db_qnaire = NULL;
+    $db_response = NULL;
+    $db_respondent = NULL;
+    $expression_manager = NULL;
+
     $respondent = 1 == preg_match( '/^token=([^;\/]+)/', $this->get_resource_value( 0 ), $parts );
     if( $respondent )
     {
       $db_respondent = $respondent_class_name::get_unique_record( 'token', $parts[1] );
-      $db_response = is_null( $db_respondent ) ? NULL : $db_respondent->get_current_response();
+      $db_qnaire = $db_respondent->get_qnaire();
+      $db_response = $db_respondent->get_current_response();
+      $expression_manager = lib::create( 'business\expression_manager', $db_response );
     }
-    $db_qnaire = $respondent ? $db_respondent->get_qnaire() : $this->get_parent_record()->get_qnaire();
-    $expression_manager = lib::create( 'business\expression_manager', $respondent ? $db_response : $db_qnaire );
+    else
+    {
+      $db_qnaire = $this->get_parent_record()->get_qnaire();
+      $expression_manager = lib::create( 'business\expression_manager', $db_qnaire );
+    }
 
     foreach( $list as $index => $record )
     {
       $expression_manager->process_hidden_text( $record );
+
+      if( 'device' == $record['type'] && $record['device_id'] && $respondent )
+      {
+        // count the number of files on disk for this record
+        $record['files_received'] = 0;
+
+        $db_answer = lib::create( 'database\answer', $record['answer_id'] );
+        $db_response_device = $db_answer->get_response_device();
+        if( !is_null( $db_response_device ) )
+        {
+          $files = $db_response_device->get_files();
+          if( $files ) $record['files_received'] = count( $files );  
+        }
+      }
       $list[$index] = $record;
 
       $processing = '';

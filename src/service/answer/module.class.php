@@ -30,5 +30,19 @@ class module extends \cenozo\service\module
     $join_mod->where( 'response.id', '=', 'response_device.response_id', false );
     $join_mod->where( 'question.device_id', '=', 'response_device.device_id', false );
     $modifier->join_modifier( 'response_device', $join_mod, 'left' );
+
+    $db_answer = $this->get_resource();
+    if( !is_null( $db_answer ) )
+    {
+      if( $select->has_column( 'files_received' ) )
+      {
+        $db_response_device = $db_answer->get_response_device();
+        $select->add_constant(
+          is_null( $db_response_device ) ? 0 : count( $db_response_device->get_files() ),
+          'files_received',
+          'integer'
+        );
+      }
+    }
   }
 }

@@ -641,6 +641,7 @@ cenozoApp.defineModule({
                           select: {
                             column: [
                               'value',
+                              'files_received',
                               { table: 'response_device', column: 'uuid' },
                               { table: 'response_device', column: 'status' },
                             ],
@@ -651,6 +652,7 @@ cenozoApp.defineModule({
                       const newValue = angular.fromJson( response.data.value );
                       if( newValue != question.value ) {
                         question.value = angular.fromJson(response.data.value);
+                        question.files_received = response.data.files_received;
                         var complete = this.questionIsComplete(question);
                         question.incomplete = false === complete ? true : true === complete ? false : complete;
                         question.backupValue = angular.copy(response.data.value);
@@ -1740,7 +1742,6 @@ cenozoApp.defineModule({
                       : null,
                 };
               } else if ("lookup" == question.type) {
-
                 if( angular.isObject( question.value ) ) {
                   question.answer = {
                     value: question.value.identifier,
@@ -1783,6 +1784,14 @@ cenozoApp.defineModule({
                   formattedValue:
                     "date" != question.type ? null : formatDate(question.value),
                 };
+
+                if ("device" == question.type) {
+                  // if the question's value is dkna or refuse then the device status/uuid has been reset
+                  if( isDkna(question.value) || isRefuse(question.value) ) {
+                    question.device_status = null;
+                    question.device_uuid = null;
+                  }
+                }
               }
 
               question.answer.dkna = isDkna(question.value);
@@ -2158,7 +2167,25 @@ cenozoApp.defineModule({
               if( 'in progress' == question.device_status ) {
                 prompt = this.text( 'misc.abort' ) + " " + question.device;
               } else if( 'completed' == question.device_status ) {
-                prompt = this.text( 'misc.reLaunch' ) + " " + question.device;
+                prompt = this.text( 'misc.reLaunch' ) + " " + question.device + " (";
+
+                const dataReceived =
+                  !isDkna(question.value) &&
+                  !isRefuse(question.value) &&
+                  null != question.value;
+                const filesReceived = angular.isDefined( question.files_received ) ? question.files_received : 0
+                if(dataReceived && 0 < filesReceived) {
+                  prompt +=
+                    "data and " + filesReceived + " file" +
+                    ( 1 < filesReceived ? "s" : "" ) + " received";
+                } else if (dataReceived && 0 == filesReceived) {
+                  prompt += "data received";
+                } else if (!dataReceived && 0 < filesReceived) {
+                  prompt += filesReceived + " file" + ( 1 < filesReceived ? "s" : "" ) + " received";
+                } else {
+                  prompt += "no data received";
+                }
+                prompt += ")";
               }
 
               return prompt;
@@ -2174,11 +2201,14 @@ cenozoApp.defineModule({
                 });
                 modal.show();
 
+                // Launch the device and set the status and uuid, set the answer value to null
+                // and watch for updates from the device
                 var response = await CnHttpFactory.instance({
                   path: "answer/" + question.answer_id + "?action=launch_device",
                 }).patch();
                 question.device_status = response.data.status;
                 question.device_uuid = response.data.uuid;
+                question.value = null;
                 this.addDevicePromise(question);
               } finally {
                 this.convertValueToModel(question);

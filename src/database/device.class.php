@@ -33,8 +33,7 @@ class device extends \cenozo\database\record
    */
   public function launch( $db_answer )
   {
-    $response_device_class_name = lib::get_class_name( 'database\response_device' );
-    $cypress_manager = lib::create( 'business\cypress_manager', $this, $db_answer );
+    $cypress_manager = lib::create( 'business\cypress_manager', $this );
     
     // always include the token and language
     $db_response = $db_answer->get_response();
@@ -50,11 +49,7 @@ class device extends \cenozo\database\record
       $data[$db_device_data->name] = $db_device_data->get_compiled_value( $db_answer );
 
     // if a response device already exists for this response/device, then a response_device record will be found
-    $db_response_device = $response_device_class_name::get_unique_record(
-      array( 'response_id', 'device_id' ),
-      array( $db_response->id, $this->id )
-    );
-
+    $db_response_device = $db_answer->get_response_device();
     if( is_null( $db_response_device ) )
     {
       if( $this->emulate )
@@ -77,5 +72,19 @@ class device extends \cenozo\database\record
     $db_response_device->save();
 
     return $db_response_device;
+  }
+
+  /**
+   * Aborts the device for a particular UUID
+   * 
+   * @argument string $uuid
+   */
+  public function abort( $uuid )
+  {
+    if( !$this->emulate )
+    {
+      $cypress_manager = lib::create( 'business\cypress_manager', $this );
+      $cypress_manager->abort( $uuid );
+    }
   }
 }

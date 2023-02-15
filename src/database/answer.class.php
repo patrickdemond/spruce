@@ -114,6 +114,22 @@ class answer extends \cenozo\database\record
           if( !is_null( $db_answer ) ) $db_answer->remove_answer_value_by_option_id( $question_option['id'] );
         }
       }
+
+      // dkna/refused device answers must have their response device records deleted
+      if( 'device' == $db_question->type )
+      {
+        $value = util::json_decode( $this->value );
+        if( is_object( $value ) )
+        {
+          $dkna = array_key_exists( 'dkna', $value ) && $value->dkna;
+          $refuse = array_key_exists( 'refuse', $value ) && $value->refuse;
+          if( $dkna || $refuse )
+          {
+            $db_response_device = $this->get_response_device();
+            if( !is_null( $db_response_device ) ) $db_response_device->delete();
+          }
+        }
+      }
     }
   }
 
@@ -302,14 +318,33 @@ class answer extends \cenozo\database\record
     }
   }
 
+  /**
+   * Returns the response_device record associated with the answer (or NULL if there is none)
+   */
+  public function get_response_device()
+  {
+    $response_device_class_name = lib::get_class_name( 'database\response_device' );
+
+    $db_question = $this->get_question();
+
+    $db_response_device = NULL;
+    if( 'device' == $db_question->type && !is_null( $db_question->device_id ) )
+    {
+      $db_response_device = $response_device_class_name::get_unique_record(
+        ['response_id', 'device_id'],
+        [$this->response_id, $db_question->device_id]
+      );
+    }
+
+    return $db_response_device;
+  }
+
   /** 
    * Launches this answer's device
    * @return database/response_device The resulting response_device object referring to the launch request
    */
   public function launch_device()
   {
-    $response_device_class_name = lib::get_class_name( 'database\response_device' );
-
     $db_device = $this->get_question()->get_device();
     if( is_null( $db_device ) )
     {

@@ -19,7 +19,17 @@ class patch extends \cenozo\service\patch
 
     if( $this->may_continue() )
     {
-      if( 'launch_device' ==  $this->get_argument( 'action', NULL ) )
+      $filename = $this->get_argument( 'filename', NULL );
+      if( !is_null( $filename ) )
+      {
+        // make sure the response_device record exists
+        $this->db_response_device = $this->get_leaf_record()->get_response_device();
+        if( is_null( $this->db_response_device ) )
+        {
+          $this->get_status()->set_code( 404 );
+        }
+      }
+      else if( 'launch_device' ==  $this->get_argument( 'action', NULL ) )
       {
         // make sure a device exists and is online
         $db_device = $this->get_leaf_record()->get_question()->get_device();
@@ -47,14 +57,7 @@ class patch extends \cenozo\service\patch
     $filename = $this->get_argument( 'filename', NULL );
     if( !is_null( $filename ) )
     {
-      $db_respondent = $this->get_leaf_record()->get_response()->get_respondent();
-
-      $directory = sprintf(
-        '%s/%s/%s',
-        DEVICE_FILES_PATH,
-        $db_respondent->get_participant()->uid,
-        $db_respondent->get_qnaire()->name
-      );
+      $directory = $this->db_response_device->get_directory();
       $local_filename = sprintf( '%s/%s', $directory, $filename );
       $file_contents = $this->get_file_as_raw();
 
@@ -73,11 +76,18 @@ class patch extends \cenozo\service\patch
     else if( 'launch_device' == $this->get_argument( 'action', NULL ) )
     {
       // launch the associated device
-      $db_response_device = $this->get_leaf_record()->launch_device();
+      $this->db_response_device = $this->get_leaf_record()->launch_device();
       $this->set_data( [
-        'uuid' => $db_response_device->uuid,
-        'status' => $db_response_device->status
+        'uuid' => $this->db_response_device->uuid,
+        'status' => $this->db_response_device->status
       ] );
     }
   }
+
+  /**
+   * The response_device associated with the request (only set when required)
+   * @var database\response_device
+   * @private
+   */
+  private $db_response_device = NULL;
 }

@@ -17,10 +17,9 @@ class cypress_manager extends \cenozo\base_object
    * Constructor.
    * 
    * @param database\device $db_device
-   * @param database\response_device $db_response_device
    * @access protected
    */
-  public function __construct( $db_device, $db_response_device = NULL )
+  public function __construct( $db_device )
   {
     if( is_string( $db_device ) )
     {
@@ -29,7 +28,6 @@ class cypress_manager extends \cenozo\base_object
     }
 
     $this->db_device = $db_device;
-    $this->db_response_device = $db_response_device;
   }
 
   /**
@@ -59,7 +57,6 @@ class cypress_manager extends \cenozo\base_object
   /**
    * Attempts to launch a device by sending a POST request to the cypress service
    * 
-   * @return varies
    * @param array $data An associative array of data to send to Cypress
    * @param database\response $db_answer The answer that the device is to return it's data to
    * @return database\response_device The resulting response_device record
@@ -111,6 +108,30 @@ class cypress_manager extends \cenozo\base_object
   }
 
   /**
+   * Requests that the device aborts a particular run by UUID
+   * 
+   * @param string $uuid The UUID of the exam that should be aborted
+   * @access public
+   */
+  public function abort( $uuid )
+  {
+    try
+    {
+      // send a delete request to cypress to abort the device
+      $this->send( sprintf( '%s/%s', $this->db_device->url, $uuid ), 'DELETE', $data );
+    }
+    catch ( \cenozo\exception\runtime $e )
+    {
+      // ignore 404, it just means the UUID has already been cancelled
+      if( !preg_match( sprintf( '/Got response code 404/', $code ), $e->get_raw_message() ) )
+      {
+        // report other errors to the log but otherwise ignore them
+        log::error( $e->get_raw_message() );
+      }
+    }
+  }
+
+  /**
    * Sends curl requests
    * 
    * @param string $api_path The internal cenozo path (not including base url)
@@ -137,9 +158,9 @@ class cypress_manager extends \cenozo\base_object
     {
       curl_setopt( $curl, CURLOPT_POST, true );
     }
-    else if( 'PATCH' == $method )
+    else if( 'GET' != $method )
     {
-      curl_setopt( $curl, CURLOPT_CUSTOMREQUEST, 'PATCH' );
+      curl_setopt( $curl, CURLOPT_CUSTOMREQUEST, $method );
     }
 
     if( !is_null( $data ) )
