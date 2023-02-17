@@ -76,7 +76,7 @@ class query extends \cenozo\service\query
     {
       $expression_manager->process_hidden_text( $record );
 
-      if( 'device' == $record['type'] && $record['device_id'] && $respondent )
+      if( $respondent && 'device' == $record['type'] && $record['device_id'] )
       {
         // count the number of files on disk for this record
         $record['files_received'] = 0;
