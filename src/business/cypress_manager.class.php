@@ -45,7 +45,7 @@ class cypress_manager extends \cenozo\base_object
         // call the base of the URL to test if Cypress is online
         $status = $this->send( sprintf( '%s/status', $this->db_device->url ) );
       }
-      catch ( \cenozo\exception\runtime $e )
+      catch( \cenozo\exception\runtime $e )
       {
         // ignore errors
       }
@@ -67,7 +67,23 @@ class cypress_manager extends \cenozo\base_object
     $response_device_class_name = lib::get_class_name( 'database\response_device' );
 
     // send a post request to cypress to start the device, it should respond with a UUID
-    $uuid = $this->send( $this->db_device->url, 'POST', $data );
+    try
+    {
+      $uuid = $this->send( $this->db_device->url, 'POST', $data );
+    }
+    catch( \cenozo\exception\runtime $e )
+    {
+      if( 409 == $this->last_code )
+      {
+        throw lib::create( 'exception\notice',
+          'Cannot launch the device as it is already busy.',
+          __METHOD__,
+          $e
+        );
+      }
+      else throw $e;
+    }
+
     if( !$uuid )
     {
       throw lib::create( 'exception\runtime',
@@ -120,10 +136,10 @@ class cypress_manager extends \cenozo\base_object
       // send a delete request to cypress to abort the device
       $this->send( sprintf( '%s/%s', $this->db_device->url, $uuid ), 'DELETE', $data );
     }
-    catch ( \cenozo\exception\runtime $e )
+    catch( \cenozo\exception\runtime $e )
     {
       // ignore 404, it just means the UUID has already been cancelled
-      if( !preg_match( sprintf( '/Got response code 404/', $code ), $e->get_raw_message() ) )
+      if( 404 != $this->last_code )
       {
         // report other errors to the log but otherwise ignore them
         log::error( $e->get_raw_message() );
@@ -145,7 +161,7 @@ class cypress_manager extends \cenozo\base_object
     $pass = $setting_manager->get_setting( 'utility', 'password' );
     $header_list = array( sprintf( 'Authorization: Basic %s', base64_encode( sprintf( '%s:%s', $user, $pass ) ) ) );
 
-    $code = 0;
+    $this->last_code = 0;
 
     // set URL and other appropriate options
     $curl = curl_init();
@@ -183,12 +199,12 @@ class cypress_manager extends \cenozo\base_object
         __METHOD__ );
     }
     
-    $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
-    if( 204 == $code || 300 <= $code )
+    $this->last_code = (int) curl_getinfo( $curl, CURLINFO_HTTP_CODE );
+    if( 204 == $this->last_code || 300 <= $this->last_code )
     {
       throw lib::create( 'exception\runtime',
         sprintf( 'Got response code %s "%s" when trying %s request to %s.',
-                 $code,
+                 $this->last_code,
                  $response,
                  $method,
                  $this->db_device->name ),
@@ -218,4 +234,11 @@ class cypress_manager extends \cenozo\base_object
    * @access protected
    */
   protected $timeout = 5;
+
+  /**
+   * The last HTTP code returned by Cypress
+   * @var integer
+   * @access protected
+   */
+  protected $last_code = NULL;
 }
