@@ -1833,6 +1833,9 @@ class qnaire extends \cenozo\database\record
       $db_respondent->qnaire_id = $this->id;
       $db_respondent->participant_id = $db_participant->id;
       $db_respondent->save();
+
+      // now make sure the respondent has a response (so response attribute values are cached)
+      $db_respondent->get_current_response( true );
     }
   }
 
