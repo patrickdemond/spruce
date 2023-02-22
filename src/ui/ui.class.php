@@ -239,6 +239,7 @@ class ui extends \cenozo\ui\ui
 
     // remove participant utilities
     unset( $list['Participant Multiedit'] );
+    unset( $list['Participant Import'] );
     unset( $list['Participant Export'] );
     unset( $list['Participant Search'] );
     unset( $list['Tracing'] );
