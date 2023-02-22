@@ -36,9 +36,8 @@ class module extends \cenozo\service\module
     {
       if( $select->has_column( 'files_received' ) )
       {
-        $db_response_device = $db_answer->get_response_device();
         $select->add_constant(
-          is_null( $db_response_device ) ? 0 : count( $db_response_device->get_files() ),
+          count( $db_answer->get_data_files() ),
           'files_received',
           'integer'
         );

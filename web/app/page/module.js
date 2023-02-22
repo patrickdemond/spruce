@@ -1559,7 +1559,9 @@ cenozoApp.defineModule({
                       question.audio = CnAudioRecordingFactory.instance({
                         timeLimit: 0 < question.maximum ? question.maximum : 60,
                         onComplete: (recorder, blob) => {
-                          this.setAnswer(question, blob);
+                          question.file = blob;
+                          question.objectURL = window.URL.createObjectURL(question.file);
+                          this.setAnswer(question, true);
                         },
                         onTimeout: (recorder) => {
                           CnModalMessageFactory.instance({
@@ -1569,13 +1571,13 @@ cenozoApp.defineModule({
                         },
                       });
 
-                      if (question.value && !angular.isObject(question.value)) {
-                        list.push(
-                          (async () => {
-                            const base64Response = await fetch(question.value);
-                            question.value = await base64Response.blob();
-                          })()
-                        );
+                      question.objectURL = null;
+                      if (null != question.file) {
+                        // Convert the base64 encoded file provided by the server to a blob, then create
+                        // an object URL for the <audio> tag's src attribute.  We can't use the base64 value
+                        // directly since Angular will insert "unsafe" in the string (for security).
+                        question.file = cenozo.convertBase64ToBlob(question.file, "audio/wav");
+                        question.objectURL = window.URL.createObjectURL(question.file);
                       }
                     } else if ("lookup" == question.type) {
                       question.lookup = {
@@ -1733,14 +1735,6 @@ cenozoApp.defineModule({
                 question.answer = angular.isObject( question.value )
                                 ? question.value
                                 : { value: null, unit: null };
-              } else if ("audio" == question.type) {
-                question.answer = {
-                  value: question.value,
-                  formattedValue:
-                    question.value instanceof Blob
-                      ? window.URL.createObjectURL(question.value)
-                      : null,
-                };
               } else if ("lookup" == question.type) {
                 if( angular.isObject( question.value ) ) {
                   question.answer = {
@@ -2303,28 +2297,42 @@ cenozoApp.defineModule({
                     if ("" === value) value = null;
 
                     if (!this.previewMode) {
-                      var valueForPatch = value;
-                      if( "audio" == question.type ) {
-                        // audio blobs need to be converted to base64 strings before sending to the server
-                        if( value instanceof Blob ) valueForPatch = await cenozo.convertBlobToBase64(value);
-                      } else if( "lookup" == question.type ) {
-                        // lookups store the selected item's identifier as the answer
-                        if(null != value && angular.isObject( value ) && angular.isDefined( value.identifier ))
-                          valueForPatch = value.identifier;
+                      // communicate with the server (if we're working with a respondent)
+                      var self = this;
+
+                      if ("audio" == question.type) {
+                        if (true !== value) {
+                          // if setting an audio answer to anything other than true, delete the file
+                          question.file = '';
+                          question.objectURL = null;
+                        }
+
+                        await CnHttpFactory.instance({
+                          path: "answer/" + question.answer_id + "?filename=audio.wav",
+                          data: question.file,
+                          format: "wav",
+                          onError: function (error) {
+                            question.value = angular.copy(question.backupValue);
+                            self.convertValueToModel(question);
+                          },
+                        }).patch();
                       }
 
-                      // first communicate with the server (if we're working with a respondent)
-                      var self = this;
+                      // set the answer's value on the server
                       await CnHttpFactory.instance({
                         path: "answer/" + question.answer_id,
                         data: {
-                          value: angular.toJson(valueForPatch),
+                          value: angular.toJson(
+                            // lookups store the selected item's identifier as the answer
+                            "lookup" == question.type &&
+                            null != value &&
+                            angular.isObject( value ) &&
+                            angular.isDefined( value.identifier ) ? value.identifier : value
+                          ),
                           alternate_id: this.alternateId,
                         },
                         onError: function (error) {
-                          question.value = angular.copy(
-                            question.backupValue
-                          );
+                          question.value = angular.copy(question.backupValue);
                           self.convertValueToModel(question);
                         },
                       }).patch();

@@ -28,14 +28,21 @@ class question extends base_qnaire_part
   {
     $changing_name = !is_null( $this->id ) && $this->has_column_changed( 'name' );
     $old_name = $this->get_passive_column_value( 'name' );
+    $old_data_directory = $this->get_old_data_directory();
 
     parent::save();
 
     // remove all question options if the question's type isn't list
     if( 'list' != $this->type && 0 < $this->get_question_option_count() ) $this->remove_question_option( NULL );
 
-    // update all preconditions if the question's name is changing
-    if( $changing_name ) $this->get_qnaire()->update_name_in_preconditions( 'question', $old_name, $this->name );
+    if( $changing_name )
+    {
+      // update all preconditions if the question's name is changing
+      $this->get_qnaire()->update_name_in_preconditions( 'question', $old_name, $this->name );
+
+      // rename response data directories, if necessary
+      if( file_exists( $old_data_directory ) ) rename( $old_data_directory, $this->get_data_directory() );
+    }
   }
 
   /**
@@ -506,5 +513,31 @@ class question extends base_qnaire_part
     }
 
     return $column_list;
+  }
+
+  /**
+   * Returns the directory that uploaded response data to this question is written to
+   */
+  public function get_data_directory()
+  {
+    return sprintf(
+      '%s/%s/%s',
+      RESPONSE_DATA_PATH,
+      $this->get_qnaire()->name,
+      $this->name
+    );
+  }
+
+  /**
+   * Returns the old data directory (used by save() before updating the record)
+   */
+  protected function get_old_data_directory()
+  {
+    return sprintf(
+      '%s/%s/%s',
+      RESPONSE_DATA_PATH,
+      $this->get_qnaire()->name,
+      $this->get_passive_column_value( 'name' )
+    );
   }
 }

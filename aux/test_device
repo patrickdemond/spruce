@@ -1,0 +1,131 @@
+#!/usr/bin/php
+<?php
+/**
+ * Utility script which should be ran once a day, ideally when the application is under light use.
+ * Author: Patrick Emond <emondpd@mcmaster.ca>
+ */
+
+/**
+ * Make sure to fill in the following
+ */
+
+$base_dir = str_replace( '/aux', '', __DIR__ );
+$instance = substr( $base_dir, strrpos( $base_dir, '/' )+1 );
+define( 'URL', sprintf( 'http://localhost/patrick/%s/api/', $instance ) );
+
+/**
+ * Do not edit any of the following lines
+ */
+
+chdir( dirname( __FILE__ ).'/../' );
+require_once 'settings.ini.php';
+require_once 'settings.local.ini.php';
+require_once $SETTINGS['path']['CENOZO'].'/src/initial.class.php';
+$initial = new \cenozo\initial( true );
+$settings = $initial->get_settings();
+define( 'USER', $settings['utility']['username'] );
+define( 'AUTH', sprintf( 'Authorization: Basic %s', base64_encode(
+  sprintf( '%s:%s', $settings['utility']['username'], $settings['utility']['password'] ) ) ) );
+
+
+// set the answer
+$curl = curl_init();
+curl_setopt( $curl, CURLOPT_URL, URL.'answer/17975250' );
+curl_setopt( $curl, CURLOPT_SSL_VERIFYHOST, false );
+curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+curl_setopt( $curl, CURLOPT_HTTPHEADER, [ AUTH, 'Content-Type: application/json' ] );
+curl_setopt( $curl, CURLOPT_CUSTOMREQUEST, 'PATCH' );
+curl_setopt( $curl, CURLOPT_POSTFIELDS, '{ "value": "{ \"k1\": \"v1\", \"k2\": \"v2\" }" }' );
+
+$response = curl_exec( $curl );
+if( curl_errno( $curl ) )
+{
+  printf(
+    "Returned error code %s \nMessage: %s\n",
+    curl_errno( $curl ),
+    curl_error( $curl )
+  );
+  exit;
+}
+else
+{
+  $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
+  if( 200 != $code && 503 != $code )
+  {
+    printf( "Failed (response code: %s)\n", $code );
+    exit;
+  }
+  else
+  {
+    printf( "Code: %d, Response: %s\n", $code, $response );
+  }
+}
+curl_close( $curl );
+
+
+// upload a file
+$curl = curl_init();
+curl_setopt( $curl, CURLOPT_URL, URL.'answer/17975250?filename=scan2.dcm' );
+curl_setopt( $curl, CURLOPT_SSL_VERIFYHOST, false );
+curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+curl_setopt( $curl, CURLOPT_HTTPHEADER, [ AUTH, 'Content-Type: application/octet-stream' ] );
+curl_setopt( $curl, CURLOPT_CUSTOMREQUEST, 'PATCH' );
+curl_setopt( $curl, CURLOPT_POSTFIELDS, 'this is another fake dcm file' );
+
+$response = curl_exec( $curl );
+if( curl_errno( $curl ) )
+{
+  printf(
+    "Returned error code %s \nMessage: %s\n",
+    curl_errno( $curl ),
+    curl_error( $curl )
+  );
+  exit;
+}
+else
+{
+  $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
+  if( 200 != $code && 503 != $code )
+  {
+    printf( "Failed (response code: %s)\n", $code );
+    exit;
+  }
+  else
+  {
+    printf( "Code: %d, Response: %s\n", $code, $response );
+  }
+}
+curl_close( $curl );
+
+
+// update the response_device record
+$curl = curl_init();
+curl_setopt( $curl, CURLOPT_URL, URL.'response_device/uuid=emulate-63ed4eb2f174d3-08111607' );
+curl_setopt( $curl, CURLOPT_SSL_VERIFYHOST, false );
+curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+curl_setopt( $curl, CURLOPT_HTTPHEADER, [ AUTH, 'Content-Type: application/json' ] );
+curl_setopt( $curl, CURLOPT_CUSTOMREQUEST, 'PATCH' );
+curl_setopt( $curl, CURLOPT_POSTFIELDS, '{ "status": "completed" }' );
+
+$response = curl_exec( $curl );
+if( curl_errno( $curl ) )
+{
+  printf(
+    "Returned error code %s \nMessage: %s\n",
+    curl_errno( $curl ),
+    curl_error( $curl )
+  );
+}
+else
+{
+  $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
+  if( 200 != $code && 503 != $code )
+  {
+    printf( "Failed (response code: %s)\n", $code );
+  }
+  else
+  {
+    printf( "Code: %d, Response: %s\n", $code, $response );
+  }
+}
+curl_close( $curl );

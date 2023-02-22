@@ -266,9 +266,10 @@ cenozoApp.defineModule({
                   module.page_list.forEach( page => {
                     page.question_list.forEach( question => {
                       if( "audio" == question.type ) {
+                        // the recording is stored in the file property as a base64 audio string
                         question.answer = $sce.trustAsHtml(
                           '<audio controls class="full-width" style="height: 40px;" src="' +
-                          question.answer + '"></audio>'
+                          question.file + '"></audio>'
                         );
                       }
                     })

@@ -329,21 +329,21 @@
                               model.renderModel.stopRecording( question ) : model.renderModel.startRecording( question )"
                             ng-bind-html="text(
                               question.audio.recordingInProgress ? 'misc.stop' :
-                              question.answer.formattedValue ? 'misc.reRecord' :
+                              question.objectURL ? 'misc.reRecord' :
                               'misc.record'
                             )" />
                     <div class="col-xs-9 col-slim-right">
                       <div ng-if="!question.audio.recordingInProgress"
                            ng-style="{
-                            'cursor': question.answer.formattedValue ? 'auto' : 'not-allowed',
-                            'opacity': question.answer.formattedValue ? 1.0 : 0.5
+                            'cursor': question.objectURL ? 'auto' : 'not-allowed',
+                            'opacity': question.objectURL ? 1.0 : 0.5
                           }">
                         <audio ng-attr-id="questionAudio{{ question.id }}"
-                               ng-src="{{ question.answer.formattedValue }}"
+                               ng-src="{{ question.objectURL }}"
                                class="full-width"
                                ng-style="{
                                  'height': '40px',
-                                 'pointer-events': question.answer.formattedValue ? 'auto' : 'none',
+                                 'pointer-events': question.objectURL ? 'auto' : 'none',
                                  'background': question.incomplete ? 'red' : 'none'
                                }"
                                controls></audio>

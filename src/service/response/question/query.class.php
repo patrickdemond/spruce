@@ -100,6 +100,7 @@ class query extends \cenozo\service\query
             $question_sel->add_column( 'precondition' );
             $question_sel->add_column( 'unit_list' );
             $question_sel->add_table_column( 'question_description', 'value', 'description' );
+            $question_sel->add_table_column( 'answer', 'id', 'answer_id' );
             $question_sel->add_table_column( 'answer', 'value', 'answer' );
             $question_sel->add_column(
               sprintf( 'IFNULL( answer.language_id, %d )', $db_language->id ),
@@ -192,7 +193,26 @@ class query extends \cenozo\service\query
                   'answer' => is_null( $print_answer ) ? NULL : $print_answer
                 );
 
-                if( 'list' == $question['type'] )
+                if( 'audio' == $question['type'] )
+                {
+                  // audio files are stored on disk, not in the database
+                  $db_answer = lib::create( 'database\answer', $question['answer_id'] );
+                  $question_data['file'] = NULL;
+                  $filename = sprintf( '%s/audio.wav', $db_answer->get_data_directory() );
+                  if( file_exists( $filename ) )
+                  {
+                    $file = file_get_contents( sprintf( '%s/audio.wav', $db_answer->get_data_directory() ) );
+                    if( false !== $file )
+                    {
+                      // send as a base64 encoded audio string for the <audio> tag's src attribute
+                      $question_data['file'] = sprintf(
+                        'data:audio/wav;base64,%s',
+                        base64_encode( $file )
+                      );
+                    }
+                  }
+                }
+                else if( 'list' == $question['type'] )
                 {
                   $question_data['option_list'] = array();
 

@@ -76,20 +76,32 @@ class query extends \cenozo\service\query
     {
       $expression_manager->process_hidden_text( $record );
 
-      if( $respondent && 'device' == $record['type'] && $record['device_id'] )
+      // alter data if respondent data is included in the request
+      if( $respondent )
       {
-        // count the number of files on disk for this record
-        $record['files_received'] = 0;
-
-        $db_answer = lib::create( 'database\answer', $record['answer_id'] );
-        $db_response_device = $db_answer->get_response_device();
-        if( !is_null( $db_response_device ) )
+        if( 'device' == $record['type'] && $record['device_id'] )
         {
-          $files = $db_response_device->get_files();
-          if( $files ) $record['files_received'] = count( $files );  
+          // count the number of files on disk for this record
+          $record['files_received'] = 0;
+
+          $db_answer = lib::create( 'database\answer', $record['answer_id'] );
+          $record['files_received'] = count( $db_answer->get_data_files() );
         }
+        else if( 'audio' == $record['type'] )
+        {
+          // audio files are stored on disk, not in the database
+          $db_answer = lib::create( 'database\answer', $record['answer_id'] );
+          $record['file'] = NULL;
+          $filename = sprintf( '%s/audio.wav', $db_answer->get_data_directory() );
+          if( file_exists( $filename ) )
+          {
+            $file = file_get_contents( sprintf( '%s/audio.wav', $db_answer->get_data_directory() ) );
+            if( false !== $file ) $record['file'] = base64_encode( $file );
+          }
+        }
+
+        $list[$index] = $record;
       }
-      $list[$index] = $record;
 
       $processing = '';
       try

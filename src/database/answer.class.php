@@ -364,4 +364,25 @@ class answer extends \cenozo\database\record
 
     return $db_response_device;
   }
+
+  /**
+   * Returns the directory that uploaded response data to this answer is written to
+   */
+  public function get_data_directory()
+  {
+    $db_respondent = $this->get_response()->get_respondent();
+    return sprintf(
+      '%s/%s',
+      $this->get_question()->get_data_directory(),
+      $db_respondent->get_participant()->uid
+    );
+  }
+
+  /**
+   * Returns a list of all files stored in the answer's response data directory
+   */
+  public function get_data_files()
+  {
+    return glob( sprintf( '%s/*', $this->get_data_directory() ) );
+  }
 }
