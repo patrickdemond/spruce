@@ -520,12 +520,7 @@ class question extends base_qnaire_part
    */
   public function get_data_directory()
   {
-    return sprintf(
-      '%s/%s/%s',
-      RESPONSE_DATA_PATH,
-      $this->get_qnaire()->name,
-      $this->name
-    );
+    return sprintf( '%s/%s', $this->get_qnaire()->get_data_directory(), $this->name );
   }
 
   /**
@@ -534,9 +529,8 @@ class question extends base_qnaire_part
   protected function get_old_data_directory()
   {
     return sprintf(
-      '%s/%s/%s',
-      RESPONSE_DATA_PATH,
-      $this->get_qnaire()->name,
+      '%s/%s',
+      $this->get_qnaire()->get_data_directory(),
       $this->get_passive_column_value( 'name' )
     );
   }

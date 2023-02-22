@@ -126,7 +126,16 @@ class qnaire extends \cenozo\database\record
       }
     }
 
+    $changing_name = !is_null( $this->id ) && $this->has_column_changed( 'name' );
+    $old_data_directory = $this->get_old_data_directory();
+
     parent::save();
+
+    if( $changing_name )
+    {
+      // rename response data directories, if necessary
+      if( file_exists( $old_data_directory ) ) rename( $old_data_directory, $this->get_data_directory() );
+    }
   }
 
   /**
@@ -4968,5 +4977,21 @@ class qnaire extends \cenozo\database\record
     }
 
     return util::json_decode( $response );
+  }
+
+  /**
+   * Returns the directory that uploaded response data to this qnaire is written to
+   */
+  public function get_data_directory()
+  {
+    return sprintf( '%s/%s', RESPONSE_DATA_PATH, $this->name );
+  }
+
+  /**
+   * Returns the old data directory (used by save() before updating the record)
+   */
+  protected function get_old_data_directory()
+  {
+    return sprintf( '%s/%s', RESPONSE_DATA_PATH, $this->get_passive_column_value( 'name' ) );
   }
 }
