@@ -2170,14 +2170,18 @@ cenozoApp.defineModule({
                 const filesReceived = angular.isDefined( question.files_received ) ? question.files_received : 0
                 if(dataReceived && 0 < filesReceived) {
                   prompt +=
-                    "data and " + filesReceived + " file" +
-                    ( 1 < filesReceived ? "s" : "" ) + " received";
+                    this.text( 'misc.dataAndFileReceived' ).
+                      replaceAll( '<FILES>', filesReceived ).
+                      replaceAll( '<PLURAL>', 1 == filesReceived ? "" : "s" );
                 } else if (dataReceived && 0 == filesReceived) {
-                  prompt += "data received";
+                  prompt += this.text( 'misc.dataReceived' );
                 } else if (!dataReceived && 0 < filesReceived) {
-                  prompt += filesReceived + " file" + ( 1 < filesReceived ? "s" : "" ) + " received";
+                  prompt +=
+                    this.text( 'misc.fileReceived' ).
+                      replaceAll( '<FILES>', filesReceived ).
+                      replaceAll( '<PLURAL>', 1 == filesReceived ? "" : "s" );
                 } else {
-                  prompt += "no data received";
+                  prompt += this.text( 'misc.noDataReceived' );
                 }
                 prompt += ")";
               }

@@ -859,6 +859,22 @@ cenozo.service("CnTranslationHelper", [
             en: "In Progress",
             fr: "en cours",
           },
+          dataAndFileReceived: {
+            en: "data and <FILES> file<PLURAL> received",
+            fr: "données et <FILES> fichier<PLURAL> reçus",
+          },
+          dataReceived: {
+            en: "data received",
+            fr: "données reçues",
+          },
+          fileReceived: {
+            en: "<FILES> file<PLURAL> received",
+            fr: "<FILES> fichier<PLURAL> reçu<PLURAL>",
+          },
+          noDataReceived: {
+            en: "no data received",
+            fr: "aucune donnée reçue",
+          },
         },
       },
       // used by services below to convert a list of descriptions into an object
