@@ -35,6 +35,10 @@ cenozoApp.defineModule({
         title: "Name",
         type: "string",
       },
+      version: {
+        title: "Version",
+        type: "string",
+      },
       description: {
         title: "Description",
         type: "text",

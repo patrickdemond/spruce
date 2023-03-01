@@ -35,8 +35,9 @@
         <div ng-if="model.viewModel.differenceIsEmpty">No differences found.</div>
         <div ng-repeat="(property, child) in model.viewModel.difference" class="row">
           <div ng-if="![
-              'stage_list', 'module_list', 'attribute_list', 'embedded_file_list', 'deviation_type_list', 'reminder_list',
-              'qnaire_consent_type_confirm_list', 'qnaire_participant_trigger_list', 'qnaire_consent_type_trigger_list',
+              'stage_list', 'module_list', 'attribute_list', 'embedded_file_list', 'lookup_list', 'device_list',
+              'qnaire_report_list', 'deviation_type_list', 'reminder_list', 'qnaire_consent_type_confirm_list',
+              'qnaire_participant_trigger_list', 'qnaire_consent_type_trigger_list',
               'qnaire_alternate_consent_type_trigger_list', 'qnaire_proxy_type_trigger_list'
             ].includes( property )">
             <label class="col-sm-2 control-label">{{
@@ -67,6 +68,12 @@
             <label class="container-fluid">Embedded File List</label>
             <div class="container-fluid">
               <cn-qnaire-part-patch subject="embedded_file" model="child"></cn-qnaire-part-patch>
+            </div>
+          </div>
+          <div ng-if="'lookup_list' == property">
+            <label class="container-fluid">Lookup List</label>
+            <div class="container-fluid">
+              <cn-qnaire-part-patch subject="lookup" model="child"></cn-qnaire-part-patch>
             </div>
           </div>
           <div ng-if="'device_list' == property">

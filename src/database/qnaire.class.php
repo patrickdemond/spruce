@@ -31,6 +31,7 @@ class qnaire extends \cenozo\database\record
     $record_type, $select = NULL, $modifier = NULL, $return_alt = '', $distinct = false )
   {
     $response_class_name = lib::get_class_name( 'database\response' );
+    $lookup_class_name = lib::get_class_name( 'database\lookup' );
 
     if( !is_string( $record_type ) || 0 == strlen( $record_type ) )
       throw lib::create( 'exception\argument', 'record_type', $record_type, __METHOD__ );
@@ -82,6 +83,37 @@ class qnaire extends \cenozo\database\record
           $return_value = 'object' == $return_alt ?
             $response_class_name::select_objects( $modifier ) :
             $response_class_name::select( $select, $modifier );
+        }
+      }
+    }
+    // artificially create a relationship between lookup and qnaire
+    else if( 'lookup' == $record_type )
+    {
+      if( is_null( $this->id ) )
+      {
+        log::warning( 'Tried to query qnaire record with no primary key.' );
+      }
+      else
+      {
+        if( is_null( $modifier ) ) $modifier = lib::create( 'database\modifier' );
+
+        // wrap the existing modifier's where statements to avoid logic errors
+        $modifier->wrap_where();
+
+        if( !$modifier->has_join( 'question' ) ) $modifier->join( 'question', 'lookup.id', 'question.lookup_id' );
+        if( !$modifier->has_join( 'page' ) ) $modifier->join( 'page', 'question.page_id', 'page.id' );
+        if( !$modifier->has_join( 'module' ) ) $modifier->join( 'module', 'page.module_id', 'module.id' );
+        $modifier->where( 'module.qnaire_id', '=', $this->id );
+
+        if( 'count' == $return_alt )
+        {
+          $return_value = $lookup_class_name::count( $modifier, $distinct );
+        }
+        else
+        {
+          $return_value = 'object' == $return_alt ?
+            $lookup_class_name::select_objects( $modifier ) :
+            $lookup_class_name::select( $select, $modifier );
         }
       }
     }
@@ -930,11 +962,36 @@ class qnaire extends \cenozo\database\record
       }
     }
 
-    // update the lookup list (but only for lookups which are in use by local questionnaires)
+    // update the qnaire (but only if the version is different)
+    $url_postfix = sprintf( '/name=%s?select={"column":["version"]}', $this->name );
+    $parent_qnaire = $this->get_parent_data( 'qnaire', $url_postfix );
+
+    if( $this->version != $parent_qnaire->version )
+    {
+      // if the version is different then download the parent qnaire and apply it as a patch
+      $old_version = $this->version;
+      $new_version = $parent_qnaire->version;
+
+      $url_postfix = sprintf( '/name=%s?output=export&download=true', $this->name );
+      $parent_qnaire = $this->get_parent_data( 'qnaire', $url_postfix );
+      $this->process_patch( $parent_qnaire, true );
+      log::info( sprintf(
+        'Questionnaire "%s" has been upgraded from version "%s" to "%s".',
+        $this->name,
+        $old_version,
+        $new_version
+      ) );
+    }
+
+    // update the lookup list
+    // Note: updating the qnaire (in the previous code block) will also update any lookup that a question
+    // in that qnaire is using.  However, we still want to check for any lookups that aren't up to date,
+    // because it's possible a lookup has changed but the parent qnaire has not.
     $url_postfix =
       '?select={'.
         '"column":['.
           '{"table":"lookup","column":"name"},'.
+          '{"table":"lookup","column":"version"},'.
           '{"table":"lookup","column":"description"}'.
         '],'.
         '"distinct":true'.
@@ -957,10 +1014,11 @@ class qnaire extends \cenozo\database\record
         $new_lookup = true;
         $db_lookup = lib::create( 'database\lookup' );
       }
-
-      $db_lookup->name = $lookup->name;
-      $db_lookup->description = $lookup->description;
-      $db_lookup->save();
+      else
+      {
+        // don't proceed if the version hasn't changed
+        if( $db_lookup->version == $lookup->version ) continue;
+      }
 
       // since lookups can be big only update the rest of the lookup data if the lookup is new
       if( $new_lookup )
@@ -1017,27 +1075,6 @@ class qnaire extends \cenozo\database\record
           }
         }
       }
-    }
-
-    // update the qnaire (but only if the version is different)
-    $url_postfix = sprintf( '/name=%s?select={"column":["version"]}', $this->name );
-    $parent_qnaire = $this->get_parent_data( 'qnaire', $url_postfix );
-
-    if( $this->version != $parent_qnaire->version )
-    {
-      // if the version is different then download the parent qnaire and apply it as a patch
-      $old_version = $this->version;
-      $new_version = $parent_qnaire->version;
-
-      $url_postfix = sprintf( '/name=%s?output=export&download=true', $this->name );
-      $parent_qnaire = $this->get_parent_data( 'qnaire', $url_postfix );
-      $this->process_patch( $parent_qnaire, true );
-      log::info( sprintf(
-        'Questionnaire "%s" has been upgraded from version "%s" to "%s".',
-        $this->name,
-        $old_version,
-        $new_version
-      ) );
     }
   }
 
@@ -2269,6 +2306,8 @@ class qnaire extends \cenozo\database\record
     $qnaire_description_class_name = lib::get_class_name( 'database\qnaire_description' );
     $module_class_name = lib::get_class_name( 'database\module' );
     $stage_class_name = lib::get_class_name( 'database\stage' );
+    $lookup_class_name = lib::get_class_name( 'database\lookup' );
+    $indicator_class_name = lib::get_class_name( 'database\indicator' );
     $device_class_name = lib::get_class_name( 'database\device' );
     $qnaire_report_class_name = lib::get_class_name( 'database\qnaire_report' );
 
@@ -2518,6 +2557,86 @@ class qnaire extends \cenozo\database\record
         if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
         if( 0 < count( $diff_list ) ) $difference_list['reminder_list'] = $diff_list;
+      }
+      else if( 'lookup_list' == $property )
+      {
+        // check every item in the patch object for additions and changes
+        $add_list = array();
+        foreach( $patch_object->lookup_list as $lookup )
+        {
+          $db_lookup = $lookup_class_name::get_unique_record( 'name', $lookup->name );
+
+          if( is_null( $db_lookup ) )
+          {
+            if( $apply )
+            {
+              $db_lookup = lib::create( 'database\lookup' );
+              $db_lookup->name = $lookup->name;
+              $db_lookup->version = $lookup->version;
+              $db_lookup->description = $lookup->description;
+              $db_lookup->save();
+
+              // add all lookup indicators
+              foreach( $lookup->indicator_list as $indicator )
+              {
+                $db_indicator = lib::create( 'database\indicator' );
+                $db_indicator->lookup_id = $db_lookup->id;
+                $db_indicator->name = $indicator->name;
+                $db_indicator->save();
+              }
+
+              // add all lookup items
+              foreach( $lookup->lookup_item_list as $lookup_item )
+              {
+                $db_lookup_item = lib::create( 'database\lookup_item' );
+                $db_lookup_item->lookup_id = $db_lookup->id;
+                $db_lookup_item->identifier = $lookup_item->identifier;
+                $db_lookup_item->name = $lookup_item->name;
+                $db_lookup_item->description = $lookup_item->description;
+                $db_lookup_item->save();
+
+                // associate with indicators
+                $indicator_id_list = [];
+                foreach( $lookup_item->indicator_list as $indicator )
+                {
+                  $db_indicator = $indicator_class_name::get_unique_record(
+                    ['lookup_id', 'name'],
+                    [$db_lookup->id, $indicator]
+                  );
+                  $indicator_id_list[] = $db_indicator->id;
+                }
+                if( 0 < count( $indicator_id_list ) ) $db_lookup_item->add_indicator( $indicator_id_list );
+              }
+            }
+            else $add_list[] = $lookup;
+          }
+        }
+
+        // check every item in this object for removals (lookups referenced by the qnaire only)
+        $remove_list = array();
+        foreach( $this->get_lookup_object_list() as $db_lookup )
+        {
+          $found = false;
+          foreach( $patch_object->lookup_list as $lookup )
+          {
+            if( $db_lookup->name == $lookup->name )
+            {
+              $found = true;
+              break;
+            }
+          }
+
+          if( !$found )
+          {
+            if( $apply ) $db_lookup->delete();
+            else $remove_list[] = $db_lookup->name;
+          }
+        }
+
+        $diff_list = array();
+        if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
+        if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
+        if( 0 < count( $diff_list ) ) $difference_list['lookup_list'] = $diff_list;
       }
       else if( 'device_list' == $property )
       {
@@ -3905,12 +4024,7 @@ class qnaire extends \cenozo\database\record
       'embedded_file_list' => array(),
       'reminder_list' => array(),
       'qnaire_description_list' => array(),
-      'module_list' => array(),
-      'qnaire_participant_trigger_list' => array(),
-      'qnaire_consent_type_confirm_list' => array(),
-      'qnaire_consent_type_trigger_list' => array(),
-      'qnaire_alternate_consent_type_trigger_list' => array(),
-      'qnaire_proxy_type_trigger_list' => array()
+      'lookup_list' => array()
     );
 
     if( $this->stages )
@@ -3920,6 +4034,14 @@ class qnaire extends \cenozo\database\record
       $qnaire_data['deviation_type_list'] = array();
       $qnaire_data['stage_list'] = array();
     }
+    
+    // The following properties must come after the optional stage properties
+    $qnaire_data['module_list'] = array();
+    $qnaire_data['qnaire_participant_trigger_list'] = array();
+    $qnaire_data['qnaire_consent_type_confirm_list'] = array();
+    $qnaire_data['qnaire_consent_type_trigger_list'] = array();
+    $qnaire_data['qnaire_alternate_consent_type_trigger_list'] = array();
+    $qnaire_data['qnaire_proxy_type_trigger_list'] = array();
 
     $language_sel = lib::create( 'database\select' );
     $language_sel->add_column( 'code' );
@@ -3943,7 +4065,7 @@ class qnaire extends \cenozo\database\record
 
     if( $this->stages )
     {
-      foreach( $this->get_device_object_list( $device_sel ) as $db_device )
+      foreach( $this->get_device_object_list() as $db_device )
       {
         $item = [
           'name' => $db_device->name,
@@ -3959,7 +4081,7 @@ class qnaire extends \cenozo\database\record
         $qnaire_data['device_list'][] = $item;
       }
 
-      foreach( $this->get_qnaire_report_object_list( $qnaire_report_sel ) as $db_qnaire_report )
+      foreach( $this->get_qnaire_report_object_list() as $db_qnaire_report )
       {
         $item = [
           'language' => $db_qnaire_report->get_language()->code,
@@ -4096,6 +4218,82 @@ class qnaire extends \cenozo\database\record
             'question_option_list' => array()
           );
 
+          if( !is_null( $db_lookup ) )
+          {
+            // only add lookups once
+            $found = false;
+            foreach( $qnaire_data['lookup_list'] as $lookup )
+            {
+              if( $lookup['name'] == $db_lookup->name )
+              {
+                $found = true;
+                break;
+              }
+            }
+
+            if( !$found )
+            {
+              $lookup = array(
+                'name' => $db_lookup->name,
+                'version' => $db_lookup->version,
+                'description' => $db_lookup->description,
+                'indicator_list' => array(),
+                'lookup_item_list' => array()
+              );
+
+              $indicator_sel = lib::create( 'database\select' );
+              $indicator_sel->add_column( 'name' );
+              $indicator_mod = lib::create( 'database\modifier' );
+              $indicator_mod->order( 'name' );
+              foreach( $db_lookup->get_indicator_list( $indicator_sel, $indicator_mod ) as $indicator )
+              {
+                $lookup['indicator_list'][] = array( 'name' => $indicator['name'] );
+              }
+
+              $lookup_item_sel = lib::create( 'database\select' );
+              $lookup_item_sel->add_column( 'identifier' );
+              $lookup_item_sel->add_column( 'name' );
+              $lookup_item_sel->add_column( 'description' );
+              $lookup_item_sel->add_column(
+                'GROUP_CONCAT( indicator.name ORDER BY indicator.name )',
+                'indicator_list',
+                false
+              );
+              $lookup_item_mod = lib::create( 'database\modifier' );
+              $lookup_item_mod->left_join(
+                'indicator_has_lookup_item',
+                'lookup_item.id',
+                'indicator_has_lookup_item.lookup_item_id'
+              );
+              $lookup_item_mod->left_join(
+                'indicator',
+                'indicator_has_lookup_item.indicator_id',
+                'indicator.id'
+              );
+              $lookup_item_mod->group( 'lookup_item.id' );
+              $lookup_item_mod->order( 'identifier' );
+              foreach( $db_lookup->get_lookup_item_list( $lookup_item_sel, $lookup_item_mod ) as $lookup_item )
+              {
+                $item = array(
+                  'identifier' => $lookup_item['identifier'],
+                  'name' => $lookup_item['name'],
+                  'description' => $lookup_item['description'],
+                  'indicator_list' => array()
+                );
+
+                foreach( explode( ',', $lookup_item['indicator_list'] ) as $indicator )
+                {
+                  $indicator = trim( $indicator, '"' );
+                  if( 0 < strlen( $indicator ) ) $item['indicator_list'][] = $indicator;
+                }
+
+                $lookup['lookup_item_list'][] = $item;
+              }
+
+              $qnaire_data['lookup_list'][] = $lookup;
+            }
+          }
+
           $description_sel = lib::create( 'database\select' );
           $description_sel->add_table_column( 'language', 'code', 'language' );
           $description_sel->add_column( 'type' );
@@ -4104,8 +4302,7 @@ class qnaire extends \cenozo\database\record
           $description_mod->join( 'language', 'question_description.language_id', 'language.id' );
           $description_mod->order( 'type' );
           $description_mod->order( 'language.code' );
-          foreach( $db_question->get_question_description_list( $description_sel, $description_mod )
-            as $item )
+          foreach( $db_question->get_question_description_list( $description_sel, $description_mod ) as $item )
           {
             $question['question_description_list'][] = $item;
           }
