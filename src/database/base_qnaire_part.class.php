@@ -340,31 +340,57 @@ abstract class base_qnaire_part extends \cenozo\database\has_rank
       }
       else if( 'device_name' == $property )
       {
-        // questions may link to a device
-        if( is_null( $patch_object->device_name ) )
-        {
-          $this->device_id = NULL;
-        }
-        else
-        {
-          $db_device = $device_class_name::get_unique_record(
-            array( 'qnaire_id', 'name' ),
-            array( $this->get_qnaire()->id, $patch_object->device_name )
-          );
-          $this->device_id = $db_device->id;
+        $db_current_device = $this->get_device();
+        if(
+          ( !is_null( $db_current_device ) && $patch_object->device_name != $db_current_device->name ) ||
+          ( is_null( $db_current_device ) && $patch_object->device_name )
+        ) {
+          if( $apply )
+          {
+            // questions may link to a device
+            if( is_null( $patch_object->device_name ) )
+            {
+              $this->device_id = NULL;
+            }
+            else
+            {
+              $db_device = $device_class_name::get_unique_record(
+                ['qnaire_id', 'name'],
+                [$this->get_qnaire()->id, $patch_object->device_name]
+              );
+              if( !is_null( $db_device ) ) $this->device_id = $db_device->id;
+            }
+          }
+          else
+          {
+            $difference_list['device_name'] = $patch_object->device_name;
+          }
         }
       }
       else if( 'lookup_name' == $property )
       {
-        // questions may link to a lookup
-        if( is_null( $patch_object->lookup_name ) )
-        {
-          $this->lookup_id = NULL;
-        }
-        else
-        {
-          $db_lookup = $lookup_class_name::get_unique_record( 'name', $patch_object->lookup_name );
-          $this->lookup_id = $db_lookup->id;
+        $db_current_lookup = $this->get_lookup();
+        if(
+          ( !is_null( $db_current_lookup ) && $patch_object->lookup_name != $db_current_lookup->name ) ||
+          ( is_null( $db_current_lookup ) && $patch_object->lookup_name )
+        ) {
+          if( $apply )
+          {
+            // questions may link to a lookup
+            if( is_null( $patch_object->lookup_name ) )
+            {
+              $this->lookup_id = NULL;
+            }
+            else
+            {
+              $db_lookup = $lookup_class_name::get_unique_record( 'name', $patch_object->lookup_name );
+              if( !is_null( $db_lookup ) ) $this->lookup_id = $db_lookup->id;
+            }
+          }
+          else
+          {
+            $difference_list['lookup_name'] = $patch_object->lookup_name;
+          }
         }
       }
       else
