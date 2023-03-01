@@ -39,4 +39,24 @@ class embedded_file extends \cenozo\database\record
       );
     }
   }
+
+  /**
+   * Creates a embedded_file from an object
+   * @param object $embedded_file
+   * @param database\qnaire $db_qnaire The qnaire to associate the embedded_file to
+   * @return database\embedded_file
+   * @static
+   */
+  public static function create_from_object( $embedded_file, $db_qnaire )
+  {
+    $db_embedded_file = new static();
+    $db_embedded_file->qnaire_id = $db_qnaire->id;
+    $db_embedded_file->name = $embedded_file->name;
+    $db_embedded_file->mime_type = $embedded_file->mime_type;
+    $db_embedded_file->size = $embedded_file->size;
+    $db_embedded_file->data = $embedded_file->data;
+    $db_embedded_file->save();
+
+    return $db_embedded_file;
+  }
 }
