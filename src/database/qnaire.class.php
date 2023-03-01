@@ -2315,7 +2315,6 @@ class qnaire extends \cenozo\database\record
     $qnaire_aconsent_type_trigger_class_name =
       lib::get_class_name( 'database\qnaire_alternate_consent_type_trigger' );
     $qnaire_proxy_type_trigger_class_name = lib::get_class_name( 'database\qnaire_proxy_type_trigger' );
-    $qnaire_description_class_name = lib::get_class_name( 'database\qnaire_description' );
     $module_class_name = lib::get_class_name( 'database\module' );
     $stage_class_name = lib::get_class_name( 'database\stage' );
     $lookup_class_name = lib::get_class_name( 'database\lookup' );
@@ -2880,80 +2879,36 @@ class qnaire extends \cenozo\database\record
       }
       else if( 'qnaire_description_list' == $property )
       {
-        // check every item in the patch object for additions and changes
-        $add_list = array();
+        // check every item in the patch object for changes (additions aren't possible)
         $change_list = array();
         foreach( $patch_object->qnaire_description_list as $qnaire_description )
         {
           $db_language = $language_class_name::get_unique_record( 'code', $qnaire_description->language );
-          $db_qnaire_description = $qnaire_description_class_name::get_unique_record(
-            array( 'qnaire_id', 'language_id', 'type' ),
-            array( $this->id, $db_language->id, $qnaire_description->type )
-          );
+          $db_qnaire_description = $this->get_description( $qnaire_description->type, $db_language );
 
-          if( is_null( $db_qnaire_description ) )
-          {
-            if( $apply ) $qnaire_description_class_name::create_from_object( $qnaire_description );
-            else $add_list[] = $qnaire_description;
-          }
-          else
-          {
-            // find and add all differences
-            $diff = array();
-            foreach( $qnaire_description as $property => $value )
-              if( 'language' != $property && $db_qnaire_description->$property != $qnaire_description->$property )
-                $diff[$property] = $qnaire_description->$property;
+          // find and add all differences
+          $diff = array();
+          foreach( $qnaire_description as $property => $value )
+            if( 'language' != $property && $db_qnaire_description->$property != $qnaire_description->$property )
+              $diff[$property] = $qnaire_description->$property;
 
-            if( 0 < count( $diff ) )
+          if( 0 < count( $diff ) )
+          {
+            if( $apply )
             {
-              if( $apply )
-              {
-                $db_qnaire_description->value = $qnaire_description->value;
-                $db_qnaire_description->save();
-              }
-              else
-              {
-                $index = sprintf( '%s [%s]', $qnaire_description->type, $db_language->code );
-                $change_list[$index] = $diff;
-              }
+              $db_qnaire_description->value = $qnaire_description->value;
+              $db_qnaire_description->save();
             }
-          }
-        }
-
-        // check every item in this object for removals
-        $remove_list = array();
-        foreach( $this->get_qnaire_description_object_list() as $db_qnaire_description )
-        {
-          $found = false;
-          foreach( $patch_object->qnaire_description_list as $qnaire_description )
-          {
-            if( $db_qnaire_description->get_language()->code == $qnaire_description->language &&
-                $db_qnaire_description->type == $qnaire_description->type )
-            {
-              $found = true;
-              break;
-            }
-          }
-
-          if( !$found )
-          {
-            if( $apply ) $db_qnaire_description->delete();
             else
             {
-              $index = sprintf(
-                '%s [%s]',
-                $db_qnaire_description->type,
-                $db_qnaire_description->get_language()->code
-              );
-              $remove_list[] = $index;
+              $index = sprintf( '%s [%s]', $qnaire_description->type, $db_language->code );
+              $change_list[$index] = $diff;
             }
           }
         }
 
         $diff_list = array();
-        if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
         if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
-        if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
         if( 0 < count( $diff_list ) ) $difference_list['qnaire_description_list'] = $diff_list;
       }
       else if( 'module_list' == $property )
@@ -4503,7 +4458,6 @@ class qnaire extends \cenozo\database\record
     $device_class_name = lib::get_class_name( 'database\device' );
     $qnaire_report_class_name = lib::get_class_name( 'database\qnaire_report' );
     $deviation_type_class_name = lib::get_class_name( 'database\deviation_type' );
-    $qnaire_description_class_name = lib::get_class_name( 'database\qnaire_description' );
     $lookup_class_name = lib::get_class_name( 'database\lookup' );
     $indicator_class_name = lib::get_class_name( 'database\indicator' );
     $qnaire_consent_type_confirm_class_name = lib::get_class_name( 'database\qnaire_consent_type_confirm' );
@@ -4555,34 +4509,45 @@ class qnaire extends \cenozo\database\record
       $db_qnaire->add_language( $language_class_name::get_unique_record( 'code', $language )->id );
 
     foreach( $qnaire_object->reminder_list as $reminder )
-      $reminder_class_name::create_from_object( $reminder, $this );
+      $reminder_class_name::create_from_object( $reminder, $db_qnaire );
 
     foreach( $qnaire_object->attribute_list as $attribute )
-      $attribute_class_name::create_from_object( $attribute, $this );
+      $attribute_class_name::create_from_object( $attribute, $db_qnaire );
 
     foreach( $qnaire_object->embedded_file_list as $embedded_file )
-      $embedded_file_class_name::create_from_object( $embedded_file, $this );
+      $embedded_file_class_name::create_from_object( $embedded_file, $db_qnaire );
 
     if( $db_qnaire->stages )
     {
       foreach( $qnaire_object->device_list as $device )
-        $device_class_name::create_from_object( $device, $this );
+        $device_class_name::create_from_object( $device, $db_qnaire );
 
       foreach( $qnaire_object->qnaire_report_list as $qnaire_report )
-        $qnaire_report_class_name::create_from_object( $qnaire_report, $this );
+        $qnaire_report_class_name::create_from_object( $qnaire_report, $db_qnaire );
 
       foreach( $qnaire_object->deviation_type_list as $deviation_type )
-        $deviation_type_class_name::create_from_object( $deviation_type, $this );
+        $deviation_type_class_name::create_from_object( $deviation_type, $db_qnaire );
     }
 
     foreach( $qnaire_object->qnaire_description_list as $qnaire_description )
-      $qnaire_description_class_name::create_from_object( $qnaire_description, $this );
+    {
+      $db_language = $language_class_name::get_unique_record( 'code', $qnaire_description->language );
+      $db_qnaire_description = $db_qnaire->get_description( $qnaire_description->type, $db_language );
+      $db_qnaire_description->value = $qnaire_description->value;
+      $db_qnaire_description->save();
+    }
 
     foreach( $qnaire_object->lookup_list as $lookup )
     {
       $db_existing_lookup = $lookup_class_name::get_unique_record( 'name', $lookup->name );
-      if( is_null( $db_existing_lookup ) || $db_existing_lookup->version != $lookup->version )
+      if( is_null( $db_existing_lookup ) )
       {
+        $lookup_class_name::create_from_object( $lookup );
+      }
+      else if( $db_existing_lookup->version != $lookup->version )
+      {
+        // delete and re-create the entire lookup
+        $db_existing_lookup->delete();
         $lookup_class_name::create_from_object( $lookup );
       }
     }
@@ -4787,7 +4752,7 @@ class qnaire extends \cenozo\database\record
         );
       }
 
-      $qnaire_consent_type_confirm_class_name::create_from_object( $qnaire_consent_type_confirm, $this );
+      $qnaire_consent_type_confirm_class_name::create_from_object( $qnaire_consent_type_confirm, $db_qnaire );
     }
 
     foreach( $qnaire_object->qnaire_participant_trigger_list as $qnaire_participant_trigger )
