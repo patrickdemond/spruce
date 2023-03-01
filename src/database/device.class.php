@@ -30,7 +30,7 @@ class device extends \cenozo\database\record
   public function launch( $db_answer )
   {
     $cypress_manager = lib::create( 'business\cypress_manager', $this );
-    
+
     // always include the token and language
     $db_response = $db_answer->get_response();
     $data = array(
@@ -44,5 +44,33 @@ class device extends \cenozo\database\record
       $data[$db_device_data->name] = $db_device_data->get_compiled_value( $db_answer );
 
     return $cypress_manager->launch( $data );
+  }
+
+  /**
+   * Creates a device from an object
+   * @param object $device
+   * @param database\qnaire $db_qnaire The qnaire to associate the device to
+   * @return database\device
+   * @static
+   */
+  public static function create_from_object( $device, $db_qnaire )
+  {
+    $db_device = new static();
+    $db_device->qnaire_id = $db_qnaire->id;
+    $db_device->name = $device->name;
+    $db_device->url = $device->url;
+    $db_device->save();
+
+    // add all device data
+    foreach( $device->device_data_list as $device_data )
+    {
+      $db_device_data = lib::create( 'database\device_data' );
+      $db_device_data->device_id = $db_device->id;
+      $db_device_data->name = $device_data->name;
+      $db_device_data->code = $device_data->code;
+      $db_device_data->save();
+    }
+
+    return $db_device;
   }
 }

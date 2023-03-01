@@ -110,4 +110,53 @@ class lookup extends \cenozo\database\record
 
     return (object)$result_data;
   }
+
+  /**
+   * Creates a lookup from an object
+   * @param object $lookup
+   * @return database\lookup
+   * @static
+   */
+  public static function create_from_object( $lookup )
+  {
+    $indicator_class_name = lib::get_class_name( 'database\indicator' );
+
+    $db_lookup = new static();
+    $db_lookup->name = $lookup->name;
+    $db_lookup->version = $lookup->version;
+    $db_lookup->description = $lookup->description;
+    $db_lookup->save();
+
+    foreach( $lookup->indicator_list as $indicator )
+    {
+      $db_indicator = lib::create( 'database\indicator' );
+      $db_indicator->lookup_id = $db_lookup->id;
+      $db_indicator->name = $indicator->name;
+      $db_indicator->save();
+    }
+
+    foreach( $lookup->lookup_item_list as $lookup_item )
+    {
+      $db_lookup_item = lib::create( 'database\lookup_item' );
+      $db_lookup_item->lookup_id = $db_lookup->id;
+      $db_lookup_item->identifier = $lookup_item->identifier;
+      $db_lookup_item->name = $lookup_item->name;
+      $db_lookup_item->description = $lookup_item->description;
+      $db_lookup_item->save();
+
+      // associate with indicators
+      $indicator_id_list = [];
+      foreach( $lookup_item->indicator_list as $indicator )
+      {
+        $db_indicator = $indicator_class_name::get_unique_record(
+          ['lookup_id', 'name'],
+          [$db_lookup->id, $indicator]
+        );
+        $indicator_id_list[] = $db_indicator->id;
+      }
+      if( 0 < count( $indicator_id_list ) ) $db_lookup_item->add_indicator( $indicator_id_list );
+    }
+
+    return $db_lookup;
+  }
 }

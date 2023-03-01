@@ -450,7 +450,6 @@ class qnaire extends \cenozo\database\record
     // copy all consent confirms
     foreach( $db_source_qnaire->get_qnaire_consent_type_confirm_object_list() as $db_source_consent_type )
     {
-      $db_question = $this->get_question( $db_source_consent_type->get_question()->name );
       $db_qnaire_consent_type_confirm = lib::create( 'database\qnaire_consent_type_confirm' );
       $db_qnaire_consent_type_confirm->qnaire_id = $this->id;
       $db_qnaire_consent_type_confirm->consent_type_id = $db_source_consent_type->consent_type_id;
@@ -1071,7 +1070,7 @@ class qnaire extends \cenozo\database\record
                 array( $db_lookup->id, $indicator_name )
               )->id;
             }
-            $db_lookup_item->add_indicator( $indicator_id_list );
+            if( 0 < count( $indicator_id_list ) ) $db_lookup_item->add_indicator( $indicator_id_list );
           }
         }
       }
@@ -2293,6 +2292,7 @@ class qnaire extends \cenozo\database\record
     $attribute_class_name = lib::get_class_name( 'database\attribute' );
     $embedded_file_class_name = lib::get_class_name( 'database\embedded_file' );
     $deviation_type_class_name = lib::get_class_name( 'database\deviation_type' );
+    $reminder_class_name = lib::get_class_name( 'database\reminder' );
     $reminder_description_class_name = lib::get_class_name( 'database\reminder_description' );
     $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
     $alternate_consent_type_class_name = lib::get_class_name( 'database\alternate_consent_type' );
@@ -2386,27 +2386,8 @@ class qnaire extends \cenozo\database\record
           $reminder_mod->where( 'unit', '=', $reminder->unit );
           $reminder_list = $this->get_reminder_object_list( $reminder_mod );
           $db_reminder = 0 == count( $reminder_list ) ? NULL : current( $reminder_list );
-          if( is_null( $db_reminder ) )
-          {
-            if( $apply )
-            {
-              $db_reminder = lib::create( 'database\reminder' );
-              $db_reminder->qnaire_id = $this->id;
-              $db_reminder->offset = $reminder->offset;
-              $db_reminder->unit = $reminder->unit;
-              $db_reminder->save();
-
-              foreach( $reminder->reminder_description_list as $reminder_description )
-              {
-                $db_language = $language_class_name::get_unique_record( 'code', $reminder_description->language );
-                $db_reminder_description = $reminder_description_class_name::get_unique_record(
-                  array( 'reminder_id', 'language_id', 'type' ),
-                  array( $db_reminder->id, $db_language->id, $reminder_description->type )
-                );
-                $db_reminder_description->value = $reminder_description->value;
-                $db_reminder_description->save();
-              }
-            }
+          if( is_null( $db_reminder ) ) {
+            if( $apply ) $reminder_class_name::create_from_object( $reminder, $this );
             else $add_list[] = $reminder;
           }
           else
@@ -2562,53 +2543,25 @@ class qnaire extends \cenozo\database\record
       {
         // check every item in the patch object for additions and changes
         $add_list = array();
+        $change_list = array();
         foreach( $patch_object->lookup_list as $lookup )
         {
           $db_lookup = $lookup_class_name::get_unique_record( 'name', $lookup->name );
 
           if( is_null( $db_lookup ) )
           {
+            if( $apply ) $lookup_class_name::create_from_object( $lookup );
+            else $add_list[] = $lookup;
+          }
+          else if( $db_lookup->version != $lookup->version )
+          {
             if( $apply )
             {
-              $db_lookup = lib::create( 'database\lookup' );
-              $db_lookup->name = $lookup->name;
-              $db_lookup->version = $lookup->version;
-              $db_lookup->description = $lookup->description;
-              $db_lookup->save();
-
-              // add all lookup indicators
-              foreach( $lookup->indicator_list as $indicator )
-              {
-                $db_indicator = lib::create( 'database\indicator' );
-                $db_indicator->lookup_id = $db_lookup->id;
-                $db_indicator->name = $indicator->name;
-                $db_indicator->save();
-              }
-
-              // add all lookup items
-              foreach( $lookup->lookup_item_list as $lookup_item )
-              {
-                $db_lookup_item = lib::create( 'database\lookup_item' );
-                $db_lookup_item->lookup_id = $db_lookup->id;
-                $db_lookup_item->identifier = $lookup_item->identifier;
-                $db_lookup_item->name = $lookup_item->name;
-                $db_lookup_item->description = $lookup_item->description;
-                $db_lookup_item->save();
-
-                // associate with indicators
-                $indicator_id_list = [];
-                foreach( $lookup_item->indicator_list as $indicator )
-                {
-                  $db_indicator = $indicator_class_name::get_unique_record(
-                    ['lookup_id', 'name'],
-                    [$db_lookup->id, $indicator]
-                  );
-                  $indicator_id_list[] = $db_indicator->id;
-                }
-                if( 0 < count( $indicator_id_list ) ) $db_lookup_item->add_indicator( $indicator_id_list );
-              }
+              // delete and re-create the entire lookup
+              $db_lookup->delete();
+              $lookup_class_name::create_from_object( $lookup );
             }
-            else $add_list[] = $lookup;
+            else $change_list[$lookup->name] = ['version' => $lookup->version];
           }
         }
 
@@ -2635,6 +2588,7 @@ class qnaire extends \cenozo\database\record
 
         $diff_list = array();
         if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
+        if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
         if( 0 < count( $diff_list ) ) $difference_list['lookup_list'] = $diff_list;
       }
@@ -2651,24 +2605,7 @@ class qnaire extends \cenozo\database\record
 
           if( is_null( $db_device ) )
           {
-            if( $apply )
-            {
-              $db_device = lib::create( 'database\device' );
-              $db_device->qnaire_id = $this->id;
-              $db_device->name = $device->name;
-              $db_device->url = $device->url;
-              $db_device->save();
-
-              // add all device data
-              foreach( $device->device_data_list as $device_data )
-              {
-                $db_device_data = lib::create( 'database\device' );
-                $db_device_data->device_id = $db_device->id;
-                $db_device_data->name = $device_data->name;
-                $db_device_data->code = $device_data->code;
-                $db_device_data->save();
-              }
-            }
+            if( $apply ) $device_class_name::create_from_object( $device, $this );
             else $add_list[] = $device;
           }
         }
@@ -2713,24 +2650,7 @@ class qnaire extends \cenozo\database\record
 
           if( is_null( $db_qnaire_report ) )
           {
-            if( $apply )
-            {
-              $db_qnaire_report = lib::create( 'database\qnaire_report' );
-              $db_qnaire_report->qnaire_id = $this->id;
-              $db_qnaire_report->language_id = $db_language->id;
-              $db_qnaire_report->data = $qnaire_report->data;
-              $db_qnaire_report->save();
-
-              // add all qnaire_report data
-              foreach( $qnaire_report->qnaire_report_data_list as $qnaire_report_data )
-              {
-                $db_qnaire_report_data = lib::create( 'database\qnaire_report' );
-                $db_qnaire_report_data->qnaire_report_id = $db_qnaire_report->id;
-                $db_qnaire_report_data->name = $qnaire_report_data->name;
-                $db_qnaire_report_data->code = $qnaire_report_data->code;
-                $db_qnaire_report_data->save();
-              }
-            }
+            if( $apply ) $qnaire_report_class_name::create_from_object( $qnaire_report, $this );
             else $add_list[] = $qnaire_report;
           }
         }
@@ -2775,14 +2695,7 @@ class qnaire extends \cenozo\database\record
 
           if( is_null( $db_deviation_type ) )
           {
-            if( $apply )
-            {
-              $db_deviation_type = lib::create( 'database\deviation_type' );
-              $db_deviation_type->qnaire_id = $this->id;
-              $db_deviation_type->type = $deviation_type->type;
-              $db_deviation_type->name = $deviation_type->name;
-              $db_deviation_type->save();
-            }
+            if( $apply ) $deviation_type_class_name::create_from_object( $deviation_type, $this );
             else $add_list[] = $deviation_type;
           }
         }
@@ -2832,15 +2745,7 @@ class qnaire extends \cenozo\database\record
 
           if( is_null( $db_attribute ) )
           {
-            if( $apply )
-            {
-              $db_attribute = lib::create( 'database\attribute' );
-              $db_attribute->qnaire_id = $this->id;
-              $db_attribute->name = $attribute->name;
-              $db_attribute->code = $attribute->code;
-              $db_attribute->note = $attribute->note;
-              $db_attribute->save();
-            }
+            if( $apply ) $attribute_class_name::create_from_object( $attribute, $this );
             else $add_list[] = $attribute;
           }
           else
@@ -2908,16 +2813,7 @@ class qnaire extends \cenozo\database\record
 
           if( is_null( $db_embedded_file ) )
           {
-            if( $apply )
-            {
-              $db_embedded_file = lib::create( 'database\embedded_file' );
-              $db_embedded_file->qnaire_id = $this->id;
-              $db_embedded_file->name = $embedded_file->name;
-              $db_embedded_file->mime_type = $embedded_file->mime_type;
-              $db_embedded_file->size = $embedded_file->size;
-              $db_embedded_file->data = $embedded_file->data;
-              $db_embedded_file->save();
-            }
+            if( $apply ) $embedded_file_class_name::create_from_object( $embedded_file, $this );
             else $add_list[] = $embedded_file;
           }
           else
@@ -2985,15 +2881,7 @@ class qnaire extends \cenozo\database\record
 
           if( is_null( $db_qnaire_description ) )
           {
-            if( $apply )
-            {
-              $db_qnaire_description = lib::create( 'database\qnaire_description' );
-              $db_qnaire_description->qnaire_id = $this->id;
-              $db_qnaire_description->language_id = $db_language->id;
-              $db_qnaire_description->type = $qnaire_description->type;
-              $db_qnaire_description->value = $qnaire_description->value;
-              $db_qnaire_description->save();
-            }
+            if( $apply ) $qnaire_description_class_name::create_from_object( $qnaire_description );
             else $add_list[] = $qnaire_description;
           }
           else
@@ -3294,10 +3182,10 @@ class qnaire extends \cenozo\database\record
             {
               if( $apply )
               {
-                $db_qnaire_consent_type_confirm = lib::create( 'database\qnaire_consent_type_confirm' );
-                $db_qnaire_consent_type_confirm->qnaire_id = $this->id;
-                $db_qnaire_consent_type_confirm->consent_type_id = $db_consent_type->id;
-                $db_qnaire_consent_type_confirm->save();
+                $qnaire_consent_type_confirm_class_name::create_from_object(
+                  $qnaire_consent_type_confirm,
+                  $this
+                );
               }
               else $add_list[] = $qnaire_consent_type_confirm;
             }
@@ -3373,13 +3261,10 @@ class qnaire extends \cenozo\database\record
           {
             if( $apply )
             {
-              $db_qnaire_participant_trigger = lib::create( 'database\qnaire_participant_trigger' );
-              $db_qnaire_participant_trigger->qnaire_id = $this->id;
-              $db_qnaire_participant_trigger->question_id = $db_question->id;
-              $db_qnaire_participant_trigger->answer_value = $qnaire_participant_trigger->answer_value;
-              $db_qnaire_participant_trigger->column_name = $qnaire_participant_trigger->column_name;
-              $db_qnaire_participant_trigger->value = $qnaire_participant_trigger->value;
-              $db_qnaire_participant_trigger->save();
+              $qnaire_participant_trigger_class_name::create_from_object(
+                $qnaire_participant_trigger,
+                $db_question
+              );
             }
             else $add_list[] = $qnaire_participant_trigger;
           }
@@ -3517,13 +3402,10 @@ class qnaire extends \cenozo\database\record
             {
               if( $apply )
               {
-                $db_qnaire_consent_type_trigger = lib::create( 'database\qnaire_consent_type_trigger' );
-                $db_qnaire_consent_type_trigger->qnaire_id = $this->id;
-                $db_qnaire_consent_type_trigger->consent_type_id = $db_consent_type->id;
-                $db_qnaire_consent_type_trigger->question_id = $db_question->id;
-                $db_qnaire_consent_type_trigger->answer_value = $qnaire_consent_type_trigger->answer_value;
-                $db_qnaire_consent_type_trigger->accept = $qnaire_consent_type_trigger->accept;
-                $db_qnaire_consent_type_trigger->save();
+                $qnaire_consent_type_trigger_class_name::create_from_object(
+                  $qnaire_consent_type_trigger,
+                  $db_question
+                );
               }
               else $add_list[] = $qnaire_consent_type_trigger;
             }
@@ -3664,14 +3546,10 @@ class qnaire extends \cenozo\database\record
             {
               if( $apply )
               {
-                $db_qnaire_aconsent_type_trigger =
-                  lib::create( 'database\qnaire_alternate_consent_type_trigger' );
-                $db_qnaire_aconsent_type_trigger->qnaire_id = $this->id;
-                $db_qnaire_aconsent_type_trigger->alternate_consent_type_id = $db_aconsent_type->id;
-                $db_qnaire_aconsent_type_trigger->question_id = $db_question->id;
-                $db_qnaire_aconsent_type_trigger->answer_value = $qnaire_aconsent_type_trigger->answer_value;
-                $db_qnaire_aconsent_type_trigger->accept = $qnaire_aconsent_type_trigger->accept;
-                $db_qnaire_aconsent_type_trigger->save();
+                $qnaire_aconsent_type_trigger_class_name::create_from_object(
+                  $qnaire_alternate_consent_type_trigger,
+                  $db_question
+                );
               }
               else $add_list[] = $qnaire_aconsent_type_trigger;
             }
@@ -3807,13 +3685,10 @@ class qnaire extends \cenozo\database\record
             {
               if( $apply )
               {
-                $db_qnaire_proxy_type_trigger = lib::create( 'database\qnaire_proxy_type_trigger' );
-                $db_qnaire_proxy_type_trigger->qnaire_id = $this->id;
-                $db_qnaire_proxy_type_trigger->proxy_type_id = is_null( $db_proxy_type ) ?
-                  NULL : $db_proxy_type->id;
-                $db_qnaire_proxy_type_trigger->question_id = $db_question->id;
-                $db_qnaire_proxy_type_trigger->answer_value = $qnaire_proxy_type_trigger->answer_value;
-                $db_qnaire_proxy_type_trigger->save();
+                $qnaire_proxy_type_trigger_class_name::create_from_object(
+                  $qnaire_proxy_type_trigger,
+                  $db_question
+                );
               }
               else
               {
@@ -4034,7 +3909,7 @@ class qnaire extends \cenozo\database\record
       $qnaire_data['deviation_type_list'] = array();
       $qnaire_data['stage_list'] = array();
     }
-    
+
     // The following properties must come after the optional stage properties
     $qnaire_data['module_list'] = array();
     $qnaire_data['qnaire_participant_trigger_list'] = array();
@@ -4605,12 +4480,26 @@ class qnaire extends \cenozo\database\record
   public static function import( $qnaire_object )
   {
     $language_class_name = lib::get_class_name( 'database\language' );
+    $reminder_class_name = lib::get_class_name( 'database\reminder' );
+    $attribute_class_name = lib::get_class_name( 'database\attribute' );
+    $embedded_file_class_name = lib::get_class_name( 'database\embedded_file' );
     $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
     $alternate_consent_type_class_name = lib::get_class_name( 'database\alternate_consent_type' );
     $proxy_type_class_name = lib::get_class_name( 'database\proxy_type' );
     $module_class_name = lib::get_class_name( 'database\module' );
+    $stage_class_name = lib::get_class_name( 'database\stage' );
     $device_class_name = lib::get_class_name( 'database\device' );
+    $qnaire_report_class_name = lib::get_class_name( 'database\qnaire_report' );
+    $deviation_type_class_name = lib::get_class_name( 'database\deviation_type' );
+    $qnaire_description_class_name = lib::get_class_name( 'database\qnaire_description' );
     $lookup_class_name = lib::get_class_name( 'database\lookup' );
+    $indicator_class_name = lib::get_class_name( 'database\indicator' );
+    $qnaire_consent_type_confirm_class_name = lib::get_class_name( 'database\qnaire_consent_type_confirm' );
+    $qnaire_participant_trigger_class_name = lib::get_class_name( 'database\qnaire_participant_trigger' );
+    $qnaire_consent_type_trigger_class_name = lib::get_class_name( 'database\qnaire_consent_type_trigger' );
+    $qnaire_aconsent_type_trigger_class_name =
+      lib::get_class_name( 'database\qnaire_alternate_consent_type_trigger' );
+    $qnaire_proxy_type_trigger_class_name = lib::get_class_name( 'database\qnaire_proxy_type_trigger' );
 
     $default_page_max_time =
       lib::create( 'business\setting_manager' )->get_setting( 'general', 'default_page_max_time' );
@@ -4654,98 +4543,36 @@ class qnaire extends \cenozo\database\record
       $db_qnaire->add_language( $language_class_name::get_unique_record( 'code', $language )->id );
 
     foreach( $qnaire_object->reminder_list as $reminder )
-    {
-      $db_reminder = lib::create( 'database\reminder' );
-      $db_reminder->qnaire_id = $db_qnaire->id;
-      $db_reminder->offset = $reminder->offset;
-      $db_reminder->unit = $reminder->unit;
-      $db_reminder->save();
-
-      foreach( $reminder->reminder_description_list as $reminder_description )
-      {
-        $db_language = $language_class_name::get_unique_record( 'code', $reminder_description->language );
-        $db_reminder_description = $db_reminder->get_description( $reminder_description->type, $db_language );
-        $db_reminder_description->value = $reminder_description->value;
-        $db_reminder_description->save();
-      }
-    }
+      $reminder_class_name::create_from_object( $reminder, $this );
 
     foreach( $qnaire_object->attribute_list as $attribute )
-    {
-      $db_attribute = lib::create( 'database\attribute' );
-      $db_attribute->qnaire_id = $db_qnaire->id;
-      $db_attribute->name = $attribute->name;
-      $db_attribute->code = $attribute->code;
-      $db_attribute->note = $attribute->note;
-      $db_attribute->save();
-    }
+      $attribute_class_name::create_from_object( $attribute, $this );
 
     foreach( $qnaire_object->embedded_file_list as $embedded_file )
-    {
-      $db_embedded_file = lib::create( 'database\embedded_file' );
-      $db_embedded_file->qnaire_id = $db_qnaire->id;
-      $db_embedded_file->name = $embedded_file->name;
-      $db_embedded_file->mime_type = $embedded_file->mime_type;
-      $db_embedded_file->size = $embedded_file->size;
-      $db_embedded_file->data = $embedded_file->data;
-      $db_embedded_file->save();
-    }
+      $embedded_file_class_name::create_from_object( $embedded_file, $this );
 
     if( $db_qnaire->stages )
     {
       foreach( $qnaire_object->device_list as $device )
-      {
-        $db_device = lib::create( 'database\device' );
-        $db_device->qnaire_id = $db_qnaire->id;
-        $db_device->name = $device['name'];
-        $db_device->url = $device['url'];
-        $db_device->save();
-
-        foreach( $device['device_data_list'] as $data )
-        {
-          $db_device_data = lib::create( 'database\device' );
-          $db_device_data->device_id = $db_device->id;
-          $db_device_data->name = $data['name'];
-          $db_device_data->code = $data['code'];
-          $db_device_data->save();
-        }
-      }
+        $device_class_name::create_from_object( $device, $this );
 
       foreach( $qnaire_object->qnaire_report_list as $qnaire_report )
-      {
-        $db_language = $language_class_name::get_unique_record( 'code', $qnaire_report['language'] );
-        $db_qnaire_report = lib::create( 'database\qnaire_report' );
-        $db_qnaire_report->qnaire_id = $db_qnaire->id;
-        $db_qnaire_report->language_id = $db_language->id;
-        $db_qnaire_report->data = $qnaire_report['data'];
-        $db_qnaire_report->save();
-
-        foreach( $qnaire_report['qnaire_report_data_list'] as $data )
-        {
-          $db_qnaire_report_data = lib::create( 'database\qnaire_report' );
-          $db_qnaire_report_data->qnaire_report_id = $db_qnaire_report->id;
-          $db_qnaire_report_data->name = $data['name'];
-          $db_qnaire_report_data->code = $data['code'];
-          $db_qnaire_report_data->save();
-        }
-      }
+        $qnaire_report_class_name::create_from_object( $qnaire_report, $this );
 
       foreach( $qnaire_object->deviation_type_list as $deviation_type )
-      {
-        $db_deviation_type = lib::create( 'database\deviation_type' );
-        $db_deviation_type->qnaire_id = $db_qnaire->id;
-        $db_deviation_type->type = $deviation_type->type;
-        $db_deviation_type->name = $deviation_type->name;
-        $db_deviation_type->save();
-      }
+        $deviation_type_class_name::create_from_object( $deviation_type, $this );
     }
 
     foreach( $qnaire_object->qnaire_description_list as $qnaire_description )
+      $qnaire_description_class_name::create_from_object( $qnaire_description, $this );
+
+    foreach( $qnaire_object->lookup_list as $lookup )
     {
-      $db_language = $language_class_name::get_unique_record( 'code', $qnaire_description->language );
-      $db_qnaire_description = $db_qnaire->get_description( $qnaire_description->type, $db_language );
-      $db_qnaire_description->value = $qnaire_description->value;
-      $db_qnaire_description->save();
+      $db_existing_lookup = $lookup_class_name::get_unique_record( 'name', $lookup->name );
+      if( is_null( $db_existing_lookup ) || $db_existing_lookup->version != $lookup->version )
+      {
+        $lookup_class_name::create_from_object( $lookup );
+      }
     }
 
     foreach( $qnaire_object->module_list as $module_object )
@@ -4903,6 +4730,15 @@ class qnaire extends \cenozo\database\record
         $db_stage->first_module_id = $db_first_module->id;
         $db_stage->last_module_id = $db_last_module->id;
         $db_stage->precondition = $stage->precondition;
+
+        // There may already be a stage by this name automatically created when modules were imported.
+        // If so we must delete it before saving this record
+        $db_old_stage = $stage_class_name::get_unique_record(
+          ['qnaire_id', 'name'],
+          [$db_qnaire->id, $db_stage->name]
+        );
+        if( !is_null( $db_old_stage ) ) $db_old_stage->delete();
+
         $db_stage->save();
       }
 
@@ -4939,22 +4775,13 @@ class qnaire extends \cenozo\database\record
         );
       }
 
-      $db_qnaire_consent_type_confirm = lib::create( 'database\qnaire_consent_type_confirm' );
-      $db_qnaire_consent_type_confirm->qnaire_id = $db_qnaire->id;
-      $db_qnaire_consent_type_confirm->consent_type_id = $db_consent_type->id;
-      $db_qnaire_consent_type_confirm->save();
+      $qnaire_consent_type_confirm_class_name::create_from_object( $qnaire_consent_type_confirm, $this );
     }
 
     foreach( $qnaire_object->qnaire_participant_trigger_list as $qnaire_participant_trigger )
     {
       $db_question = $db_qnaire->get_question( $qnaire_participant_trigger->question_name );
-      $db_qnaire_participant_trigger = lib::create( 'database\qnaire_participant_trigger' );
-      $db_qnaire_participant_trigger->qnaire_id = $db_qnaire->id;
-      $db_qnaire_participant_trigger->question_id = $db_question->id;
-      $db_qnaire_participant_trigger->answer_value = $qnaire_participant_trigger->answer_value;
-      $db_qnaire_participant_trigger->column_name = $qnaire_participant_trigger->column_name;
-      $db_qnaire_participant_trigger->value = $qnaire_participant_trigger->value;
-      $db_qnaire_participant_trigger->save();
+      $qnaire_participant_trigger_class_name::create_from_object( $qnaire_participant_trigger, $db_question );
     }
 
     foreach( $qnaire_object->qnaire_consent_type_trigger_list as $qnaire_consent_type_trigger )
@@ -4976,13 +4803,7 @@ class qnaire extends \cenozo\database\record
       }
 
       $db_question = $db_qnaire->get_question( $qnaire_consent_type_trigger->question_name );
-      $db_qnaire_consent_type_trigger = lib::create( 'database\qnaire_consent_type_trigger' );
-      $db_qnaire_consent_type_trigger->qnaire_id = $db_qnaire->id;
-      $db_qnaire_consent_type_trigger->consent_type_id = $db_consent_type->id;
-      $db_qnaire_consent_type_trigger->question_id = $db_question->id;
-      $db_qnaire_consent_type_trigger->answer_value = $qnaire_consent_type_trigger->answer_value;
-      $db_qnaire_consent_type_trigger->accept = $qnaire_consent_type_trigger->accept;
-      $db_qnaire_consent_type_trigger->save();
+      $qnaire_consent_type_trigger_class_name::create_from_object( $qnaire_consent_type_trigger, $db_question );
     }
 
     foreach( $qnaire_object->qnaire_alternate_consent_type_trigger_list
@@ -5005,14 +4826,10 @@ class qnaire extends \cenozo\database\record
       }
 
       $db_question = $db_qnaire->get_question( $qnaire_alternate_consent_type_trigger->question_name );
-      $db_qnaire_alternate_consent_type_trigger = lib::create( 'database\qnaire_alternate_consent_type_trigger' );
-      $db_qnaire_alternate_consent_type_trigger->qnaire_id = $db_qnaire->id;
-      $db_qnaire_alternate_consent_type_trigger->alternate_consent_type_id = $db_alternate_consent_type->id;
-      $db_qnaire_alternate_consent_type_trigger->question_id = $db_question->id;
-      $db_qnaire_alternate_consent_type_trigger->answer_value =
-        $qnaire_alternate_consent_type_trigger->answer_value;
-      $db_qnaire_alternate_consent_type_trigger->accept = $qnaire_alternate_consent_type_trigger->accept;
-      $db_qnaire_alternate_consent_type_trigger->save();
+      $qnaire_aconsent_type_trigger_class_name::create_from_object(
+        $qnaire_alternate_consent_type_trigger,
+        $db_question
+      );
     }
 
     foreach( $qnaire_object->qnaire_proxy_type_trigger_list as $qnaire_proxy_type_trigger )
@@ -5038,12 +4855,7 @@ class qnaire extends \cenozo\database\record
       }
 
       $db_question = $db_qnaire->get_question( $qnaire_proxy_type_trigger->question_name );
-      $db_qnaire_proxy_type_trigger = lib::create( 'database\qnaire_proxy_type_trigger' );
-      $db_qnaire_proxy_type_trigger->qnaire_id = $db_qnaire->id;
-      $db_qnaire_proxy_type_trigger->proxy_type_id = is_null( $db_proxy_type ) ? NULL : $db_proxy_type->id;
-      $db_qnaire_proxy_type_trigger->question_id = $db_question->id;
-      $db_qnaire_proxy_type_trigger->answer_value = $qnaire_proxy_type_trigger->answer_value;
-      $db_qnaire_proxy_type_trigger->save();
+      $qnaire_proxy_type_trigger_class_name::create_from_object( $qnaire_proxy_type_trigger, $db_question );
     }
 
     if( $qnaire_object->readonly )

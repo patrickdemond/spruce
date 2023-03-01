@@ -58,4 +58,26 @@ class qnaire_description extends base_description
 
     return $text;
   }
+
+  /**
+   * Creates a qnaire_description from an object
+   * @param object $qnaire_description
+   * @param database\qnaire $db_qnaire The qnaire to associate the qnaire_description to
+   * @return database\qnaire_description
+   * @static
+   */
+  public static function create_from_object( $qnaire_description, $db_qnaire )
+  {
+    $language_class_name = lib::get_class_name( 'database\language' );
+    $db_language = $language_class_name::get_unique_record( 'code', $qnaire_description->language );
+
+    $db_qnaire_description = new static();
+    $db_qnaire_description->qnaire_id = $db_qnaire->id;
+    $db_qnaire_description->language_id = $db_language->id;
+    $db_qnaire_description->type = $qnaire_description->type;
+    $db_qnaire_description->value = $qnaire_description->value;
+    $db_qnaire_description->save();
+
+    return $db_qnaire_description;
+  }
 }

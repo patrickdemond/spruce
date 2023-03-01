@@ -22,4 +22,23 @@ class attribute extends \cenozo\database\record
       $data_manager->get_value( $this->code )
     );
   }
+
+  /**
+   * Creates a attribute from an object
+   * @param object $attribute
+   * @param database\qnaire $db_qnaire The qnaire to associate the attribute to
+   * @return database\attribute
+   * @static
+   */
+  public static function create_from_object( $attribute, $db_qnaire )
+  {
+    $db_attribute = new static();
+    $db_attribute->qnaire_id = $db_qnaire->id;
+    $db_attribute->name = $attribute->name;
+    $db_attribute->code = $attribute->code;
+    $db_attribute->note = $attribute->note;
+    $db_attribute->save();
+
+    return $db_attribute;
+  }
 }
