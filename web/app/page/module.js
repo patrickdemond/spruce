@@ -415,12 +415,20 @@ cenozoApp.defineModule({
             var m = getDate(date);
             return m ? m.format("dddd, MMMM Do YYYY") : null;
           }
+
+          function formatTime(time) {
+            var m = getTime(time);
+            return m ? m.format(CnSession.user.use12hourClock ? "h:mm a" : "HH:mm") : null;
+          }
+
           function isDkna(value) {
             return angular.isObject(value) && true === value.dkna;
           }
+
           function isRefuse(value) {
             return angular.isObject(value) && true === value.refuse;
           }
+
           function isDknaOrRefuse(value) {
             return (
               angular.isObject(value) &&
@@ -432,6 +440,25 @@ cenozoApp.defineModule({
             if ("now" == date) date = moment().format("YYYY-MM-DD");
             return date && !angular.isObject(date)
               ? moment(new Date(date))
+              : null;
+          }
+
+          function getTime(time,tz) {
+            // if there isn't a date then add one so that moment will read it correctly
+            const match = null == time ? null : time.match(/^([0-9]+):([0-9]+)$/);
+            if( null != match ) {
+              m = angular.isDefined(tz) ? moment().tz(tz) : moment();
+              m.hour(parseInt(match[1]));
+              m.minute(parseInt(match[2]));
+              m.second(0);
+              time = moment(m).format();
+            } else if ("now" == time) {
+              m = angular.isDefined(tz) ? moment().tz(tz) : moment();
+              time = time.format();
+            }
+
+            return time && !angular.isObject(time)
+              ? moment(new Date(time))
               : null;
           }
 
@@ -1713,12 +1740,16 @@ cenozoApp.defineModule({
                         }
 
                         list[option.id].valueList = option.multiple_answers ? value : [value];
-                        list[option.id].formattedValueList =
-                          "date" != option.extra
-                            ? null
-                            : option.multiple_answers
+                        list[option.id].formattedValueList = null;
+                        if( "date" == option.extra ) {
+                          list[option.id].formatedValueList = option.multiple_answers
                             ? formatDate(selectedOptions[optionIndex].value)
                             : [formatDate(selectedOptions[optionIndex].value)];
+                        } else if( "time" == option.extra ) {
+                          list[option.id].formatedValueList = option.multiple_answers
+                            ? formatTime(selectedOptions[optionIndex].value)
+                            : [formatTime(selectedOptions[optionIndex].value)];
+                        }
                       } else {
                         list[option.id].valueList = option.multiple_answers
                           ? []
@@ -1775,8 +1806,12 @@ cenozoApp.defineModule({
                     angular.isNumber(question.value)
                       ? question.value
                       : null,
-                  formattedValue:
-                    "date" != question.type ? null : formatDate(question.value),
+                  formattedValue: null
+                };
+                if( "date" == question.type ) {
+                  question.answer.formattedValue = formatDate(question.value);
+                } else if( "time" == question.type ) {
+                  question.answer.formattedValue = formatTime(question.value);
                 };
 
                 if ("device" == question.type) {
@@ -2501,38 +2536,7 @@ cenozoApp.defineModule({
               await this.setAnswer(question, value, true);
             },
 
-            selectDateForOption: async function (
-              question,
-              option,
-              valueIndex,
-              answerValue
-            ) {
-              try {
-                this.hotKeyDisabled = true;
-
-                var response = await CnModalDatetimeFactory.instance({
-                  locale: this.currentLanguage,
-                  date: answerValue,
-                  pickerType: "date",
-                  minDate: getDate(this.evaluateLimit(option.minimum)),
-                  maxDate: getDate(this.evaluateLimit(option.maximum)),
-                  emptyAllowed: true,
-                }).show();
-
-                if (false !== response) {
-                  await this.setAnswerValue(
-                    question,
-                    option,
-                    valueIndex,
-                    null == response ? null : response.replace(/T.*/, "")
-                  );
-                }
-              } finally {
-                this.hotKeyDisabled = false;
-              }
-            },
-
-            selectDate: async function (question, value) {
+            selectDateForQuestionOrOption: async function (question, option, valueIndex, value) {
               try {
                 this.hotKeyDisabled = true;
 
@@ -2540,20 +2544,84 @@ cenozoApp.defineModule({
                   locale: this.currentLanguage,
                   date: value,
                   pickerType: "date",
-                  minDate: getDate(this.evaluateLimit(question.minimum)),
-                  maxDate: getDate(this.evaluateLimit(question.maximum)),
+                  minDate: getDate(this.evaluateLimit(null != option ? option.minimum : question.minimum)),
+                  maxDate: getDate(this.evaluateLimit(null != option ? option.maximum : question.maximum)),
                   emptyAllowed: true,
                 }).show();
 
                 if (false !== response) {
-                  await this.setAnswer(
-                    question,
-                    null == response ? null : response.replace(/T.*/, "")
-                  );
+                  if (null != option) {
+                    await this.setAnswerValue(
+                      question,
+                      option,
+                      valueIndex,
+                      null == response ? null : response.replace(/T.*/, "")
+                    );
+                  } else {
+                    await this.setAnswer(
+                      question,
+                      null == response ? null : response.replace(/T.*/, "")
+                    );
+                  }
                 }
               } finally {
                 this.hotKeyDisabled = false;
               }
+            },
+
+            selectDateForOption: async function (question, option, valueIndex, answerValue) {
+              this.selectDateForQuestionOrOption(question, option, valueIndex, answerValue);
+            },
+
+            selectDate: async function (question, value) {
+              this.selectDateForQuestionOrOption(question, null, null, value);
+            },
+
+            selectTimeForQuestionOrOption: async function (question, option, valueIndex, value) {
+              try {
+                this.hotKeyDisabled = true;
+
+                // assume a default of 12:00
+                if (value == null) value = "12:00";
+
+                var response = await CnModalDatetimeFactory.instance({
+                  locale: this.currentLanguage,
+                  // return the time in the user's timezone
+                  date: getTime(value, CnSession.user.timezone),
+                  pickerType: "time",
+                  emptyAllowed: true,
+                }).show();
+
+                if (false !== response) {
+                  if( null != response ) {
+                    // convert the time from UTC to the user's timezone
+                    const match = response.match(/^([0-9]+):([0-9]+)$/);
+                    let m = moment();
+                    m.hour(parseInt(match[1]));
+                    m.minute(parseInt(match[2]));
+                    m.second(0);
+                    m.tz(CnSession.user.timezone);
+                    response = moment(m).format("HH:mm");
+                  }
+
+                  await this.setAnswer( question, response );
+                  if (null != option) {
+                    await this.setAnswerValue( question, option, valueIndex, response );
+                  } else {
+                    await this.setAnswer( question, response );
+                  }
+                }
+              } finally {
+                this.hotKeyDisabled = false;
+              }
+            },
+
+            selectTimeForOption: async function (question, option, valueIndex, answerValue) {
+              this.selectTimeForQuestionOrOption(question, option, valueIndex, answerValue);
+            },
+
+            selectTime: async function (question, value) {
+              this.selectTimeForQuestionOrOption(question, null, null, value);
             },
 
             setAnswerValue: async function (
@@ -2629,6 +2697,9 @@ cenozoApp.defineModule({
                     if ("date" == option.extra) {
                       question.answer.optionList[option.id].formattedValueList[valueIndex] =
                         formatDate(value[optionIndex].value);
+                    } else if ("time" == option.extra) {
+                      question.answer.optionList[option.id].formattedValueList[valueIndex] =
+                        formatTime(value[optionIndex].value);
                     } else if ("number with unit") {
                       if (angular.isUndefined(value[optionIndex].value.value)) {
                         value[optionIndex].value.value = null;
@@ -2989,6 +3060,9 @@ cenozoApp.defineModule({
                   if ("date" == question.type) {
                     // show the date selection modal
                     await this.selectDate(question, question.answer.value);
+                  } else if ("time" == question.type) {
+                    // show the time selection modal
+                    await this.selectTime(question, question.answer.value);
                   } else {
                     // simply focus on the question's input box
                     await focusElement("question" + question.id);

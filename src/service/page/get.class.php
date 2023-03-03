@@ -96,7 +96,7 @@ class get extends \cenozo\service\get
             $value = $expression_manager->compile( $question['default_answer'] );
             if( 'null' != $value )
             {
-              $db_answer->value = in_array( $question['type'], array( 'date', 'string', 'text' ) )
+              $db_answer->value = in_array( $question['type'], array( 'date', 'string', 'text', 'time' ) )
                                 ? preg_replace( '/^[\'"]?(.*?)[\'"]?$/', '"$1"', $value )
                                 : $value;
             }

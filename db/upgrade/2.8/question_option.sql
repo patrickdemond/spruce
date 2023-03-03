@@ -7,16 +7,17 @@ CREATE PROCEDURE patch_question_option()
 
     SELECT LOCATE( "audio", column_type ),
            LOCATE( "lookup", column_type ),
-           LOCATE( "number with unit", column_type )
-    INTO @audio, @lookup, @number_with_unit
+           LOCATE( "number with unit", column_type ),
+           LOCATE( "time", column_type )
+    INTO @audio, @lookup, @number_with_unit, @time
     FROM information_schema.COLUMNS
     WHERE table_schema = DATABASE()
     AND table_name = "question_option"
     AND column_name = "extra";
 
-    IF @audio = 0 OR @lookup = 0 OR @number_with_unit = 0 THEN
+    IF @audio = 0 OR @lookup = 0 OR @number_with_unit = 0 OR @time = 0 THEN
       ALTER TABLE question_option
-      MODIFY COLUMN extra ENUM('date', 'number', 'number with unit', 'string', 'text') NULL DEFAULT NULL;
+      MODIFY COLUMN extra ENUM('date', 'number', 'number with unit', 'string', 'text', 'time') NULL DEFAULT NULL;
     END IF;
 
     SELECT "Adding new unit_list column to question_option table" AS "";

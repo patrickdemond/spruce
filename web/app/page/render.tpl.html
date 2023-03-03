@@ -476,6 +476,17 @@
                           ng-click="model.renderModel.selectDateForOption( question, option, $index, value )"
                           ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
                           class="form-control rounded-bottom-left rounded-bottom-right larger"></input>
+                        <input ng-switch-when="time"
+                          cn-ignore-mouse-wheel
+                          type="text"
+                          ng-attr-id="option{{ option.id }}value{{ $index }}"
+                          name="answerValue"
+                          ng-class="{ 'color-red': true === question.incomplete || option.id === question.incomplete }"
+                          ng-model="question.answer.optionList[option.id].formattedValueList[$index]"
+                          onkeydown="return false"
+                          ng-click="model.renderModel.selectTimeForOption( question, option, $index, value )"
+                          ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
+                          class="form-control rounded-bottom-left rounded-bottom-right larger"></input>
                         <input ng-switch-when="number"
                           cn-ignore-mouse-wheel
                           type="number"
@@ -548,6 +559,17 @@
                     ng-class="{ 'color-red': true === question.incomplete }"
                     ng-model="question.answer.formattedValue"
                     ng-click="model.renderModel.selectDate( question, question.answer.value )"
+                    onkeydown="return false">
+                  </input>
+                  <input ng-switch-when="time"
+                    ng-attr-id="question{{ question.id }}"
+                    cn-ignore-mouse-wheel
+                    type="text"
+                    placeholder="{{ model.renderModel.getHotKey( question, null ) }}"
+                    class="form-control larger"
+                    ng-class="{ 'color-red': true === question.incomplete }"
+                    ng-model="question.answer.formattedValue"
+                    ng-click="model.renderModel.selectTime( question, question.answer.value )"
                     onkeydown="return false">
                   </input>
                   <input ng-switch-when="number"
