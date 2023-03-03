@@ -7,18 +7,19 @@ CREATE PROCEDURE patch_question()
 
     SELECT LOCATE( "audio", column_type ),
            LOCATE( "lookup", column_type ),
-           LOCATE( "number with unit", column_type )
-    INTO @audio, @lookup, @number_with_unit
+           LOCATE( "number with unit", column_type ),
+           LOCATE( "time", column_type )
+    INTO @audio, @lookup, @number_with_unit, @time
     FROM information_schema.COLUMNS
     WHERE table_schema = DATABASE()
     AND table_name = "question"
     AND column_name = "type";
 
-    IF @audio = 0 OR @lookup = 0 OR @number_with_unit = 0 THEN
+    IF @audio = 0 OR @lookup = 0 OR @number_with_unit = 0 OR @time = 0 THEN
       ALTER TABLE question
       MODIFY COLUMN type ENUM(
         'audio', 'boolean', 'comment', 'date', 'device', 'list', 'lookup',
-        'number', 'number with unit', 'string', 'text'
+        'number', 'number with unit', 'string', 'text', 'time'
       ) NOT NULL;
     END IF;
 

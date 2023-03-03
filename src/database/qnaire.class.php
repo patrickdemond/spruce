@@ -2218,7 +2218,7 @@ class qnaire extends \cenozo\database\record
                 // if the column has a unit_list property then this is the UNIT column, otherwise it's the value
                 $row_value = array_key_exists( 'unit_list', $column ) ? $answer->unit : $answer->value;
               }
-              else // date, number, string and text are all just direct answers
+              else // date, number, string, text and time are all just direct answers
               {
                 $row_value = $answer;
               }

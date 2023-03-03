@@ -747,7 +747,7 @@ cenozo.service("CnTranslationHelper", [
               "<ul>" +
               "<li>List: the option will be toggled (off to on, or on to off) - if extra details are required then the input box will automatically be given focus</li>" +
               "<li>Number/String/Text: the input box is focused</li>" +
-              "<li>Date: the date picker will show</li>" +
+              "<li>Date/Time: the date/time picker will show</li>" +
               "</ul>" +
               "<li>Holding down the SHIFT key will allow selection of items 11 through 20</li>" +
               "<li>When an input box has focus the enter key must be pressed to leave focus and re-activate hot-keys</li>" +
