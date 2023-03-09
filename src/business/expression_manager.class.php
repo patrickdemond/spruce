@@ -554,32 +554,50 @@ class expression_manager extends \cenozo\singleton
         array( $this->db_response->id, $db_attribute->id )
       );
 
+      if( is_null( $this->db_response_attribute ) )
+      {
+        log::warning( sprintf(
+          'Cannot find response_attribute record for questionnaire "%s", response id "%s", attribute "%s"',
+          $this->db_qnaire->name,
+          $this->db_response->id,
+          $db_attribute->name
+        ) );
+      }
+
       if( 'indicator' == $special_function )
       {
         $compiled = 'false';
 
-        $db_lookup_item = $lookup_item_class_name::get_unique_record(
-          array( 'lookup_id', 'identifier' ),
-          array( $db_lookup->id, $this->db_response_attribute->value )
-        );
-
-        if( !is_null( $db_lookup_item ) )
+        if( !is_null( $this->db_response_attribute ) )
         {
-          $lookup_item_mod = lib::create( 'database\modifier' );
-          $lookup_item_mod->where( 'lookup_item.id', '=', $db_lookup_item->id );
-          if( $db_indicator->get_lookup_item_count( $lookup_item_mod ) ) $compiled = 'true';
+          $db_lookup_item = $lookup_item_class_name::get_unique_record(
+            array( 'lookup_id', 'identifier' ),
+            array( $db_lookup->id, $this->db_response_attribute->value )
+          );
+
+          if( !is_null( $db_lookup_item ) )
+          {
+            $lookup_item_mod = lib::create( 'database\modifier' );
+            $lookup_item_mod->where( 'lookup_item.id', '=', $db_lookup_item->id );
+            if( $db_indicator->get_lookup_item_count( $lookup_item_mod ) ) $compiled = 'true';
+          }
         }
       }
       else
       {
-        $compiled = is_null( $this->db_response_attribute->value )
-                  ? 'null'
-                  : sprintf( '%s', addslashes( $this->db_response_attribute->value ) );
+        $compiled = 'null';
 
-        // add quotes if required
-        if( 'null' != $compiled &&
-            !util::string_matches_int( $compiled ) &&
-            !util::string_matches_float( $compiled ) ) $compiled = sprintf( "'%s'", $compiled );
+        if( !is_null( $this->db_response_attribute ) )
+        {
+          $compiled = is_null( $this->db_response_attribute->value )
+                    ? 'null'
+                    : sprintf( '%s', addslashes( $this->db_response_attribute->value ) );
+
+          // add quotes if required
+          if( 'null' != $compiled &&
+              !util::string_matches_int( $compiled ) &&
+              !util::string_matches_float( $compiled ) ) $compiled = sprintf( "'%s'", $compiled );
+        }
       }
     }
 
