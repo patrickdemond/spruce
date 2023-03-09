@@ -139,6 +139,7 @@ class expression_manager extends \cenozo\singleton
    *   $NAME.dkna()$ (true if a question's answer is don't know or no answer)
    *   $NAME.refuse()$ (true if a question is refused)
    *   $NAME.status()$ (gets a stage's current status)
+   *   $NAME.value("PATH")$ (a particular property of an object-based answer)
    *   $respondent.token$ (gets the respondent's token)
    *   $respondent.language$ (gets the current language code)
    *   showhidden true if showing hidden elements (launched by phone) false if not (launched by web)
@@ -150,16 +151,16 @@ class expression_manager extends \cenozo\singleton
    *   true|false (boolean)
    *   123 (number)
    *   "string" (may be delimited by ', " or `
-
+   *
    * lookup:
    *   @NAME.indicator("LOOKUP","INDICATOR")@ (true if attribute has a particular indicator for the given lookup)
    *   $NAME.indicator("LOOKUP","INDICATOR")$ (true if answer has a particular indicator for the given lookup)
-
+   *
    * lists:
    *   $NAME:OPTION$ (always true if it is selected, false if not)
    *   $NAME:count()$ (always a number representing how many options are selected)
    *   $NAME.extra(OPTION)$ Used to get the extra value associated with a selected option
-
+   *
    * operators:
    *   -  function(x,y) where x,y must be number, A:NAME, Q:NAME(type=number)
    *   +  function(x,y) where x,y must be number, A:NAME, Q:NAME(type=number)
@@ -682,6 +683,7 @@ class expression_manager extends \cenozo\singleton
     $db_lookup = NULL;
     $db_indicator = NULL;
     $special_function = NULL;
+    $object_path = NULL;
 
     // question-options and certain functions are defined by question:question_option
     if( preg_match( '/([^.:]+)([.:])([^.:]+)/', $this->term, $matches ) )
@@ -759,6 +761,15 @@ class expression_manager extends \cenozo\singleton
               __METHOD__
             );
           }
+        }
+        else if( 'value(' == substr( $matches[3], 0, 6 ) )
+        {
+          $special_function = 'value';
+
+          if( !preg_match( '/value\( *"([^"]+)" *\)/', $matches[3], $sub_matches ) )
+            throw lib::create( 'exception\runtime', sprintf( 'Invalid syntax "%s"', $matches[3] ), __METHOD__ );
+
+          $object_path = $sub_matches[1];
         }
         else if( in_array( $matches[3], ['empty()', 'dkna()', 'refuse()'] ) )
         {
@@ -873,11 +884,10 @@ class expression_manager extends \cenozo\singleton
                           : sprintf( '"%s"', str_replace( '"', '\"', $selected_option->value ) );
               }
             }
-            else
-
-            if( ( is_object( $selected_option ) && $db_question_option->id == $selected_option->id ) ||
-                ( !is_object( $selected_option ) && $db_question_option->id == $selected_option ) )
-            {
+            else if(
+              ( is_object( $selected_option ) && $db_question_option->id == $selected_option->id ) ||
+              ( !is_object( $selected_option ) && $db_question_option->id == $selected_option )
+            ) {
               $compiled = 'true';
               break;
             }
@@ -899,6 +909,29 @@ class expression_manager extends \cenozo\singleton
           $lookup_item_mod->where( 'lookup_item.id', '=', $db_lookup_item->id );
           if( $db_indicator->get_lookup_item_count( $lookup_item_mod ) ) $compiled = 'true';
         }
+      }
+      else if( 'value' == $special_function )
+      {
+        $compiled = false;
+
+        foreach( explode( '.', $object_path ) as $property )
+        {
+          if( property_exists( $value, $property ) )
+          {
+            $value = $value->$property;
+          }
+          else
+          {
+            $value = false;
+            break;
+          }
+        }
+
+        if( is_null( $value ) ) $compiled = 'NULL';
+        else if( is_bool( $value ) ) $compiled = $value ? 'true' : 'false';
+        else if( is_string( $value ) )
+          $compiled = sprintf( "'%s'", str_replace( "'", "\\'", $value ) );
+        else $compiled = $value;
       }
       else
       {
