@@ -769,6 +769,7 @@ class response extends \cenozo\database\has_rank
     $lookup_item_class_name = lib::get_class_name( 'database\lookup_item' );
 
     $db_qnaire = $this->get_qnaire();
+    $db_participant = $this->get_participant();
 
     // Keep converting attributes and questions until there are none left to convert
     // This has to be done in a loop since a question's description may contain other attributes or questions
@@ -816,6 +817,16 @@ class response extends \cenozo\database\has_rank
             array( 'response_id', 'attribute_id' ),
             array( $this->id, $db_attribute->id )
           );
+
+          if( is_null( $db_response_attribute ) )
+          {
+            $db_response_attribute = lib::create( 'database\response_attribute' );
+            $db_response_attribute->response_id = $this->id;
+            $db_response_attribute->attribute_id = $db_attribute->id;
+            $db_response_attribute->value = $db_attribute->get_participant_value( $db_participant );
+            $db_response_attribute->save();
+          }
+
           $value = $db_response_attribute->value;
         }
 
