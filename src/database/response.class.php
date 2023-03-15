@@ -730,8 +730,8 @@ class response extends \cenozo\database\has_rank
 
     // write the PDF template to disk (it's the only way for the pdf_writer class to read it)
     $random_string = bin2hex( openssl_random_pseudo_bytes( 5 ) );
-    $template_filename = sprintf( '%s/qnaire_report_template_%s.pdf', TEMPORARY_FILES_PATH, $language );
-    $report_filename = sprintf( '%s/qnaire_report_%s.pdf', TEMPORARY_FILES_PATH, $random_string );
+    $template_filename = sprintf( '%s/qnaire_report_template_%s.pdf', TEMP_PATH, $language );
+    $report_filename = sprintf( '%s/qnaire_report_%s.pdf', TEMP_PATH, $random_string );
     $pdf_file = base64_decode( $db_qnaire_report->data );
     file_put_contents( $template_filename, $pdf_file, LOCK_EX );
 

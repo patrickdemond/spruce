@@ -23,7 +23,7 @@ class patch extends \cenozo\service\patch
     {
       if( 'data' != $file ) throw lib::create( 'exception\argument', 'file', $file, __METHOD__ );
 
-      $filename = sprintf( '%s/%s', TEMPORARY_FILES_PATH, bin2hex( openssl_random_pseudo_bytes( 8 ) ) );
+      $filename = sprintf( '%s/%s', TEMP_PATH, bin2hex( openssl_random_pseudo_bytes( 8 ) ) );
       $file = $this->get_file_as_raw();
       file_put_contents( $filename, $file );
 
