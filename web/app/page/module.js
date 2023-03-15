@@ -651,7 +651,7 @@ cenozoApp.defineModule({
 
             cancelDevicePromises: function() {
               if( angular.isDefined( this.devicePromiseList ) ) {
-                this.devicePromiseList.forEach( promise => $interval.cancel(promise) );
+                this.devicePromiseList.forEach( promise => $interval.cancel(promise.promise) );
                 this.devicePromiseList = [];
               }
             },
@@ -692,7 +692,7 @@ cenozoApp.defineModule({
                   },
                   4000, // update every 4 seconds
                 );
-                this.devicePromiseList.push(promise);
+                this.devicePromiseList.push({id: question.id, promise: promise});
               }
             },
 
@@ -2258,6 +2258,11 @@ cenozoApp.defineModule({
                 }).delete();
                 question.device_status = null;
                 question.device_uuid = null;
+                const promiseIndex = this.devicePromiseList.findIndexByProperty("id", question.id);
+                if(null != promiseIndex) {
+                  $interval.cancel(this.devicePromiseList[promiseIndex].promise);
+                  this.devicePromiseList.splice(promiseIndex, 1);
+                }
               } finally {
                 this.working = false;
               }

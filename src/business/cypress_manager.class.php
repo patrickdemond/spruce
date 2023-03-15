@@ -58,11 +58,11 @@ class cypress_manager extends \cenozo\base_object
    * Attempts to launch a device by sending a POST request to the cypress service
    * 
    * @param array $data An associative array of data to send to Cypress
-   * @param database\response $db_answer The answer that the device is to return it's data to
+   * @param database\response $db_response The response that the device is to return it's data to
    * @return database\response_device The resulting response_device record
    * @access public
    */
-  public function launch( $data, $db_answer )
+  public function launch( $data, $db_response )
   {
     $response_device_class_name = lib::get_class_name( 'database\response_device' );
 
@@ -93,7 +93,6 @@ class cypress_manager extends \cenozo\base_object
     }
 
     // Cypress will respond with a UUID that will be used to refer to this respondent/device in the future
-    $db_response = $db_answer->get_response();
     $db_response_device = $response_device_class_name::get_unique_record( 'uuid', $uuid );
 
     if( is_null( $db_response_device ) )
@@ -134,7 +133,7 @@ class cypress_manager extends \cenozo\base_object
     try
     {
       // send a delete request to cypress to abort the device
-      $this->send( sprintf( '%s/%s', $this->db_device->url, $uuid ), 'DELETE', $data );
+      $this->send( sprintf( '%s/%s', $this->db_device->url, $uuid ), 'DELETE' );
     }
     catch( \cenozo\exception\runtime $e )
     {
@@ -181,8 +180,10 @@ class cypress_manager extends \cenozo\base_object
 
     if( !is_null( $data ) )
     {
+      $encoded_data = util::json_encode( $data );
       $header_list[] = 'Content-Type: application/json';
-      curl_setopt( $curl, CURLOPT_POSTFIELDS, util::json_encode( $data ) );
+      $header_list[] = sprintf( 'Content-Length: %d', strlen( $encoded_data ) );
+      curl_setopt( $curl, CURLOPT_POSTFIELDS, $encoded_data );
     }
 
     curl_setopt( $curl, CURLOPT_HTTPHEADER, $header_list );
