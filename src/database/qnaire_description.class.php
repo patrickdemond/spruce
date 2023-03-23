@@ -24,6 +24,7 @@ class qnaire_description extends base_description
    */
   public function get_compiled_value( $db_respondent, $iteration )
   {
+    $embedded_file_class_name = lib::get_class_name( 'database\embedded_file' );
     $data_manager = lib::create( 'business\data_manager' );
     $db_participant = $db_respondent->get_participant();
 
@@ -54,6 +55,23 @@ class qnaire_description extends base_description
       }
 
       $text = str_replace( $match, $replace, $text );
+    }
+
+    preg_match_all( '/@([A-Za-z0-9_]+)(\.width\( *([0-9]+%?) *\))?@/', $text, $matches );
+    foreach( $matches[1] as $index => $match )
+    {
+      $name = $match;
+
+      // images may have a width argument, for example: @name.width(123)@
+      $width = array_key_exists( 3, $matches ) ? $matches[3][$index] : NULL;
+      $db_embedded_file = $embedded_file_class_name::get_unique_record(
+        array( 'qnaire_id', 'name' ),
+        array( $this->qnaire_id, $name )
+      );
+      if( !is_null( $db_embedded_file ) )
+      {
+        $text = str_replace( $matches[0][$index], $db_embedded_file->get_tag( $width ), $text );
+      }
     }
 
     return $text;
