@@ -38,7 +38,7 @@ class device extends \cenozo\database\record
     // always include the token and language
     $db_response = $db_answer->get_response();
     $data = array(
-      'answer_id' => $this->id,
+      'answer_id' => $db_answer->id,
       'barcode' => $db_response->get_respondent()->token,
       'language' => $db_response->get_language()->code,
       'interviewer' => $db_answer->get_user()->name
