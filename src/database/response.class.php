@@ -765,19 +765,18 @@ class response extends \cenozo\database\has_rank
     $response_attribute_class_name = lib::get_class_name( 'database\response_attribute' );
     $answer_class_name = lib::get_class_name( 'database\answer' );
     $question_option_description_class_name = lib::get_class_name( 'database\question_option_description' );
-    $lookup_class_name = lib::get_class_name( 'database\lookup' );
-    $lookup_item_class_name = lib::get_class_name( 'database\lookup_item' );
 
     $db_qnaire = $this->get_qnaire();
     $db_participant = $this->get_participant();
 
     // Keep converting attributes and questions until there are none left to convert
     // This has to be done in a loop since a question's description may contain other attributes or questions
-    $attribute_regex = '/@[A-Za-z0-9_]+@/';
     $attribute_regex =
       '/@([A-Za-z0-9_]+)('.
         '.(name|description)\( *"?[^)"]+"? *\)'.
       ')?\@/';
+
+    $attribute_matches = [];
     $attribute_test = preg_match_all(
       $attribute_regex,
       $description,
@@ -791,6 +790,8 @@ class response extends \cenozo\database\has_rank
         '.count\(\)|'.
         '.(name|description)\( *"?[^)"]+"? *\)'.
       ')?\$/';
+
+    $question_matches = [];
     $question_test = preg_match_all(
       $question_regex,
       $description,
@@ -801,15 +802,14 @@ class response extends \cenozo\database\has_rank
     while( $attribute_test || $question_test )
     {
       // convert attributes
-      foreach( $attribute_matches[0] as $match )
+      foreach( $attribute_matches[1] as $index => $attribute_name )
       {
         // Note: embedded files also use @ as delimiters, so if the attribute isn't found it's likely
         // an embedded file and not an attribute (so we can safely ignore it)
-        $name = substr( $match, 1, -1 );
         $value = '';
         $db_attribute = $attribute_class_name::get_unique_record(
           array( 'qnaire_id', 'name' ),
-          array( $db_qnaire->id, $name )
+          array( $db_qnaire->id, $attribute_name )
         );
         if( !is_null( $db_attribute ) )
         {
@@ -827,10 +827,13 @@ class response extends \cenozo\database\has_rank
             $db_response_attribute->save();
           }
 
-          $value = $db_response_attribute->value;
+          // if we matched for .name() or .description then make sure to compile as a lookup
+          $value = 3 <= count( $attribute_matches )
+                 ? $this->compile_lookup( $db_response_attribute->value, $attribute_matches[2][$index] )
+                 : $db_response_attribute->value;
         }
 
-        $description = str_replace( $match, $value, $description );
+        $description = str_replace( $attribute_matches[0], $value, $description );
       }
 
       // convert questions and question options
@@ -883,6 +886,8 @@ class response extends \cenozo\database\has_rank
           }
           else if( is_array( $value ) )
           {
+            $extra_matches = [];
+            $selected_matches = [];
             if( '.count()' == $question_matches[2][$index] )
             {
               $compiled = count( $value );
@@ -993,50 +998,7 @@ class response extends \cenozo\database\has_rank
           }
           else if( 'lookup' == $db_question->type )
           {
-            $match = preg_match(
-              '/.(name|description)\( *"?([^)"]+)"? *\)/',
-              $question_matches[2][$index],
-              $lookup_matches
-            );
-            if( $match )
-            {
-              // assume the default of the value (in case the lookup below doesn't work)
-              $compiled = $value;
-
-              $property = $lookup_matches[1];
-              $lookup_name = $lookup_matches[2];
-              $db_lookup = $lookup_class_name::get_unique_record( 'name', $lookup_name );
-              if( !is_null( $db_lookup ) )
-              {
-                $db_lookup_item = $lookup_item_class_name::get_unique_record(
-                  array( 'lookup_id', 'identifier' ),
-                  array( $db_lookup->id, $value )
-                );
-
-                if( !is_null( $db_lookup_item ) )
-                {
-                  $compiled = $db_lookup_item->$property;
-                }
-                else if( $db_qnaire->debug )
-                {
-                  log::warning( sprintf(
-                    'Lookup identifier "%s" not found while compiling description',
-                    $value
-                  ) );
-                }
-              }
-              else if( $db_qnaire->debug )
-              {
-                log::warning( sprintf(
-                  'Invalid lookup "%s" found while compiling description',
-                  $lookup_name
-                ) );
-              }
-            }
-            else
-            {
-              $compiled = $value;
-            }
+            $compiled = $this->compile_lookup( $value, $question_matches[2][$index] );
           }
           else $compiled = $value;
 
@@ -1117,5 +1079,61 @@ class response extends \cenozo\database\has_rank
     }
 
     return $create;
+  }
+
+  /**
+   * Converts a lookup expression (eg: VAR.name("lookup") or VAR.description("lookup"))
+   * @param string $identifier The identifier of the lookup_item being referenced
+   * @param string $expression The expression to compile (EG: .name("lookup") or .description("lookup"))
+   * @return string
+   */
+  private function compile_lookup( $identifier, $expression )
+  {
+    $lookup_class_name = lib::get_class_name( 'database\lookup' );
+    $lookup_item_class_name = lib::get_class_name( 'database\lookup_item' );
+
+    // start with the identifier as a default (in case the lookup below doesn't work)
+    $compiled = $identifier;
+    
+    $lookup_matches = [];
+    $match = preg_match(
+      '/.(name|description)\( *"?([^)"]+)"? *\)/',
+      $expression,
+      $lookup_matches
+    );
+    if( $match )
+    {
+      $property = $lookup_matches[1]; // either name or description
+      $lookup_name = $lookup_matches[2]; // the name of the lookup
+      $db_lookup = $lookup_class_name::get_unique_record( 'name', $lookup_name );
+      if( !is_null( $db_lookup ) )
+      {
+        $db_lookup_item = $lookup_item_class_name::get_unique_record(
+          array( 'lookup_id', 'identifier' ),
+          array( $db_lookup->id, $identifier )
+        );
+
+        if( !is_null( $db_lookup_item ) )
+        {
+          $compiled = $db_lookup_item->$property;
+        }
+        else if( $db_qnaire->debug )
+        {
+          log::warning( sprintf(
+            'Lookup identifier "%s" not found while compiling description',
+            $identifier
+          ) );
+        }
+      }
+      else if( $db_qnaire->debug )
+      {
+        log::warning( sprintf(
+          'Invalid lookup "%s" found while compiling description',
+          $lookup_name
+        ) );
+      }
+    }
+
+    return $compiled;
   }
 }
