@@ -19,12 +19,14 @@ cenozoApp.defineModule({
           title: 'Identifier',
         },
         name: {
+          column: "lookup_item.name",
           title: "Name",
         },
         indicator_list: {
           title: "Indicator List",
         },
         description: {
+          column: "lookup_item.description",
           title: "Description",
           align: "left",
         },
