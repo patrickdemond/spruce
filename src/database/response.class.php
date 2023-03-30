@@ -1091,6 +1091,7 @@ class response extends \cenozo\database\has_rank
   {
     $lookup_class_name = lib::get_class_name( 'database\lookup' );
     $lookup_item_class_name = lib::get_class_name( 'database\lookup_item' );
+    $db_qnaire = $this->get_qnaire();
 
     // start with the identifier as a default (in case the lookup below doesn't work)
     $compiled = $identifier;
