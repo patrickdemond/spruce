@@ -833,7 +833,7 @@ class response extends \cenozo\database\has_rank
                  : $db_response_attribute->value;
         }
 
-        $description = str_replace( $attribute_matches[0], $value, $description );
+        $description = str_replace( $attribute_matches[0][$index], $value, $description );
       }
 
       // convert questions and question options
