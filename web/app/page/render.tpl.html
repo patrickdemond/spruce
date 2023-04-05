@@ -235,7 +235,7 @@
                     <td ng-if="null == model.renderModel.data.end_datetime" style="line-height: 26px;">
                       <button type="button"
                               class="btn btn-default btn-narrow btn-thin full-width"
-                              ng-if="!['not ready', 'skipped', 'parent skipped'].includes( responseStage.status )"
+                              ng-if="!['not ready', 'not applicable', 'skipped', 'parent skipped'].includes( responseStage.status )"
                               ng-click="model.renderModel.showStageComments( responseStage.id )"
                               ng-bind-html="'Comments' +
                                 ( responseStage.comments ? ' <i class=\'glyphicon glyphicon-ok\'></i>' : '' )">
