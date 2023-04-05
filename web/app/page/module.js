@@ -1108,7 +1108,7 @@ cenozoApp.defineModule({
                     : null;
 
                 // get the stage list if there is one:
-                //   not ready: nothing
+                //   not ready or not applicable: nothing
                 //   ready: launch, skip
                 //   active: nothing (it will never show in the list)
                 //   paused: resume, skip, reset
@@ -1208,11 +1208,8 @@ cenozoApp.defineModule({
                   this.responseStageList.forEach((responseStage) => {
                     responseStage.operations = [];
 
-                    if (
-                      !["not ready", "parent skipped", "skipped"].includes(
-                        responseStage.status
-                      )
-                    ) {
+                    if ( !["not ready", "not applicable", "parent skipped", "skipped"]
+                            .includes(responseStage.status)) {
                       var self = this;
                       responseStage.operations.push({
                         name: "launch",
@@ -1250,7 +1247,7 @@ cenozoApp.defineModule({
                     }
 
                     if (
-                      !["not ready", "parent skipped", "ready"].includes(
+                      !["not ready", "not applicable", "parent skipped", "ready"].includes(
                         responseStage.status
                       )
                     ) {
@@ -2826,7 +2823,7 @@ cenozoApp.defineModule({
               var warning = null;
 
               if (
-                ["not ready", "parent skipped"].includes(data.status) ||
+                ["not ready", "not applicable", "parent skipped"].includes(data.status) ||
                 ("skipped" == data.status && "reset" != operationName) ||
                 ("ready" == data.status && "reset" == operationName) ||
                 ("completed" == data.status && "skip" == operationName)
