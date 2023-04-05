@@ -28,10 +28,14 @@ class response_stage extends \cenozo\database\record
 
       if( $db_stage->is_last_stage() )
       {
-        // the last stage can only proceed once all other stages are completed or skipped
+        // the last stage can only proceed once all other stages are completed, skipped or not applicable
         $response_stage_mod = lib::create( 'database\modifier' );
         $response_stage_mod->where( 'stage_id', '!=', $db_stage->id );
-        $response_stage_mod->where( 'status', 'NOT IN', array( 'completed', 'skipped', 'parent skipped' ) );
+        $response_stage_mod->where(
+          'status',
+          'NOT IN',
+          ['completed', 'skipped', 'parent skipped', 'not applicable']
+        );
         if( 0 < $db_response->get_response_stage_count( $response_stage_mod ) )
         {
           $this->status = 'not ready';
@@ -40,17 +44,17 @@ class response_stage extends \cenozo\database\record
         {
           $this->status = $expression_manager->evaluate( $db_stage->precondition )
                         ? ( is_null( $this->page_id ) ? 'ready' : 'paused' )
-                        : 'not ready';
+                        : 'not applicable';
         }
       }
       else
       {
         $this->status = $expression_manager->evaluate( $db_stage->precondition )
                       ? ( is_null( $this->page_id ) ? 'ready' : 'paused' )
-                      : 'not ready';
+                      : 'not applicable';
 
-        // skip stages which are dependent on a parent stage which has been skipped
-        if( 'not ready' == $this->status )
+        // if the status is not applicable due to a parent stage being skipped then use the "parent skipped" status
+        if( 'not applicable' == $this->status )
         {
           $matches = array();
           if( preg_match_all( '/#[^#]+#/', $db_stage->precondition, $matches ) )
