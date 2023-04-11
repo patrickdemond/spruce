@@ -19,7 +19,7 @@ CREATE PROCEDURE patch_role_has_service()
       "WHERE role.name = 'administrator' ",
       "AND service.subject IN( ",
         "'alternate_consent_type', 'device_data', 'embedded_file', 'indicator', 'lookup', 'lookup_item', ",
-        "'notation', 'proxy', 'proxy_type', 'qnaire_alternate_consent_type_trigger', ",
+        "'notation', 'problem_report', 'proxy', 'proxy_type', 'qnaire_alternate_consent_type_trigger', ",
         "'qnaire_participant_trigger', 'qnaire_proxy_type_trigger', 'qnaire_report', 'qnaire_report_data', ",
         "'response_device' "
       ") ",
@@ -57,7 +57,7 @@ CREATE PROCEDURE patch_role_has_service()
       "SELECT role.id, service.id ",
       "FROM ", @cenozo, ".role, service ",
       "WHERE role.name = 'interviewer' ",
-      "AND service.subject IN( 'indicator', 'lookup', 'lookup_item', 'proxy', 'response_device' ) ",
+      "AND service.subject IN( 'indicator', 'lookup', 'lookup_item', 'problem_report', 'proxy', 'response_device' ) ",
       "AND service.restricted = 1"
     );
     PREPARE statement FROM @sql;
@@ -70,7 +70,7 @@ CREATE PROCEDURE patch_role_has_service()
       "SELECT role.id, service.id ",
       "FROM ", @cenozo, ".role, service ",
       "WHERE role.name = 'readonly' ",
-      "AND service.subject IN( 'address', 'participant' ) ",
+      "AND service.subject IN( 'address', 'participant', 'report_problem' ) ",
       "AND service.method = 'GET' ",
       "AND service.resource = 1 ",
       "AND service.restricted = 1"

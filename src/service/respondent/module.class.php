@@ -43,22 +43,6 @@ class module extends \cenozo\service\module
       $select->add_column( $column_value, 'status', false );
     }
 
-    if( $select->has_column( 'page_progress' ) )
-    {
-      $select->add_column(
-        'CONCAT( '.
-          'IF( '.
-            'response.submitted, '.
-            'qnaire.total_pages, '.
-            'IF( response.page_id IS NULL, 0, response.current_page_rank ) '.
-          '), '.
-          '" of ", qnaire.total_pages '.
-        ')',
-        'page_progress',
-        false
-      );
-    }
-
     if( $select->has_table_columns( 'language' ) ||
         $select->has_table_columns( 'module' ) ||
         $select->has_table_columns( 'page' ) )
@@ -104,53 +88,8 @@ class module extends \cenozo\service\module
 
       if( $select->has_column( 'completed' ) )
         $select->add_constant( $db_respondent->is_complete(), 'completed', 'boolean' );
-
-      if( $select->has_column( 'introduction_list' ) )
-      {
-        // join to the introduction descriptions
-        $join_mod = lib::create( 'database\modifier' );
-        $join_mod->where( 'qnaire.id', '=', 'introduction.qnaire_id', false );
-        $join_mod->where( 'introduction.type', '=', 'introduction' );
-        $modifier->join_modifier( 'qnaire_description', $join_mod, '', 'introduction' );
-        $modifier->join( 'language', 'introduction.language_id', 'introduction_language.id', '', 'introduction_language' );
-        $select->add_column(
-          'GROUP_CONCAT( DISTINCT CONCAT_WS( "`", introduction_language.code, IFNULL( introduction.value, "" ) ) SEPARATOR "`" )',
-          'introduction_list',
-          false
-        );
-
-        $modifier->group( 'qnaire.id' );
-      }
-
-      if( $select->has_column( 'conclusion_list' ) )
-      {
-        // join to the conclusion descriptions
-        $join_mod = lib::create( 'database\modifier' );
-        $join_mod->where( 'qnaire.id', '=', 'conclusion.qnaire_id', false );
-        $join_mod->where( 'conclusion.type', '=', 'conclusion' );
-        $modifier->join_modifier( 'qnaire_description', $join_mod, '', 'conclusion' );
-        $modifier->join( 'language', 'conclusion.language_id', 'conclusion_language.id', '', 'conclusion_language' );
-        $select->add_column(
-          'GROUP_CONCAT( DISTINCT CONCAT_WS( "`", conclusion_language.code, IFNULL( conclusion.value, "" ) ) SEPARATOR "`" )',
-          'conclusion_list',
-          false
-        );
-      }
-
-      if( $select->has_column( 'closed_list' ) )
-      {
-        // join to the close descriptions
-        $join_mod = lib::create( 'database\modifier' );
-        $join_mod->where( 'qnaire.id', '=', 'closed.qnaire_id', false );
-        $join_mod->where( 'closed.type', '=', 'closed' );
-        $modifier->join_modifier( 'qnaire_description', $join_mod, '', 'closed' );
-        $modifier->join( 'language', 'closed.language_id', 'closed_language.id', '', 'closed_language' );
-        $select->add_column(
-          'GROUP_CONCAT( DISTINCT CONCAT_WS( "`", closed_language.code, IFNULL( closed.value, "" ) ) SEPARATOR "`" )',
-          'closed_list',
-          false
-        );
-      }
     }
+
+    util::prepare_respondent_read_objects( $select, $modifier );
   }
 }

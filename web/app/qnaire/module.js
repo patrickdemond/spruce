@@ -139,6 +139,12 @@ cenozoApp.defineModule({
         },
         help: "Whether to allow participants who are in a final hold to answer the questionnaire.",
       },
+      problem_report: {
+        title: "Enable Problem Reports",
+        type: "boolean",
+        isExcluded: function ($state, model) { return model.isRole("interviewer"); },
+        help: "Whether to enable the \"Report Problem\" button when running a questionnaire.",
+      },
       stages: {
         title: "Stages",
         type: "boolean",

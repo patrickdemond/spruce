@@ -10,11 +10,11 @@ CREATE PROCEDURE patch_qnaire_description()
     WHERE table_schema = DATABASE()
     AND table_name = "qnaire_description"
     AND column_name = "type"
-    AND column_type LIKE "%'incompatible'%";
+    AND column_type = "enum('introduction','conclusion','closed','invitation subject','invitation body','incompatible','problem prompt','problem confirm')";
 
     IF @test = 0 THEN
       ALTER TABLE qnaire_description
-      MODIFY COLUMN type ENUM('introduction', 'conclusion', 'closed', 'invitation subject', 'invitation body', 'incompatible') NOT NULL;
+      MODIFY COLUMN type ENUM('introduction','conclusion','closed','invitation subject','invitation body','incompatible','problem prompt','problem confirm') NOT NULL;
 
       INSERT IGNORE INTO qnaire_description( qnaire_id, language_id, type )
       SELECT qnaire_id, language_id, 'introduction' FROM qnaire_has_language;
@@ -33,6 +33,12 @@ CREATE PROCEDURE patch_qnaire_description()
 
       INSERT IGNORE INTO qnaire_description( qnaire_id, language_id, type )
       SELECT qnaire_id, language_id, 'incompatible' FROM qnaire_has_language;
+
+      INSERT IGNORE INTO qnaire_description( qnaire_id, language_id, type )
+      SELECT qnaire_id, language_id, 'problem prompt' FROM qnaire_has_language;
+
+      INSERT IGNORE INTO qnaire_description( qnaire_id, language_id, type )
+      SELECT qnaire_id, language_id, 'problem confirm' FROM qnaire_has_language;
     END IF;
 
   END //

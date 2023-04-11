@@ -45,6 +45,7 @@ cenozoApp.defineModule({
       isExcluded: true,
     });
     module.addInput("", "debug", { column: "qnaire.debug", isExcluded: true });
+    module.addInput("", "problem_report", { column: "qnaire.problem_report", isExcluded: true });
     module.addInput("", "base_language", {
       column: "base_language.code",
       isExcluded: true,
@@ -887,21 +888,48 @@ cenozoApp.defineModule({
                      this.qnaireReportList.includes(this.currentLanguage);
             },
 
+            reportProblem: async function () {
+              var response = await CnModalTextFactory.instance({
+                title: this.text("misc.reportProblem.promptTitle"),
+                message: this.data.problemPromptList[this.currentLanguage],
+                html: true,
+                size: "lg",
+              }).show();
+
+              if (false !== response) {
+                var modal = CnModalMessageFactory.instance({
+                  title: this.text("misc.reportProblem.waitTitle"),
+                  message: this.text("misc.reportProblem.waitMessage"),
+                  block: true,
+                });
+                modal.show();
+
+                try {
+                  await CnHttpFactory.instance({
+                    path: ["response", this.data.response_id, "problem_report"].join("/"),
+                    data: { description: response },
+                  }).post();
+
+                  CnModalMessageFactory.instance({
+                    title: this.text("misc.reportProblem.promptTitle"),
+                    message: this.data.problemConfirmList[this.currentLanguage],
+                    html: true,
+                  }).show();
+                } finally {
+                  modal.close();
+                }
+              }
+            },
+
             getModulePrompt: function () {
               return null != this.parentModel.viewModel.record.module_prompts
-                ? $sce.trustAsHtml(
-                    this.parentModel.viewModel.record.module_prompts[
-                      this.currentLanguage
-                    ]
-                  )
+                ? $sce.trustAsHtml(this.parentModel.viewModel.record.module_prompts[this.currentLanguage])
                 : "";
             },
 
             getModulePopup: function () {
               return null != this.parentModel.viewModel.record.module_popups
-                ? this.parentModel.viewModel.record.module_popups[
-                    this.currentLanguage
-                  ]
+                ? this.parentModel.viewModel.record.module_popups[this.currentLanguage]
                 : "";
             },
 
@@ -909,14 +937,10 @@ cenozoApp.defineModule({
               return null != this.parentModel.viewModel.record.prompts &&
                 null != this.parentModel.viewModel.record.popups
                 ? $sce.trustAsHtml(
-                    (this.parentModel.viewModel.record.popups[
-                      this.currentLanguage
-                    ]
-                      ? '<b class="invert">ⓘ</b> '
-                      : "") +
-                      this.parentModel.viewModel.record.prompts[
-                        this.currentLanguage
-                      ]
+                    (
+                      this.parentModel.viewModel.record.popups[this.currentLanguage] ?
+                        '<b class="invert">ⓘ</b> ' : ""
+                    ) + this.parentModel.viewModel.record.prompts[this.currentLanguage]
                   )
                 : "";
             },
@@ -1070,9 +1094,12 @@ cenozoApp.defineModule({
                         "introduction_list",
                         "conclusion_list",
                         "closed_list",
+                        "problem_prompt_list",
+                        "problem_confirm_list",
                         { table: "participant", column: "first_name" },
                         { table: "participant", column: "last_name" },
                         { table: "qnaire", column: "debug" },
+                        { table: "qnaire", column: "problem_report" },
                         { table: "qnaire", column: "stages" },
                         { table: "qnaire", column: "closed" },
                         { table: "qnaire", column: "name", alias: "qnaire_name", },
@@ -1369,7 +1396,7 @@ cenozoApp.defineModule({
                   ];
                 }
 
-                // parse the intro, conclusion and close descriptions
+                // parse the intro, conclusion, close and problem descriptions
                 angular.extend(this.data, {
                   introductionList: CnTranslationHelper.parseDescriptions(
                     this.data.introduction_list,
@@ -1383,7 +1410,29 @@ cenozoApp.defineModule({
                     this.data.closed_list,
                     this.showHidden
                   ),
+                  problemPromptList: CnTranslationHelper.parseDescriptions(
+                    this.data.problem_prompt_list,
+                    this.showHidden
+                  ),
+                  problemConfirmList: CnTranslationHelper.parseDescriptions(
+                    this.data.problem_confirm_list,
+                    this.showHidden
+                  ),
                 });
+                
+                for( const lang in this.data.problemPromptList ) {
+                  if( 0 == this.data.problemPromptList[lang].length ) {
+                    this.data.problemPromptList[lang] =
+                      CnTranslationHelper.translate( "misc.reportProblem.promptMessage", lang );
+                  }
+                }
+                
+                for( const lang in this.data.problemConfirmList ) {
+                  if( 0 == this.data.problemConfirmList[lang].length ) {
+                    this.data.problemConfirmList[lang] =
+                      CnTranslationHelper.translate( "misc.reportProblem.submitted", lang );
+                  }
+                }
               }
 
               if (this.previewMode || null != this.data.page_id) {
