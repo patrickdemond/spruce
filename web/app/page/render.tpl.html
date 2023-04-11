@@ -3,25 +3,31 @@
   <div class="container-fluid bg-primary rounded-top">
     <h4>
       {{ !isComplete ? 'Loading...' : model.renderModel.data.closed ? text( 'misc.qnaireClosed' ) : model.renderModel.data.title }}
-      <div class="pull-right" style="margin-top: -7px; margin-bottom: 3px;">
-        <select class="form-control larger"
+      <div class="pull-right">
+        <i class="glyphicon glyphicon-refresh glyph-hover btn-primary btn-header"
+           ng-click="model.renderModel.onReady()"
+           uib-tooltip="Click to refresh data"
+           tooltip-placement="right"></i>
+      </div>
+      <div class="pull-right horizontal-spacer" style="margin-top: -7px; margin-bottom: 4px;">
+        <select class="form-control btn btn-default"
                 ng-model="model.renderModel.currentLanguage"
                 ng-change="model.renderModel.setLanguage()"
                 ng-options="lang.code as lang.name for lang in model.renderModel.languageList">
         </select>
       </div>
-      <div class="pull-right" style="margin-top: 3px; margin-right: 26px;">
-        <i class="glyphicon glyphicon-refresh glyph-hover btn-primary btn-header"
-           ng-click="model.renderModel.onReady()"
-           uib-tooltip="Click to refresh data"
-           tooltip-placement="left"></i>
-      </div>
-      <button class="btn btn-info pull-right horizontal-spacer"
+      <button class="btn btn-default pull-right"
+              ng-if="model.renderModel.data.problem_report"
+              ng-click="model.renderModel.reportProblem()"
+              ng-bind-html="text( 'misc.reportProblem.promptTitle' )"
+              style="margin-top: -7px; line-height: 21px;">
+      </button>
+      <button class="btn btn-default pull-right horizontal-spacer"
               ng-init="showHotKeyHint=false"
               ng-show="model.renderModel.showHidden && model.renderModel.data.page_id"
               ng-click="showHotKeyHint = !showHotKeyHint"
               ng-bind-html="text( showHotKeyHint ? 'hotKey.hide' : 'hotKey.show' )"
-              style="margin-top: -5px;">
+              style="margin-top: -7px; line-height: 21px;">
         {{ showHotKeyHint ? 'Hide' : 'Show' }} Hot-key Hints
         <i class="glyphicon" ng-class="showHotKeyHint ? 'glyphicon-chevron-up' : 'glyphicon-chevron-down'"></i>
       </button>

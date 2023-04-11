@@ -843,6 +843,31 @@ cenozo.service("CnTranslationHelper", [
             en: "You must complete all questions before you can proceed.",
             fr: "Vous devez répondre à toutes les questions avant de continuer.",
           },
+          reportProblem: {
+            promptTitle: {
+              en: "Report Problem",
+              fr: "Signaler un problème",
+            },
+            promptMessage: {
+              en:
+                "Please describe the problem(s) that you are having with the questionnaire with as much " +
+                "detail as possible.  If it is a technical problem, please also describe the type of device " +
+                "and web browser you are using.",
+              fr: "Veuillez fournir une description la plus détaillée possible du ou des problèmes que vous rencontrez avec le questionnaire. S’il s’agit d’un problème technique, veuillez également fournir le type d’appareil et le navigateur Web que vous utilisez.",
+            },
+            waitTitle: { en: "Please Wait", fr: "Veuillez patienter" },
+            waitMessage: {
+              en: "Please wait while your report is submitted.",
+              fr: "Veuillez patienter pendant l’envoi de votre rapport.",
+            },
+            submitted: {
+              en:
+                "Thank you for reporting your problem.  If you are unable to proceed with the " +
+                "questionnaire please close your browser window, we will contact you once the problem has " +
+                "been resolved.",
+              fr: "Merci d’avoir signalé votre problème. Si vous n’êtes pas capable de répondre au questionnaire, veuillez fermer la fenêtre de votre navigateur. Nous vous contacterons une fois le problème résolu.",
+            },
+          },
         },
       },
       // used by services below to convert a list of descriptions into an object

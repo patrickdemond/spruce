@@ -132,7 +132,6 @@ class qnaire extends \cenozo\database\record
       // only allow changes to the readonly columns
       if( $this->has_column_changed( 'base_language_id' ) ||
           $this->has_column_changed( 'name' ) ||
-          $this->has_column_changed( 'debug' ) ||
           $this->has_column_changed( 'stages' ) ||
           $this->has_column_changed( 'description' ) ||
           $this->has_column_changed( 'note' ) )
@@ -3838,6 +3837,8 @@ class qnaire extends \cenozo\database\record
       'variable_suffix' => $this->variable_suffix,
       'debug' => $this->debug,
       'readonly' => $this->readonly,
+      'allow_in_hold' => $this->alow_in_hold,
+      'problem_report' => $this->problem_report,
       'stages' => $this->stages,
       'repeated' => $this->repeated,
       'repeat_offset' => $this->repeat_offset,
@@ -4480,6 +4481,8 @@ class qnaire extends \cenozo\database\record
     $db_qnaire->version = property_exists( $qnaire_object, 'version' ) ? $qnaire_object->version : NULL;
     $db_qnaire->variable_suffix = $qnaire_object->variable_suffix;
     $db_qnaire->debug = $qnaire_object->debug;
+    $db_qnaire->allow_in_hold = $qnaire_object->allow_in_hold;
+    $db_qnaire->problem_report = $qnaire_object->problem_report;
     $db_qnaire->stages = $qnaire_object->stages;
     $db_qnaire->repeated = $qnaire_object->repeated;
     $db_qnaire->repeat_offset = $qnaire_object->repeat_offset;

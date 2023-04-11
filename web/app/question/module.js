@@ -371,7 +371,6 @@ cenozoApp.defineModule({
               );
             },
             getMetadata: async function () {
-              console.log( 'a' );
               await this.$$getMetadata();
 
               let queryList = [

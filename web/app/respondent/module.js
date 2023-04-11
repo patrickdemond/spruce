@@ -414,18 +414,17 @@ cenozoApp.defineModule({
               return this.$$getChildList().filter(
                 (child) =>
                   // show the response list if the qnaire is answered more than once
-                  ("response" == child.subject.snake &&
-                    null != this.record.repeated) ||
+                  ("response" == child.subject.snake && null != this.record.repeated) ||
                   // show mail list if the qnaire sends mail
-                  ("respondent_mail" == child.subject.snake &&
-                    this.record.sends_mail) ||
+                  ("respondent_mail" == child.subject.snake && this.record.sends_mail) ||
                   // show stage list if the qnaire has stages and the qnaire is only answered once
                   ("response_stage" == child.subject.snake &&
                     this.record.stages &&
                     null == this.record.repeated) ||
                   // show attribute list if the qnaire is only answered once
-                  ("response_attribute" == child.subject.snake &&
-                    null == this.record.repeated)
+                  ("response_attribute" == child.subject.snake && null == this.record.repeated) ||
+                  // show problem_report list if the qnaire is only answered once
+                  ("problem_report" == child.subject.snake && null == this.record.repeated)
               );
             },
 

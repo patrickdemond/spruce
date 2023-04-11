@@ -153,6 +153,7 @@ class ui extends \cenozo\ui\ui
       // add response children and actions here in case the qnaire is only done once
       $module->add_child( 'response_stage' );
       $module->add_child( 'response_attribute' );
+      $module->add_child( 'problem_report' );
       $module->add_action( 'display', '/{identifier}' );
     }
 
@@ -161,6 +162,7 @@ class ui extends \cenozo\ui\ui
     {
       $module->add_child( 'response_stage' );
       $module->add_child( 'response_attribute' );
+      $module->add_child( 'problem_report' );
       $module->add_action( 'display', '/{identifier}' );
     }
 
@@ -214,6 +216,7 @@ class ui extends \cenozo\ui\ui
     $db_role = lib::create( 'business\session' )->get_role();
 
     $this->add_listitem( 'Lookups', 'lookup' );
+    $this->add_listitem( 'Problem Reports', 'problem_report' );
     $this->add_listitem( 'Questionnaires', 'qnaire' );
     if( 'readonly' == $db_role->name ) $this->add_listitem( 'Overviews', 'overview' );
     $this->remove_listitem( 'Collections' );
@@ -223,6 +226,7 @@ class ui extends \cenozo\ui\ui
     if( 'interviewer' == $db_role->name )
     {
       $this->remove_listitem( 'Consent Types' );
+      $this->add_listitem( 'Problem Reports', 'problem_report' );
       $this->remove_listitem( 'Questionnaires' );
       $this->remove_listitem( 'Users' );
     }

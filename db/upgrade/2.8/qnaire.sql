@@ -47,6 +47,18 @@ CREATE PROCEDURE patch_qnaire()
       ALTER TABLE qnaire ADD COLUMN token_regex VARCHAR(255) NULL DEFAULT NULL AFTER beartooth_password;
     END IF;
 
+    SELECT "Adding problem_report column to qnaire table" AS "";
+
+    SELECT COUNT(*) INTO @test
+    FROM information_schema.COLUMNS
+    WHERE table_schema = DATABASE()
+    AND table_name = "qnaire"
+    AND column_name = "problem_report";
+
+    IF @test = 0 THEN
+      ALTER TABLE qnaire ADD COLUMN problem_report TINYINT(1) NOT NULL DEFAULT 0 AFTER allow_in_hold;
+    END IF;
+
   END //
 DELIMITER ;
 

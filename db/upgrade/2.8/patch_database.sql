@@ -28,6 +28,7 @@ SOURCE page.sql
 SOURCE report_type.sql
 SOURCE qnaire_report.sql
 SOURCE qnaire_report_data.sql
+SOURCE problem_report.sql
 
 SOURCE update_version_number.sql
 
