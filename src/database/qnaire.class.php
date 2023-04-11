@@ -3837,7 +3837,7 @@ class qnaire extends \cenozo\database\record
       'variable_suffix' => $this->variable_suffix,
       'debug' => $this->debug,
       'readonly' => $this->readonly,
-      'allow_in_hold' => $this->alow_in_hold,
+      'allow_in_hold' => $this->allow_in_hold,
       'problem_report' => $this->problem_report,
       'stages' => $this->stages,
       'repeated' => $this->repeated,
