@@ -8,11 +8,23 @@
 
 global $SETTINGS;
 
+// the name of this instance, if it isn't simply "pine"
+$SETTINGS['general']['instance_name'] = 'pine';
+
 // the file path to the framework and application
 $SETTINGS['path']['CENOZO'] = '/path/to/cenozo';
 
+// the location of the application's internal path
+$SETTINGS['path']['APPLICATION'] = __DIR__;
+
 // the path to the log file
-$SETTINGS['path']['LOG_FILE'] = $SETTINGS['path']['APPLICATION'].'/log';
+$SETTINGS['path']['LOG_FILE'] = sprintf( '%s/log', $SETTINGS['path']['APPLICATION'] );
+
+// the location of qnaire export files
+$SETTINGS['path']['QNAIRE_EXPORT'] = sprintf( '%s/doc/qnaire_export', $SETTINGS['path']['APPLICATION'] );
+
+// the location of qnaire print files
+$SETTINGS['path']['QNAIRE_PRINT'] = sprintf( '%s/doc/qnaire_print', $SETTINGS['path']['APPLICATION'] );
 
 // database settings (the driver, server and prefixes are set in the framework's settings)
 $SETTINGS['db']['username'] = 'put your database username here';
