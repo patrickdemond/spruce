@@ -26,6 +26,9 @@ $SETTINGS['path']['QNAIRE_EXPORT'] = sprintf( '%s/doc/qnaire_export', $SETTINGS[
 // the location of qnaire print files
 $SETTINGS['path']['QNAIRE_PRINT'] = sprintf( '%s/doc/qnaire_print', $SETTINGS['path']['APPLICATION'] );
 
+// the location to store response data (uncomment after updating software)
+$SETTINGS['path']['RESPONSE_DATA'] = sprintf( '%s/doc/response_data', $SETTINGS['path']['APPLICATION'] );
+
 // database settings (the driver, server and prefixes are set in the framework's settings)
 $SETTINGS['db']['username'] = 'put your database username here';
 $SETTINGS['db']['password'] = 'put your database password here';
