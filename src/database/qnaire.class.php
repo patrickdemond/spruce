@@ -2186,9 +2186,13 @@ class qnaire extends \cenozo\database\record
                     {
                       if( 'number with unit' == $column['extra'] )
                       {
-                        $row_value = property_exists( $a, 'value' )
-                                   ? array_key_exists( 'unit_list', $column ) ? $a->value->unit : $a->value->value
-                                   : NULL;
+                        $row_value = NULL;
+                        if( property_exists( $a, 'value' ) )
+                        {
+                          $row_value = array_key_exists( 'unit_list', $column )
+                                     ? $a->value->unit
+                                     : $a->value->value;
+                        }
                       }
                       else
                       {
