@@ -894,6 +894,7 @@ cenozoApp.defineModule({
                 message: this.data.problemPromptList[this.currentLanguage],
                 html: true,
                 size: "lg",
+                minLength: 1,
               }).show();
 
               if (false !== response) {
