@@ -18,8 +18,7 @@ class patch extends \cenozo\service\patch
     parent::execute();
 
     $file = $this->get_argument( 'file', NULL );
-    $headers = apache_request_headers();
-    if( false !== strpos( $headers['Content-Type'], 'application/octet-stream' ) && !is_null( $file ) )
+    if( false !== strpos( util::get_header( 'Content-Type' ), 'application/octet-stream' ) && !is_null( $file ) )
     {
       if( 'data' != $file ) throw lib::create( 'exception\argument', 'file', $file, __METHOD__ );
 
