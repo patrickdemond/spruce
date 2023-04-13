@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS problem_report (
   platform VARCHAR(127) NULL DEFAULT NULL,
   mobile VARCHAR(127) NULL DEFAULT NULL,
   datetime DATETIME NOT NULL,
-  description VARCHAR(45) NOT NULL,
+  description TEXT NOT NULL,
   PRIMARY KEY (id),
   INDEX fk_response_id (response_id ASC),
   CONSTRAINT fk_problem_report_response_id
