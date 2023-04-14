@@ -11,7 +11,9 @@ BEGIN
   ( NEW.qnaire_id, NEW.language_id, 'closed' ),
   ( NEW.qnaire_id, NEW.language_id, 'invitation subject' ),
   ( NEW.qnaire_id, NEW.language_id, 'invitation body' ),
-  ( NEW.qnaire_id, NEW.language_id, 'incompatible' );
+  ( NEW.qnaire_id, NEW.language_id, 'incompatible' ),
+  ( NEW.qnaire_id, NEW.language_id, 'problem prompt' ),
+  ( NEW.qnaire_id, NEW.language_id, 'problem confirm' );
 
   INSERT IGNORE INTO reminder_description( reminder_id, language_id, type )
   SELECT reminder.id, NEW.language_id, type.name
