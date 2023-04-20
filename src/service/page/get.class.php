@@ -68,7 +68,7 @@ class get extends \cenozo\service\get
         is_null( $this->db_response ) ? $this->get_leaf_record()->get_qnaire() : $this->db_response
       );
       $qnaire_username = $setting_manager->get_setting( 'utility', 'qnaire_username' );
-      $db_user = lib::create( 'business\session' )->get_user();
+      $db_effective_user = lib::create( 'business\session' )->get_effective_user();
       $db_page = $this->db_response->get_page();
 
       // create answers for all questions on this page if they don't already exist
@@ -88,7 +88,7 @@ class get extends \cenozo\service\get
           $db_answer = lib::create( 'database\answer' );
           $db_answer->response_id = $this->db_response->id;
           $db_answer->question_id = $question['id'];
-          $db_answer->user_id = $qnaire_username == $db_user->name ? NULL : $db_user->id;
+          $db_answer->user_id = $qnaire_username == $db_effective_user->name ? NULL : $db_effective_user->id;
 
           // apply the default answer if there is one
           if( !is_null( $question['default_answer'] ) )

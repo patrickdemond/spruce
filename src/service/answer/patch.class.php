@@ -11,6 +11,26 @@ use cenozo\lib, cenozo\log, pine\util;
 class patch extends \cenozo\service\patch
 {
   /**
+   * Override parent method
+   */
+  public function get_file_as_array()
+  {
+    $user_class_name = lib::get_class_name( 'database\user' );
+
+    // replace username with a user_id (if the user exists)
+    $patch_array = parent::get_file_as_array();
+
+    if( array_key_exists( 'username', $patch_array ) )
+    {
+      $db_user = $user_class_name::get_unique_record( 'name', $patch_array['username'] );
+      unset( $patch_array['username'] );
+      if( !is_null( $db_user ) ) $patch_array['user_id'] = $db_user->id;
+    }
+
+    return $patch_array;
+  }
+
+  /**
    * Extend parent method
    */
   public function validate()
@@ -46,6 +66,7 @@ class patch extends \cenozo\service\patch
 
     $db_answer = $this->get_leaf_record();
     $filename = $this->get_argument( 'filename', NULL );
+
     if( !is_null( $filename ) )
     {
       $directory = $db_answer->get_data_directory();
@@ -77,4 +98,11 @@ class patch extends \cenozo\service\patch
       ] );
     }
   }
+
+  /**
+   * Used to track metadata about the user providing answer data
+   * @var array;
+   * @access protected
+   */
+  protected $user_metadata = [];
 }

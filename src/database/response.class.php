@@ -59,6 +59,7 @@ class response extends \cenozo\database\has_rank
   public function save()
   {
     $script_class_name = lib::get_class_name( 'database\script' );
+    $hold_class_name = lib::get_class_name( 'database\hold' );
     $qnaire_participant_trigger_class_name = lib::get_class_name( 'database\qnaire_participant_trigger' );
     $qnaire_consent_type_trigger_class_name = lib::get_class_name( 'database\qnaire_consent_type_trigger' );
     $qnaire_alternate_consent_type_trigger_class_name = lib::get_class_name( 'database\qnaire_alternate_consent_type_trigger' );
@@ -117,10 +118,18 @@ class response extends \cenozo\database\has_rank
     {
       if( is_null( $db_respondent ) ) $db_respondent = $this->get_respondent();
       $db_script = $script_class_name::get_unique_record( 'pine_qnaire_id', $db_respondent->qnaire_id );
-      if( !is_null( $db_script ) ) $db_script->add_started_event( $this->get_participant(), $this->last_datetime );
+      if( !is_null( $db_script ) )
+      {
+        $db_script->add_started_event(
+          $this->get_participant(),
+          $this->last_datetime,
+          $session->get_effective_user()
+        );
+      }
     }
     else if( $submitted )
     {
+      $db_effective_user = $session->get_effective_user();
       $db_participant = $this->get_participant();
       if( is_null( $db_respondent ) ) $db_respondent = $this->get_respondent();
       if( is_null( $db_qnaire ) ) $db_qnaire = $db_respondent->get_qnaire();
@@ -132,7 +141,14 @@ class response extends \cenozo\database\has_rank
 
         // now add the finished event, if there is one
         $db_script = $script_class_name::get_unique_record( 'pine_qnaire_id', $db_respondent->qnaire_id );
-        if( !is_null( $db_script ) ) $db_script->add_finished_event( $db_participant, $this->last_datetime );
+        if( !is_null( $db_script ) )
+        {
+          $db_script->add_finished_event(
+            $db_participant,
+            $this->last_datetime,
+            $session->get_effective_user()
+          );
+        }
       }
 
       // when submitting the response check if the respondent is done and remove any unsent mail
@@ -195,12 +211,31 @@ class response extends \cenozo\database\has_rank
           $db_consent->written = false;
           $db_consent->datetime = util::get_datetime_object();
           $db_consent->note = sprintf(
-            'Created by Pine after questionnaire "%s" was completed with question "%s" having the value "%s"',
+            'Created by Pine after questionnaire "%s" '.
+            'was completed by user "%s" '.
+            'with question "%s" '.
+            'having the value "%s"',
             $db_qnaire->name,
+            $db_effective_user->name,
             $db_question->name,
             $db_qnaire_consent_type_trigger->answer_value
           );
           $db_consent->save();
+
+          // if this is a participation consent then set the new hold record's user to the effective user
+          if( 'participation' == $db_consent->get_consent_type()->name )
+          {
+            $db_hold = $hold_class_name::get_unique_record(
+              ['participant_id', 'datetime'],
+              [$db_participant->id, $db_consent->datetime]
+            );
+            $db_hold_type = $db_hold->get_hold_type();
+            if( 'final' == $db_hold_type->type && 'Withdrawn' == $db_hold_type->name )
+            {
+              $db_hold->user_id = $db_effective_user->id;
+              $db_hold->save();
+            }
+          }
         }
       }
 
@@ -248,8 +283,12 @@ class response extends \cenozo\database\has_rank
             $db_alternate_consent->written = false;
             $db_alternate_consent->datetime = util::get_datetime_object();
             $db_alternate_consent->note = sprintf(
-              'Created by Pine after questionnaire "%s" was completed with question "%s" having the value "%s"',
+              'Created by Pine after questionnaire "%s" '.
+              'was completed by user "%s" '.
+              'with question "%s" '.
+              'having the value "%s"',
               $db_qnaire->name,
+              $db_effective_user->name,
               $db_question->name,
               $db_qnaire_alternate_consent_type_trigger->answer_value
             );
@@ -283,13 +322,17 @@ class response extends \cenozo\database\has_rank
           $db_proxy->participant_id = $db_participant->id;
           $db_proxy->proxy_type_id = $db_qnaire_proxy_type_trigger->proxy_type_id;
           $db_proxy->datetime = util::get_datetime_object();
-          $db_proxy->user_id = $session->get_user()->id;
+          $db_proxy->user_id = $db_effective_user->id;
           $db_proxy->site_id = $session->get_site()->id;
           $db_proxy->role_id = $session->get_role()->id;
           $db_proxy->application_id = $session->get_application()->id;
           $db_proxy->note = sprintf(
-            'Created by Pine after questionnaire "%s" was completed with question "%s" having the value "%s"',
+            'Created by Pine after questionnaire "%s" '.
+            'was completed by user "%s" '.
+            'with question "%s" '.
+            'having the value "%s"',
             $db_qnaire->name,
+            $db_effective_user->name,
             $db_question->name,
             $db_qnaire_proxy_type_trigger->answer_value
           );

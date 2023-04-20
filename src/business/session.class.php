@@ -25,7 +25,8 @@ class session extends \cenozo\business\session
       $qnaire_username = $setting_manager->get_setting( 'utility', 'qnaire_username' );
 
       // If an access.id exists in the session then we're already logged in.
-      // Check if we're logged in as the qnaire user and if so then logout if loading anything other than the response run page
+      // Check if we're logged in as the qnaire user and if so then logout if loading anything other than the
+      // response run page
       if( array_key_exists( 'access.id', $_SESSION ) )
       {
         try
@@ -93,7 +94,9 @@ class session extends \cenozo\business\session
 
             // do not allow auto-login of qnaire with stages
             if( !$this->qnaire_has_stages )
+            {
               $this->db_response = is_null( $db_respondent ) ? NULL : $db_respondent->get_current_response( true );
+            }
           }
         }
       }
@@ -107,6 +110,8 @@ class session extends \cenozo\business\session
    */
   public function initialize( $no_activity = false )
   {
+    $user_class_name = lib::get_class_name( 'database\user' );
+
     // turn off activity when using the special access role
     $setting_manager = lib::create( 'business\setting_manager' );
     $respondent_access_id = $setting_manager->get_setting( 'general', 'respondent_access_id' );
@@ -114,6 +119,37 @@ class session extends \cenozo\business\session
         !is_null( $respondent_access_id ) &&
         $_SESSION['access.id'] == $respondent_access_id ) $no_activity = true;
     parent::initialize( $no_activity );
+
+    // convert the username from the query string to a user record as the referring user
+    if( array_key_exists( 'REDIRECT_QUERY_STRING', $_SERVER ) )
+    {
+      $query_params = [];
+      parse_str( $_SERVER['REDIRECT_QUERY_STRING'], $query_params );
+      if( array_key_exists( 'username', $query_params ) )
+      {
+        $this->db_referring_user = $user_class_name::get_unique_record( 'name', $query_params['username'] );
+      }
+    }
+  }
+
+  /**
+   * Get the referring user.
+   * 
+   * Note that the referring user is only set when running a respondent record (URL: respondent/run/*)
+   * @return database\user
+   * @access public
+   */
+  public function get_referring_user() { return $this->db_referring_user; }
+
+  /**
+   * Gets the referring user if there is one, otherwise the current (session) user is returned.
+   * 
+   * @return database\user
+   * @access public
+   */
+  public function get_effective_user()
+  {
+    return is_null( $this->db_referring_user ) ? $this->get_user() : $this->db_referring_user;
   }
 
   /**
@@ -127,4 +163,10 @@ class session extends \cenozo\business\session
    * @var database\response
    */
   private $db_response = false;
+
+  /**
+   * Stores the referring user record (if there is one)
+   * @var database\user
+   */
+  private $db_referring_user = NULL;
 }

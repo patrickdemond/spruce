@@ -629,6 +629,7 @@ cenozoApp.defineModule({
             languageList: null,
             showHidden: false,
             alternateId: null,
+            username: null,
             focusQuestionId: null,
             hotKeyDisabled: false,
             upperDigitsActivated: false,
@@ -1072,6 +1073,10 @@ cenozoApp.defineModule({
                 ? $state.params.alternate_id
                 : null;
 
+              this.username = angular.isDefined($state.params.username)
+                ? $state.params.username
+                : null;
+
               if (!this.previewMode) {
                 angular.extend(this, {
                   responseStageList: null,
@@ -1081,7 +1086,7 @@ cenozoApp.defineModule({
 
                 // check for the respondent using the token
                 var params = "?assert_response=1";
-                if (this.showHidden) params += "&&show_hidden=1";
+                if (this.showHidden) params += "&show_hidden=1";
                 var response = await CnHttpFactory.instance({
                   path: "respondent/token=" + $state.params.token + params,
                   data: {
@@ -2409,19 +2414,25 @@ cenozoApp.defineModule({
                         }).patch();
                       }
 
+                      let path = "answer/" + question.answer_id;
+
+                      if( null != this.username ) path += "?username=" + this.username;
+                      let data = {
+                        value: angular.toJson(
+                          // lookups store the selected item's identifier as the answer
+                          "lookup" == question.type &&
+                          null != value &&
+                          angular.isObject( value ) &&
+                          angular.isDefined( value.identifier ) ? value.identifier : value
+                        )
+                      };
+
+                      if( null != this.alternateId ) data.alternate_id = this.alternateId;
+
                       // set the answer's value on the server
                       await CnHttpFactory.instance({
-                        path: "answer/" + question.answer_id,
-                        data: {
-                          value: angular.toJson(
-                            // lookups store the selected item's identifier as the answer
-                            "lookup" == question.type &&
-                            null != value &&
-                            angular.isObject( value ) &&
-                            angular.isDefined( value.identifier ) ? value.identifier : value
-                          ),
-                          alternate_id: this.alternateId,
-                        },
+                        path: path,
+                        data: data,
                         onError: function (error) {
                           question.value = angular.copy(question.backupValue);
                           self.convertValueToModel(question);
@@ -3018,9 +3029,10 @@ cenozoApp.defineModule({
                     // proceed to the respondent's next valid page
                     await this.runQuery(async () => {
                       if (null === record.next_id) modal.show(); // show a wait dialog when submitting the qnaire
-                      await CnHttpFactory.instance({
-                        path: "respondent/token=" + $state.params.token + "?action=proceed",
-                      }).patch();
+
+                      let path = "respondent/token=" + $state.params.token + "?action=proceed";
+                      if( null != this.username ) path += "&username=" + this.username;
+                      await CnHttpFactory.instance({ path: path }).patch();
                       await this.parentModel.reloadState(true);
                     });
                   }
