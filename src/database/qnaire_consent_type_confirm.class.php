@@ -30,7 +30,7 @@ class qnaire_consent_type_confirm extends \cenozo\database\record
 
     $db_qnaire_consent_type_confirm = new static();
     $db_qnaire_consent_type_confirm->qnaire_id = $db_qnaire->id;
-    $db_qnaire_consent_type_confirm->consent_type_id = $qnaire_consent_type_confirm->consent_type_id;
+    $db_qnaire_consent_type_confirm->consent_type_id = $db_consent_type->id;
     $db_qnaire_consent_type_confirm->save();
 
     return $db_qnaire_consent_type_confirm;
