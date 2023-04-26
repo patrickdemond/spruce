@@ -20,7 +20,7 @@ class response_stage extends \cenozo\database\record
   {
     $stage_class_name = lib::get_class_name( 'database\stage' );
 
-    if( in_array( $this->status, ['not ready', 'parent skipped', 'paused', 'ready'] ) )
+    if( in_array( $this->status, ['not ready', 'not applicable', 'parent skipped', 'paused', 'ready'] ) )
     {
       $db_response = $this->get_response();
       $db_stage = $this->get_stage();
