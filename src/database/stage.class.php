@@ -91,6 +91,38 @@ class stage extends \cenozo\database\has_rank
   }
 
   /**
+   * Returns the last page valid page in the stage for a response
+   * 
+   * @param database\response $db_response
+   * @return database\page
+   */
+  public function get_last_page_for_response( $db_response )
+  {
+    // get the module rank boundary for this stage
+    $db_first_module = $this->get_first_module();
+    $db_last_module = $this->get_last_module();
+    if( is_null( $db_first_module ) || is_null( $db_last_module ) ) return NULL;
+
+    // now find the last page with answers
+    $page_sel = lib::create( 'database\select' );
+    $page_sel->from( 'answer' );
+    $page_sel->add_table_column( 'page', 'id' );
+    $page_mod = lib::create( 'database\modifier' );
+    $page_mod->join( 'question', 'answer.question_id', 'question.id' );
+    $page_mod->join( 'page', 'question.page_id', 'page.id' );
+    $page_mod->join( 'module', 'page.module_id', 'module.id' );
+    $page_mod->where( 'response_id', '=', $db_response->id );
+    $page_mod->where( 'module.rank', '>=', $db_first_module->rank );
+    $page_mod->where( 'module.rank', '<=', $db_last_module->rank );
+    $page_mod->order( 'module.rank', true );
+    $page_mod->order( 'page.rank', true );
+    $page_mod->limit( 1 );
+
+    $page_id = static::db()->get_one( sprintf( '%s %s', $page_sel->get_sql(), $page_mod->get_sql() ) );
+    return is_null( $page_id ) ? NULL : lib::create( 'database\page', $page_id );
+  }
+
+  /**
    * Returns the total number of pages in the stage
    * @return integer
    */

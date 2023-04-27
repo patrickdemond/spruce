@@ -122,6 +122,58 @@ class patch extends \cenozo\service\patch
           $db_response->page_id = $db_page->id;
           $db_response->save();
         }
+        else if( 'rewind_stage' == $action )
+        {
+          $db_qnaire = $db_respondent->get_qnaire();
+          if( !$db_qnaire->stages )
+          {
+            log::warning( sprintf(
+              'Tried to fast forward a non-stage based qnaire on respondent %s for qnaire "%s".',
+              $db_respondent->get_participant()->uid,
+              $db_qnaire->name
+            ) );
+          }
+          else
+          {
+            $db_response_stage = $db_response->get_current_response_stage();
+            $db_module = $db_response_stage->get_stage()->get_first_module_for_response( $db_response );
+            if( !is_null( $db_module ) )
+            {
+              $db_page = $db_module->get_first_page_for_response( $db_response );
+              if( !is_null( $db_page ) )
+              {
+                $db_response_stage->page_id = $db_page->id;
+                $db_response_stage->save();
+                $db_response->page_id = $db_page->id;
+                $db_response->save();
+              }
+            }
+          }
+        }
+        else if( 'fast_forward_stage' == $action )
+        {
+          $db_qnaire = $db_respondent->get_qnaire();
+          if( !$db_qnaire->stages )
+          {
+            log::warning( sprintf(
+              'Tried to rewind a non-stage based qnaire on respondent %s for qnaire "%s".',
+              $db_respondent->get_participant()->uid,
+              $db_qnaire->name
+            ) );
+          }
+          else
+          {
+            $db_response_stage = $db_response->get_current_response_stage();
+            $db_page = $db_response_stage->get_stage()->get_last_page_for_response( $db_response );
+            if( !is_null( $db_page ) )
+            {
+              $db_response_stage->page_id = $db_page->id;
+              $db_response_stage->save();
+              $db_response->page_id = $db_page->id;
+              $db_response->save();
+            }
+          }
+        }
         else if( 'set_language' == $action )
         {
           // set the response's new language

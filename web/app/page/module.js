@@ -755,8 +755,7 @@ cenozoApp.defineModule({
 
             reopen: async function () {
               await CnHttpFactory.instance({
-                path:
-                  "respondent/token=" + $state.params.token + "?action=reopen",
+                path: "respondent/token=" + $state.params.token + "?action=reopen",
               }).patch();
               await this.parentModel.reloadState(true);
             },
@@ -1219,11 +1218,7 @@ cenozoApp.defineModule({
 
                     CnHttpFactory.instance({
                       path: ["qnaire", this.data.qnaire_id, "qnaire_report"].join("/"),
-                      data: {
-                        select: {
-                          column: [{ table: 'language', column: 'code', alias: 'lang' }],
-                        },
-                      },
+                      data: { select: { column: [{ table: 'language', column: 'code', alias: 'lang' }], }, },
                     }).query(),
 
                     this.participantModel.viewModel.onView(true),
@@ -1470,9 +1465,7 @@ cenozoApp.defineModule({
 
                 const [questionResponse, languageResponse] = await Promise.all([
                   CnHttpFactory.instance({
-                    path:
-                      this.parentModel.getServiceResourceBasePath() +
-                      "/question",
+                    path: this.parentModel.getServiceResourceBasePath() + "/question",
                     data: {
                       select: {
                         column: [
@@ -1538,11 +1531,7 @@ cenozoApp.defineModule({
                       value: this.data.stage_id,
                     };
                   var response = await CnHttpFactory.instance({
-                    path: [
-                      "qnaire",
-                      this.parentModel.viewModel.record.qnaire_id,
-                      "module",
-                    ].join("/"),
+                    path: [ "qnaire", this.parentModel.viewModel.record.qnaire_id, "module", ].join("/"),
                     data: {
                       select: { column: ["id", "rank", "name"] },
                       modifier: modifier,
@@ -1578,13 +1567,9 @@ cenozoApp.defineModule({
                       list.push(
                         (async () => {
                           var response = await CnHttpFactory.instance({
-                            path:
-                              ["question", question.id, "question_option"].join(
-                                "/"
-                              ) +
-                              (!this.previewMode
-                                ? "?token=" + $state.params.token
-                                : ""),
+                            path: ["question", question.id, "question_option"].join("/") + (
+                              !this.previewMode ? "?token=" + $state.params.token : ""
+                            ),
                             data: {
                               select: {
                                 column: [
@@ -2213,12 +2198,8 @@ cenozoApp.defineModule({
               if (!this.previewMode && null != this.currentLanguage) {
                 await this.runQuery(async () => {
                   await CnHttpFactory.instance({
-                    path:
-                      this.parentModel
-                        .getServiceResourceBasePath()
-                        .replace("page/", "respondent/") +
-                      "?action=set_language&code=" +
-                      this.currentLanguage,
+                    path: this.parentModel.getServiceResourceBasePath().replace("page/", "respondent/") +
+                      "?action=set_language&code=" + this.currentLanguage,
                   }).patch();
                 });
               }
@@ -2973,13 +2954,7 @@ cenozoApp.defineModule({
                 try {
                   this.working = true;
                   await this.runQuery(async () => {
-                    var httpObj = {
-                      path:
-                        "response_stage/" +
-                        responseStageId +
-                        "?action=" +
-                        operationName,
-                    };
+                    var httpObj = { path: "response_stage/" + responseStageId + "?action=" + operationName, };
                     if (null != patchData) {
                       httpObj.data = patchData;
                       // update the client with any changes
@@ -3061,10 +3036,7 @@ cenozoApp.defineModule({
                   this.working = true;
                   await this.runQuery(async () => {
                     await CnHttpFactory.instance({
-                      path:
-                        "respondent/token=" +
-                        $state.params.token +
-                        "?action=backup",
+                      path: "respondent/token=" + $state.params.token + "?action=backup",
                     }).patch();
                     await this.parentModel.reloadState(true);
                   });
@@ -3080,11 +3052,37 @@ cenozoApp.defineModule({
                 this.working = true;
                 await this.runQuery(async () => {
                   await CnHttpFactory.instance({
-                    path:
-                      "respondent/token=" +
-                      $state.params.token +
-                      "?action=jump&module_id=" +
-                      moduleId,
+                    path: "respondent/token=" + $state.params.token + "?action=jump&module_id=" + moduleId,
+                  }).patch();
+                  await this.parentModel.reloadState(true);
+                });
+              } finally {
+                this.working = false;
+              }
+            },
+
+            fastForwardStage: async function() {
+              try {
+                // jump to the first page in the stage
+                this.working = true;
+                await this.runQuery(async () => {
+                  await CnHttpFactory.instance({
+                    path: "respondent/token=" + $state.params.token + "?action=fast_forward_stage",
+                  }).patch();
+                  await this.parentModel.reloadState(true);
+                });
+              } finally {
+                this.working = false;
+              }
+            },
+
+            rewindStage: async function() {
+              try {
+                // jump to the last answered page in the stage
+                this.working = true;
+                await this.runQuery(async () => {
+                  await CnHttpFactory.instance({
+                    path: "respondent/token=" + $state.params.token + "?action=rewind_stage",
                   }).patch();
                   await this.parentModel.reloadState(true);
                 });
