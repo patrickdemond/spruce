@@ -121,8 +121,8 @@ class answer extends \cenozo\database\record
         $value = util::json_decode( $this->value );
         if( is_object( $value ) )
         {
-          $dkna = array_key_exists( 'dkna', $value ) && $value->dkna;
-          $refuse = array_key_exists( 'refuse', $value ) && $value->refuse;
+          $dkna = property_exists( $value, 'dkna' ) && $value->dkna;
+          $refuse = property_exists( $value, 'refuse' ) && $value->refuse;
           if( $dkna || $refuse )
           {
             $db_response_device = $this->get_response_device();
@@ -179,8 +179,8 @@ class answer extends \cenozo\database\record
     // dkna/refused questions are always complete
     if( is_object( $value ) )
     {
-      $dkna = array_key_exists( 'dkna', $value ) && $value->dkna;
-      $refuse = array_key_exists( 'refuse', $value ) && $value->refuse;
+      $dkna = property_exists( $value, 'dkna' ) && $value->dkna;
+      $refuse = property_exists( $value, 'refuse' ) && $value->refuse;
       if( $dkna || $refuse ) return true;
     }
 
