@@ -725,8 +725,9 @@ class response extends \cenozo\database\has_rank
     $response_attribute_class_name = lib::get_class_name( 'database\response_attribute' );
 
     $db_participant = $this->get_participant();
+    $db_qnaire = $this->get_qnaire();
 
-    foreach( $this->get_qnaire()->get_attribute_object_list() as $db_attribute )
+    foreach( $db_qnaire->get_attribute_object_list() as $db_attribute )
     {
       $db_response_attribute = $response_attribute_class_name::get_unique_record(
         array( 'response_id', 'attribute_id' ),
@@ -735,10 +736,29 @@ class response extends \cenozo\database\has_rank
 
       if( is_null( $db_response_attribute ) )
       {
+        // collect errors found while trying to get the participant's attribute value
+        $value = NULL;
+        try
+        {
+          $value = $db_attribute->get_participant_value( $db_participant );
+        }
+        catch( \cenozo\exception\argument $e )
+        {
+          log::warning( sprintf(
+            'Error while getting attribute value for "%s", questionnaire "%s", attribute "%s".%s%s',
+            $db_participant->uid,
+            $db_qnaire->name,
+            $db_attribute->name,
+            "\n",
+            $e->get_raw_message()
+          ) );
+          $this->attribute_error_list[$db_attribute->name] = $e->get_raw_message();
+        }
+          
         $db_response_attribute = lib::create( 'database\response_attribute' );
         $db_response_attribute->response_id = $this->id;
         $db_response_attribute->attribute_id = $db_attribute->id;
-        $db_response_attribute->value = $db_attribute->get_participant_value( $db_participant );
+        $db_response_attribute->value = $value;
         $db_response_attribute->save();
       }
     }
@@ -1180,4 +1200,19 @@ class response extends \cenozo\database\has_rank
 
     return $compiled;
   }
+
+  /**
+   * Gets the list of errors that occured while creating attributes when the response is first created
+   * @return array
+   */
+  public function get_attribute_error_list()
+  {
+    return $this->attribute_error_list;
+  }
+
+  /**
+   * A list of errors that occured while creating attributes when the response is first created
+   * @var attribute_error_list
+   */
+  private $attribute_error_list = [];
 }

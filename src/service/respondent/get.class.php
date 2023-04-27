@@ -28,18 +28,28 @@ class get extends \cenozo\service\get
 
       $db_respondent = $this->get_leaf_record();
       $db_qnaire = $db_respondent->get_qnaire();
-      $db_response = $db_respondent->get_current_response();
+      $this->db_response = $db_respondent->get_current_response();
 
       // make sure there is a response
-      if( is_null( $db_response ) )
+      if( is_null( $this->db_response ) )
       {
         // always create the first response
-        $db_response = lib::create( 'database\response' );
-        $db_response->respondent_id = $db_respondent->id;
-        $db_response->save();
+        $this->db_response = lib::create( 'database\response' );
+        $this->db_response->respondent_id = $db_respondent->id;
+        $this->db_response->show_hidden = $this->get_argument( 'show_hidden', false );
+        $this->db_response->save();
       }
-      else if( !is_null( $db_qnaire->repeated ) )
+
+      if( !is_null( $db_qnaire->repeated ) )
       {
+        // TODO: need to re-implement the following code
+        throw lib::create( 'exception\notice',
+          'Repeated questionnaires are currently dissabled. '.
+          'Please contact the development team to re-enable this feature.',
+          __METHOD__
+        );
+
+        /*
         $response_class_name = lib::get_class_name( 'database\response' );
         $respondent_mail_class_name = lib::get_class_name( 'database\respondent_mail' );
 
@@ -63,17 +73,14 @@ class get extends \cenozo\service\get
         $total_responses = floor( $count / $db_qnaire->repeat_offset ) + 1;
         if( $total_responses > $db_qnaire->max_responses ) $total_responses = $db_qnaire->max_responses;
 
-        for( $i = $db_response->rank + 1; $i <= $total_responses; $i++ )
+        for( $rank = $this->db_response->rank + 1; $rank <= $total_responses; $rank++ )
         {
           $db_response = lib::create( 'database\response' );
           $db_response->respondent_id = $db_respondent->id;
           $db_response->save();
         }
+        */
       }
-
-      // finally, save whether we're showing hidden elements or not
-      $db_response->show_hidden = $this->get_argument( 'show_hidden', false );
-      $db_response->save();
 
       $semaphore->release();
     }
@@ -91,8 +98,6 @@ class get extends \cenozo\service\get
     {
       $db_qnaire = $db_respondent->get_qnaire();
       $expression_manager = lib::create( 'business\expression_manager', $db_qnaire );
-      $db_response = $db_respondent->get_current_response();
-      $rank = is_null( $db_response ) ? 1 : $db_response->rank;
       $column_values = $db_respondent->get_column_values( $this->select, $this->modifier );
 
       // Evaluate expressions in the descriptions
@@ -102,6 +107,7 @@ class get extends \cenozo\service\get
       if( array_key_exists( 'closed_list', $column_values ) ) $description_list['closed'] = array();
       if( 0 < count( $description_list ) )
       {
+        $rank = is_null( $this->db_response ) ? 1 : $this->db_response->rank;
         $qnaire_description_mod = lib::create( 'database\modifier' );
         $qnaire_description_mod->where( 'type', 'IN', array_keys( $description_list ) );
 
@@ -120,4 +126,36 @@ class get extends \cenozo\service\get
       }
     }
   }
+
+  /**
+   * Extend parent method
+   */
+  public function finish()
+  {
+    parent::finish();
+
+    // show any attribute errors as a notice when in debug mode
+    if( !is_null( $this->db_response ) && $this->db_response->get_qnaire()->debug )
+    {
+      $error_list = $this->db_response->get_attribute_error_list();
+      if( 0 < count( $error_list ) )
+      {
+        log::debug( $error_list );
+        $notice = "The following errors occurred while creating the participant's attribute values:\n\n";
+        foreach( $error_list as $name => $error ) $notice .= sprintf( "\"%s\": %s", $name, $error );
+        $notice .=
+          "\n".
+          'Empty values have been created so you can proceed with the questionnaire by reloading the page.'.
+          "\n\n";
+        throw lib::create( 'exception\notice', $notice, __METHOD__ );
+      }
+    }
+  }
+
+  /**
+   * A cache of the current response record (sometimes created by this service)
+   * If the qnaire is repeated then only the first record is stored
+   * @var database\response $db_response
+   */
+  protected $db_response = NULL;
 }

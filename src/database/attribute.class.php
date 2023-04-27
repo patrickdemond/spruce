@@ -13,6 +13,13 @@ use cenozo\lib, cenozo\log, pine\util;
  */
 class attribute extends \cenozo\database\record
 {
+  /**
+   * Gets a participant's value for this attribute
+   * 
+   * Warning, this method can throw exceptions when fetching values from the data manager
+   * @param database\participant $db_participant
+   * @return string
+   */
   public function get_participant_value( $db_participant )
   {
     $data_manager = lib::create( 'business\data_manager' );
