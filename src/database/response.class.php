@@ -1054,6 +1054,17 @@ class response extends \cenozo\database\has_rank
           }
           else if( 'audio' == $db_question->type )
           {
+            // audio files are stored on disk, not in the database
+            $filename = sprintf( '%s/audio.wav', $db_answer->get_data_directory() );
+            if( file_exists( $filename ) )
+            {
+              $file = file_get_contents( sprintf( '%s/audio.wav', $db_answer->get_data_directory() ) );
+              if( false !== $file )
+              {
+                // send as a base64 encoded audio string for the <audio> tag's src attribute
+                $value = sprintf( 'data:audio/wav;base64,%s', base64_encode( $file ) );
+              }
+            }
             $compiled = sprintf(
               '<audio controls class="full-width" style="height: 40px;" src="%s"></audio>',
               $value
