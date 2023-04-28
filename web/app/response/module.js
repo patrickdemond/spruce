@@ -271,6 +271,8 @@ cenozoApp.defineModule({
                           '<audio controls class="full-width" style="height: 40px;" src="' +
                           question.file + '"></audio>'
                         );
+                      } else if( "list" == question.type ) {
+                        question.isString = angular.isString(question.answer);
                       }
                     })
                   })

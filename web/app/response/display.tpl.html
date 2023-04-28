@@ -10,13 +10,19 @@
           <strong ng-if="!['comment','device','list'].includes( question.type )"
                   ng-style="'audio' == question.type ? null : { 'padding': '0 4px', 'outline': 'black solid 1px' }"
                   ng-bind-html="null === question.answer ? '(empty)' : question.answer"></strong>
-          <div ng-if="'list' == question.type" class="container-fluid" ng-repeat="option in question.option_list">
-            <div ng-if="option.description">
-              <strong>{{ option.selected ? "&#x2611;" : "&#x25a2;" }}</strong>
-              <span ng-bind-html="option.description"></span>
-              <strong ng-if="null != option.value"
-                      style="padding: 0 4px; outline: black solid 1px;"
-                      ng-bind-html="option.value"></strong>
+          <div ng-if="'list' == question.type">
+            <div class="container-fluid" ng-repeat="option in question.option_list">
+              <div ng-if="option.description">
+                <strong>{{ option.selected ? "&#x2611;" : "&#x25a2;" }}</strong>
+                <span ng-bind-html="option.description"></span>
+                <strong ng-if="null != option.value"
+                        style="padding: 0 4px; outline: black solid 1px;"
+                        ng-bind-html="option.value"></strong>
+              </div>
+            </div>
+            <div class="container-fluid" ng-if="question.isString">
+              <strong>&#x2611;</strong>
+              <span ng-bind-html="question.answer"></span>
             </div>
           </div>
         </div>
