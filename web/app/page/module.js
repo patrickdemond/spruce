@@ -2585,6 +2585,7 @@ cenozoApp.defineModule({
                 this.hotKeyDisabled = true;
 
                 var response = await CnModalDatetimeFactory.instance({
+                  title: null,
                   locale: this.currentLanguage,
                   date: value,
                   pickerType: "date",
@@ -2629,6 +2630,7 @@ cenozoApp.defineModule({
                 if (value == null) value = "12:00";
 
                 var response = await CnModalDatetimeFactory.instance({
+                  title: null,
                   locale: this.currentLanguage,
                   // return the time in the user's timezone
                   date: getTime(value, CnSession.user.timezone),
