@@ -9,7 +9,7 @@
  * Make sure to fill in the following
  */
 
-$base_dir = str_replace( '/aux', '', __DIR__ );
+$base_dir = getcwd();
 $instance = substr( $base_dir, strrpos( $base_dir, '/' )+1 );
 define( 'URL', sprintf( 'http://localhost/patrick/%s/api/', $instance ) );
 
@@ -17,7 +17,7 @@ define( 'URL', sprintf( 'http://localhost/patrick/%s/api/', $instance ) );
  * Do not edit any of the following lines
  */
 
-chdir( dirname( __FILE__ ).'/../' );
+if( '/aux' == substr( getcwd(), -4 ) ) chdir( '..' );
 require_once 'settings.ini.php';
 require_once 'settings.local.ini.php';
 require_once $SETTINGS['path']['CENOZO'].'/src/initial.class.php';
