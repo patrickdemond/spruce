@@ -152,6 +152,13 @@ class expression_manager extends \cenozo\singleton
    *   123 (number)
    *   "string" (may be delimited by ', " or `
    *
+   * numeric iteration:
+   *   Any boolean (true/false) variable enclosed by @ or $ can include a numerical iteration.
+   *   For example, the expression $NAME#10#$ will be converted to:
+   *     $NAME1$ || $NAME2$ || ... || $NAME10$
+   *   This also works for values with expressions, where $NAME#10#.value("PATH")$ will be converted to:
+   *     $NAME1.value("PATH")$ || $NAME2.value("PATH")$ || .. || $NAME10.value("PATH")$
+   * 
    * lookup:
    *   @NAME.indicator("LOOKUP","INDICATOR")@ (true if attribute has a particular indicator for the given lookup)
    *   $NAME.indicator("LOOKUP","INDICATOR")$ (true if answer has a particular indicator for the given lookup)
@@ -533,73 +540,94 @@ class expression_manager extends \cenozo\singleton
       $attribute_name = $this->term;
     }
 
-    // make sure the attribute exists in the qnaire
-    $db_attribute = $attribute_class_name::get_unique_record(
-      array( 'qnaire_id', 'name' ),
-      array( $this->db_qnaire->id, $attribute_name )
-    );
-
-    if( is_null( $db_attribute ) )
-      throw lib::create( 'exception\runtime', sprintf( 'Invalid attribute "%s"', $attribute_name ), __METHOD__ );
-
     // test that the working item is an operator
     if( !is_null( $this->last_term ) && 'operator' != $this->last_term )
       throw lib::create( 'exception\runtime', 'Attribute found but expecting an operator', __METHOD__ );
 
-    // if a response was provided replace the term with the attribute's value
-    $compiled = sprintf( '%%%s%%', $attribute_name );
-    if( !is_null( $this->db_response ) )
+    $attribute_name_list = [];
+
+    // check for a numerical iterator
+    if( preg_match( '/(.*)#([0-9]+)#(.*)/', $attribute_name, $iterator_matches ) )
     {
-      $this->db_response_attribute = $response_attribute_class_name::get_unique_record(
-        array( 'response_id', 'attribute_id' ),
-        array( $this->db_response->id, $db_attribute->id )
+      $max = intval( $iterator_matches[2] );
+      for( $i = 1; $i <= $max; $i++ ) $attribute_name_list[] = preg_replace( '/#[0-9]+#/', $i, $attribute_name );
+    }
+    else $attribute_name_list[] = $attribute_name;
+
+    $compiled_list = [];
+    foreach( $attribute_name_list as $attribute_name )
+    {
+      // make sure the attribute exists in the qnaire
+      $db_attribute = $attribute_class_name::get_unique_record(
+        array( 'qnaire_id', 'name' ),
+        array( $this->db_qnaire->id, $attribute_name )
       );
 
-      // Try creating any missing response attributes (this may happen with new attributes)
-      if( is_null( $this->db_response_attribute ) )
-      {
-        $this->db_response_attribute = lib::create( 'database\response_attribute' );
-        $this->db_response_attribute->response_id = $this->db_response->id;
-        $this->db_response_attribute->attribute_id = $db_attribute->id;
-        $this->db_response_attribute->value =
-          $db_attribute->get_participant_value( $this->db_response->get_participant() );
-        $this->db_response_attribute->save();
-      }
+      if( is_null( $db_attribute ) )
+        throw lib::create( 'exception\runtime', sprintf( 'Invalid attribute "%s"', $attribute_name ), __METHOD__ );
 
-      if( 'indicator' == $special_function )
+      // if a response was provided replace the term with the attribute's value
+      $compiled = sprintf( '%%%s%%', $attribute_name );
+      if( !is_null( $this->db_response ) )
       {
-        $compiled = 'false';
-
-        $db_lookup_item = $lookup_item_class_name::get_unique_record(
-          array( 'lookup_id', 'identifier' ),
-          array( $db_lookup->id, $this->db_response_attribute->value )
+        $this->db_response_attribute = $response_attribute_class_name::get_unique_record(
+          array( 'response_id', 'attribute_id' ),
+          array( $this->db_response->id, $db_attribute->id )
         );
 
-        if( !is_null( $db_lookup_item ) )
+        // Try creating any missing response attributes (this may happen with new attributes)
+        if( is_null( $this->db_response_attribute ) )
         {
-          $lookup_item_mod = lib::create( 'database\modifier' );
-          $lookup_item_mod->where( 'lookup_item.id', '=', $db_lookup_item->id );
-          if( $db_indicator->get_lookup_item_count( $lookup_item_mod ) ) $compiled = 'true';
+          $this->db_response_attribute = lib::create( 'database\response_attribute' );
+          $this->db_response_attribute->response_id = $this->db_response->id;
+          $this->db_response_attribute->attribute_id = $db_attribute->id;
+          $this->db_response_attribute->value =
+            $db_attribute->get_participant_value( $this->db_response->get_participant() );
+          $this->db_response_attribute->save();
+        }
+
+        if( 'indicator' == $special_function )
+        {
+          $compiled = 'false';
+
+          $db_lookup_item = $lookup_item_class_name::get_unique_record(
+            array( 'lookup_id', 'identifier' ),
+            array( $db_lookup->id, $this->db_response_attribute->value )
+          );
+
+          if( !is_null( $db_lookup_item ) )
+          {
+            $lookup_item_mod = lib::create( 'database\modifier' );
+            $lookup_item_mod->where( 'lookup_item.id', '=', $db_lookup_item->id );
+            if( $db_indicator->get_lookup_item_count( $lookup_item_mod ) ) $compiled = 'true';
+          }
+        }
+        else
+        {
+          $compiled = is_null( $this->db_response_attribute->value )
+                    ? 'null'
+                    : sprintf( '%s', addslashes( $this->db_response_attribute->value ) );
+
+          // add quotes if required
+          if( 'null' != $compiled &&
+              !util::string_matches_int( $compiled ) &&
+              !util::string_matches_float( $compiled ) ) $compiled = sprintf( "'%s'", $compiled );
         }
       }
-      else
-      {
-        $compiled = is_null( $this->db_response_attribute->value )
-                  ? 'null'
-                  : sprintf( '%s', addslashes( $this->db_response_attribute->value ) );
 
-        // add quotes if required
-        if( 'null' != $compiled &&
-            !util::string_matches_int( $compiled ) &&
-            !util::string_matches_float( $compiled ) ) $compiled = sprintf( "'%s'", $compiled );
-      }
+      $compiled_list[] = $compiled;
     }
 
-    // if the last term was an operator then assume we now represent a boolean expression
-    $this->last_term = 'operator' == $this->last_term ? 'boolean' : $this->active_term;
+    // if we iterated over a list of attributes then we now represent a boolean expression
+    if( 1 < count( $compiled_list ) ) $this->last_term = 'boolean';
+    // also, if the last term was an operator then we now represent a boolean expression
+    else if( 'operator' == $this->last_term ) $this->last_term = 'boolean';
+    else $this->last_term = $this->active_term;
     $this->active_term = NULL;
 
-    return $compiled;
+    return 1 < count( $compiled_list ) ?
+      sprintf( '(%s)', implode( ' || ', $compiled_list ) ) :
+      current( $compiled_list );
   }
 
   /**
@@ -664,15 +692,19 @@ class expression_manager extends \cenozo\singleton
     if( !is_null( $db_override_question_option ) )
       $db_override_question = $db_override_question_option->get_question();
 
+    // test that the working item is an operator
+    if( !is_null( $this->last_term ) && 'operator' != $this->last_term )
+      throw lib::create( 'exception\runtime', 'Question found but expecting an operator', __METHOD__ );
+
     $answer_class_name = lib::get_class_name( 'database\answer' );
     $question_option_class_name = lib::get_class_name( 'database\question_option' );
     $lookup_class_name = lib::get_class_name( 'database\lookup' );
     $lookup_item_class_name = lib::get_class_name( 'database\lookup_item' );
     $indicator_class_name = lib::get_class_name( 'database\indicator' );
 
-    // figure out the question, and possibly the question option referred to by this term
-    $db_question = NULL;
-    $db_question_option = NULL;
+    // figure out the question(s), and possibly the question option(s) referred to by this term
+    $question_list = [];
+    $question_option_list = [];
     $db_lookup = NULL;
     $db_indicator = NULL;
     $special_function = NULL;
@@ -684,266 +716,333 @@ class expression_manager extends \cenozo\singleton
       if( 4 != count( $matches ) )
         throw lib::create( 'exception\runtime', sprintf( 'Invalid question "%s"', $this->term ), __METHOD__ );
 
-      $db_question = $this->db_qnaire->get_question( $matches[1] );
-      if( is_null( $db_question ) )
+      $question_name = $matches[1];
+      $question_operator = $matches[2];
+      $question_function = $matches[3];
+
+      $question_name_list = [];
+
+      // check for a numerical iterator
+      if( preg_match( '/(.*)#([0-9]+)#(.*)/', $question_name, $iterator_matches ) )
       {
-        throw lib::create( 'exception\runtime',
-          sprintf( 'No question name "%s" found.', $matches[1] ),
-          __METHOD__
-        );
+        $max = intval( $iterator_matches[2] );
+        for( $i = 1; $i <= $max; $i++ ) $question_name_list[] = preg_replace( '/#[0-9]+#/', $i, $question_name );
       }
+      else $question_name_list[] = $question_name;
 
-      if( '.' == $matches[2] )
+      foreach( $question_name_list as $question_name )
       {
-        if( 'extra(' == substr( $matches[3], 0, 6 ) )
+        $db_question = $this->db_qnaire->get_question( $question_name );
+        $db_question_option = NULL;
+        if( is_null( $db_question ) )
         {
-          $special_function = 'extra';
-
-          if( !preg_match( '/extra\(([^)]+)\)/', $matches[3], $sub_matches ) )
-            throw lib::create( 'exception\runtime', sprintf( 'Invalid syntax "%s"', $matches[3] ), __METHOD__ );
-
-          $db_question_option = $question_option_class_name::get_unique_record(
-            array( 'question_id', 'name' ),
-            array( $db_question->id, $sub_matches[1] )
+          throw lib::create( 'exception\runtime',
+            sprintf( 'No question name "%s" found.', $question_name ),
+            __METHOD__
           );
-          if( is_null( $db_question_option ) )
+        }
+
+        if( '.' == $question_operator )
+        {
+          if( 'extra(' == substr( $question_function, 0, 6 ) )
+          {
+            $special_function = 'extra';
+
+            if( !preg_match( '/extra\(([^)]+)\)/', $question_function, $sub_matches ) )
+            {
+              throw lib::create( 'exception\runtime',
+                sprintf( 'Invalid syntax "%s"', $question_function ),
+                __METHOD__
+              );
+            }
+
+            $db_question_option = $question_option_class_name::get_unique_record(
+              array( 'question_id', 'name' ),
+              array( $db_question->id, $sub_matches[1] )
+            );
+            if( is_null( $db_question_option ) )
+            {
+              throw lib::create( 'exception\runtime',
+                sprintf( 'Invalid question option "%s" for question "%s"', $sub_matches[1], $question_name ),
+                __METHOD__
+              );
+            }
+            else if( is_null( $db_question_option->extra ) )
+            {
+              throw lib::create( 'exception\runtime',
+                sprintf(
+                  'Question option "%s" for question "%s" does not have extra values.',
+                  $sub_matches[1],
+                  $question_name
+                ),
+                __METHOD__
+              );
+            }
+          }
+          else if( 'indicator(' == substr( $question_function, 0, 10 ) )
+          {
+            $special_function = 'indicator';
+
+            if( !preg_match( '/indicator\( *"([^"]+)" *, *"([^"]+)" *\)/', $question_function, $sub_matches ) )
+            {
+              throw lib::create( 'exception\runtime',
+                sprintf( 'Invalid syntax "%s"', $question_function ),
+                __METHOD__
+              );
+            }
+
+            $db_lookup = $lookup_class_name::get_unique_record( 'name', $sub_matches[1] );
+
+            if( is_null( $db_lookup ) )
+            {
+              throw lib::create( 'exception\runtime',
+                sprintf( 'No lookup named "%s" found.', $sub_matches[1] ),
+                __METHOD__
+              );
+            }
+
+            $db_indicator = $indicator_class_name::get_unique_record(
+              array( 'lookup_id', 'name' ),
+              array( $db_lookup->id, $sub_matches[2] )
+            );
+
+            if( is_null( $db_indicator ) )
+            {
+              throw lib::create( 'exception\runtime',
+                sprintf( 'No indicator named "%s" found for the lookup "%s".', $sub_matches[2], $db_lookup->name ),
+                __METHOD__
+              );
+            }
+          }
+          else if( 'value(' == substr( $question_function, 0, 6 ) )
+          {
+            $special_function = 'value';
+
+            if( !preg_match( '/value\( *"([^"]+)" *\)/', $question_function, $sub_matches ) )
+            {
+              throw lib::create( 'exception\runtime',
+                sprintf( 'Invalid syntax "%s"', $question_function ),
+                __METHOD__
+              );
+            }
+
+            $object_path = $sub_matches[1];
+          }
+          else if( in_array( $question_function, ['empty()', 'dkna()', 'refuse()'] ) )
+          {
+            $special_function = substr( $question_function, 0, -2 );
+          }
+          else
           {
             throw lib::create( 'exception\runtime',
-              sprintf( 'Invalid question option "%s" for question "%s"', $sub_matches[1], $matches[1] ),
+              sprintf( 'No such function "%s"', $question_function ),
               __METHOD__
             );
           }
-          else if( is_null( $db_question_option->extra ) )
+        }
+        else if( ':' == $question_operator )
+        {
+          if( 'count()' == $question_function )
           {
-            throw lib::create( 'exception\runtime',
-              sprintf(
-                'Question option "%s" for question "%s" does not have extra values.',
-                $sub_matches[1],
-                $matches[1]
-              ),
-              __METHOD__
+            // return how many options are selected
+            $special_function = 'count';
+          }
+          else
+          {
+            $db_question_option = $question_option_class_name::get_unique_record(
+              array( 'question_id', 'name' ),
+              array( $db_question->id, $question_function )
             );
+            if( is_null( $db_question_option ) )
+            {
+              throw lib::create( 'exception\runtime',
+                sprintf(
+                  'No question option name "%s" found for question "%s".',
+                  $question_function,
+                  $question_name
+                ),
+                __METHOD__
+              );
+            }
           }
         }
-        else if( 'indicator(' == substr( $matches[3], 0, 10 ) )
-        {
-          $special_function = 'indicator';
 
-          if( !preg_match( '/indicator\( *"([^"]+)" *, *"([^"]+)" *\)/', $matches[3], $sub_matches ) )
-            throw lib::create( 'exception\runtime', sprintf( 'Invalid syntax "%s"', $matches[3] ), __METHOD__ );
-
-          $db_lookup = $lookup_class_name::get_unique_record( 'name', $sub_matches[1] );
-
-          if( is_null( $db_lookup ) )
-          {
-            throw lib::create( 'exception\runtime',
-              sprintf( 'No lookup named "%s" found.', $sub_matches[1] ),
-              __METHOD__
-            );
-          }
-
-          $db_indicator = $indicator_class_name::get_unique_record(
-            array( 'lookup_id', 'name' ),
-            array( $db_lookup->id, $sub_matches[2] )
-          );
-
-          if( is_null( $db_indicator ) )
-          {
-            throw lib::create( 'exception\runtime',
-              sprintf( 'No indicator named "%s" found for the lookup "%s".', $sub_matches[2], $db_lookup->name ),
-              __METHOD__
-            );
-          }
-        }
-        else if( 'value(' == substr( $matches[3], 0, 6 ) )
-        {
-          $special_function = 'value';
-
-          if( !preg_match( '/value\( *"([^"]+)" *\)/', $matches[3], $sub_matches ) )
-            throw lib::create( 'exception\runtime', sprintf( 'Invalid syntax "%s"', $matches[3] ), __METHOD__ );
-
-          $object_path = $sub_matches[1];
-        }
-        else if( in_array( $matches[3], ['empty()', 'dkna()', 'refuse()'] ) )
-        {
-          $special_function = substr( $matches[3], 0, -2 );
-        }
-        else
-        {
-          throw lib::create( 'exception\runtime', sprintf( 'No such function "%s"', $matches[3] ), __METHOD__ );
-        }
-      }
-      else if( ':' == $matches[2] )
-      {
-        if( 'count()' == $matches[3] )
-        {
-          // return how many options are selected
-          $special_function = 'count';
-        }
-        else
-        {
-          $db_question_option = $question_option_class_name::get_unique_record(
-            array( 'question_id', 'name' ),
-            array( $db_question->id, $matches[3] )
-          );
-          if( is_null( $db_question_option ) )
-          {
-            throw lib::create( 'exception\runtime',
-              sprintf( 'No question option name "%s" found for question "%s".', $matches[3], $matches[1] ),
-              __METHOD__
-            );
-          }
-        }
+        $question_list[] = $db_question;
+        $question_option_list[] = $db_question_option;
       }
     }
     else // questions are defined by name
     {
-      $db_question = $this->db_qnaire->get_question( $this->term );
-      if( is_null( $db_question ) )
-      {
-        throw lib::create( 'exception\runtime',
-          sprintf( 'No question name "%s" found.', $this->term ),
-          __METHOD__
-        );
-      }
+      $question_name = $this->term;
+      $question_name_list = [];
 
-      if( 'list' == $db_question->type )
+      // check for a numerical iterator
+      if( preg_match( '/(.*)#([0-9]+)#(.*)/', $question_name, $iterator_matches ) )
       {
-        throw lib::create( 'exception\runtime',
-          sprintf(
-            'Question "%s" is a list type so you must reference a question option using '.
-            'the QUESTION:OPTION format.',
-            $this->term
-          ),
-          __METHOD__
-        );
+        $max = intval( $iterator_matches[2] );
+        for( $i = 1; $i <= $max; $i++ ) $question_name_list[] = preg_replace( '/#[0-9]+#/', $i, $question_name );
       }
+      else $question_name_list[] = $question_name;
 
-      if( in_array( $db_question->type, ['comment', 'device', 'text'] ) )
+      foreach( $question_name_list as $question_name )
       {
-        throw lib::create( 'exception\runtime',
-          sprintf( 'Cannot use question type "%s"', $db_question->type ),
-          __METHOD__
-        );
+        $db_question = $this->db_qnaire->get_question( $question_name );
+        if( is_null( $db_question ) )
+        {
+          throw lib::create( 'exception\runtime',
+            sprintf( 'No question name "%s" found.', $question_name ),
+            __METHOD__
+          );
+        }
+
+        if( 'list' == $db_question->type )
+        {
+          throw lib::create( 'exception\runtime',
+            sprintf(
+              'Question "%s" is a list type so you must reference a question option using '.
+              'the QUESTION:OPTION format.',
+              $question_name
+            ),
+            __METHOD__
+          );
+        }
+
+        if( in_array( $db_question->type, ['comment', 'device', 'text'] ) )
+        {
+          throw lib::create( 'exception\runtime',
+            sprintf( 'Cannot use question type "%s"', $db_question->type ),
+            __METHOD__
+          );
+        }
+
+        $question_list[] = $db_question;
+        $question_option_list[] = NULL;
       }
     }
 
-    // test that the working item is an operator
-    if( !is_null( $this->last_term ) && 'operator' != $this->last_term )
-      throw lib::create( 'exception\runtime', 'Question found but expecting an operator', __METHOD__ );
-
-    // if a response was provided and there is no override then replace the term with the attribute's value
-    $compiled = sprintf( '$%s$', $this->term );
-    if( !is_null( $this->db_response ) && (
-      // make sure the question isn't overridden
-      is_null( $db_override_question ) ||
-      $db_question->page_id != $db_override_question->page_id ||
-      $db_question->rank >= $db_override_question->rank
-    ) && (
-      // make sure the question_option isn't overridden
-      is_null( $db_question_option ) ||
-      is_null( $db_override_question_option ) ||
-      $db_question_option->question_id != $db_override_question_option->question_id ||
-      $db_question_option->rank >= $db_override_question_option->rank
-    ) )
+    $compiled_list = [];
+    foreach( $question_list as $index => $db_question )
     {
-      $db_answer = $answer_class_name::get_unique_record(
-        array( 'response_id', 'question_id' ),
-        array( $this->db_response->id, $db_question->id )
-      );
-      $value = is_null( $db_answer ) ? NULL : util::json_decode( $db_answer->value );
-      $dkna = is_object( $value ) && property_exists( $value, 'dkna' ) && $value->dkna;
-      $refuse = is_object( $value ) && property_exists( $value, 'refuse' ) && $value->refuse;
+      $db_question_option = $question_option_list[$index];
 
-      if( 'empty' == $special_function ) $compiled = is_null( $value ) ? 'true' : 'false';
-      else if( 'dkna' == $special_function ) $compiled = $dkna ? 'true' : 'false';
-      else if( 'refuse' == $special_function ) $compiled = $refuse ? 'true' : 'false';
-      else if( 'count' == $special_function ) { $compiled = is_array( $value ) ? count( $value ) : 0; }
-      else if( is_null( $value ) || $dkna || $refuse ) $compiled = 'NULL';
-      else if( !is_null( $db_question_option ) )
+      // if a response was provided and there is no override then replace the term with the attribute's value
+      $compiled = sprintf( '$%s$', $this->term );
+      if( !is_null( $this->db_response ) && (
+        // make sure the question isn't overridden
+        is_null( $db_override_question ) ||
+        $db_question->page_id != $db_override_question->page_id ||
+        $db_question->rank >= $db_override_question->rank
+      ) && (
+        // make sure the question_option isn't overridden
+        is_null( $db_question_option ) ||
+        is_null( $db_override_question_option ) ||
+        $db_question_option->question_id != $db_override_question_option->question_id ||
+        $db_question_option->rank >= $db_override_question_option->rank
+      ) )
       {
-        // set whether or not the response checked off the option, or provide extra data if requested
-        $compiled = 'extra' == $special_function ? 'NULL' : 'false';
-        if( is_array( $value ) )
+        $db_answer = $answer_class_name::get_unique_record(
+          array( 'response_id', 'question_id' ),
+          array( $this->db_response->id, $db_question->id )
+        );
+        $value = is_null( $db_answer ) ? NULL : util::json_decode( $db_answer->value );
+        $dkna = is_object( $value ) && property_exists( $value, 'dkna' ) && $value->dkna;
+        $refuse = is_object( $value ) && property_exists( $value, 'refuse' ) && $value->refuse;
+
+        if( 'empty' == $special_function ) $compiled = is_null( $value ) ? 'true' : 'false';
+        else if( 'dkna' == $special_function ) $compiled = $dkna ? 'true' : 'false';
+        else if( 'refuse' == $special_function ) $compiled = $refuse ? 'true' : 'false';
+        else if( 'count' == $special_function ) { $compiled = is_array( $value ) ? count( $value ) : 0; }
+        else if( is_null( $value ) || $dkna || $refuse ) $compiled = 'NULL';
+        else if( !is_null( $db_question_option ) )
         {
-          foreach( $value as $selected_option )
+          // set whether or not the response checked off the option, or provide extra data if requested
+          $compiled = 'extra' == $special_function ? 'NULL' : 'false';
+          if( is_array( $value ) )
           {
-            if( 'extra' == $special_function )
+            foreach( $value as $selected_option )
             {
-              if( ( is_object( $selected_option ) && $db_question_option->id == $selected_option->id ) )
+              if( 'extra' == $special_function )
               {
-                $compiled = 'number' == $db_question_option->extra
-                          ? $selected_option->value
-                          : sprintf( '"%s"', str_replace( '"', '\"', $selected_option->value ) );
+                if( ( is_object( $selected_option ) && $db_question_option->id == $selected_option->id ) )
+                {
+                  $compiled = 'number' == $db_question_option->extra
+                            ? $selected_option->value
+                            : sprintf( '"%s"', str_replace( '"', '\"', $selected_option->value ) );
+                }
+              }
+              else if(
+                ( is_object( $selected_option ) && $db_question_option->id == $selected_option->id ) ||
+                ( !is_object( $selected_option ) && $db_question_option->id == $selected_option )
+              ) {
+                $compiled = 'true';
+                break;
               }
             }
-            else if(
-              ( is_object( $selected_option ) && $db_question_option->id == $selected_option->id ) ||
-              ( !is_object( $selected_option ) && $db_question_option->id == $selected_option )
-            ) {
-              $compiled = 'true';
+          }
+        }
+        else if( 'indicator' == $special_function )
+        {
+          $compiled = 'false';
+
+          $db_lookup_item = $lookup_item_class_name::get_unique_record(
+            array( 'lookup_id', 'identifier' ),
+            array( $db_lookup->id, $value )
+          );
+
+          if( !is_null( $db_lookup_item ) )
+          {
+            $lookup_item_mod = lib::create( 'database\modifier' );
+            $lookup_item_mod->where( 'lookup_item.id', '=', $db_lookup_item->id );
+            if( $db_indicator->get_lookup_item_count( $lookup_item_mod ) ) $compiled = 'true';
+          }
+        }
+        else if( 'value' == $special_function )
+        {
+          $compiled = false;
+
+          foreach( explode( '.', $object_path ) as $property )
+          {
+            if( property_exists( $value, $property ) )
+            {
+              $value = $value->$property;
+            }
+            else
+            {
+              $value = false;
               break;
             }
           }
+
+          if( is_null( $value ) ) $compiled = 'NULL';
+          else if( is_bool( $value ) ) $compiled = $value ? 'true' : 'false';
+          else if( is_string( $value ) )
+            $compiled = sprintf( "'%s'", str_replace( "'", "\\'", $value ) );
+          else $compiled = $value;
         }
-      }
-      else if( 'indicator' == $special_function )
-      {
-        $compiled = 'false';
-
-        $db_lookup_item = $lookup_item_class_name::get_unique_record(
-          array( 'lookup_id', 'identifier' ),
-          array( $db_lookup->id, $value )
-        );
-
-        if( !is_null( $db_lookup_item ) )
+        else
         {
-          $lookup_item_mod = lib::create( 'database\modifier' );
-          $lookup_item_mod->where( 'lookup_item.id', '=', $db_lookup_item->id );
-          if( $db_indicator->get_lookup_item_count( $lookup_item_mod ) ) $compiled = 'true';
+          if( 'boolean' == $db_question->type ) $compiled = $value ? 'true' : 'false';
+          else if( 'string' == $db_question->type )
+            $compiled = sprintf( "'%s'", str_replace( "'", "\\'", $value ) );
+          else $compiled = $value;
         }
       }
-      else if( 'value' == $special_function )
-      {
-        $compiled = false;
 
-        foreach( explode( '.', $object_path ) as $property )
-        {
-          if( property_exists( $value, $property ) )
-          {
-            $value = $value->$property;
-          }
-          else
-          {
-            $value = false;
-            break;
-          }
-        }
-
-        if( is_null( $value ) ) $compiled = 'NULL';
-        else if( is_bool( $value ) ) $compiled = $value ? 'true' : 'false';
-        else if( is_string( $value ) )
-          $compiled = sprintf( "'%s'", str_replace( "'", "\\'", $value ) );
-        else $compiled = $value;
-      }
-      else
-      {
-        if( 'boolean' == $db_question->type ) $compiled = $value ? 'true' : 'false';
-        else if( 'string' == $db_question->type )
-          $compiled = sprintf( "'%s'", str_replace( "'", "\\'", $value ) );
-        else $compiled = $value;
-      }
+      $compiled_list[] = $compiled;
     }
 
-    // determine the last term
-    if( is_null( $special_function ) )
+    // if we iterated over a list of questions then we now represent a boolean expression
+    if( 1 < count( $compiled_list ) ) $this->last_term = 'boolean';
+    else if( is_null( $special_function ) )
       $this->last_term = !is_null( $db_question_option ) ? 'boolean' : $db_question->type;
     else if( 'extra' == $special_function ) $this->last_term = $db_question_option->extra;
     else $this->last_term = 'count' == $special_function ? 'number' : 'boolean';
 
     $this->active_term = NULL;
 
-    return $compiled;
+    return 1 < count( $compiled_list ) ?
+      sprintf( '(%s)', implode( ' || ', $compiled_list ) ) :
+      current( $compiled_list );
   }
 
   /**
