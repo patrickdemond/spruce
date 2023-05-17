@@ -20,12 +20,6 @@ $SETTINGS['path']['APPLICATION'] = __DIR__;
 // the path to the log file
 $SETTINGS['path']['LOG_FILE'] = sprintf( '%s/log', $SETTINGS['path']['APPLICATION'] );
 
-// the location of qnaire export files
-$SETTINGS['path']['QNAIRE_EXPORT'] = sprintf( '%s/doc/qnaire_export', $SETTINGS['path']['APPLICATION'] );
-
-// the location of qnaire print files
-$SETTINGS['path']['QNAIRE_PRINT'] = sprintf( '%s/doc/qnaire_print', $SETTINGS['path']['APPLICATION'] );
-
 // the location to store response data (uncomment after updating software)
 $SETTINGS['path']['RESPONSE_DATA'] = sprintf( '%s/doc/response_data', $SETTINGS['path']['APPLICATION'] );
 

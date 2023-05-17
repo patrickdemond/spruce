@@ -4276,12 +4276,12 @@ class qnaire extends \cenozo\database\record
 
     if( 'export' == $type )
     {
-      $filename = sprintf( '%s/%s.json', QNAIRE_EXPORT_PATH, $this->id );
+      $filename = sprintf( '%s/qnaire_export_%d.json', TEMP_PATH, $this->id );
       $contents = util::json_encode( $qnaire_data, JSON_PRETTY_PRINT );
     }
     else // print
     {
-      $filename = sprintf( '%s/%s.txt', QNAIRE_PRINT_PATH, $this->id );
+      $filename = sprintf( '%s/qnaire_print_%d.txt', TEMP_PATH, $this->id );
       $contents = sprintf(
         "%s (%s)\n",
         $qnaire_data['name'],

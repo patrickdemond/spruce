@@ -33,12 +33,6 @@ $SETTINGS['path']['APPLICATION'] = str_replace( '/settings.ini.php', '', __FILE_
 // the user to use when filling in a qnaire without logging in
 $SETTINGS['utility']['qnaire_username'] = 'pine';
 
-// the location of qnaire export files
-$SETTINGS['path']['QNAIRE_EXPORT'] = str_replace( 'settings.ini.php', 'doc/qnaire_export', __FILE__ );
-
-// the location of qnaire print files
-$SETTINGS['path']['QNAIRE_PRINT'] = str_replace( 'settings.ini.php', 'doc/qnaire_print', __FILE__ );
-
 // the location to store response data
 $SETTINGS['path']['RESPONSE_DATA'] = str_replace( 'settings.ini.php', 'doc/response_data', __FILE__ );
 

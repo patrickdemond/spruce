@@ -36,8 +36,9 @@ class get extends \cenozo\service\downloadable
   {
     $output = $this->get_argument( 'output', NULL );
     return sprintf(
-      '%s/%s.%s',
-      'export' == $output ? QNAIRE_EXPORT_PATH : QNAIRE_PRINT_PATH,
+      '%s/qnaire_%s_%d.%s',
+      TEMP_PATH,
+      $output,
       $this->get_leaf_record()->id,
       'export' == $output ? 'json' : 'txt'
     );
@@ -71,6 +72,28 @@ class get extends \cenozo\service\downloadable
     else
     {
       parent::execute();
+    }
+  }
+
+  /**
+   * Extend parent method
+   */
+  public function finish()
+  {
+    parent::finish();
+
+    // clean up by deleting temporary files
+    $output = $this->get_argument( 'output', NULL );
+    if( !is_null( $output ) )
+    {
+      $filename = sprintf(
+        '%s/qnaire_%s_%d.%s',
+        TEMP_PATH,
+        $output,
+        $this->get_leaf_record()->id,
+        'export' == $output ? 'json' : 'txt'
+      );
+      if( file_exists( $filename ) ) unlink( $filename );
     }
   }
 }
