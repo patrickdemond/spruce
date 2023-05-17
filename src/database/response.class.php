@@ -836,7 +836,7 @@ class response extends \cenozo\database\has_rank
     // This has to be done in a loop since a question's description may contain other attributes or questions
     $attribute_regex =
       '/@([A-Za-z0-9_]+)('.
-        '.(name|description)\( *"?[^)"]+"? *\)'.
+        '\.(name|description)\( *"?[^)"]+"? *\)'.
       ')?\@/';
 
     $attribute_matches = [];
@@ -849,9 +849,9 @@ class response extends \cenozo\database\has_rank
     $question_regex =
       '/\$([A-Za-z0-9_]+)('.
         ':[A-Za-z0-9_]+|'.
-        '.extra\([^)]+\)|'.
-        '.count\(\)|'.
-        '.(name|description)\( *"?[^)"]+"? *\)'.
+        '\.extra\([^)]+\)|'.
+        '\.count\(\)|'.
+        '\.(name|description)\( *"?[^)"]+"? *\)'.
       ')?\$/';
 
     $question_matches = [];
@@ -955,7 +955,7 @@ class response extends \cenozo\database\has_rank
             {
               $compiled = count( $value );
             }
-            else if( preg_match( '/.extra\((.*)\)/', $question_matches[2][$index], $extra_matches ) )
+            else if( preg_match( '/\.extra\((.*)\)/', $question_matches[2][$index], $extra_matches ) )
             {
               $extra_option_name = $extra_matches[1];
               $compiled = '';
@@ -1169,10 +1169,13 @@ class response extends \cenozo\database\has_rank
 
     // start with the identifier as a default (in case the lookup below doesn't work)
     $compiled = $identifier;
+
+    // if there is no identifier then we do nothing
+    if( is_null( $compiled ) ) return $compiled;
     
     $lookup_matches = [];
     $match = preg_match(
-      '/.(name|description)\( *"?([^)"]+)"? *\)/',
+      '/\.(name|description)\( *"?([^)"]+)"? *\)/',
       $expression,
       $lookup_matches
     );
