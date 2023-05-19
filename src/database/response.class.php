@@ -792,23 +792,17 @@ class response extends \cenozo\database\has_rank
     }
 
     // write the PDF template to disk (it's the only way for the pdf_writer class to read it)
-    $random_string = bin2hex( openssl_random_pseudo_bytes( 5 ) );
-    $template_filename = sprintf( '%s/qnaire_report_template_%s.pdf', TEMP_PATH, $language );
-    $report_filename = sprintf( '%s/qnaire_report_%s.pdf', TEMP_PATH, $random_string );
-    $pdf_file = base64_decode( $db_qnaire_report->data );
-    file_put_contents( $template_filename, $pdf_file, LOCK_EX );
-
-    $pdf_writer = lib::create( 'business\pdf_writer' );
-    $pdf_writer->set_template( $template_filename );
-    $pdf_writer->fill_form( $data );
-    if( !$pdf_writer->save( $report_filename ) )
+    $report_filename = sprintf( '%s/qnaire_report_%d.pdf', TEMP_PATH, $this->id );
+    $error = $db_qnaire_report->fill_and_write_form( $data, $report_filename );
+    if( $error )
     {
       $db_respondent = $this->get_respondent();
       throw lib::create( 'exception\runtime',
         sprintf(
-          'Failed to generate PDF qnaire report for %s response to "%s"',
+          'Failed to generate PDF qnaire report for %s response to "%s"%s',
           $db_respondent->get_participant()->uid,
-          $db_respondent->get_qnaire()->name
+          $db_respondent->get_qnaire()->name,
+          "\n".$error
         ),
         __METHOD__
       );

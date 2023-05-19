@@ -49,6 +49,18 @@ class get extends \cenozo\service\downloadable
   }
 
   /**
+   * Extend parent method
+   */
+  public function finish()
+  {
+    parent::finish();
+
+    // clean up by deleting temporary files
+    if( !is_null( $this->report_filename ) && file_exists( $this->report_filename ) )
+      unlink( $this->report_filename );
+  }
+
+  /**
    * @var string $report_filename
    */
   private $report_filename = NULL;
