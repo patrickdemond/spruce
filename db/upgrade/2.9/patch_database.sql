@@ -2,6 +2,9 @@
 
 SET AUTOCOMMIT=0;
 
+SOURCE embedded_file.sql
+SOURCE qnaire_report.sql
+
 SOURCE update_version_number.sql
 
 COMMIT;
