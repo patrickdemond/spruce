@@ -108,7 +108,7 @@ API
 
 Pine:
   PATCH answer/<answer_id>?action=launch_device returns { "uuid": <uuid>, "status": "in progress" }
-  PATCH answer/<answer_id> with body { "value": <DEVICE_JSON_OUTPUT> }
+  PATCH answer/<answer_id> with body { "instrumentBarcode": <STRING>, "language": "en|fr", "startTime": <DATETIME>, "endTime": <DATETIME>, "results": [{<DEVICE_KEY_VALUE_PAIRS>}] }
   PATCH answer/<answer_id>?filename=<FILENAME> with raw file contents as body
   DELETE response_device/<uuid> returns 200 or 404
   PATCH response_device/<uuid> with body { "status": "completed" } returns 200 or 404

@@ -69,7 +69,7 @@ class cypress_manager extends \cenozo\base_object
     // send a post request to cypress to start the device, it should respond with a UUID
     try
     {
-      $uuid = $this->send( $this->db_device->url, 'POST', $data );
+      $response = $this->send( $this->db_device->url, 'POST', $data );
     }
     catch( \cenozo\exception\runtime $e )
     {
@@ -84,13 +84,15 @@ class cypress_manager extends \cenozo\base_object
       else throw $e;
     }
 
-    if( !$uuid )
+    if( !property_exists( $response, 'sessionId' ) || 0 == strlen( $response->sessionId ) )
     {
       throw lib::create( 'exception\runtime',
         sprintf( 'Invalid UUID returned from Cypress while launching %s', $this->db_device->name ),
         __METHOD__
       );
     }
+
+    $uuid = $response->sessionId;
 
     // Cypress will respond with a UUID that will be used to refer to this respondent/device in the future
     $db_response_device = $response_device_class_name::get_unique_record( 'uuid', $uuid );

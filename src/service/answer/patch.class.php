@@ -16,6 +16,7 @@ class patch extends \cenozo\service\patch
   public function get_file_as_array()
   {
     $user_class_name = lib::get_class_name( 'database\user' );
+    $language_class_name = lib::get_class_name( 'database\language' );
 
     // replace username with a user_id (if the user exists)
     $patch_array = parent::get_file_as_array();
@@ -25,6 +26,18 @@ class patch extends \cenozo\service\patch
       $db_user = $user_class_name::get_unique_record( 'name', $patch_array['username'] );
       unset( $patch_array['username'] );
       if( !is_null( $db_user ) ) $patch_array['user_id'] = $db_user->id;
+    }
+
+    if( array_key_exists( 'language', $patch_array ) )
+    {
+      $db_language = $language_class_name::get_unique_record( 'code', $patch_array['language'] );
+      unset( $patch_array['language'] );
+      if( !is_null( $db_language ) ) $patch_array['language_id'] = $db_language->id;
+    }
+
+    if( array_key_exists( 'value', $patch_array ) && is_object( $patch_array['value'] ) )
+    {
+      $patch_array['value'] = util::json_encode( $patch_array['value'] );
     }
 
     return $patch_array;
