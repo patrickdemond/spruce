@@ -1170,7 +1170,6 @@ class qnaire extends \cenozo\database\record
       }
 
       // add any consent confirm records
-      $consent_list = array();
       $consent_sel = lib::create( 'database\select' );
       $consent_sel->add_table_column( 'consent_type', 'name' );
       $consent_sel->add_table_column( 'consent', 'accept' );
