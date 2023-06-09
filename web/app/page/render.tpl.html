@@ -45,6 +45,15 @@
             model.renderModel.data.submitted ? model.renderModel.data.conclusionList[model.renderModel.currentLanguage] :
                              model.renderModel.data.introductionList[model.renderModel.currentLanguage]">
           </span>
+          <div ng-if="model.renderModel.data.submitted && model.renderModel.showDisplayResponseButton()">
+            <button
+              type="button"
+              class="btn btn-default larger full-width vertical-spacer"
+              ng-click="model.renderModel.transitionToDisplayResponse()"
+            >
+              Display Responses
+            </button>
+          </div>
         </div>
       </div>
       <div class="form-footer text-right rounded-bottom bg-info">

@@ -2770,6 +2770,17 @@ cenozoApp.defineModule({
               );
             },
 
+            showDisplayResponseButton: function () {
+              return this.parentModel.isRole( "interviewer", "administrator" );
+            },
+
+            transitionToDisplayResponse: function () {
+              $state.go(
+                "response.display",
+                { identifier: this.data.response_id },
+              );
+            },
+
             setResponseComments: async function () {
               try {
                 this.working = true;
