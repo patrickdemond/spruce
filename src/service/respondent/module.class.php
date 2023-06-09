@@ -23,7 +23,7 @@ class module extends \cenozo\service\module
     parent::prepare_read( $select, $modifier );
 
     $modifier->join( 'qnaire', 'respondent.qnaire_id', 'qnaire.id' );
-    $modifier->join( 'participant', 'respondent.participant_id', 'participant.id' );
+    $modifier->left_join( 'participant', 'respondent.participant_id', 'participant.id' );
 
     $modifier->join( 'respondent_current_response', 'respondent.id', 'respondent_current_response.respondent_id' );
     $modifier->left_join( 'response', 'respondent_current_response.response_id', 'response.id' );

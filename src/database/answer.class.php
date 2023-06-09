@@ -38,6 +38,20 @@ class answer extends \cenozo\database\record
     // if the alternate_id is set make sure it belongs to the respondent
     if( $this->has_column_changed( 'alternate_id' ) && !is_null( $this->alternate_id ) )
     {
+      $db_respondent = $db_response->get_respondent();
+      if( is_null( $db_respondent->participant_id ) )
+      {
+        $db_question = lib::create( 'database\question', $this->question_id );
+        throw lib::create( 'exception\runtime',
+          sprintf(
+            'Tried to set alternate in answer for question "%s" record but parent respondent (%d) is anonymous.',
+            $db_question->name,
+            $db_respondent->id
+          ),
+          __METHOD__
+        );
+      }
+
       $select = lib::create( 'database\select' );
       $select->from( 'alternate' );
       $select->add_column( 'COUNT(*)', 'total', false );
@@ -374,12 +388,13 @@ class answer extends \cenozo\database\record
     return sprintf(
       '%s/%s',
       $this->get_question()->get_data_directory(),
-      $db_respondent->get_participant()->uid
+      is_null( $db_respondent->participant_id ) ? $db_respondent->id : $db_respondent->get_participant()->uid
     );
   }
 
   /**
    * Returns a list of all files stored in the answer's response data directory
+   * @return array(string)
    */
   public function get_data_files()
   {

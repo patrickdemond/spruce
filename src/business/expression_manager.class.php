@@ -581,6 +581,7 @@ class expression_manager extends \cenozo\singleton
           $this->db_response_attribute = lib::create( 'database\response_attribute' );
           $this->db_response_attribute->response_id = $this->db_response->id;
           $this->db_response_attribute->attribute_id = $db_attribute->id;
+          // participant-specific attributes will always be NULL for anonymous respondents
           $this->db_response_attribute->value =
             $db_attribute->get_participant_value( $this->db_response->get_participant() );
           $this->db_response_attribute->save();

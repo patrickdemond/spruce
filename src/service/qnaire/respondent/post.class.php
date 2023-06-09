@@ -41,21 +41,36 @@ class post extends \cenozo\service\post
     }
     else if( $this->may_continue() )
     {
-      // make sure the participant is enrolled and not in a final hold
       $post_array = $this->get_file_as_array();
-      $db_participant = lib::create( 'database\participant', $post_array['participant_id'] );
-      $db_last_hold = $db_participant->get_last_hold();
-      $db_last_hold_type = is_null( $db_last_hold ) ? NULL : $db_last_hold->get_hold_type();
-      $final_hold = !is_null( $db_last_hold_type ) && 'final' == $db_last_hold_type->type;
-      if( !is_null( $db_participant->exclusion_id ) )
+      if( array_key_exists( 'participant_id', $post_array ) )
       {
-        $this->status->set_code( 306 );
-        $this->set_data( 'Only enrolled participants may be added to a questionnaire.' );
+        // make sure the participant is enrolled and not in a final hold
+        $db_participant = lib::create( 'database\participant', $post_array['participant_id'] );
+        $db_last_hold = $db_participant->get_last_hold();
+        $db_last_hold_type = is_null( $db_last_hold ) ? NULL : $db_last_hold->get_hold_type();
+        $final_hold = !is_null( $db_last_hold_type ) && 'final' == $db_last_hold_type->type;
+        if( !is_null( $db_participant->exclusion_id ) )
+        {
+          $this->status->set_code( 306 );
+          $this->set_data( 'Only enrolled participants may be added to a questionnaire.' );
+        }
+        else if( $final_hold && !$db_qnaire->allow_in_hold )
+        {
+          $this->status->set_code( 306 );
+          $this->set_data( 'This questionniare does not allow participants who in a final hold to be interviewed.' );
+        }
       }
-      else if( $final_hold && !$db_qnaire->allow_in_hold )
+      else
       {
-        $this->status->set_code( 306 );
-        $this->set_data( 'This questionniare does not allow participants who in a final hold to be interviewed.' );
+        // make sure that only anonymous qnaires can have anonymous respondents
+        if( !$db_qnaire->anonymous )
+        {
+          $this->status->set_code( 306 );
+          $this->set_data(
+            'Only anonymous questionnaires may have respondents not associated with any participant.  '.
+            'Please provide the associated participant.'
+          );
+        }
       }
     }
   }

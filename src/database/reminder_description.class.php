@@ -48,9 +48,15 @@ class reminder_description extends base_description
       }
       else
       {
-        $replace = 0 === strpos( $value, 'participant.' )
-                 ? $data_manager->get_participant_value( $db_participant, $value )
-                 : $data_manager->get_value( $value );
+        if( 0 === strpos( $value, 'participant.' ) )
+        {
+          $replace = is_null( $db_participant ) ?
+            NULL : $data_manager->get_participant_value( $db_participant, $value );
+        }
+        else
+        {
+          $replace = $data_manager->get_value( $value );
+        }
       }
 
       $text = str_replace( $match, $replace, $text );

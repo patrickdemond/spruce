@@ -25,7 +25,7 @@ class module extends \cenozo\service\module
 
     $modifier->join( 'respondent', 'response.respondent_id', 'respondent.id' );
     $modifier->join( 'qnaire', 'respondent.qnaire_id', 'qnaire.id' );
-    $modifier->join( 'participant', 'respondent.participant_id', 'participant.id' );
+    $modifier->left_join( 'participant', 'respondent.participant_id', 'participant.id' );
     $modifier->join( 'language', 'response.language_id', 'language.id' );
     $modifier->left_join( 'page', 'response.page_id', 'page.id' );
     $modifier->left_join( 'module', 'page.module_id', 'module.id' );

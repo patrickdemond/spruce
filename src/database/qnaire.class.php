@@ -143,6 +143,17 @@ class qnaire extends \cenozo\database\record
       }
     }
 
+    if( $this->has_column_changed( 'anonymous' ) || $this->has_column_changed( 'stages' ) )
+    {
+      if( $this->anonymous && $this->stages )
+      {
+        throw lib::create( 'exception\runtime',
+          sprintf( 'Tried to set qnaire "%s" to have both anonymous and stages set to true.', $this->name ),
+          __METHOD__
+        );
+      }
+    }
+
     if( $this->has_column_changed( 'repeated' ) )
     {
       if( !$this->repeated )
@@ -264,7 +275,7 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
-   * Get this participant's base_language record
+   * Get this qnaire's base_language record
    * @return base_language
    * @access public
    */
@@ -1115,6 +1126,10 @@ class qnaire extends \cenozo\database\record
     foreach( $respondent_list as $db_respondent )
     {
       $db_participant = $db_respondent->get_participant();
+
+      // do not export anonymous respondents
+      if( is_null( $db_participant ) ) continue;
+
       $db_address = $db_participant->get_primary_address();
 
       $participant = array(
@@ -2023,7 +2038,7 @@ class qnaire extends \cenozo\database\record
     $data = array();
     $response_mod = lib::create( 'database\modifier' );
     $response_mod->join( 'respondent', 'response.respondent_id', 'respondent.id' );
-    $response_mod->join( 'participant', 'respondent.participant_id', 'participant.id' );
+    $response_mod->left_join( 'participant', 'respondent.participant_id', 'participant.id' );
     $response_mod->where( 'respondent.qnaire_id', '=', $this->id );
     $response_mod->order( 'respondent.end_datetime' );
 

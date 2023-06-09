@@ -56,12 +56,15 @@ class patch extends \cenozo\service\patch
       else
       {
         // the following actions require the current response, but that record isn't guaranteed to exist
+        $db_participant = $db_respondent->get_participant();
         $db_response = $db_respondent->get_current_response();
         if( is_null( $db_response ) )
         {
           throw lib::create( 'exception\runtime', sprintf(
-            'Tried to perform a PATCH on respondent %s for qnaire "%s" but no response record exists.',
-            $db_respondent->get_participant()->uid,
+            'Tried to perform a PATCH on %s for qnaire "%s" but no response record exists.',
+            is_null( $db_participant ) ?
+              sprintf( 'anonymous respondent %d', $db_respondent->id ) :
+              sprintf( 'participant %s', $db_participant->uid ),
             $db_respondent->get_qnaire()->name
           ), __METHOD__ );
         }
@@ -78,10 +81,13 @@ class patch extends \cenozo\service\patch
           $db_respondent->save();
 
           // now add the finished event, if there is one
-          $script_class_name = lib::get_class_name( 'database\script' );
-          $db_script = $script_class_name::get_unique_record( 'pine_qnaire_id', $db_respondent->qnaire_id );
-          if( !is_null( $db_script ) )
-            $db_script->add_finished_event( $db_respondent->get_participant(), $db_respondent->end_datetime );
+          if( !is_null( $db_participant ) )
+          {
+            $script_class_name = lib::get_class_name( 'database\script' );
+            $db_script = $script_class_name::get_unique_record( 'pine_qnaire_id', $db_respondent->qnaire_id );
+            if( !is_null( $db_script ) )
+              $db_script->add_finished_event( $db_participant, $db_respondent->end_datetime );
+          }
         }
         else if( 'export' == $action )
         {
@@ -128,8 +134,10 @@ class patch extends \cenozo\service\patch
           if( !$db_qnaire->stages )
           {
             log::warning( sprintf(
-              'Tried to fast forward a non-stage based qnaire on respondent %s for qnaire "%s".',
-              $db_respondent->get_participant()->uid,
+              'Tried to fast forward a non-stage based qnaire on %s for qnaire "%s".',
+              is_null( $db_participant ) ?
+                sprintf( 'anonymous respondent %d', $db_respondent->id ) :
+                sprintf( 'participant %s', $db_participant->uid ),
               $db_qnaire->name
             ) );
           }
@@ -156,8 +164,10 @@ class patch extends \cenozo\service\patch
           if( !$db_qnaire->stages )
           {
             log::warning( sprintf(
-              'Tried to rewind a non-stage based qnaire on respondent %s for qnaire "%s".',
-              $db_respondent->get_participant()->uid,
+              'Tried to rewind a non-stage based qnaire on %s for qnaire "%s".',
+              is_null( $db_participant ) ?
+                sprintf( 'anonymous respondent %d', $db_respondent->id ) :
+                sprintf( 'participant %s', $db_participant->uid ),
               $db_qnaire->name
             ) );
           }

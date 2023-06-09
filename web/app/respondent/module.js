@@ -76,6 +76,7 @@ cenozoApp.defineModule({
           where: ["participant.first_name", "participant.last_name", "uid"],
         },
         isConstant: "view",
+        help: "For anonymous respondents this value should be left blank.",
       },
       token: {
         title: "Token (Interview ID)",

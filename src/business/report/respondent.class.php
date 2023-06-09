@@ -22,7 +22,7 @@ class respondent extends \cenozo\business\report\base_report
     $respondent_class_name = lib::get_class_name( 'database\respondent' );
 
     $modifier = lib::create( 'database\modifier' );
-    $modifier->join( 'participant', 'respondent.participant_id', 'participant.id' );
+    $modifier->left_join( 'participant', 'respondent.participant_id', 'participant.id' );
 
     $select = lib::create( 'database\select' );
     $select->from( 'respondent' );
@@ -44,8 +44,8 @@ class respondent extends \cenozo\business\report\base_report
       false
     );
 
-    $modifier->join( 'language', 'participant.language_id', 'language.id' );
-    $modifier->join( 'cohort', 'participant.cohort_id', 'cohort.id' );
+    $modifier->left_join( 'language', 'participant.language_id', 'language.id' );
+    $modifier->left_join( 'cohort', 'participant.cohort_id', 'cohort.id' );
     $modifier->join( 'respondent_current_response', 'respondent.id', 'respondent_current_response.respondent_id' );
     $modifier->join( 'response', 'respondent_current_response.response_id', 'response.id' );
 

@@ -44,7 +44,12 @@ class get extends \cenozo\service\get
       if( $respondent ) $data['popups'] = $this->db_response->compile_description( $data['popups'] );
     }
 
-    if( $respondent ) $data['uid'] = $this->db_response->get_participant()->uid;
+    if( $respondent )
+    {
+      $db_participant = $this->db_response->get_participant();
+      $data['respondent_name'] = is_null( $db_participant ) ?
+        sprintf( 'Anonymous (%s)', $db_respondent->token ) : $db_participant->uid;
+    }
 
     $this->set_data( $data );
   }

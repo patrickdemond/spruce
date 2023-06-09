@@ -84,8 +84,31 @@ class session extends \cenozo\business\session
       {
         $self_path = substr( $_SERVER['PHP_SELF'], 0, strrpos( $_SERVER['PHP_SELF'], '/' ) + 1 );
         $path = str_replace( $self_path, '', $_SERVER['REDIRECT_URL'] );
-        if( preg_match( '#^respondent/run/([^/]+)$#', $path, $matches ) )
+        if( preg_match( '#^respondent/run/q=([^/]+)$#', $path, $matches ) )
         {
+          // check for an anonymous qnaire
+          $qnaire_class_name = lib::get_class_name( 'database\qnaire' );
+          $db_qnaire = $qnaire_class_name::get_unique_record( 'name', $matches[1] );
+          if( !is_null( $db_qnaire ) && $db_qnaire->anonymous )
+          {
+            // create a new anonymous respondent
+            $this->qnaire_has_stages = $db_qnaire->stages;
+            $db_respondent = lib::create( 'database\respondent' );
+            $db_respondent->qnaire_id = $db_qnaire->id;
+            $db_respondent->save();
+
+            // now redirect the browser to the new anonymous response
+            header( sprintf(
+              'Location: %s%s',
+              $db_respondent->token,
+              0 < strlen( $_SERVER['QUERY_STRING'] ) ? sprintf( '?%s', $_SERVER['QUERY_STRING'] ) : ''
+            ) );
+            die();
+          }
+        }
+        else if( preg_match( '#^respondent/run/([^/]+)$#', $path, $matches ) )
+        {
+          // check for a respondent token
           $respondent_class_name = lib::get_class_name( 'database\respondent' );
           $db_respondent = $respondent_class_name::get_unique_record( 'token', $matches[1] );
           if( !is_null( $db_respondent ) )

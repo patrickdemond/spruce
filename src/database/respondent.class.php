@@ -129,7 +129,10 @@ class respondent extends \cenozo\database\record
   {
     // set the language to the last response, or the participant default there isn't one
     $db_current_response = $this->get_current_response();
-    return is_null( $db_current_response ) ? $this->get_participant()->get_language() : $db_current_response->get_language();
+    if( !is_null( $db_current_response ) ) return $db_current_response->get_language();
+
+    return is_null( $this->participant_id ) ?
+      $this->get_qnaire()->get_base_language() : $this->get_participant()->get_language();
   }
 
   /**
@@ -198,19 +201,22 @@ class respondent extends \cenozo\database\record
     $this->end_datetime = NULL;
     $this->save();
 
-    // now remove the finished event, if there is one
-    $db_script = $script_class_name::get_unique_record( 'pine_qnaire_id', $this->qnaire_id );
-    if( !is_null( $db_script ) && !is_null( $db_script->finished_event_type_id ) )
+    // if not anonymous, remove the finished event if there is one
+    if( !is_null( $this->participant_id ) )
     {
-      $event_mod = lib::create( 'database\modifier' );
-      $event_mod->where( 'event_type_id', '=', $db_script->finished_event_type_id );
-      $event_mod->order_desc( 'datetime' );
-      $event_mod->limit( 1 );
-      $event_list = $this->get_participant()->get_event_object_list( $event_mod );
-      if( 0 < count( $event_list ) )
+      $db_script = $script_class_name::get_unique_record( 'pine_qnaire_id', $this->qnaire_id );
+      if( !is_null( $db_script ) && !is_null( $db_script->finished_event_type_id ) )
       {
-        $db_event = current( $event_list );
-        $db_event->delete();
+        $event_mod = lib::create( 'database\modifier' );
+        $event_mod->where( 'event_type_id', '=', $db_script->finished_event_type_id );
+        $event_mod->order_desc( 'datetime' );
+        $event_mod->limit( 1 );
+        $event_list = $this->get_participant()->get_event_object_list( $event_mod );
+        if( 0 < count( $event_list ) )
+        {
+          $db_event = current( $event_list );
+          $db_event->delete();
+        }
       }
     }
   }
@@ -220,6 +226,9 @@ class respondent extends \cenozo\database\record
    */
   public function send_all_mail()
   {
+    // we don't send mail to anonymous respondents
+    if( is_null( $this->participant_id ) ) return;
+
     $db_qnaire = $this->get_qnaire();
     $number_of_iterations = $db_qnaire->repeated ? $db_qnaire->max_responses : 1;
     if( 0 == $number_of_iterations ) $number_of_iterations = 1; // infinitely repeated qnaires only get one invitation
@@ -308,6 +317,9 @@ class respondent extends \cenozo\database\record
    */
   public function remove_unsent_mail()
   {
+    // we don't send mail to anonymous respondents
+    if( is_null( $this->participant_id ) ) return;
+
     // get a list of all mail that wasn't sent
     $modifier = lib::create( 'database\modifier' );
     $modifier->join( 'mail', 'respondent_mail.mail_id', 'mail.id' );
@@ -324,7 +336,12 @@ class respondent extends \cenozo\database\record
    */
   public function get_url()
   {
-    return sprintf( 'https://%s%s/respondent/run/%s', $_SERVER['HTTP_HOST'], str_replace( '/api', '', ROOT_URL ), $this->token );
+    return sprintf(
+      'https://%s%s/respondent/run/%s',
+      $_SERVER['HTTP_HOST'],
+      str_replace( '/api', '', ROOT_URL ),
+      $this->token
+    );
   }
 
   /**
@@ -336,6 +353,9 @@ class respondent extends \cenozo\database\record
    */
   private function add_mail( $db_reminder, $rank, $datetime = NULL )
   {
+    // we don't send mail to anonymous respondents
+    if( is_null( $this->participant_id ) ) return;
+
     $respondent_mail_class_name = lib::get_class_name( 'database\respondent_mail' );
 
     $db_respondent_mail = NULL;

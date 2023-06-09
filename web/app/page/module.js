@@ -361,8 +361,8 @@ cenozoApp.defineModule({
                   },
                 },
                 {
-                  title: $scope.model.renderModel.data.uid
-                    ? $scope.model.renderModel.data.uid
+                  title: $scope.model.renderModel.data.respondent_name
+                    ? $scope.model.renderModel.data.respondent_name
                     : "Preview",
                 },
               ]);
@@ -611,7 +611,7 @@ cenozoApp.defineModule({
               stages: null,
               closed: null,
               submitted: null,
-              uid: null,
+              respondent_name: null,
               introductionList: null,
               conclusionList: null,
               closedList: null,
@@ -1118,7 +1118,6 @@ cenozoApp.defineModule({
                         { table: "response", column: "comments" },
                         { table: "response_stage", column: "id", alias: "response_stage_id", },
                         { table: "response_stage", column: "stage_id" },
-                        { table: "participant", column: "uid" },
                         { table: "language", column: "code", alias: "base_language", },
                       ],
                     },
@@ -1449,7 +1448,7 @@ cenozoApp.defineModule({
                   qnaire_name: this.parentModel.viewModel.record.qnaire_name,
                   base_language:
                     this.parentModel.viewModel.record.base_language,
-                  uid: this.parentModel.viewModel.record.uid,
+                  respondent_name: this.parentModel.viewModel.record.respondent_name,
                 });
 
                 this.progress = Math.round(

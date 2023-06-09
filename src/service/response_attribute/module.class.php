@@ -23,7 +23,7 @@ class module extends \cenozo\service\module
     $modifier->join( 'attribute', 'response_attribute.attribute_id', 'attribute.id' );
     $modifier->join( 'response', 'response_attribute.response_id', 'response.id' );
     $modifier->join( 'respondent', 'response.respondent_id', 'respondent.id' );
-    $modifier->join( 'participant', 'respondent.participant_id', 'participant.id' );
+    $modifier->left_join( 'participant', 'respondent.participant_id', 'participant.id' );
     $modifier->join( 'qnaire', 'respondent.qnaire_id', 'qnaire.id' );
   }
 }

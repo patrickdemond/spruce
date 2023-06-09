@@ -70,12 +70,14 @@ class response extends \cenozo\database\has_rank
     $new = is_null( $this->id );
     $submitted = $this->has_column_changed( 'submitted' ) && $this->submitted;
     $db_respondent = NULL;
+    $db_participant = NULL;
     $db_qnaire = NULL;
 
     // setup new responses
     if( $new )
     {
       $db_respondent = lib::create( 'database\respondent', $this->respondent_id );
+      $db_participant = $db_respondent->get_participant();
       $db_qnaire = $db_respondent->get_qnaire();
       $db_current_response = $db_respondent->get_current_response();
 
@@ -83,8 +85,10 @@ class response extends \cenozo\database\has_rank
       if( is_null( $db_qnaire->repeated ) && !is_null( $db_current_response ) )
       {
         throw lib::create( 'exception\runtime', sprintf(
-          'Tried to create second response for participant %s answering qnaire "%s" which is not repeated.',
-          $db_respondent->get_participant()->uid,
+          'Tried to create second response for %s answering qnaire "%s" which is not repeated.',
+          is_null( $db_participant ) ?
+            sprintf( 'anonymous respondent %d', $db_respondent->id ) :
+            sprintf( 'participant %s', $db_participant->uid ),
           $db_qnaire->name
         ), __METHOD__ );
       }
@@ -93,8 +97,10 @@ class response extends \cenozo\database\has_rank
                $db_qnaire->max_responses <= $db_current_response->rank )
       {
         throw lib::create( 'exception\runtime', sprintf(
-          'Tried to create more than the maximum allowed responses for participant %s answering qnaire "%s" (maximum responses %d).',
-          $db_respondent->get_participant()->uid,
+          'Tried to create more than the maximum allowed responses for %s answering qnaire "%s" (maximum responses %d).',
+          is_null( $db_participant ) ?
+            sprintf( 'anonymous respondent %d', $db_respondent->id ) :
+            sprintf( 'participant %s', $db_participant->uid ),
           $db_qnaire->name,
           $db_qnaire->max_responses
         ), __METHOD__ );
@@ -117,21 +123,25 @@ class response extends \cenozo\database\has_rank
     if( $new && 1 == $this->rank )
     {
       if( is_null( $db_respondent ) ) $db_respondent = $this->get_respondent();
-      $db_script = $script_class_name::get_unique_record( 'pine_qnaire_id', $db_respondent->qnaire_id );
-      if( !is_null( $db_script ) )
+      if( is_null( $db_participant ) ) $db_participant = $db_respondent->get_participant();
+      if( !is_null( $db_participant ) )
       {
-        $db_script->add_started_event(
-          $this->get_participant(),
-          $this->last_datetime,
-          $session->get_effective_user()
-        );
+        $db_script = $script_class_name::get_unique_record( 'pine_qnaire_id', $db_respondent->qnaire_id );
+        if( !is_null( $db_script ) )
+        {
+          $db_script->add_started_event(
+            $db_participant,
+            $this->last_datetime,
+            $session->get_effective_user()
+          );
+        }
       }
     }
     else if( $submitted )
     {
       $db_effective_user = $session->get_effective_user();
-      $db_participant = $this->get_participant();
       if( is_null( $db_respondent ) ) $db_respondent = $this->get_respondent();
+      if( is_null( $db_participant ) ) $db_participant = $db_respondent->get_participant();
       if( is_null( $db_qnaire ) ) $db_qnaire = $db_respondent->get_qnaire();
 
       if( is_null( $db_qnaire->max_responses ) || $this->rank == $db_qnaire->max_responses )
@@ -139,17 +149,23 @@ class response extends \cenozo\database\has_rank
         $db_respondent->end_datetime = util::get_datetime_object();
         $db_respondent->save();
 
-        // now add the finished event, if there is one
-        $db_script = $script_class_name::get_unique_record( 'pine_qnaire_id', $db_respondent->qnaire_id );
-        if( !is_null( $db_script ) )
+        // now add the finished event to non-anonymous respondents
+        if( !is_null( $db_participant ) )
         {
-          $db_script->add_finished_event(
-            $db_participant,
-            $this->last_datetime,
-            $session->get_effective_user()
-          );
+          $db_script = $script_class_name::get_unique_record( 'pine_qnaire_id', $db_respondent->qnaire_id );
+          if( !is_null( $db_script ) )
+          {
+            $db_script->add_finished_event(
+              $db_participant,
+              $this->last_datetime,
+              $session->get_effective_user()
+            );
+          }
         }
       }
+
+      // nothing left to do for anonymous respondents
+      if( is_null( $db_participant ) ) return;
 
       // when submitting the response check if the respondent is done and remove any unsent mail
       $db_respondent->remove_unsent_mail();
@@ -345,7 +361,7 @@ class response extends \cenozo\database\has_rank
   }
 
   /**
-   * Convenience method to return this response's participant
+   * Convenience method to return this response's participant (NULL if respondent is anonymous)
    * @return database\participant $db_participant
    */
   public function get_participant()
@@ -466,11 +482,14 @@ class response extends \cenozo\database\has_rank
 
         if( is_null( $db_answer ) || !$db_answer->is_complete() )
         {
+          $db_participant = $this->get_participant();
           log::warning( sprintf(
-            'Tried to advance response for %s to the next page for question "%s", on the current page "%s", '.(
+            'Tried to advance %s to the next page for question "%s", on the current page "%s", '.(
               is_null( $db_answer ) ? 'but the answer doesn\'t exist.' : 'but the answer is incomplete.'
             ),
-            $this->get_participant()->uid,
+            is_null( $db_participant ) ?
+              sprintf( 'anonymous respondent %d', $db_respondent->id ) :
+              sprintf( 'participant %s', $db_participant->uid ),
             $question['name'],
             $db_page->name
           ) );
@@ -740,13 +759,16 @@ class response extends \cenozo\database\has_rank
         $value = NULL;
         try
         {
+          // participant-specific attributes will always be NULL for anonymous respondents
           $value = $db_attribute->get_participant_value( $db_participant );
         }
         catch( \cenozo\exception\argument $e )
         {
           log::warning( sprintf(
-            'Error while getting attribute value for "%s", questionnaire "%s", attribute "%s".%s%s',
-            $db_participant->uid,
+            'Error while getting attribute value for %s, questionnaire "%s", attribute "%s".%s%s',
+            is_null( $db_participant ) ?
+              sprintf( 'anonymous respondent %d', $db_respondent->id ) :
+              sprintf( 'participant %s', $db_participant->uid ),
             $db_qnaire->name,
             $db_attribute->name,
             "\n",
@@ -797,11 +819,14 @@ class response extends \cenozo\database\has_rank
     if( $error )
     {
       $db_respondent = $this->get_respondent();
+      $db_participant = $db_respondent->get_participant();
       throw lib::create( 'exception\runtime',
         sprintf(
-          'Failed to generate PDF qnaire report for %s response to "%s"%s',
-          $db_respondent->get_participant()->uid,
+          'Failed to generate PDF qnaire "%s" report for %s%s',
           $db_respondent->get_qnaire()->name,
+          is_null( $db_participant ) ?
+            sprintf( 'anonymous respondent %d', $db_respondent->id ) :
+            sprintf( 'participant %s', $db_participant->uid ),
           "\n".$error
         ),
         __METHOD__
@@ -880,6 +905,7 @@ class response extends \cenozo\database\has_rank
             $db_response_attribute = lib::create( 'database\response_attribute' );
             $db_response_attribute->response_id = $this->id;
             $db_response_attribute->attribute_id = $db_attribute->id;
+            // participant-specific attributes will always be NULL for anonymous respondents
             $db_response_attribute->value = $db_attribute->get_participant_value( $db_participant );
             $db_response_attribute->save();
           }

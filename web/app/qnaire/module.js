@@ -39,6 +39,10 @@ cenozoApp.defineModule({
             return !model.isRole("interviewer");
           },
         },
+        anonymous: {
+          title: "Anonymous",
+          type: "boolean",
+        },
         stages: {
           title: "Use Stages",
           type: "boolean",
@@ -131,6 +135,13 @@ cenozoApp.defineModule({
           return model.isRole("interviewer") ? true : "add";
         },
       },
+      anonymous: {
+        title: "Anonymous Respondents Allowed",
+        type: "boolean",
+        isExcluded: function ($state, model) {
+          return model.viewModel.record.stages;
+        },
+      },
       allow_in_hold: {
         title: "Allow when in Hold",
         type: "boolean",
@@ -149,7 +160,7 @@ cenozoApp.defineModule({
         title: "Stages",
         type: "boolean",
         isExcluded: function ($state, model) {
-          return model.isRole("interviewer") ? true : "add";
+          return model.viewModel.record.anonymous || model.isRole("interviewer") ? true : "add";
         },
       },
       closed: {

@@ -520,7 +520,8 @@ class question extends base_qnaire_part
    */
   public function get_data_directory()
   {
-    return sprintf( '%s/%s', $this->get_qnaire()->get_data_directory(), $this->name );
+    $db_qnaire = $this->get_qnaire();
+    return sprintf( '%s/%s', $db_qnaire->get_data_directory(), $this->name );
   }
 
   /**
@@ -528,6 +529,7 @@ class question extends base_qnaire_part
    */
   protected function get_old_data_directory()
   {
+    $db_qnaire = $this->get_qnaire();
     return sprintf(
       '%s/%s',
       $this->get_qnaire()->get_data_directory(),
