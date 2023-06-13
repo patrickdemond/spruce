@@ -142,6 +142,14 @@ cenozoApp.defineModule({
           return model.viewModel.record.stages;
         },
       },
+      anonymous_url: {
+        title: "Anonymous URL",
+        type: "string",
+        isConstant: true,
+        isExcluded: function ($state, model) {
+          return !model.viewModel.record.anonymous ? true : "add";
+        },
+      },
       allow_in_hold: {
         title: "Allow when in Hold",
         type: "boolean",

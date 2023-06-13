@@ -18,6 +18,8 @@ class module extends \cenozo\service\module
    */
   public function prepare_read( $select, $modifier )
   {
+    $session = lib::create( 'business\session' );
+
     parent::prepare_read( $select, $modifier );
 
     $modifier->join( 'language', 'qnaire.base_language_id', 'base_language.id', '', 'base_language' );
@@ -50,6 +52,18 @@ class module extends \cenozo\service\module
     $db_qnaire = $this->get_resource();
     if( !is_null( $db_qnaire ) )
     {
+      if( $select->has_column( 'anonymous_url' ) )
+      {
+        $select->add_constant(
+          sprintf(
+            '%s/respondent/run/q=%s',
+            $session->get_application()->url,
+            urlencode( $db_qnaire->name )
+          ),
+          'anonymous_url'
+        );
+      }
+
       if( $select->has_column( 'first_page_id' ) )
       {
         $first_page_id = NULL;
