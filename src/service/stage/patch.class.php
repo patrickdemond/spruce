@@ -78,12 +78,10 @@ class patch extends \cenozo\service\patch
       $stage_mod->order( 'stage.rank' );
       foreach( $db_stage->get_qnaire()->get_stage_object_list( $stage_mod ) as $db_temp_stage )
       {
-        log::debug( sprintf( '%d) %s', $db_temp_stage->rank, $db_temp_stage->name ) );
         $module_mod = lib::create( 'database\modifier' );
         $module_mod->order( 'module.rank' );
         foreach( $db_temp_stage->get_module_object_list( $module_mod ) as $db_module )
         {
-          log::debug( sprintf( '%d => %d', $db_module->rank, $rank ) );
           $db_module->rank = $rank;
           $db_module->save();
           $rank++;

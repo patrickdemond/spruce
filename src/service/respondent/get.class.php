@@ -140,7 +140,6 @@ class get extends \cenozo\service\get
       $error_list = $this->db_response->get_attribute_error_list();
       if( 0 < count( $error_list ) )
       {
-        log::debug( $error_list );
         $notice = "The following errors occurred while creating the participant's attribute values:\n\n";
         foreach( $error_list as $name => $error ) $notice .= sprintf( "\"%s\": %s", $name, $error );
         $notice .=
