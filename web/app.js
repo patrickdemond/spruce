@@ -72,7 +72,10 @@ cenozoApp.initQnairePartModule = function (module, type) {
     childType = "question_option";
     columnList.question_option_count = { title: "Question Options" };
   }
-  columnList.precondition = { title: "Precondition" };
+  columnList.precondition = {
+    column: type + '.precondition',
+    title: "Precondition",
+  };
 
   angular.extend(module, {
     identifier: {},
