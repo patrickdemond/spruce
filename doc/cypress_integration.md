@@ -16,13 +16,13 @@ A) answer_device doesn't exist
 B) answer_device exists
   B.1) cypress is available
     B.1.i) user launch => reload Pine UI
-    B.1.ii) user abort => send DELETE to Cypress (404 response); delete answer_device
+    B.1.ii) user abort => send DELETE to Cypress (404 response); patch answer_device (status=cancelled)
     B.1.iii) cypress abort => n/a (impossible)
     B.1.iv) cypress complete => n/a (impossible)
   B.2) is busy
     B.2.i) user launch => reload Pine UI
-    B.2.ii) user abort => send DELETE to Cypress (200 response); delete answer_device
-    B.2.iii) cypress abort => delete answer_device or return 404
+    B.2.ii) user abort => send DELETE to Cypress (200 response); patch answer_device (status=cancelled)
+    B.2.iii) cypress abort => patch answer_device (status=cancelled) or return 404
     B.3.iv) cypress complete => complete answer_device or return 404
 
 
@@ -65,7 +65,7 @@ launch( <answer_id> )
 
 abort( <uuid> )
 {
-  Client or Cypress sends DELETE to PINE:answer_device/<uuid>
+  Client or Cypress sends PATCH to PINE:answer_device/<uuid> (status=cancelled)
   if( answer_device record doesn't exist )
   {
     return 404
@@ -75,7 +75,7 @@ abort( <uuid> )
   {
     server sends DELETE to CYPRESS:<device_path>/<uuid>
   }
-  server deletes the answer_device record
+  server patches the answer_device record (status=cancelled)
 }
 
 complete( <uuid> )
@@ -110,7 +110,7 @@ Pine:
   PATCH answer/<answer_id>?action=launch_device returns { "uuid": <uuid>, "status": "in progress" }
   PATCH answer/<answer_id> with body { "instrumentBarcode": <STRING>, "language": "en|fr", "startTime": <DATETIME>, "endTime": <DATETIME>, "results": [{<DEVICE_KEY_VALUE_PAIRS>}] }
   PATCH answer/<answer_id>?filename=<FILENAME> with raw file contents as body
-  DELETE answer_device/<uuid> returns 200 or 404
+  PATCH answer_device/<uuid> with body { "status": "cancelled" } returns 200 or 404
   PATCH answer_device/<uuid> with body { "status": "completed" } returns 200 or 404
 
 Cypress:
