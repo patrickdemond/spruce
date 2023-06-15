@@ -33,7 +33,6 @@ class query extends \cenozo\service\query
       // count all answer_devices belonging to the current response
       $answer_device_class_name = lib::get_class_name( 'database\answer_device' );
       $modifier = clone $this->modifier;
-      $modifier->join( 'answer', 'answer_device.answer_id', 'answer.id' );
       $modifier->where( 'answer.response_id', '=', $this->get_parent_record()->get_current_response()->id );
       $count = $answer_device_class_name::count( $modifier );
     }
@@ -54,7 +53,6 @@ class query extends \cenozo\service\query
       // list all answer_devices belonging to the current response
       $answer_device_class_name = lib::get_class_name( 'database\answer_device' );
       $modifier = clone $this->modifier;
-      $modifier->join( 'answer', 'answer_device.answer_id', 'answer.id' );
       $modifier->where( 'answer.response_id', '=', $this->get_parent_record()->get_current_response()->id );
       $list = $answer_device_class_name::select( $this->select, $modifier );
     }
