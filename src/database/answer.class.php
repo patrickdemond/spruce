@@ -137,11 +137,6 @@ class answer extends \cenozo\database\record
         {
           $dkna = property_exists( $value, 'dkna' ) && $value->dkna;
           $refuse = property_exists( $value, 'refuse' ) && $value->refuse;
-          if( $dkna || $refuse )
-          {
-            $db_response_device = $this->get_response_device();
-            if( !is_null( $db_response_device ) ) $db_response_device->delete();
-          }
         }
       }
     }
@@ -333,50 +328,26 @@ class answer extends \cenozo\database\record
   }
 
   /**
-   * Returns the response_device record associated with the answer (or NULL if there is none)
+   * Returns the answer_device record associated with the answer
+   * @return database\answer_device
    */
-  public function get_response_device()
+  public function get_answer_device()
   {
-    $response_device_class_name = lib::get_class_name( 'database\response_device' );
-
     $db_question = $this->get_question();
-
-    $db_response_device = NULL;
-    if( 'device' == $db_question->type && !is_null( $db_question->device_id ) )
-    {
-      $db_response_device = $response_device_class_name::get_unique_record(
-        ['response_id', 'device_id'],
-        [$this->response_id, $db_question->device_id]
-      );
-    }
-
-    return $db_response_device;
-  }
-
-  /** 
-   * Launches this answer's device
-   * @return database/response_device The resulting response_device object referring to the launch request
-   */
-  public function launch_device()
-  {
-    $db_device = $this->get_question()->get_device();
-    if( is_null( $db_device ) )
+    if( is_null( $db_question->device_id ) )
     {
       throw lib::create( 'exception\runtime',
-        sprintf( 'Tried to run device for answer %d but question has no device associated with it.', $this->id ),
+        sprintf(
+          'Tried to get answer_device record for answer %d (question %s) but question has no device',
+          $this->id,
+          $db_question->name
+        ),
         __METHOD__
       );
     }
 
-    $db_response_device = $db_device->launch( $this );
-    if( 'in progress' == $db_response_device->status )
-    {
-      // remove the answer's value since the device is in progress
-      $this->value = 'null';
-      $this->save();
-    }
-
-    return $db_response_device;
+    $answer_device_class_name = lib::get_class_name( 'database\answer_device' );
+    return $answer_device_class_name::get_unique_record( 'answer_id', $this->id );
   }
 
   /**

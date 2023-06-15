@@ -104,10 +104,11 @@ class patch extends \cenozo\service\patch
     else if( 'launch_device' == $this->get_argument( 'action', NULL ) )
     {
       // launch the associated device
-      $db_response_device = $this->get_leaf_record()->launch_device();
+      $db_answer_device = $this->get_leaf_record()->get_answer_device();
+      $db_answer_device->launch();
       $this->set_data( [
-        'uuid' => $db_response_device->uuid,
-        'status' => $db_response_device->status
+        'uuid' => $db_answer_device->uuid,
+        'status' => $db_answer_device->status
       ] );
     }
   }

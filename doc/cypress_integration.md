@@ -1,29 +1,29 @@
 DESIGN
 ======
 
-A) response_device doesn't exist
+A) answer_device doesn't exist
   A.1) cypress is available
-    A.1.i) user launch => send POST to Cypress; get back uuid; create response_device
+    A.1.i) user launch => send POST to Cypress; get back uuid; create answer_device
     A.1.ii) user abort => n/a (impossible)
     A.1.iii) cypress abort => return 404
     A.1.iv) cypress complete => n/a (impossible)
   A.2) is busy
-    A.2.i) user launch => get barcode and uuid from Cypress (status); create response_device or show busy in Pine UI
+    A.2.i) user launch => get barcode and uuid from Cypress (status); create answer_device or show busy in Pine UI
     A.2.ii) user abort => n/a (impossible)
     A.2.iii) cyrpess abort => return 404
     A.2.iv) cypress complete => return 404
       
-B) response_device exists
+B) answer_device exists
   B.1) cypress is available
     B.1.i) user launch => reload Pine UI
-    B.1.ii) user abort => send DELETE to Cypress (404 response); delete response_device
+    B.1.ii) user abort => send DELETE to Cypress (404 response); delete answer_device
     B.1.iii) cypress abort => n/a (impossible)
     B.1.iv) cypress complete => n/a (impossible)
   B.2) is busy
     B.2.i) user launch => reload Pine UI
-    B.2.ii) user abort => send DELETE to Cypress (200 response); delete response_device
-    B.2.iii) cypress abort => delete response_device or return 404
-    B.3.iv) cypress complete => complete response_device or return 404
+    B.2.ii) user abort => send DELETE to Cypress (200 response); delete answer_device
+    B.2.iii) cypress abort => delete answer_device or return 404
+    B.3.iv) cypress complete => complete answer_device or return 404
 
 
 
@@ -33,9 +33,9 @@ IMPLEMENTATION
 launch( <answer_id> )
 {
   Pine client sends PATCH to PINE:answer/<answer_id>?action=launch_device
-  if( response_device record exists )
+  if( answer_device record exists )
   {
-    respond to client with uuid and status (from response_device record)
+    respond to client with uuid and status (from answer_device record)
   }
   else
   {
@@ -65,8 +65,8 @@ launch( <answer_id> )
 
 abort( <uuid> )
 {
-  Client or Cypress sends DELETE to PINE:response_device/<uuid>
-  if( response_device record doesn't exist )
+  Client or Cypress sends DELETE to PINE:answer_device/<uuid>
+  if( answer_device record doesn't exist )
   {
     return 404
   }
@@ -75,7 +75,7 @@ abort( <uuid> )
   {
     server sends DELETE to CYPRESS:<device_path>/<uuid>
   }
-  server deletes the response_device record
+  server deletes the answer_device record
 }
 
 complete( <uuid> )
@@ -92,13 +92,13 @@ complete( <uuid> )
     Cypress sends PATCH to PINE:answer/<answer_id>?filename=<FILENAME> with raw file contents as body
   }
 
-  Cypress sends PATCH to PINE:response_device/<uuid> with body { "status": "completed" }
-  if( response_device record doesn't exist )
+  Cypress sends PATCH to PINE:answer_device/<uuid> with body { "status": "completed" }
+  if( answer_device record doesn't exist )
   {
     return 404
   }
 
-  server updates response_device.status to "completed"
+  server updates answer_device.status to "completed"
 }
 
 
@@ -110,8 +110,8 @@ Pine:
   PATCH answer/<answer_id>?action=launch_device returns { "uuid": <uuid>, "status": "in progress" }
   PATCH answer/<answer_id> with body { "instrumentBarcode": <STRING>, "language": "en|fr", "startTime": <DATETIME>, "endTime": <DATETIME>, "results": [{<DEVICE_KEY_VALUE_PAIRS>}] }
   PATCH answer/<answer_id>?filename=<FILENAME> with raw file contents as body
-  DELETE response_device/<uuid> returns 200 or 404
-  PATCH response_device/<uuid> with body { "status": "completed" } returns 200 or 404
+  DELETE answer_device/<uuid> returns 200 or 404
+  PATCH answer_device/<uuid> with body { "status": "completed" } returns 200 or 404
 
 Cypress:
   GET <device_path>/status returns { "status": "ready|in progress", ... }

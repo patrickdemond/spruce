@@ -72,7 +72,7 @@ cenozoApp.defineModule({
       "CnModalMessageFactory",
       function (CnBaseViewFactory, CnHttpFactory, CnModalMessageFactory) {
         var object = function (parentModel, root) {
-          CnBaseViewFactory.construct(this, parentModel, root, 'response_device');
+          CnBaseViewFactory.construct(this, parentModel, root, 'answer_device');
 
           this.getDeviceStatus = async function () {
             var modal = CnModalMessageFactory.instance({

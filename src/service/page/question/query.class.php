@@ -30,17 +30,13 @@ class query extends \cenozo\service\query
       $join_mod->where( 'answer.response_id', '=', $db_response->id );
       $this->modifier->join_modifier( 'answer', $join_mod, 'left' );
       $this->modifier->left_join( 'language', 'answer.language_id', 'language.id' );
-
-      $join_mod = lib::create( 'database\modifier' );
-      $join_mod->where( 'question.device_id', '=', 'response_device.device_id', false );
-      $join_mod->where( 'answer.response_id', '=', 'response_device.response_id', false );
-      $this->modifier->join_modifier( 'response_device', $join_mod, 'left' );
+      $this->modifier->left_join( 'answer_device', 'answer.id', 'answer_device.answer_id' );
 
       $this->select->add_table_column( 'language', 'code', 'language' );
       $this->select->add_table_column( 'answer', 'id', 'answer_id' );
       $this->select->add_table_column( 'answer', 'value' );
-      $this->select->add_table_column( 'response_device', 'uuid', 'device_uuid' );
-      $this->select->add_table_column( 'response_device', 'status', 'device_status' );
+      $this->select->add_table_column( 'answer_device', 'uuid', 'device_uuid' );
+      $this->select->add_table_column( 'answer_device', 'status', 'device_status' );
     }
   }
 

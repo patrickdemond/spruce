@@ -140,7 +140,7 @@ class ui extends \cenozo\ui\ui
     $module = $this->get_module( 'device' );
     if( !is_null( $module ) )
     {
-      $module->add_child( 'response_device' );
+      $module->add_child( 'answer_device' );
       $module->add_child( 'device_data' );
     }
 
@@ -157,7 +157,7 @@ class ui extends \cenozo\ui\ui
       // add response children and actions here in case the qnaire is only done once
       $module->add_child( 'response_stage' );
       $module->add_child( 'response_attribute' );
-      $module->add_child( 'response_device' );
+      $module->add_child( 'answer_device' );
       $module->add_child( 'problem_report' );
       $module->add_action( 'display', '/{identifier}' );
     }
@@ -167,7 +167,7 @@ class ui extends \cenozo\ui\ui
     {
       $module->add_child( 'response_stage' );
       $module->add_child( 'response_attribute' );
-      $module->add_child( 'response_device' );
+      $module->add_child( 'answer_device' );
       $module->add_child( 'problem_report' );
       $module->add_action( 'display', '/{identifier}' );
     }

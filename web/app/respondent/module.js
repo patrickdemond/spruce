@@ -428,7 +428,7 @@ cenozoApp.defineModule({
                 ("response_attribute" == child.subject.snake && null == this.record.repeated) ||
                 // show device list if the qnaire has devices and the qnaire is only answered once
                 (
-                  "response_device" == child.subject.snake &&
+                  "answer_device" == child.subject.snake &&
                   this.record.has_devices &&
                   null == this.record.repeated
                 )

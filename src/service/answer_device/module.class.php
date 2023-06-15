@@ -5,7 +5,7 @@
  * @author Patrick Emond <emondpd@mcmaster.ca>
  */
 
-namespace pine\service\response_device;
+namespace pine\service\answer_device;
 use cenozo\lib, cenozo\log, pine\util;
 
 /**
@@ -20,9 +20,11 @@ class module extends \cenozo\service\module
   {
     parent::prepare_read( $select, $modifier );
 
-    $modifier->join( 'response', 'response_device.response_id', 'response.id' );
+    $modifier->join( 'answer', 'answer_device.answer_id', 'answer.id' );
+    $modifier->join( 'question', 'answer.question_id', 'question.id' );
+    $modifier->join( 'device', 'question.device_id', 'device.id' );
+    $modifier->join( 'response', 'answer.response_id', 'response.id' );
     $modifier->join( 'respondent', 'response.respondent_id', 'respondent.id' );
     $modifier->join( 'qnaire', 'respondent.qnaire_id', 'qnaire.id' );
-    $modifier->join( 'device', 'response_device.device_id', 'device.id' );
   }
 }

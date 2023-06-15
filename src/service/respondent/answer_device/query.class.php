@@ -5,7 +5,7 @@
  * @author Patrick Emond <emondpd@mcmaster.ca>
  */
 
-namespace pine\service\respondent\response_device;
+namespace pine\service\respondent\answer_device;
 use cenozo\lib, cenozo\log, pine\util;
 
 class query extends \cenozo\service\query
@@ -30,11 +30,12 @@ class query extends \cenozo\service\query
     $count = 0;
     if( !is_null( $db_current_response ) )
     {
-      // count all response_devices belonging to the current response
-      $response_device_class_name = lib::get_class_name( 'database\response_device' );
+      // count all answer_devices belonging to the current response
+      $answer_device_class_name = lib::get_class_name( 'database\answer_device' );
       $modifier = clone $this->modifier;
-      $modifier->where( 'response_id', '=', $this->get_parent_record()->get_current_response()->id );
-      $count = $response_device_class_name::count( $modifier );
+      $modifier->join( 'answer', 'answer_device.answer_id', 'answer.id' );
+      $modifier->where( 'answer.response_id', '=', $this->get_parent_record()->get_current_response()->id );
+      $count = $answer_device_class_name::count( $modifier );
     }
 
     return $count;
@@ -50,11 +51,12 @@ class query extends \cenozo\service\query
     $list = array();
     if( !is_null( $db_current_response ) )
     {
-      // list all response_devices belonging to the current response
-      $response_device_class_name = lib::get_class_name( 'database\response_device' );
+      // list all answer_devices belonging to the current response
+      $answer_device_class_name = lib::get_class_name( 'database\answer_device' );
       $modifier = clone $this->modifier;
-      $modifier->where( 'response_id', '=', $this->get_parent_record()->get_current_response()->id );
-      $list = $response_device_class_name::select( $this->select, $modifier );
+      $modifier->join( 'answer', 'answer_device.answer_id', 'answer.id' );
+      $modifier->where( 'answer.response_id', '=', $this->get_parent_record()->get_current_response()->id );
+      $list = $answer_device_class_name::select( $this->select, $modifier );
     }
 
     return $list;

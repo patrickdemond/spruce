@@ -671,8 +671,8 @@ cenozoApp.defineModule({
                             column: [
                               'value',
                               'files_received',
-                              { table: 'response_device', column: 'uuid' },
-                              { table: 'response_device', column: 'status' },
+                              { table: 'answer_device', column: 'uuid' },
+                              { table: 'answer_device', column: 'status' },
                             ],
                           },
                         },
@@ -2286,8 +2286,9 @@ cenozoApp.defineModule({
               try {
                 this.working = true;
                 var response = await CnHttpFactory.instance({
-                  path: "response_device/uuid=" + question.device_uuid
-                }).delete();
+                  path: "answer_device/uuid=" + question.device_uuid,
+                  data: { "status": "cancelled" },
+                }).patch();
                 question.device_status = null;
                 question.device_uuid = null;
                 const promiseIndex = this.devicePromiseList.findIndexByProperty("id", question.id);

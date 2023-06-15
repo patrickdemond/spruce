@@ -1,5 +1,5 @@
 cenozoApp.defineModule({
-  name: "response_device",
+  name: "answer_device",
   models: ["list"],
   create: (module) => {
     angular.extend(module, {
@@ -10,9 +10,9 @@ cenozoApp.defineModule({
         },
       },
       name: {
-        singular: "response device status",
-        plural: "response device statuses",
-        possessive: "response device status's",
+        singular: "device status",
+        plural: "device statuses",
+        possessive: "device status'",
       },
       columnList: {
         questionnaire: {
@@ -43,7 +43,7 @@ cenozoApp.defineModule({
         },
       },
       defaultOrder: {
-        column: "response_device.start_datetime",
+        column: "answer_device.start_datetime",
         reverse: true,
       },
     });

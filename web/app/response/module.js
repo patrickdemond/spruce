@@ -305,11 +305,11 @@ cenozoApp.defineModule({
 
           this.getChildList = function () {
             return this.$$getChildList().filter( (child) =>
-              (!["response_stage", "response_device"].includes(child.subject.snake)) ||
+              (!["response_stage", "answer_device"].includes(child.subject.snake)) ||
               // show stage list if the qnaire has stages
               ("response_stage" == child.subject.snake && this.record.stages) ||
               // show device list if the qnaire has devices and the qnaire is only answered once
-              ("response_device" == child.subject.snake && this.record.has_devices)
+              ("answer_device" == child.subject.snake && this.record.has_devices)
             );
           };
         };
