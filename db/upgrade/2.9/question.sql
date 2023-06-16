@@ -11,7 +11,7 @@ BEGIN
   END IF;
 
   IF NEW.device_id IS NOT NULL AND OLD.device_id IS NULL THEN
-    INSERT INTO answer_device( answer_id )
+    INSERT IGNORE INTO answer_device( answer_id )
     SELECT id FROM answer WHERE question_id = NEW.id;
   END IF;
 END$$
