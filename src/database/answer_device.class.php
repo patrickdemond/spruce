@@ -16,24 +16,27 @@ class answer_device extends \cenozo\database\record
   /**
    * Extend parent method
    */
-  public function delete()
+  public function save()
   {
-    $db_device = $this->get_device();
-    $uuid = $this->uuid;
+    $status_changed = $this->has_column_changed( 'status' );
 
-    // delete any answer associated with this answer device
-    $db_answer = $this->get_answer();
-    $db_answer->value = 'null';
-    $db_answer->save();
-    foreach( $db_answer->get_data_files() as $filename ) unlink( $filename );
+    parent::save();
 
-    parent::delete();
-
-    // abort the device
-    if( !$db_device->emulate )
+    if( $status_changed && 'cancelled' == $this->status )
     {
-      $cypress_manager = lib::create( 'business\cypress_manager', $db_device );
-      $cypress_manager->abort( $uuid );
+      // delete any answer associated with this answer device
+      $db_answer = $this->get_answer();
+      $db_answer->value = 'null';
+      $db_answer->save();
+      foreach( $db_answer->get_data_files() as $filename ) unlink( $filename );
+
+      // abort the device
+      $db_device = $this->get_device();
+      if( !$db_device->emulate )
+      {
+        $cypress_manager = lib::create( 'business\cypress_manager', $db_device );
+        $cypress_manager->abort( $uuid = $this->uuid );
+      }
     }
   }
 
