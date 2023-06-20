@@ -63,7 +63,15 @@ class cypress_manager extends \cenozo\base_object
     }
     catch( \cenozo\exception\runtime $e )
     {
-      if( 409 == $this->last_code )
+      if( 400 == $this->last_code )
+      {
+        throw lib::create( 'exception\notice',
+          'The device has not been setup properly (input data is missing), please contact support.',
+          __METHOD__,
+          $e
+        );
+      }
+      else if( 409 == $this->last_code )
       {
         throw lib::create( 'exception\notice',
           'Cannot launch the device as it is already busy.',
