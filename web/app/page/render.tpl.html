@@ -315,8 +315,7 @@
                  ng-repeat="question in model.renderModel.getVisibleQuestionList()">
               <div class="container-fluid"
                    ng-style="model.viewModel.record.tabulate ? { 'padding': '5px 0px 5px 5px' } : null">
-                <hr ng-if="!$first && !model.viewModel.record.tabulate" />
-                <div ng-if="model.viewModel.record.debug || model.renderModel.showHidden"
+                <div ng-if="'comment' != question.type && ( model.viewModel.record.debug || model.renderModel.showHidden )"
                      class="spacer small text-muted"
                      ng-class="{ 'float-left': model.viewModel.record.tabulate }"
                      style="line-height: 26px"">[{{ question.variable_name }}]</div>
@@ -687,6 +686,7 @@
                     </label>
                   </div>
                 </div>
+                <hr ng-if="!$last && 'comment' != question.type && !model.viewModel.record.tabulate" />
               </div>
             </div>
           </div>
