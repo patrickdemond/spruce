@@ -291,9 +291,9 @@ class respondent extends \cenozo\database\record
 
           $datetime->add( new \DateInterval( sprintf(
             'P%s%d%s',
-            'hour' == $db_reminder->unit ? 'T' : '',
-            $db_reminder->offset,
-            strtoupper( substr( $db_reminder->unit, 0, 1 ) )
+            'hour' == $db_reminder->delay_unit ? 'T' : '',
+            $db_reminder->delay_offset,
+            strtoupper( substr( $db_reminder->delay_unit, 0, 1 ) )
           ) ) );
 
           if( 1 < $rank )
@@ -371,7 +371,9 @@ class respondent extends \cenozo\database\record
     {
       log::critical( sprintf(
         'Unable to send %s to %s since description is missing.',
-        is_null( $db_reminder ) ? 'invitation' : sprintf( '%s %s reminder', $db_reminder->offset, $db_reminder->unit ),
+        is_null( $db_reminder ) ?
+          'invitation' :
+          sprintf( '%s %s reminder', $db_reminder->delay_offset, $db_reminder->delay_unit ),
         $db_participant->uid
       ) );
     }

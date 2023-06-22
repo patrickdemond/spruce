@@ -27,7 +27,7 @@ class module extends \cenozo\service\module
     if( $select->has_column( 'type' ) )
     {
       $select->add_column(
-        'IF( reminder.id IS NULL, "invitation", CONCAT_WS( " ", reminder.offset, reminder.unit ) )',
+        'IF( reminder.id IS NULL, "invitation", CONCAT_WS( " ", reminder.delay_offset, reminder.delay_unit ) )',
         'type',
         false
       );

@@ -42,8 +42,8 @@ class reminder extends \cenozo\database\record
 
     $db_reminder = new static();
     $db_reminder->qnaire_id = $db_qnaire->id;
-    $db_reminder->offset = $reminder->offset;
-    $db_reminder->unit = $reminder->unit;
+    $db_reminder->delay_offset = $reminder->delay_offset;
+    $db_reminder->delay_unit = $reminder->delay_unit;
     $db_reminder->save();
 
     foreach( $reminder->reminder_description_list as $reminder_description )
