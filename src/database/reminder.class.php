@@ -56,4 +56,123 @@ class reminder extends \cenozo\database\record
 
     return $db_reminder;
   }
+
+  /**
+   * Applies a patch file to the reminder and returns an object containing all elements which are affected by the patch
+   * @param stdObject $patch_object An object containing all (nested) parameters to change
+   * @param boolean $apply Whether to apply or evaluate the patch
+   */
+  public function process_patch( $patch_object, $apply = false )
+  {
+    $language_class_name = lib::get_class_name( 'database\language' );
+    $description_class_name = lib::get_class_name( 'database\reminder_description' );
+
+    $difference_list = [];
+
+    foreach( $patch_object as $property => $value )
+    {
+      if( 'reminder_description_list' == $property )
+      {
+        // check every item in the patch object for additions and changes
+        $add_list = [];
+        $change_list = [];
+        foreach( $patch_object->reminder_description_list as $description )
+        {
+          $db_language = $language_class_name::get_unique_record( 'code', $description->language );
+          $db_description = $description_class_name::get_unique_record(
+            [ 'reminder_id', 'language_id', 'type' ],
+            [ $this->id, $db_language->id, $description->type ]
+          );
+
+          if( is_null( $db_description ) )
+          {
+            if( $apply )
+            {
+              $db_description = lib::create( 'database\reminder_description' );
+              $db_description->reminder_id = $this->id;
+              $db_description->language_id = $db_language->id;
+              $db_description->type = $description->type;
+              $db_description->value = $description->value;
+              $db_description->save();
+            }
+            else $add_list[] = $description;
+          }
+          else
+          {
+            // find and add all differences
+            $diff = [];
+            foreach( $description as $property => $value )
+              if( 'language' != $property && $db_description->$property != $description->$property )
+                $diff[$property] = $description->$property;
+
+            if( 0 < count( $diff ) )
+            {
+              if( $apply )
+              {
+                $db_description->value = $description->value;
+                $db_description->save();
+              }
+              else
+              {
+                $index = sprintf( '%s [%s]', $description->type, $db_language->code );
+                $change_list[$index] = $diff;
+              }
+            }
+          }
+        }
+
+        // check every item in this object for removals
+        $remove_list = [];
+        foreach( $this->get_reminder_description_object_list() as $db_description )
+        {
+          $found = false;
+          foreach( $patch_object->reminder_description_list as $description )
+          {
+            if( $db_description->get_language()->code == $description->language &&
+                $db_description->type == $description->type )
+            {
+              $found = true;
+              break;
+            }
+          }
+
+          if( !$found )
+          {
+            if( $apply ) $db_description->delete();
+            else
+            {
+              $index = sprintf( '%s [%s]', $db_description->type, $db_description->get_language()->code );
+              $remove_list[] = $index;
+            }
+          }
+        }
+
+        $diff_list = [];
+        if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
+        if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
+        if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
+        if( 0 < count( $diff_list ) ) $difference_list['reminder_description_list'] = $diff_list;
+      }
+      else
+      {
+        if( $patch_object->$property != $this->$property )
+        {
+          if( $apply )
+          {
+            $this->$property = 'name' == $property
+                             ? sprintf( '%s_%s', $patch_object->$property, $name_suffix )
+                             : $patch_object->$property;
+          }
+          else $difference_list[$property] = $patch_object->$property;
+        }
+      }
+    }
+
+    if( $apply )
+    {
+      $this->save();
+      return null;
+    }
+    else return 0 == count( $difference_list ) ? NULL : (object)$difference_list;
+  }
 }
