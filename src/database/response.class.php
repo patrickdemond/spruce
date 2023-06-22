@@ -776,7 +776,7 @@ class response extends \cenozo\database\has_rank
           ) );
           $this->attribute_error_list[$db_attribute->name] = $e->get_raw_message();
         }
-          
+
         $db_response_attribute = lib::create( 'database\response_attribute' );
         $db_response_attribute->response_id = $this->id;
         $db_response_attribute->attribute_id = $db_attribute->id;
@@ -870,7 +870,7 @@ class response extends \cenozo\database\has_rank
         ':[A-Za-z0-9_]+|'.
         '\.extra\([^)]+\)|'.
         '\.count\(\)|'.
-        '\.(name|description)\( *"?[^)"]+"? *\)'.
+        '\.(value|name|description)\( *"?[^)"]+"? *\)'.
       ')?\$/';
 
     $question_matches = [];
@@ -924,7 +924,7 @@ class response extends \cenozo\database\has_rank
       {
         $matched_expression = $question_matches[0][$index];
         $db_question = $db_qnaire->get_question( $question_name );
-        if( is_null( $db_question ) || in_array( $db_question->type, ['comment', 'device'] ) )
+        if( is_null( $db_question ) || 'comment' == $db_question->type )
         {
           $warning = sprintf(
             'Invalid question "%s" found while compiling description: %s',
@@ -1090,6 +1090,10 @@ class response extends \cenozo\database\has_rank
               $value
             );
           }
+          else if( 'device' == $db_question->type )
+          {
+            $compiled = util::json_encode( $this->compile_device( $value, $question_matches[2][$index] ) );
+          }
           else if( 'lookup' == $db_question->type )
           {
             $compiled = $this->compile_lookup( $value, $question_matches[2][$index] );
@@ -1176,6 +1180,48 @@ class response extends \cenozo\database\has_rank
   }
 
   /**
+   * Converts a device expression (eg: VAR.value(<PATH>))
+   * @param string $value The data returned by the device
+   * @param string $expression The expression to compile (EG: .value("device"))
+   * @return string
+   */
+  private function compile_device( $value, $expression )
+  {
+    $device_class_name = lib::get_class_name( 'database\device' );
+
+    // start with the full value returned by the device
+    $compiled = $value;
+
+    // if there is no identifier then we do nothing
+    if( is_null( $compiled ) ) return $compiled;
+
+    $device_matches = [];
+    $match = preg_match(
+      '/\.value\( *"?([^)"]+)"? *\)/',
+      $expression,
+      $device_matches
+    );
+    if( $match )
+    {
+      $object_path = $device_matches[1];
+      foreach( explode( '.', $object_path ) as $property )
+      {
+        if( property_exists( $compiled, $property ) )
+        {
+          $compiled = $compiled->$property;
+        }
+        else
+        {
+          $compiled = false;
+          break;
+        }
+      }
+    }
+
+    return $compiled;
+  }
+
+  /**
    * Converts a lookup expression (eg: VAR.name("lookup") or VAR.description("lookup"))
    * @param string $identifier The identifier of the lookup_item being referenced
    * @param string $expression The expression to compile (EG: .name("lookup") or .description("lookup"))
@@ -1192,7 +1238,7 @@ class response extends \cenozo\database\has_rank
 
     // if there is no identifier then we do nothing
     if( is_null( $compiled ) ) return $compiled;
-    
+
     $lookup_matches = [];
     $match = preg_match(
       '/\.(name|description)\( *"?([^)"]+)"? *\)/',
