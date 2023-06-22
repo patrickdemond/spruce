@@ -13,6 +13,7 @@ SOURCE answer.sql
 SOURCE question.sql
 SOURCE service.sql
 SOURCE role_has_service.sql
+SOURCE reminder.sql
 
 SOURCE update_version_number.sql
 

@@ -15,11 +15,14 @@ cenozoApp.defineModule({
         possessive: "reminder's",
       },
       columnList: {
-        offset: {
+        delay_offset: {
           title: "Offset",
-          column: "reminder.offset",
+          column: "reminder.delay_offset",
         },
-        unit: { title: "Unit" },
+        delay_unit: {
+          title: "Unit",
+          column: "reminder.delay_unit",
+        },
       },
       defaultOrder: {
         column: "reminder.id",
@@ -28,12 +31,12 @@ cenozoApp.defineModule({
     });
 
     module.addInputGroup("", {
-      offset: {
+      delay_offset: {
         title: "Offset",
         type: "string",
         format: "integer",
       },
-      unit: {
+      delay_unit: {
         title: "Unit",
         type: "enum",
       },

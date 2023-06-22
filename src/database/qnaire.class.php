@@ -345,8 +345,8 @@ class qnaire extends \cenozo\database\record
     {
       $db_reminder = lib::create( 'database\reminder' );
       $db_reminder->qnaire_id = $this->id;
-      $db_reminder->offset = $db_source_reminder->offset;
-      $db_reminder->unit = $db_source_reminder->unit;
+      $db_reminder->delay_offset = $db_source_reminder->delay_offset;
+      $db_reminder->delay_unit = $db_source_reminder->delay_unit;
       $db_reminder->save();
 
       foreach( $db_source_reminder->get_reminder_description_object_list() as $db_source_reminder_description )
@@ -2410,8 +2410,8 @@ class qnaire extends \cenozo\database\record
         foreach( $patch_object->reminder_list as $reminder )
         {
           $reminder_mod = lib::create( 'database\modifier' );
-          $reminder_mod->where( 'offset', '=', $reminder->offset );
-          $reminder_mod->where( 'unit', '=', $reminder->unit );
+          $reminder_mod->where( 'delay_offset', '=', $reminder->delay_offset );
+          $reminder_mod->where( 'delay_unit', '=', $reminder->delay_unit );
           $reminder_list = $this->get_reminder_object_list( $reminder_mod );
           $db_reminder = 0 == count( $reminder_list ) ? NULL : current( $reminder_list );
           if( is_null( $db_reminder ) ) {
@@ -2527,13 +2527,13 @@ class qnaire extends \cenozo\database\record
             {
               if( $apply )
               {
-                $db_reminder->unit = $reminder->unit;
-                $db_reminder->offset = $reminder->offset;
+                $db_reminder->delay_unit = $reminder->delay_unit;
+                $db_reminder->delay_offset = $reminder->delay_offset;
                 $db_reminder->save();
               }
               else
               {
-                $index = sprintf( '%s %s', $reminder->offset, $reminder->unit );
+                $index = sprintf( '%s %s', $reminder->delay_offset, $reminder->delay_unit );
                 $change_list[$index] = $diff;
               }
             }
@@ -2547,8 +2547,10 @@ class qnaire extends \cenozo\database\record
           $found = false;
           foreach( $patch_object->reminder_list as $reminder )
           {
-            if( $db_reminder->offset == $reminder->offset && $db_reminder->unit == $reminder->unit )
-            {
+            if(
+              $db_reminder->delay_offset == $reminder->delay_offset &&
+              $db_reminder->delay_unit == $reminder->delay_unit
+            ) {
               $found = true;
               break;
             }
@@ -2557,7 +2559,7 @@ class qnaire extends \cenozo\database\record
           if( !$found )
           {
             if( $apply ) $db_reminder->delete();
-            else $remove_list[] = sprintf( '%s %s', $db_reminder->offset, $db_reminder->unit );
+            else $remove_list[] = sprintf( '%s %s', $db_reminder->delay_offset, $db_reminder->delay_unit );
           }
         }
 
@@ -3968,8 +3970,8 @@ class qnaire extends \cenozo\database\record
     foreach( $this->get_reminder_object_list() as $db_reminder )
     {
       $item = array(
-        'offset' => $db_reminder->offset,
-        'unit' => $db_reminder->unit,
+        'delay_offset' => $db_reminder->delay_offset,
+        'delay_unit' => $db_reminder->delay_unit,
         'reminder_description_list' => array()
       );
 
