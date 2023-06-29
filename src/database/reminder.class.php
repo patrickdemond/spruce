@@ -157,12 +157,7 @@ class reminder extends \cenozo\database\record
       {
         if( $patch_object->$property != $this->$property )
         {
-          if( $apply )
-          {
-            $this->$property = 'name' == $property
-                             ? sprintf( '%s_%s', $patch_object->$property, $name_suffix )
-                             : $patch_object->$property;
-          }
+          if( $apply ) $this->$property = $patch_object->$property;
           else $difference_list[$property] = $patch_object->$property;
         }
       }
