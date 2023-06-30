@@ -373,6 +373,7 @@ class qnaire extends \cenozo\database\record
       $db_device->qnaire_id = $this->id;
       $db_device->name = $db_source_device->name;
       $db_device->url = $db_source_device->url;
+      $db_device->emulate = $db_source_device->emulate;
       $db_device->save();
 
       // copy all device data
@@ -2521,6 +2522,7 @@ class qnaire extends \cenozo\database\record
       {
         // check every item in the patch object for additions and changes
         $add_list = array();
+        $change_list = array();
         foreach( $patch_object->device_list as $device )
         {
           $db_device = $device_class_name::get_unique_record(
@@ -2532,6 +2534,16 @@ class qnaire extends \cenozo\database\record
           {
             if( $apply ) $device_class_name::create_from_object( $device, $this );
             else $add_list[] = $device;
+          }
+          else
+          {
+            // find and add all differences
+            $diff = $db_device->process_patch( $device, $apply );
+            if( !is_null( $diff ) )
+            {
+              // the process_patch() function above applies any changes so we don't have to do it here
+              if( !$apply ) $change_list[$device->name] = $diff;
+            }
           }
         }
 
@@ -2558,6 +2570,7 @@ class qnaire extends \cenozo\database\record
 
         $diff_list = array();
         if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
+        if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
         if( 0 < count( $diff_list ) ) $difference_list['device_list'] = $diff_list;
       }
@@ -2565,6 +2578,7 @@ class qnaire extends \cenozo\database\record
       {
         // check every item in the patch object for additions and changes
         $add_list = array();
+        $change_list = array();
         foreach( $patch_object->qnaire_report_list as $qnaire_report )
         {
           $db_language = $language_class_name::get_unique_record( 'code', $qnaire_report->language );
@@ -2577,6 +2591,16 @@ class qnaire extends \cenozo\database\record
           {
             if( $apply ) $qnaire_report_class_name::create_from_object( $qnaire_report, $this );
             else $add_list[] = $qnaire_report;
+          }
+          else
+          {
+            // find and all add differences
+            $diff = $db_qnaire_report->process_patch( $qnaire_report, $apply );
+            if( !is_null( $diff ) )
+            {
+              // the process_patch() function above applies any changes so we don't have to do it here
+              if( !$apply ) $change_list[$db_language->code] = $diff;
+            }
           }
         }
 
@@ -2604,6 +2628,7 @@ class qnaire extends \cenozo\database\record
 
         $diff_list = array();
         if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
+        if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
         if( 0 < count( $diff_list ) ) $difference_list['qnaire_report_list'] = $diff_list;
       }
@@ -3745,7 +3770,9 @@ class qnaire extends \cenozo\database\record
 
       return null;
     }
-    else return (object)$difference_list;
+
+    // not patching, so just return the difference list
+    return (object)$difference_list;
   }
 
   /**
@@ -3828,6 +3855,7 @@ class qnaire extends \cenozo\database\record
         $item = [
           'name' => $db_device->name,
           'url' => $db_device->url,
+          'emulate' => $db_device->emulate,
           'device_data_list' => []
         ];
 

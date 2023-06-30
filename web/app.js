@@ -46,8 +46,9 @@ cenozo.directive("cnQnairePartPatch", [
       controller: function ($scope) {
         if ("module" == $scope.subject) $scope.childSubject = "page";
         else if ("page" == $scope.subject) $scope.childSubject = "question";
-        else if ("question" == $scope.subject)
-          $scope.childSubject = "question_option";
+        else if ("question" == $scope.subject) $scope.childSubject = "question_option";
+        else if ("device" == $scope.subject) $scope.childSubject = "device_data";
+        else if ("qnaire_report" == $scope.subject) $scope.childSubject = "qnaire_report_data";
         else $scope.childSubject = null;
       },
     };
