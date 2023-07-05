@@ -851,7 +851,7 @@ class response extends \cenozo\database\has_rank
     $db_qnaire = $this->get_qnaire();
     $db_participant = $this->get_participant();
 
-    // Keep converting attributes and questions until there are none left to convert
+    // Keep converting attributes, questions and respondent data until there are none left to convert
     // This has to be done in a loop since a question's description may contain other attributes or questions
     $attribute_regex =
       '/@([A-Za-z0-9_]+)('.
@@ -881,7 +881,16 @@ class response extends \cenozo\database\has_rank
     );
     $ignore_question_list = array();
 
-    while( $attribute_test || $question_test )
+    $respondent_regex = '/\$respondent\.(.+)\$/';
+
+    $respondent_matches = [];
+    $respondent_test = preg_match_all(
+      $respondent_regex,
+      $description,
+      $respondent_matches
+    );
+
+    while( $attribute_test || $question_test || $respondent_test )
     {
       // convert attributes
       foreach( $attribute_matches[1] as $index => $attribute_name )
@@ -1104,6 +1113,33 @@ class response extends \cenozo\database\has_rank
         }
       }
 
+
+      // convert respondent data
+      foreach( $respondent_matches[1] as $index => $respondent_property )
+      {
+        $matched_expression = $respondent_matches[0][$index];
+
+        $compiled = '';
+        if( 'token' == $respondent_property )
+        {
+          $compiled = $this->get_respondent()->token;
+        }
+        else if( 'language' == $respondent_property )
+        {
+          $compiled = $this->get_language()->code;
+        }
+        else if( 'start_date' == $respondent_property )
+        {
+          $compiled = is_null( $this->start_datetime ) ? '' : $this->start_datetime->format( 'Y-m-d' );
+        }
+        else
+        {
+          log::warning( sprintf( 'Tried to compile invalid respondent code "%s".', $matched_expression ) );
+        }
+
+        $description = str_replace( $matched_expression, $compiled, $description );
+      }
+
       // now determine if there are more attributes or questions to decode in the description
       $attribute_test = preg_match_all(
         $attribute_regex,
@@ -1114,6 +1150,11 @@ class response extends \cenozo\database\has_rank
         $question_regex,
         $description,
         $question_matches
+      );
+      $respondent_test = preg_match_all(
+        $respondent_regex,
+        $description,
+        $respondent_matches
       );
     }
 

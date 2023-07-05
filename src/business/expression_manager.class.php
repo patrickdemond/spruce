@@ -142,6 +142,7 @@ class expression_manager extends \cenozo\singleton
    *   $NAME.value("PATH")$ (a particular property of an object-based answer)
    *   $respondent.token$ (gets the respondent's token)
    *   $respondent.language$ (gets the current language code)
+   *   $respondent.start_date$ (gets the date the response was launched in YYYY-MM-DD format)
    *   showhidden true if showing hidden elements (launched by phone) false if not (launched by web)
    *   current_year The current year in YYYY format
    *   current_month The current month in MM format
@@ -430,7 +431,7 @@ class expression_manager extends \cenozo\singleton
     $this->active_term = NULL;
 
     if( 'showhidden' == $this->term ) return $this->show_hidden ? 'true' : 'false';
-    if( 'today' == $this->term ) return util::get_datetime_object()->format( 'YYYY-MM-DD' );
+    if( 'today' == $this->term ) return util::get_datetime_object()->format( 'Y-m-d' );
     return $this->term;
   }
 
@@ -647,6 +648,12 @@ class expression_manager extends \cenozo\singleton
       $compiled = is_null( $this->db_response )
                 ? $this->db_qnaire->get_base_language()->code
                 : $this->db_response->get_language()->code;
+    }
+    else if( 'start_date' == $variable )
+    {
+      $compiled = is_null( $this->db_response ) || is_null( $this->db_reponse->start_datetime )
+                ? ''
+                : $this->db_response->start_datetime->format( 'YYYY-MM-DD' ) ;
     }
     else
     {
