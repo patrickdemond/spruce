@@ -1213,6 +1213,7 @@ cenozoApp.defineModule({
 
                     CnHttpFactory.instance({
                       path: ["qnaire", this.data.qnaire_id, "deviation_type"].join("/"),
+                      data: { modifier: { order: "deviation_type.name" } },
                     }).query(),
 
                     CnHttpFactory.instance({
