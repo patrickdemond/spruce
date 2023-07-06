@@ -159,7 +159,7 @@ class qnaire_report extends \cenozo\database\has_data
       }
       else
       {
-        if( $patch_object->$property != $this->$property )
+        if( 'language' != $property && $patch_object->$property != $this->$property )
         {
           if( $apply ) $this->$property = $patch_object->$property;
           else $difference_list[$property] = $patch_object->$property;
