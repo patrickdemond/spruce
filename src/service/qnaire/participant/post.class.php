@@ -51,10 +51,13 @@ class post extends \cenozo\service\write
     // This is a special service since participants cannot be added to the system through the web interface.
     // Instead, this service provides participant-based utility functions.
     $modifier = lib::create( 'database\modifier' );
-    $modifier->join( 'participant_last_hold', 'participant.id', 'participant_last_hold.participant_id' );
-    $modifier->left_join( 'hold', 'participant_last_hold.hold_id', 'hold.id' );
-    $modifier->left_join( 'hold_type', 'hold.hold_type_id', 'hold_type.id' );
-    $modifier->where( 'IFNULL( hold_type.type, "" )', '!=', 'final' ); // no final holds
+    if( !$db_qnaire->allow_in_hold )
+    {
+      $modifier->join( 'participant_last_hold', 'participant.id', 'participant_last_hold.participant_id' );
+      $modifier->left_join( 'hold', 'participant_last_hold.hold_id', 'hold.id' );
+      $modifier->left_join( 'hold_type', 'hold.hold_type_id', 'hold_type.id' );
+      $modifier->where( 'IFNULL( hold_type.type, "" )', '!=', 'final' ); // no final holds
+    }
     $modifier->where( 'exclusion_id', '=', NULL ); // no exclusions
 
     $join_mod = lib::create( 'database\modifier' );
