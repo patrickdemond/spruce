@@ -1656,6 +1656,7 @@ class qnaire extends \cenozo\database\record
     $language_class_name = lib::get_class_name( 'database\language' );
     $region_class_name = lib::get_class_name( 'database\region' );
     $study_class_name = lib::get_class_name( 'database\study' );
+    $identifier_class_name = lib::get_class_name( 'database\identifier' );
     $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
 
     if( is_null( $this->beartooth_url ) ||
@@ -1800,6 +1801,51 @@ class qnaire extends \cenozo\database\record
           'DELETE FROM study_has_participant %s',
           $study_mod->get_sql()
         ) );
+      }
+
+      // create participant_identifier records
+      foreach( explode( ';', $participant->participant_identifier_list ) as $participant_identifier_entry )
+      {
+        // entries have the format: identifier_name$value, convert to an associative array
+        $participant_identifier_data = explode( '$', $participant_identifier_entry );
+        $participant_identifier = array(
+          'name' => $participant_identifier_data[0],
+          'value' => $participant_identifier_data[1]
+        );
+        $db_identifier = $identifier_class_name::get_unique_record( 'name', $participant_identifier['name'] );
+
+        // create any missing identifiers
+        if( is_null( $db_identifier ) )
+        {
+          $db_identifier = lib::create( 'database\identifier' );
+          $db_identifier->name = $participant_identifier['name'];
+          $db_identifier->locked = 1;
+          $db_identifier->save();
+        }
+
+        $participant_identifier_mod = lib::create( 'database\modifier' );
+        $participant_identifier_mod->where( 'identifier_id', '=', $db_identifier->id );
+        $list = $db_participant->get_participant_identifier_object_list( $participant_identifier_mod );
+
+        if( 0 < count( $list ) )
+        { // the participant_identifier record already exists, make sure the value is correct
+          foreach( $list as $db_participant_identifier )
+          {
+            if( $participant_identifier['value'] != $db_participant_identifier->value )
+            {
+              $db_participant_identifier->value = $participant_identifier['value'];
+              $db_participant_identifier->save();
+            }
+          }
+        }
+        else // there is no participant_identifier record for that datetime, so create one
+        {
+          $db_participant_identifier = lib::create( 'database\participant_identifier' );
+          $db_participant_identifier->participant_id = $db_participant->id;
+          $db_participant_identifier->identifier_id = $db_identifier->id;
+          $db_participant_identifier->value = $participant_identifier['value'];
+          $db_participant_identifier->save();
+        }
       }
 
       // create consent records (NOTE: importing alternate consent is not yet implemented)
