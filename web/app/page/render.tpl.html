@@ -88,28 +88,43 @@
               model="model.renderModel.addressModel"
               input="input"></cn-view-input>
           </div>
-          <h4>Consent Details</h4>
+          <h4>Phone Number(s)</h4>
           <div class="form-horizontal">
-            <div class="form-group" ng-repeat="consent in model.renderModel.consentList">
-              <label for="consent_type_{{ consent.consent_type_id }}"
-                     class="control-label col-sm-3"
-                     ng-bind-html="consent.consent_type"></label>
-              <div class="row col-sm-9">
-                <div class="input-group">
-                  <select ng-attr-id="consent_type_{{ consent.consent_type_id }}"
-                          ng-model="consent.accept"
-                          ng-change="model.renderModel.setConsent( consent )"
-                          ng-options="item.value as item.name disable when item.disabled for item in model.renderModel.consentEnumList"
-                          ng-disabled="!consent.access"
-                          class="form-control">
-                  </select>
+            <div ng-repeat="phone in model.renderModel.data.phoneList">
+              <div class="form-group">
+                <label class="control-label col-sm-3" ng-bind-html="phone.type|cnUCWords"></label>
+                <div class="row col-sm-9">
+                  <div class="form-input">
+                    <input class="form-control" value="{{ phone.number }}" readonly></input>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div ng-if="0 < model.renderModel.consentList.length">
+            <h4>Consent Details</h4>
+            <div class="form-horizontal">
+              <div class="form-group" ng-repeat="consent in model.renderModel.consentList">
+                <label for="consent_type_{{ consent.consent_type_id }}"
+                       class="control-label col-sm-3"
+                       ng-bind-html="consent.consent_type"></label>
+                <div class="row col-sm-9">
+                  <div class="input-group">
+                    <select ng-attr-id="consent_type_{{ consent.consent_type_id }}"
+                            ng-model="consent.accept"
+                            ng-change="model.renderModel.setConsent( consent )"
+                            ng-options="item.value as item.name disable when item.disabled for item in model.renderModel.consentEnumList"
+                            ng-disabled="!consent.access"
+                            class="form-control">
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
           <h4>Interview Details</h4>
           <div class="form-horizontal">
-            <div class="form-group">
+            <div ng-if="this.data.token_check" class="form-group">
               <label for="token" class="control-label col-sm-3">Token (Interview ID)</label>
               <div class="row col-sm-9">
                 <div class="input-group">
@@ -145,7 +160,7 @@
              ng-if="!model.renderModel.data.closed && model.renderModel.data.stages && !model.renderModel.data.checked_in">
           <button type="button"
                   class="btn btn-primary"
-                  ng-disabled="null == model.renderModel.data.scanned_token"
+                  ng-disabled="this.data.token_check && null == model.renderModel.data.scanned_token"
                   ng-click="model.renderModel.setCheckIn( true )">
             Proceed
           </button>

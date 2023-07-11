@@ -148,5 +148,22 @@ class util extends \cenozo\util
 
       if( !$modifier->has_group( 'qnaire.id' ) ) $modifier->group( 'qnaire.id' );
     }
+
+    if( $select->has_column( 'phone_list' ) )
+    {
+      // join to the phone table
+      $modifier->left_join( 'phone', 'participant.id', 'phone.participant_id' );
+      $select->add_column(
+        'GROUP_CONCAT( '.
+          'DISTINCT CONCAT_WS( ":", phone.type, phone.number ) '.
+          'ORDER BY phone.rank '.
+          'SEPARATOR "`" '.
+        ')',
+        'phone_list',
+        false
+      );
+
+      if( !$modifier->has_group( 'qnaire.id' ) ) $modifier->group( 'qnaire.id' );
+    }
   }
 }

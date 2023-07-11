@@ -289,7 +289,7 @@ cenozoApp.defineModule({
         title: "Token Check",
         type: "boolean",
         help:
-          "Whether to check the token before launching a stage.",
+          "Whether to check the token at check-in and before launching a stage.",
         isExcluded: function ($state, model) {
           return model.isRole("interviewer") ? true : "add";
         },

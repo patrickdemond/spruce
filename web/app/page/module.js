@@ -763,7 +763,7 @@ cenozoApp.defineModule({
             setCheckIn: async function (checkedIn) {
               // update the token if we've changed it
               var updatedToken = null;
-              if (checkedIn && this.data.token != this.data.scanned_token) {
+              if (this.data.token_check && checkedIn && this.data.token != this.data.scanned_token) {
                 var self = this;
                 await CnHttpFactory.instance({
                   path: "respondent/token=" + $state.params.token,
@@ -1058,10 +1058,9 @@ cenozoApp.defineModule({
             },
 
             onReady: async function () {
-              this.previewMode =
-                "respondent" != parentModel.getSubjectFromState();
+              this.previewMode = "respondent" != parentModel.getSubjectFromState();
 
-              // we show hidden stuff when previewing (not a respondent) or when there is a state parameter asking for it
+              // We show hidden stuff when previewing or when there is a state parameter asking for it
               this.showHidden = this.previewMode
                 ? true
                 : angular.isDefined($state.params.show_hidden)
@@ -1086,6 +1085,7 @@ cenozoApp.defineModule({
                 // check for the respondent using the token
                 var params = "?assert_response=1";
                 if (this.showHidden) params += "&show_hidden=1";
+
                 var response = await CnHttpFactory.instance({
                   path: "respondent/token=" + $state.params.token + params,
                   data: {
@@ -1101,6 +1101,7 @@ cenozoApp.defineModule({
                         "closed_list",
                         "problem_prompt_list",
                         "problem_confirm_list",
+                        "phone_list",
                         { table: "participant", column: "first_name" },
                         { table: "participant", column: "last_name" },
                         { table: "qnaire", column: "debug" },
@@ -1419,6 +1420,10 @@ cenozoApp.defineModule({
                     this.data.problem_confirm_list,
                     this.showHidden
                   ),
+                  phoneList: this.data.phone_list.split("`").map(item => {
+                    const parts = item.split(":");
+                    return { type: parts[0], number: parts[1] };
+                  }),
                 });
                 
                 for( const lang in this.data.problemPromptList ) {
