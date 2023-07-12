@@ -982,7 +982,10 @@ class qnaire extends \cenozo\database\record
     }
 
     // update the qnaire (but only if the version is different)
-    $url_postfix = sprintf( '/name=%s?select={"column":["version"]}', $this->name );
+    $url_postfix = sprintf(
+      '/name=%s?select={"column":["version"]}',
+      util::full_urlencode( $this->name )
+    );
     $parent_qnaire = $this->get_parent_data( 'qnaire', $url_postfix );
 
     if( $this->version != $parent_qnaire->version )
@@ -991,7 +994,10 @@ class qnaire extends \cenozo\database\record
       $old_version = $this->version;
       $new_version = $parent_qnaire->version;
 
-      $url_postfix = sprintf( '/name=%s?output=export&download=true', $this->name );
+      $url_postfix = sprintf(
+        '/name=%s?output=export&download=true',
+        util::full_urlencode( $this->name )
+      );
       $parent_qnaire = $this->get_parent_data( 'qnaire', $url_postfix );
       $this->process_patch( $parent_qnaire, true );
       log::info( sprintf(
