@@ -88,14 +88,16 @@
               model="model.renderModel.addressModel"
               input="input"></cn-view-input>
           </div>
-          <h4>Phone Number(s)</h4>
-          <div class="form-horizontal">
-            <div ng-repeat="phone in model.renderModel.data.phoneList">
-              <div class="form-group">
-                <label class="control-label col-sm-3" ng-bind-html="phone.type|cnUCWords"></label>
-                <div class="row col-sm-9">
-                  <div class="form-input">
-                    <input class="form-control" value="{{ phone.number }}" readonly></input>
+          <div ng-if="0 == model.renderModel.data.phoneList.length">
+            <h4>Phone Number(s)</h4>
+            <div class="form-horizontal">
+              <div ng-repeat="phone in model.renderModel.data.phoneList">
+                <div class="form-group">
+                  <label class="control-label col-sm-3" ng-bind-html="phone.type|cnUCWords"></label>
+                  <div class="row col-sm-9">
+                    <div class="form-input">
+                      <input class="form-control" value="{{ phone.number }}" readonly></input>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -1787,11 +1787,10 @@ class qnaire extends \cenozo\database\record
         $study_sel = lib::create( 'database\select' );
         $study_sel->from( 'study' );
         $study_sel->add_column( 'study.id', 'study_id', false );
-        $participant_sel->add_column( 'participant.id', 'participant_id', false );
+        $study_sel->add_constant( $db_participant->id, 'participant_id' );
 
         $study_mod = lib::create( 'database\modifier' );
         $study_mod->where( 'study.name', 'IN', $study_name_list );
-        $study_mod->where( 'participant.id', '=', $db_participant->id );
 
         static::db()->execute( sprintf(
           'INSERT IGNORE INTO study_has_participant( study_id, participant_id ) '.
@@ -1800,9 +1799,14 @@ class qnaire extends \cenozo\database\record
           $study_mod->get_sql()
         ) );
 
+        // Get a list of all selected study IDs
+        $study_id_list = [];
+        foreach( $study_class_name::select( $study_sel, $study_mod ) as $row )
+          $study_id_list[] = $row['study_id'];
+
         $study_mod = lib::create( 'database\modifier' );
-        $study_mod->where( 'study.name', 'NOT IN', $study_name_list );
-        $study_mod->where( 'participant.id', '=', $db_participant->id );
+        $study_mod->where( 'study_id', 'NOT IN', $study_id_list );
+        $study_mod->where( 'participant_id', '=', $db_participant->id );
         static::db()->execute( sprintf(
           'DELETE FROM study_has_participant %s',
           $study_mod->get_sql()
