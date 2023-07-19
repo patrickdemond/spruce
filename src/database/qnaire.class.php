@@ -1151,12 +1151,12 @@ class qnaire extends \cenozo\database\record
           // these may be modified by participant triggers
           'current_sex' => $db_participant->current_sex,
           'delink' => $db_participant->delink,
-          'low_education' => $db_participant->low_education
+          'low_education' => $db_participant->low_education,
           'mass_email' => $db_participant->mass_email,
           'out_of_area' => $db_participant->out_of_area,
           'override_stratum' => $db_participant->override_stratum,
           'sex' => $db_participant->sex,
-          'withdraw_third_party' => $db_participant->withdraw_third_party,
+          'withdraw_third_party' => $db_participant->withdraw_third_party
         ),
         'address' => array(
           'address1' => $db_address->address1,
