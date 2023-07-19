@@ -1146,16 +1146,17 @@ class qnaire extends \cenozo\database\record
           'first_name' => $db_participant->first_name,
           'other_name' => $db_participant->other_name,
           'last_name' => $db_participant->last_name,
-          'current_sex' => $db_participant->current_sex,
           'email' => $db_participant->email,
 
           // these may be modified by participant triggers
-          'override_stratum' => $db_participant->override_stratum,
-          'mass_email' => $db_participant->mass_email,
+          'current_sex' => $db_participant->current_sex,
           'delink' => $db_participant->delink,
-          'withdraw_third_party' => $db_participant->withdraw_third_party,
-          'out_of_area' => $db_participant->out_of_area,
           'low_education' => $db_participant->low_education
+          'mass_email' => $db_participant->mass_email,
+          'out_of_area' => $db_participant->out_of_area,
+          'override_stratum' => $db_participant->override_stratum,
+          'sex' => $db_participant->sex,
+          'withdraw_third_party' => $db_participant->withdraw_third_party,
         ),
         'address' => array(
           'address1' => $db_address->address1,
@@ -1743,18 +1744,18 @@ class qnaire extends \cenozo\database\record
       $db_participant->first_name = $participant->first_name;
       $db_participant->other_name = $participant->other_name;
       $db_participant->last_name = $participant->last_name;
-      $db_participant->sex = $participant->sex;
-      $db_participant->current_sex = $participant->current_sex;
       $db_participant->email = $participant->email;
       if( $participant->date_of_birth ) $db_participant->date_of_birth = $participant->date_of_birth;
 
       // these may be modified by participant triggers
-      $db_participant->override_stratum = $participant->override_stratum;
-      $db_participant->mass_email = $participant->mass_email;
+      $db_participant->current_sex = $participant->current_sex;
       $db_participant->delink = $participant->delink;
-      $db_participant->withdraw_third_party = $participant->withdraw_third_party;
-      $db_participant->out_of_area = $participant->out_of_area;
       $db_participant->low_education = $participant->low_education;
+      $db_participant->mass_email = $participant->mass_email;
+      $db_participant->out_of_area = $participant->out_of_area;
+      $db_participant->override_stratum = $participant->override_stratum;
+      $db_participant->sex = $participant->sex;
+      $db_participant->withdraw_third_party = $participant->withdraw_third_party;
       $db_participant->save();
 
       // update the address record
