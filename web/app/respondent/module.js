@@ -246,6 +246,18 @@ cenozoApp.defineModule({
     });
 
     module.addExtraOperation("list", {
+      title: "Import",
+      operation: async function ($state, model) {
+        await $state.go("qnaire.import_responses", {
+          identifier: $state.params.identifier,
+        });
+      },
+      isIncluded: function ($state, model) {
+        return !model.isDetached();
+      },
+    });
+
+    module.addExtraOperation("list", {
       title: "Mass Respondent",
       operation: async function ($state, model) {
         await $state.go("qnaire.mass_respondent", {

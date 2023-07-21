@@ -125,6 +125,12 @@ class question extends base_qnaire_part
     }
   }
 
+  /**
+   * Returns an array of details about this question (used by qnaire::get_output_column_list())
+   * 
+   * @param boolean $descriptions If true then include module, page and question descriptions
+   * @return array
+   */
   public function get_output_column_list( $descriptions = false )
   {
     $variable_suffix = $this->get_qnaire()->variable_suffix;

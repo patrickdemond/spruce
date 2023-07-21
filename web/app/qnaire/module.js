@@ -496,6 +496,46 @@ cenozoApp.defineModule({
     ]);
 
     /* ############################################################################################## */
+    cenozo.providers.directive("cnQnaireImportResponses", [
+      "CnQnaireImportResponsesFactory",
+      "CnSession",
+      "$state",
+      function (CnQnaireImportResponsesFactory, CnSession, $state) {
+        return {
+          templateUrl: module.getFileUrl("import_responses.tpl.html"),
+          restrict: "E",
+          scope: { model: "=?" },
+          controller: async function ($scope) {
+            if (angular.isUndefined($scope.model))
+              $scope.model = CnQnaireImportResponsesFactory.instance();
+
+            await $scope.model.onLoad();
+
+            CnSession.setBreadcrumbTrail([
+              {
+                title: "Questionnaires",
+                go: async function () {
+                  await $state.go("qnaire.list");
+                },
+              },
+              {
+                title: $scope.model.qnaireName,
+                go: async function () {
+                  await $state.go("qnaire.view", {
+                    identifier: $scope.model.qnaireId,
+                  });
+                },
+              },
+              {
+                title: "Import Responses",
+              },
+            ]);
+          },
+        };
+      },
+    ]);
+
+    /* ############################################################################################## */
     cenozo.providers.directive("cnQnaireMassRespondent", [
       "CnQnaireMassRespondentFactory",
       "CnSession",
@@ -763,6 +803,98 @@ cenozoApp.defineModule({
     ]);
 
     /* ############################################################################################## */
+    cenozo.providers.factory("CnQnaireImportResponsesFactory", [
+      "CnQnaireModelFactory",
+      "CnHttpFactory",
+      "CnModalMessageFactory",
+      "$rootScope",
+      "$state",
+      function (
+        CnQnaireModelFactory,
+        CnHttpFactory,
+        CnModalMessageFactory,
+        $rootScope,
+        $state
+      ) {
+        var object = function () {
+          angular.extend(this, {
+            parentModel: CnQnaireModelFactory.root,
+            working: false,
+            qnaireId: $state.params.identifier,
+            qnaireName: null,
+            file: null,
+            confirmData: null,
+
+            onLoad: async function () {
+              this.qnaireName = '';
+              this.working = false;
+              this.file = null;
+              this.confirmData = null;
+
+              // reset data
+              var response = await CnHttpFactory.instance({
+                path: "qnaire/" + this.qnaireId,
+                data: { select: { column: "name" } },
+              }).get();
+
+              this.qnaireName = response.data.name;
+            },
+
+            checkImport: function () {
+              // need to wait for cnUpload to do its thing
+              const removeFn = $rootScope.$on("cnUpload read", async () => {
+                removeFn(); // only run once
+                try {
+                  this.working = true;
+                  var data = new FormData();
+                  data.append("file", this.file);
+
+                  // check the patch file
+                  var response = await CnHttpFactory.instance({
+                    path: ["qnaire", this.qnaireId, "response"].join("/") + "?mode=confirm",
+                    data: this.file,
+                    onError: async function (error) {
+                      await CnModalMessageFactory.httpError(error);
+                      self.onLoad();
+                    },
+                  }).post();
+                  this.confirmData = response.data;
+                } finally {
+                  this.working = false;
+                }
+              });
+            },
+
+            import: async function () {
+              var data = new FormData();
+              data.append("file", this.file);
+              var fileDetails = data.get("file");
+
+              try {
+                this.working = true;
+                var response = await CnHttpFactory.instance({
+                  path: "qnaire?import=1",
+                  data: this.file,
+                }).post();
+                await $state.go("qnaire.view", { identifier: response.data });
+              } finally {
+                this.working = false;
+              }
+            },
+
+            proceed: async function () {
+            },
+          });
+        };
+        return {
+          instance: function () {
+            return new object();
+          },
+        };
+      },
+    ]);
+
+    /* ############################################################################################## */
     cenozo.providers.factory("CnQnaireMassRespondentFactory", [
       "CnQnaireModelFactory",
       "CnSession",
@@ -875,7 +1007,6 @@ cenozoApp.defineModule({
           );
 
           angular.extend(this, {
-            uploadReadReady: false,
             working: false,
             file: null,
             difference: null,
@@ -944,32 +1075,29 @@ cenozoApp.defineModule({
             },
 
             checkPatch: function () {
-              if (!this.uploadReadReady) {
-                // need to wait for cnUpload to do its thing
-                $rootScope.$on("cnUpload read", async () => {
-                  try {
-                    this.working = true;
-                    this.uploadReadReady = true;
+              // need to wait for cnUpload to do its thing
+              const removeFn = $rootScope.$on("cnUpload read", async () => {
+                removeFn(); // only run once
+                try {
+                  this.working = true;
+                  var data = new FormData();
+                  data.append("file", this.file);
 
-                    var data = new FormData();
-                    data.append("file", this.file);
+                  // check the patch file
+                  var response = await CnHttpFactory.instance({
+                    path:
+                      this.parentModel.getServiceResourcePath() +
+                      "?patch=check",
+                    data: this.file,
+                  }).patch();
 
-                    // check the patch file
-                    var response = await CnHttpFactory.instance({
-                      path:
-                        this.parentModel.getServiceResourcePath() +
-                        "?patch=check",
-                      data: this.file,
-                    }).patch();
-
-                    this.difference = response.data;
-                    this.differenceIsEmpty =
-                      0 == Object.keys(this.difference).length;
-                  } finally {
-                    this.working = false;
-                  }
-                });
-              }
+                  this.difference = response.data;
+                  this.differenceIsEmpty =
+                    0 == Object.keys(this.difference).length;
+                } finally {
+                  this.working = false;
+                }
+              });
             },
 
             applyPatch: async function () {
