@@ -118,7 +118,6 @@ cenozoApp.defineModule({
           );
 
           angular.extend(this, {
-            uploadReadReady: false,
             working: false,
             file: null,
             dataSummary: null,
@@ -131,31 +130,28 @@ cenozoApp.defineModule({
             },
 
             checkData: function () {
-              if (!this.uploadReadReady) {
-                // need to wait for cnUpload to do its thing
-                $rootScope.$on("cnUpload read", async () => {
-                  try {
-                    this.working = true;
-                    this.uploadReadReady = true;
+              // need to wait for cnUpload to do its thing
+              const removeFn = $rootScope.$on("cnUpload read", async () => {
+                removeFn(); // only run once
+                try {
+                  this.working = true;
+                  var data = new FormData();
+                  data.append("file", this.file);
 
-                    var data = new FormData();
-                    data.append("file", this.file);
+                  // check the data file
+                  var response = await CnHttpFactory.instance({
 
-                    // check the data file
-                    var response = await CnHttpFactory.instance({
+                    path:
+                      this.parentModel.getServiceResourcePath() +
+                      "?action=check",
+                    data: this.file,
+                  }).patch();
 
-                      path:
-                        this.parentModel.getServiceResourcePath() +
-                        "?action=check",
-                      data: this.file,
-                    }).patch();
-
-                    this.dataSummary = response.data;
-                  } finally {
-                    this.working = false;
-                  }
-                });
-              }
+                  this.dataSummary = response.data;
+                } finally {
+                  this.working = false;
+                }
+              });
             },
             applyData: async function() {
               let proceed = true;
