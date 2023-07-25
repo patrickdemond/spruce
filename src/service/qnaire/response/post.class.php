@@ -30,7 +30,8 @@ class post extends \cenozo\service\write
 
     if( $this->may_continue() )
     {
-      if( !in_array( $this->get_argument( 'mode' ), ['confirm', 'create'] ) ) $this->status->set_code( 400 );
+      if( !in_array( $this->get_argument( 'mode' ), ['confirm', 'import', 'import_new'] ) )
+        $this->status->set_code( 400 );
     }
   }
 
@@ -41,14 +42,10 @@ class post extends \cenozo\service\write
   {
     $db_qnaire = $this->get_parent_record();
     $file = $this->get_file_as_raw();
-
-    if( 'confirm' == $this->get_argument( 'mode' ) )
-    {
-      $this->set_data( $db_qnaire->import_response_data_from_csv( $file ) );
-    }
-    else
-    {
-    }
+    $mode = $this->get_argument( 'mode' );
+    $apply = in_array( $mode, ['import', 'import_new'] );
+    $new_only = 'import_new' == $mode;
+    $this->set_data( $db_qnaire->import_response_data_from_csv( $file, $apply, $new_only ) );
   }
 
   /**

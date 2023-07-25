@@ -711,9 +711,7 @@ cenozoApp.defineModule({
               );
             },
             cancel: async function () {
-              await $state.go("qnaire.view", {
-                identifier: this.parentQnaireId,
-              });
+              await $state.go("qnaire.view", { identifier: this.parentQnaireId });
             },
 
             save: async function () {
@@ -779,7 +777,6 @@ cenozoApp.defineModule({
             import: async function () {
               var data = new FormData();
               data.append("file", this.file);
-              var fileDetails = data.get("file");
 
               try {
                 this.working = true;
@@ -807,16 +804,21 @@ cenozoApp.defineModule({
       "CnQnaireModelFactory",
       "CnHttpFactory",
       "CnModalMessageFactory",
+      "CnModalConfirmFactory",
+      "CnModalInputFactory",
       "$rootScope",
       "$state",
       function (
         CnQnaireModelFactory,
         CnHttpFactory,
         CnModalMessageFactory,
+        CnModalConfirmFactory,
+        CnModalInputFactory,
         $rootScope,
         $state
       ) {
         var object = function () {
+          const self = this;
           angular.extend(this, {
             parentModel: CnQnaireModelFactory.root,
             working: false,
@@ -826,10 +828,12 @@ cenozoApp.defineModule({
             confirmData: null,
 
             onLoad: async function () {
-              this.qnaireName = '';
-              this.working = false;
-              this.file = null;
-              this.confirmData = null;
+              angular.extend(this, {
+                qnaireName: '',
+                working: false,
+                file: null,
+                confirmData: null,
+              });
 
               // reset data
               var response = await CnHttpFactory.instance({
@@ -840,7 +844,11 @@ cenozoApp.defineModule({
               this.qnaireName = response.data.name;
             },
 
-            checkImport: function () {
+            navigateToDataDictionaryReport: async function() {
+              await $state.go("report_type.view", { identifier: "name=annotation" });
+            },
+
+            checkImport: async function () {
               // need to wait for cnUpload to do its thing
               const removeFn = $rootScope.$on("cnUpload read", async () => {
                 removeFn(); // only run once
@@ -866,23 +874,80 @@ cenozoApp.defineModule({
             },
 
             import: async function () {
-              var data = new FormData();
-              data.append("file", this.file);
-              var fileDetails = data.get("file");
-
-              try {
-                this.working = true;
-                var response = await CnHttpFactory.instance({
-                  path: "qnaire?import=1",
-                  data: this.file,
-                }).post();
-                await $state.go("qnaire.view", { identifier: response.data });
-              } finally {
-                this.working = false;
+              // do nothing if we don't have valid data
+              if(
+                null == this.confirmData ||
+                0 == this.confirmData.valid_column_list.length ||
+                0 < this.confirmData.column_errors
+              ) {
+                console.warn( "Tried to import invalid data." );
+                return;
               }
-            },
 
-            proceed: async function () {
+              let importMode = false;
+              if(0 < this.confirmData.existing_responses && 0 < this.confirmData.new_responses) {
+                // There are both new and existing responses
+                const response = await CnModalInputFactory.instance({
+                  message:
+                    "Please specify whether you would like to import all responses or " +
+                    "only new responses that do not already exist in the database:",
+                  format: "enum",
+                  enumList: [
+                    { value: "import", name: "All Responses" },
+                    { value: "import_new", name: "New Responses Only" },
+                  ],
+                  value: "import",
+                }).show();
+                importMode = response;
+              } else {
+                // There are only new or existing responses
+                const response = await CnModalConfirmFactory.instance({
+                  message: "Are you sure you wish to import all responses?"
+                }).show();
+                importMode = response ? "import" : false;
+              }
+
+              if(false !== importMode) {
+                try {
+                  var data = new FormData();
+                  data.append("file", this.file);
+
+                  var response = await CnHttpFactory.instance({
+                    path: ["qnaire", this.qnaireId, "response"].join("/") + "?mode=" + importMode,
+                    data: this.file,
+                    onError: async function (error) {
+                      await CnModalMessageFactory.httpError(error);
+                      self.onLoad();
+                    },
+                  }).post();
+
+                  if(response) {
+                    let messages = [];
+                    if(0 < this.confirmData.new_responses) {
+                      messages.push(
+                        this.confirmData.new_responses + " new response" +
+                        ( 1 == this.confirmData.new_responses ?  " has" : "s have" ) + 
+                        " been imported"
+                      );
+                    }
+                    if(0 < this.confirmData.existing_responses) {
+                      messages.push(
+                        this.confirmData.existing_responses + " existing response" +
+                        ( 1 == this.confirmData.existing_responses ? " has" : "s have" ) +
+                        " been overwritten"
+                      );
+                    }
+
+                    await CnModalMessageFactory.instance({
+                      title: "Import Complete",
+                      message: messages.join( " and " )
+                    }).show();
+                    await $state.go("qnaire.view", { identifier: this.qnaireId });
+                  }
+                } finally {
+                  this.working = false;
+                }
+              }
             },
           });
         };

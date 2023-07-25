@@ -1479,11 +1479,13 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
-   * Imports response data from a CSV file
+   * Imports response data from a CSV file, returning an associative array of the import details
    * @param string $csv_data The CSV contents (including a header and one row for each response)
    * @param boolean $apply Whether to apply or evaluate the CSV data
+   * @param boolean $apply Whether to only import new responses (only used when $apply is true)
+   * @return associative array
    */
-  public function import_response_data_from_csv( $csv_data, $apply = false )
+  public function import_response_data_from_csv( $csv_data, $apply = false, $new_only = false )
   {
     // a private function for testing data values
     function test_value( $type, $value )
@@ -1515,8 +1517,10 @@ class qnaire extends \cenozo\database\record
 
     // get a list of all questions in this array (without qnaire name prefix)
     $question_list = $this->get_output_column_list();
+    $valid_column_list = NULL;
     $invalid_column_list = NULL;
     $missing_column_list = NULL;
+    $new_responses = 0;
     $existing_responses = 0;
     $row_errors = [];
     $column_errors = [];
@@ -1563,6 +1567,10 @@ class qnaire extends \cenozo\database\record
         }
 
         // determine valid, invalid and missing columns based on the CSV header
+        $valid_column_list = array_values( array_intersect(
+          $column_name_list,
+          array_keys( $question_list )
+        ) );
         $invalid_column_list = array_values( array_diff(
           $column_name_list,
           array_merge( array_keys( $metadata_columns ), array_keys( $question_list ) )
@@ -1581,10 +1589,11 @@ class qnaire extends \cenozo\database\record
       $identifier = array_shift( $row );
 
       // determine metadata (including certain default values)
-      $metadata = [ 'rank' => 1, 'completed' => 1 ];
-      foreach( $metadata_columns as $metadata_column_name )
-        $metadata[$metadata_column_name] = $row[$metadata_column_name];
+      $metadata = [ 'rank' => 1, 'submitted' => 1 ];
+      foreach( $metadata_columns as $metadata_column_name => $metadata_column_index )
+        $metadata[$metadata_column_name] = $row[$metadata_column_index];
 
+      $existing = false;
       if( !$identifier )
       {
         // the participant record must be found for non-anonymous qnaires
@@ -1631,26 +1640,38 @@ class qnaire extends \cenozo\database\record
               [$db_respondent->id, $metadata['rank']]
             );
 
-            if( !is_null( $db_response ) ) $existing_responses++;
+            if( !is_null( $db_response ) ) $existing = true;
           }
         }
       }
 
-      if( $apply )
+      if( $existing ) $existing_responses++;
+      else $new_responses++;
+
+      // whether or not we apply this row depends on if this is an existing response
+      $apply_this_row = $apply && !($existing && $new_only);
+
+      if( $apply_this_row )
       {
         if( is_null( $db_respondent ) )
         {
           $db_respondent = lib::create( 'database\respondent' );
           $db_respondent->qnaire_id = $this->id;
           if( !is_null( $db_participant ) ) $db_respondent->participant_id = $db_participant->id;
-          if( $metadata['completed'] )
-          {
-            $db_respondent->end_datetime = array_key_exists( 'last_datetime', $metadata )
-                                         ? $metadata['last_datetime']
-                                         : util::get_datetime_object();
-            $db_respondent->save();
-          }
         }
+
+        if( is_null( $db_respondent->start_datetime ) )
+          $db_respondent->start_datetime = array_key_exists( 'start_datetime', $metadata ) ?
+            $metadata['start_datetime'] : util::get_datetime_object();
+
+        if( $metadata['submitted'] )
+        {
+          // set the end datetime if the qnaire isn't repeated or this is the last response
+          if( !$this->repeated || $metadata['rank'] == $this->max_responses )
+            $db_respondent->end_datetime = array_key_exists( 'last_datetime', $metadata ) ?
+              $metadata['last_datetime'] : util::get_datetime_object();
+        }
+        $db_respondent->save();
 
         if( is_null( $db_response ) )
         {
@@ -1658,21 +1679,27 @@ class qnaire extends \cenozo\database\record
           $db_response->respondent_id = $db_respondent->id;
           $db_response->rank = $metadata['rank'];
           $db_response->qnaire_version = $this->version;
-          $db_response->language_id = $this->base_language_id;
-          if( array_key_exists( 'language', $metadata ) )
-          {
-            $db_language = $language_class_name::get_unique_record( 'code', $metadata['language'] );
-            if( is_null( $db_language ) )
-              $db_language = $language_class_name::get_unique_record( 'name', $metadata['language'] );
-            if( !is_null( $db_language ) ) $db_response->language_id = $db_language->id;
-          }
-          $db_response->submitted = $metadata['submitted'];
-          $db_response->start_datetime = $db_respondent->start_datetime;
-          if( array_key_exists( 'last_datetime', $metadata ) )
-            $db_response->last_datetime = $metadata['last_datetime'];
-          $db_response->comments = 'Imported from CSV';
-          $db_response->save();
         }
+
+        $db_response->language_id = $this->base_language_id;
+        if( array_key_exists( 'language', $metadata ) )
+        {
+          $db_language = $language_class_name::get_unique_record( 'code', $metadata['language'] );
+          if( is_null( $db_language ) )
+            $db_language = $language_class_name::get_unique_record( 'name', $metadata['language'] );
+          if( !is_null( $db_language ) ) $db_response->language_id = $db_language->id;
+        }
+        $db_response->submitted = $metadata['submitted'];
+        $db_response->comments = 'Imported from CSV';
+
+        if( array_key_exists( 'start_datetime', $metadata ) )
+          $db_response->start_datetime = $metadata['start_datetime'];
+        else if( is_null( $db_response->start_datetime ) )
+          $db_response->start_datetime = util::get_datetime_object();
+
+        if( array_key_exists( 'last_datetime', $metadata ) )
+          $db_response->last_datetime = $metadata['last_datetime'];
+        $db_response->save();
       }
 
       foreach( $question_list as $column_name => $question )
@@ -1683,7 +1710,7 @@ class qnaire extends \cenozo\database\record
         if( is_string( $value ) && 0 == strlen( $value ) ) continue; // ignore emptry string values
 
         // when applying the data makes sure the answer record exists
-        if( $apply )
+        if( $apply_this_row )
         {
           $db_answer = is_null( $db_response ) ? NULL : $answer_class_name::get_unique_record(
             ['response_id', 'question_id'],
@@ -1691,6 +1718,7 @@ class qnaire extends \cenozo\database\record
           );
           if( is_null( $db_answer ) )
           {
+            $db_answer = lib::create( 'database\answer' );
             $db_answer->response_id = $db_response->id;
             $db_answer->question_id = $question['question_id'];
             $db_answer->language_id = $this->base_language_id;
@@ -1717,7 +1745,7 @@ class qnaire extends \cenozo\database\record
           }
 
           if( is_null( $missing ) ) $invalid = true;
-          else if( $apply )
+          else if( $apply_this_row )
           {
             if( in_array( $missing, ['DK_NA', 'REFUSED'] ) )
             {
@@ -1730,7 +1758,7 @@ class qnaire extends \cenozo\database\record
         {
           // TODO: validate the value
 
-          if( $apply )
+          if( $apply_this_row )
           {
             // TODO: apply the value to the question
           }
@@ -1740,7 +1768,7 @@ class qnaire extends \cenozo\database\record
           in_array( $question['option_id'], ['dkna', 'refuse'] )
         ) {
           if( !in_array( $value, ['0', '1'] ) ) $invalid = true;
-          else if( $apply )
+          else if( $apply_this_row )
           {
             // NOTE: allow the main column to define the value if this column has a value of 0
             if( '1' == $value )
@@ -1756,7 +1784,7 @@ class qnaire extends \cenozo\database\record
           if( array_key_exists( 'extra', $question ) && $question['extra'] )
           {
             if( !test_value( $question['extra'], $value ) ) $invalid = true;
-            else if( $apply )
+            else if( $apply_this_row )
             {
               $a = util::json_decode( $db_answer->value );
               if( is_null( $a ) ) $a = [];
@@ -1780,7 +1808,7 @@ class qnaire extends \cenozo\database\record
           else
           {
             if( !in_array( $value, ['0', '1'] ) ) $invalid = true;
-            else if( $apply )
+            else if( $apply_this_row )
             {
               $a = util::json_decode( $db_answer->value );
               if( is_null( $a ) ) $a = [];
@@ -1809,7 +1837,7 @@ class qnaire extends \cenozo\database\record
             if( array_key_exists( 'extra', $question ) && $question['extra'] ) // extra data for a selected option
             {
               if( !test_value( $question['extra'], $value ) ) $invalid = true;
-              else if( $apply )
+              else if( $apply_this_row )
               {
                 $db_answer->value = util::json_encode( (object) [
                   'id' => $question['option_id'],
@@ -1819,7 +1847,7 @@ class qnaire extends \cenozo\database\record
             }
             else // no extra data
             {
-              if( $apply )
+              if( $apply_this_row )
               {
                 if( 'DK_NA' == $option['name'] )
                   $db_answer->value = util::json_encode( (object) ['dkna' => true] );
@@ -1834,7 +1862,7 @@ class qnaire extends \cenozo\database\record
         else
         {
           if( !test_value( $question['type'], $value ) ) $invalid = true;
-          else if( $apply )
+          else if( $apply_this_row )
           {
             $db_answer->value = util::json_encode( $value );
             $db_answer->save();
@@ -1862,8 +1890,10 @@ class qnaire extends \cenozo\database\record
     }
 
     return [
+      'valid_column_list' => $valid_column_list,
       'invalid_column_list' => $invalid_column_list,
       'missing_column_list' => $missing_column_list,
+      'new_responses' => $new_responses,
       'existing_responses' => $existing_responses,
       'row_errors' => $row_errors,
       'column_errors' => $column_error_list
