@@ -126,7 +126,8 @@
           </div>
           <h4>Interview Details</h4>
           <div class="form-horizontal">
-            <div ng-if="this.data.token_check" class="form-group">
+            {{ model.renderModel.data.token_check ? "Y" : "N" }}
+            <div ng-if="model.renderModel.data.token_check" class="form-group">
               <label for="token" class="control-label col-sm-3">Token (Interview ID)</label>
               <div class="row col-sm-9">
                 <div class="input-group">
@@ -162,7 +163,7 @@
              ng-if="!model.renderModel.data.closed && model.renderModel.data.stages && !model.renderModel.data.checked_in">
           <button type="button"
                   class="btn btn-primary"
-                  ng-disabled="this.data.token_check && null == model.renderModel.data.scanned_token"
+                  ng-disabled="model.renderModel.data.token_check && null == model.renderModel.data.scanned_token"
                   ng-click="model.renderModel.setCheckIn( true )">
             Proceed
           </button>
