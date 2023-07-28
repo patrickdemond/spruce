@@ -1784,11 +1784,11 @@ cenozoApp.defineModule({
                         list[option.id].valueList = option.multiple_answers ? value : [value];
                         list[option.id].formattedValueList = null;
                         if( "date" == option.extra ) {
-                          list[option.id].formatedValueList = option.multiple_answers
+                          list[option.id].formattedValueList = option.multiple_answers
                             ? formatDate(selectedOptions[optionIndex].value)
                             : [formatDate(selectedOptions[optionIndex].value)];
                         } else if( "time" == option.extra ) {
-                          list[option.id].formatedValueList = option.multiple_answers
+                          list[option.id].formattedValueList = option.multiple_answers
                             ? formatTime(selectedOptions[optionIndex].value)
                             : [formatTime(selectedOptions[optionIndex].value)];
                         }
