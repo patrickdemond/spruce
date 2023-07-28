@@ -1210,11 +1210,7 @@ class qnaire extends \cenozo\database\record
         $found = false;
         foreach( $consent_list as $c )
         {
-          if( $consent['name'] == $c['name'] )
-          {
-            $found = true;
-            break;
-          }
+          if( $consent['name'] == $c['name'] ) { $found = true; break; }
         }
 
         if( !$found )
@@ -1492,14 +1488,14 @@ class qnaire extends \cenozo\database\record
     {
       // null values are valid for all types
       if( 'null' == $value ) return true;
-      else if( 'audio' == $type ) return 'true' == $value;
+      else if( 'audio' == $type ) return 'YES' == $value;
       else if( 'boolean' == $type ) return in_array( $value, ['YES', 'NO'] );
       else if( 'date' == $type ) return preg_match( '/^[0-9]{4}-[0-1][0-9]-[0-3][0-9]$/', $value );
       else if( 'device' == $type ) return true;
       else if( 'list' == $type ) return true;
       else if( 'lookup' == $type ) return true;
       else if( 'number' == $type ) return util::string_matches_float( $value );
-      else if( 'number with unit' == $type ) return true;
+      else if( 'number with unit' == $type ) return util::string_matches_float( $value );
       else if( 'string' == $type ) return true;
       else if( 'text' == $type ) return true;
       else if( 'time' == $type ) return preg_match( '/^[01][0-9]:[0-5][0-9]$/', $value );
@@ -1737,11 +1733,7 @@ class qnaire extends \cenozo\database\record
           $missing = NULL;
           foreach( $question['missing_list'] as $m => $not_used )
           {
-            if( $value == $m )
-            {
-              $missing = $m;
-              break;
-            }
+            if( $value == $m ) { $missing = $m; break; }
           }
 
           if( is_null( $missing ) ) $invalid = true;
@@ -1756,11 +1748,45 @@ class qnaire extends \cenozo\database\record
         }
         else if( array_key_exists( 'unit_list', $question ) ) // unit column
         {
-          // TODO: validate the value
+          // the value must be in the unit list
+          $unit = NULL;
+          $unit_list = $this->get_unit_list_enum( $question['unit_list'] );
 
-          if( $apply_this_row )
+          // the enum list will be divided into languages, so search the first one's key=>value unit list
+          foreach( current( $unit_list ) as $k => $v )
           {
-            // TODO: apply the value to the question
+            if( $value == $k ) { $unit = $value; break; }
+          }
+
+          if( is_null( $unit ) ) $invalid = true;
+          else if( $apply_this_row )
+          {
+            // add the unit to the value property
+            $new_value = 'null';
+            if( array_key_exists( 'option_id', $question ) )
+            {
+              // this unit belongs to extra data in a "list" question
+              $new_value = util::json_decode( $db_answer->value );
+              foreach( $new_value as $i => $v )
+              {
+                if( is_object( $v ) && $v->id == $question['option_id'] )
+                {
+                  $new_value[$i]->value->unit = $unit;
+                  break;
+                }
+              }
+            }
+            else
+            {
+              // this unit belongs to a "number with unit" question
+              $new_value = (object) [
+                'value' => util::json_decode( $db_answer->value ),
+                'unit' => $unit
+              ];
+            }
+
+            $db_answer->value = util::json_encode( $new_value );
+            $db_answer->save();
           }
         }
         else if( // dkna or refused column
@@ -1778,8 +1804,10 @@ class qnaire extends \cenozo\database\record
             }
           }
         }
-        else if( array_key_exists( 'option_id', $question ) ) // multi-select list column
-        {
+        else if( // multi-select list column
+          array_key_exists( 'option_id', $question ) &&
+          !$question['all_exclusive']
+        ) {
           // if there is extra data then we must test for that type
           if( array_key_exists( 'extra', $question ) && $question['extra'] )
           {
@@ -1791,11 +1819,7 @@ class qnaire extends \cenozo\database\record
               $v_index = NULL;
               foreach( $a as $i => $v )
               {
-                if( is_object( $v ) && $question['option_id'] == $v->id )
-                {
-                  $v_index = $i;
-                  break;
-                }
+                if( is_object( $v ) && $question['option_id'] == $v->id ) { $v_index = $i; break; }
               }
 
               $new_value = (object) ['id' => $question['option_id'], 'value' => $value];
@@ -1810,11 +1834,14 @@ class qnaire extends \cenozo\database\record
             if( !in_array( $value, ['0', '1'] ) ) $invalid = true;
             else if( $apply_this_row )
             {
-              $a = util::json_decode( $db_answer->value );
-              if( is_null( $a ) ) $a = [];
-              if( !in_array( $question['option_id'], $a ) ) $a[] = $question['option_id'];
-              $db_answer->value = util::json_encode( $a );
-              $db_answer->save();
+              if( '1' == $value )
+              {
+                $a = util::json_decode( $db_answer->value );
+                if( is_null( $a ) ) $a = [];
+                if( !in_array( $question['option_id'], $a ) ) $a[] = $question['option_id'];
+                $db_answer->value = util::json_encode( $a );
+                $db_answer->save();
+              }
             }
           }
         }
@@ -1822,13 +1849,18 @@ class qnaire extends \cenozo\database\record
         {
           // the value must be in the option list
           $option = NULL;
-          foreach( $question['option_list'] as $o )
+          if( array_key_exists( 'option_list', $question ) )
           {
-            if( $value == $o['name'] )
+            foreach( $question['option_list'] as $o )
             {
-              $option = $o;
-              break;
+              if( $value == $o['name'] ) { $option = $o; break; }
             }
+          }
+          else if( array_key_exists( 'option_id', $question ) )
+          {
+            // some extra columns (such as number-with-unit "NB" columns) have no option-list
+            // but they do have an ID
+            $option = ['id' => $question['option_id']];
           }
 
           if( is_null( $option ) ) $invalid = true;
@@ -1839,10 +1871,39 @@ class qnaire extends \cenozo\database\record
               if( !test_value( $question['extra'], $value ) ) $invalid = true;
               else if( $apply_this_row )
               {
-                $db_answer->value = util::json_encode( (object) [
+                $new_value = util::json_decode( $db_answer->value );
+                if( !is_array( $new_value ) ) $new_value = [];
+
+                $obj = [
                   'id' => $question['option_id'],
-                  'value' => $value
-                ] );
+                  'value' => 'number with unit' == $question['extra'] ?
+                    (object) ['value' => $value, 'unit' => NULL] :
+                    $value
+                ];
+                // look for this id as an integer in the array and replace it with an object
+
+                $found = false;
+                foreach( $new_value as $i => $v )
+                {
+                  if( is_int( $v ) && $v == $question['option_id'] )
+                  {
+                    $new_value[$i] = (array) $obj;
+                    $found = true;
+                    break;
+                  }
+                }
+
+                if( !$found )
+                {
+                  $new_value[] = [
+                    'id' => $question['option_id'],
+                    'value' => 'number with unit' == $question['extra'] ?
+                      (object) ['value' => $value, 'unit' => NULL] :
+                      $value
+                  ];
+                }
+                $db_answer->value = util::json_encode( $new_value );
+                $db_answer->save();
               }
             }
             else // no extra data
@@ -1853,7 +1914,13 @@ class qnaire extends \cenozo\database\record
                   $db_answer->value = util::json_encode( (object) ['dkna' => true] );
                 else if( 'REFUSED' == $option['name'] )
                   $db_answer->value = util::json_encode( (object) ['refuse' => true] );
-                else $db_answer->value = util::json_encode( [$option['id']] );
+                else
+                {
+                  $new_value = util::json_decode( $db_answer->value );
+                  if( !is_array( $new_value ) || $question['all_exclusive'] ) $new_value = [];
+                  $new_value[] = $option['id'];
+                  $db_answer->value = util::json_encode( $new_value );
+                }
                 $db_answer->save();
               }
             }
@@ -1864,7 +1931,7 @@ class qnaire extends \cenozo\database\record
           if( !test_value( $question['type'], $value ) ) $invalid = true;
           else if( $apply_this_row )
           {
-            $db_answer->value = util::json_encode( $value );
+            $db_answer->value = util::json_encode( 'boolean' == $question['type'] ? 'YES' == $value : $value );
             $db_answer->save();
           }
         }
@@ -2704,9 +2771,9 @@ class qnaire extends \cenozo\database\record
             }
             else // the question can only have one answer
             {
-              if( 'boolean' == $column['type'] )
+              if( in_array( $column['type'], ['audio', 'boolean'] ) )
               {
-                // boolean values have values YES or NO instead of 1 and 0 (since DK_NA and REFUSED is possible)
+                // convert audio and boolean values from 0 and 1 to NO and YES
                 $row_value = $answer ? 'YES' : 'NO';
               }
               else if( 'list' == $column['type'] )
