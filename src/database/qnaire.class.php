@@ -2264,7 +2264,10 @@ class qnaire extends \cenozo\database\record
       $db_address->save();
 
       // replace all eligibility with the provided list
-      $study_name_list = explode( ';', $participant->study_list );
+      // NOTE: due to a bug in Beartooth we have to seperate study names by , instead of ;
+      // This can't be fixed in Beartooth because it would require updating all Onyx instances,
+      // so as a TODO, this should be replaced with a ; once Onyx is retired
+      $study_name_list = explode( ',', $participant->study_list );
 
       if( 0 == count( $study_name_list ) )
       {
