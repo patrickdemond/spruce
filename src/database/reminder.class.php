@@ -49,7 +49,7 @@ class reminder extends \cenozo\database\record
     foreach( $reminder->reminder_description_list as $reminder_description )
     {
       $db_language = $language_class_name::get_unique_record( 'code', $reminder_description->language );
-      $db_reminder_description = $db_reminder->get_description( $reminder->type, $db_language );
+      $db_reminder_description = $db_reminder->get_description( $reminder_description->type, $db_language );
       $db_reminder_description->value = $reminder_description->value;
       $db_reminder_description->save();
     }
