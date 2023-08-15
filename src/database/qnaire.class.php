@@ -1503,6 +1503,12 @@ class qnaire extends \cenozo\database\record
       return false;
     }
 
+    // a private function to convert a json value to a number
+    function convert_to_number( $value )
+    {
+      return util::string_matches_float( $value ) ? (float) $value : $value;
+    }
+
     $identifier_class_name = lib::get_class_name( 'database\identifier' );
     $participant_class_name = lib::get_class_name( 'database\participant' );
     $participant_identifier_class_name = lib::get_class_name( 'database\participant_identifier' );
@@ -1780,7 +1786,7 @@ class qnaire extends \cenozo\database\record
             {
               // this unit belongs to a "number with unit" question
               $new_value = (object) [
-                'value' => util::json_decode( $db_answer->value ),
+                'value' => convert_to_number( util::json_decode( $db_answer->value ) ),
                 'unit' => $unit
               ];
             }
@@ -1877,7 +1883,7 @@ class qnaire extends \cenozo\database\record
                 $obj = [
                   'id' => $question['option_id'],
                   'value' => 'number with unit' == $question['extra'] ?
-                    (object) ['value' => $value, 'unit' => NULL] :
+                    (object) ['value' => convert_to_number( $value ), 'unit' => NULL] :
                     $value
                 ];
                 // look for this id as an integer in the array and replace it with an object
@@ -1898,7 +1904,7 @@ class qnaire extends \cenozo\database\record
                   $new_value[] = [
                     'id' => $question['option_id'],
                     'value' => 'number with unit' == $question['extra'] ?
-                      (object) ['value' => $value, 'unit' => NULL] :
+                      (object) ['value' => convert_to_number( $value ), 'unit' => NULL] :
                       $value
                   ];
                 }
@@ -1931,7 +1937,10 @@ class qnaire extends \cenozo\database\record
           if( !test_value( $question['type'], $value ) ) $invalid = true;
           else if( $apply_this_row )
           {
-            $db_answer->value = util::json_encode( 'boolean' == $question['type'] ? 'YES' == $value : $value );
+            $formatted_value = $value;
+            if( 'boolean' == $question['type'] ) $formatted_value = 'YES' == $value;
+            else if( 'number' == $question['type'] ) $formatted_value = convert_to_number( $value );
+            $db_answer->value = util::json_encode( $formatted_value );
             $db_answer->save();
           }
         }
