@@ -1282,12 +1282,46 @@ class qnaire extends \cenozo\database\record
 
         $answer_sel = lib::create( 'database\select' );
         $answer_sel->add_table_column( 'question', 'name', 'question' );
+        $answer_sel->add_table_column( 'question', 'type' );
         $answer_sel->add_table_column( 'language', 'code', 'language' );
         $answer_sel->add_column( 'value' );
         $answer_mod = lib::create( 'database\modifier' );
         $answer_mod->join( 'question', 'answer.question_id', 'question.id' );
         $answer_mod->join( 'language', 'answer.language_id', 'language.id' );
-        $response['answer_list'] = $db_response->get_answer_list( $answer_sel, $answer_mod );
+        foreach( $db_response->get_answer_list( $answer_sel, $answer_mod ) as $answer )
+        {
+          $value = $answer['value'];
+
+          // convert list question option IDs to names
+          if( 'list' == $answer['type'] )
+          {
+            // only change array answers (the others don't have IDs to convert)
+            if( '[' == substr( $value, 0, 1 ) )
+            {
+              $new_value = [];
+              foreach( util::json_decode( $value ) as $val )
+              {
+                if( is_int( $val ) )
+                {
+                  $new_value[] = lib::create( 'database\question_option', $val )->name;
+                }
+                else if( is_object( $val ) )
+                {
+                  $val->name = lib::create( 'database\question_option', $val->id )->name;
+                  unset( $val->id );
+                  $new_value[] = $val;
+                }
+              }
+              $value = util::json_encode( $new_value );
+            }
+          }
+
+          $response['answer_list'][] = [
+            'question' => $answer['question'],
+            'language' => $answer['language'],
+            'value' => $value
+          ];
+        }
 
         if( $this->stages )
         {
@@ -1989,6 +2023,7 @@ class qnaire extends \cenozo\database\record
     $module_class_name = lib::get_class_name( 'database\module' );
     $page_class_name = lib::get_class_name( 'database\page' );
     $answer_class_name = lib::get_class_name( 'database\answer' );
+    $question_option_class_name = lib::get_class_name( 'database\question_option' );
     $stage_class_name = lib::get_class_name( 'database\stage' );
     $user_class_name = lib::get_class_name( 'database\user' );
     $response_stage_class_name = lib::get_class_name( 'database\response_stage' );
@@ -2079,8 +2114,39 @@ class qnaire extends \cenozo\database\record
               $db_answer->question_id = $db_question->id;
             }
 
+            // list answers will have options encoded as names, so convert to IDs
+            $value = $answer->value;
+            if( 'list' == $db_question->type )
+            {
+              // only change array answers (the others don't have Names to convert)
+              if( '[' == substr( $value, 0, 1 ) )
+              {
+                $new_value = [];
+                foreach( util::json_decode( $value ) as $val )
+                {
+                  if( is_string( $val ) )
+                  {
+                    $new_value[] = $question_option_class_name::get_unique_record(
+                      ['question_id', 'name'],
+                      [$db_question->id, $val]
+                    )->id;
+                  }
+                  else if( is_object( $val ) )
+                  {
+                    $val->id = $question_option_class_name::get_unique_record(
+                      ['question_id', 'name'],
+                      [$db_question->id, $val->name]
+                    )->id;
+                    unset( $val->name );
+                    $new_value[] = $val;
+                  }
+                }
+                $value = util::json_encode( $new_value );
+              }
+            }
+
             $db_answer->language_id = $language_class_name::get_unique_record( 'code', $answer->language )->id;
-            $db_answer->value = $answer->value;
+            $db_answer->value = $value;
             $db_answer->save();
           }
 
