@@ -255,33 +255,33 @@ class query extends \cenozo\service\query
                         {
                           $selected_option_id_list[] = is_object( $item ) ?
                             $selected_option_id_list[] = $item->id : $item;
-                        }
 
-                        $option_data['selected'] = false;
-                        if( in_array( $option['id'], $selected_option_id_list ) )
-                        {
-                          $option_data['selected'] = true;
-
-                          if( is_object( $item ) )
+                          $option_data['selected'] = false;
+                          if( in_array( $option['id'], $selected_option_id_list ) )
                           {
-                            // add the option data's value
-                            $option_data['value'] = $item->value;
-                            if(
-                              is_object( $item->value ) &&
-                              property_exists( $item->value, 'value' ) &&
-                              property_exists( $item->value, 'unit' )
-                            ) {
-                              $unit_list_enum = $db_qnaire->get_unit_list_enum( $option['unit_list'] );
-                              $lang = $question['language_code'];
-                              $unit = $item->value->unit;
-                              $option_data['value'] = sprintf(
-                                '%s %s',
-                                $item->value->value,
-                                !is_null( $unit_list_enum ) &&
-                                array_key_exists( $lang, $unit_list_enum ) &&
-                                array_key_exists( $unit, $unit_list_enum[$lang] ) ?
-                                  $unit_list_enum[$lang][$unit] : $unit
-                              );
+                            $option_data['selected'] = true;
+
+                            if( is_object( $item ) )
+                            {
+                              // add the option data's value
+                              $option_data['value'] = $item->value;
+                              if(
+                                is_object( $item->value ) &&
+                                property_exists( $item->value, 'value' ) &&
+                                property_exists( $item->value, 'unit' )
+                              ) {
+                                $unit_list_enum = $db_qnaire->get_unit_list_enum( $option['unit_list'] );
+                                $lang = $question['language_code'];
+                                $unit = $item->value->unit;
+                                $option_data['value'] = sprintf(
+                                  '%s %s',
+                                  $item->value->value,
+                                  !is_null( $unit_list_enum ) &&
+                                  array_key_exists( $lang, $unit_list_enum ) &&
+                                  array_key_exists( $unit, $unit_list_enum[$lang] ) ?
+                                    $unit_list_enum[$lang][$unit] : $unit
+                                );
+                              }
                             }
                           }
                         }
