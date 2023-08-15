@@ -843,6 +843,9 @@ class response extends \cenozo\database\has_rank
    */
   public function compile_description( $description, $force = false )
   {
+    // do nothing to empty descriptions
+    if( is_null( $description ) || 0 == strlen( $description ) ) return;
+
     $attribute_class_name = lib::get_class_name( 'database\attribute' );
     $response_attribute_class_name = lib::get_class_name( 'database\response_attribute' );
     $answer_class_name = lib::get_class_name( 'database\answer' );
