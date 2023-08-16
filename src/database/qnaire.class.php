@@ -1277,6 +1277,7 @@ class qnaire extends \cenozo\database\record
           'show_hidden' => $db_response->show_hidden,
           'start_datetime' => $db_response->start_datetime->format( 'c' ),
           'last_datetime' => $db_response->last_datetime->format( 'c' ),
+          'comments' => $db_response->comments,
           'answer_list' => array()
         );
 
@@ -2093,6 +2094,7 @@ class qnaire extends \cenozo\database\record
           $db_response->show_hidden = $response->show_hidden;
           $db_response->start_datetime = $response->start_datetime;
           $db_response->last_datetime = $response->last_datetime;
+          $db_response->comments = $response->comments;
           $db_response->save();
 
           foreach( $response->answer_list as $answer )
