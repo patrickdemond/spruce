@@ -162,7 +162,13 @@ class annotation extends \cenozo\business\report\base_report
       }
 
       // convert all newlines to \n (as text)
-      foreach( $row as $index => $value ) $row[$index] = str_replace( "\n", '\n', $value );
+      foreach( $row as $index => $value )
+      {
+        if( !is_null( $value ) )
+        {
+          $row[$index] = str_replace( "\n", '\n', $value );
+        }
+      }
 
       // if there is a unit list then add it to the category list
       // note that only questions or options with number-with-unit type/extra values will have a unit list
