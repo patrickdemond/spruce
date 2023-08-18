@@ -2586,66 +2586,37 @@ cenozoApp.defineModule({
               await this.setAnswer(question, value, true);
             },
 
-            selectDateForQuestionOrOption: async function (question, option, valueIndex, value) {
-              try {
-                this.hotKeyDisabled = true;
-
-                var response = await CnModalDatetimeFactory.instance({
-                  title: null,
-                  locale: this.currentLanguage,
-                  date: value,
-                  pickerType: "date",
-                  minDate: getDate(this.evaluateLimit(null != option ? option.minimum : question.minimum)),
-                  maxDate: getDate(this.evaluateLimit(null != option ? option.maximum : question.maximum)),
-                  emptyAllowed: true,
-                }).show();
-
-                if (false !== response) {
-                  if (null != option) {
-                    await this.setAnswerValue(
-                      question,
-                      option,
-                      valueIndex,
-                      null == response ? null : response.replace(/T.*/, "")
-                    );
-                  } else {
-                    await this.setAnswer(
-                      question,
-                      null == response ? null : response.replace(/T.*/, "")
-                    );
-                  }
-                }
-              } finally {
-                this.hotKeyDisabled = false;
+            selectDateOrTimeForQuestionOrOption: async function (question, option, valueIndex, value, type) {
+              if (!["date", "time"].includes(type)) {
+                throw new Error('Invalid type "' + type + '", must be "date" or "time".');
               }
-            },
 
-            selectDateForOption: async function (question, option, valueIndex, answerValue) {
-              this.selectDateForQuestionOrOption(question, option, valueIndex, answerValue);
-            },
-
-            selectDate: async function (question, value) {
-              this.selectDateForQuestionOrOption(question, null, null, value);
-            },
-
-            selectTimeForQuestionOrOption: async function (question, option, valueIndex, value) {
               try {
                 this.hotKeyDisabled = true;
 
-                // assume a default of 12:00
-                if (value == null) value = "12:00";
-
-                var response = await CnModalDatetimeFactory.instance({
+                const modalObj = {
                   title: null,
                   locale: this.currentLanguage,
-                  // return the time in the user's timezone
-                  date: getTime(value, CnSession.user.timezone),
-                  pickerType: "time",
+                  // return the date, or time in the user's timezone
+                  date: "date" == type ?
+                    value :
+                    // assume a default of 12:00
+                    getTime(null == value ? "12:00" : value, CnSession.user.timezone),
+                  pickerType: type,
                   emptyAllowed: true,
-                }).show();
+                };
+
+                if ("date" == type) {
+                  angular.extend(modalObj, {
+                    minDate: getDate(this.evaluateLimit(null != option ? option.minimum : question.minimum)),
+                    maxDate: getDate(this.evaluateLimit(null != option ? option.maximum : question.maximum)),
+                  });
+                }
+                  
+                var response = await CnModalDatetimeFactory.instance(modalObj).show();
 
                 if (false !== response) {
-                  if( null != response ) {
+                  if ("time" == type && null != response) {
                     // convert the time from UTC to the user's timezone
                     const match = response.match(/^([0-9]+):([0-9]+)$/);
                     let m = moment();
@@ -2654,13 +2625,14 @@ cenozoApp.defineModule({
                     m.second(0);
                     m.tz(CnSession.user.timezone);
                     response = moment(m).format("HH:mm");
+                  } else if ("date" == type && null != response) {
+                    response = response.replace(/T.*/, "");
                   }
 
-                  await this.setAnswer( question, response );
                   if (null != option) {
-                    await this.setAnswerValue( question, option, valueIndex, response );
+                    await this.setAnswerValue(question, option, valueIndex, response);
                   } else {
-                    await this.setAnswer( question, response );
+                    await this.setAnswer(question, response);
                   }
                 }
               } finally {
@@ -2668,12 +2640,20 @@ cenozoApp.defineModule({
               }
             },
 
+            selectDateForOption: async function (question, option, valueIndex, answerValue) {
+              this.selectDateOrTimeForQuestionOrOption(question, option, valueIndex, answerValue, "date");
+            },
+
+            selectDate: async function (question, value) {
+              this.selectDateOrTimeForQuestionOrOption(question, null, null, value, "date");
+            },
+
             selectTimeForOption: async function (question, option, valueIndex, answerValue) {
-              this.selectTimeForQuestionOrOption(question, option, valueIndex, answerValue);
+              this.selectDateOrTimeForQuestionOrOption(question, option, valueIndex, answerValue, "time");
             },
 
             selectTime: async function (question, value) {
-              this.selectTimeForQuestionOrOption(question, null, null, value);
+              this.selectDateOrTimeForQuestionOrOption(question, null, null, value, "time");
             },
 
             setAnswerValue: async function (
@@ -2860,10 +2840,9 @@ cenozoApp.defineModule({
                 responseStageId
               );
 
-              if (!["launch", "pause", "skip", "reset"].includes(operationName))
-                throw new Error(
-                  'Tried to run invalid stage operation "' + operationName + '"'
-                );
+              if (!["launch", "pause", "skip", "reset"].includes(operationName)) {
+                throw new Error('Tried to run invalid stage operation "' + operationName + '"');
+              }
 
               // determine if the stage is already open and which user it is associated with
               var responseStageResponse = await CnHttpFactory.instance({
