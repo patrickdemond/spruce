@@ -2293,6 +2293,25 @@ class qnaire extends \cenozo\database\record
       );
     }
 
+    // Now that we know we have successfully pulled a list of appointments, start by deleting
+    // all respondents that haven't been checked in yet (avoiding those that have started stage selection
+    // but have gone back to the check-in stage)
+    $respondent_mod = lib::create( 'database\modifier' );
+    $respondent_mod->join(
+      'respondent_current_response',
+      'respondent.id',
+      'respondent_current_response.respondent_id'
+    );
+    $respondent_mod->left_join( 'response', 'respondent_current_response.response_id', 'rsponse.id' );
+    $respondent_mod->qnaire_id = $this->id;
+    $respondent_mod->where( 'IF_NULL( response.stage_selection, false )', '=', false );
+    $respondent_mod->where( 'IF_NULL( response.submitted, false )', '=', false );
+    $respondent_mod->where( 'IF_NULL( response.checked_in, false )', '=', false );
+
+    foreach( $respondent_class_name::select_objects( $respondent_mod ) as $db_respondent )
+      $db_respondent->delete();
+
+    // now load all data provided by the response from beartooth
     foreach( util::json_decode( $response ) as $participant )
     {
       // update the participant record
@@ -2489,6 +2508,7 @@ class qnaire extends \cenozo\database\record
         $db_respondent = lib::create( 'database\respondent' );
         $db_respondent->qnaire_id = $this->id;
         $db_respondent->participant_id = $db_participant->id;
+        $db_respondent->start_datetime = $participant->datetime;
         $db_respondent->save();
       }
     }
