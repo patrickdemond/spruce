@@ -40,7 +40,7 @@ class post extends \cenozo\service\post
     if( $this->get_argument( 'time_report', false ) )
     {
       $service_class_name::setup();
-      
+
       // create the temporary table needed to respond with data from multiple qnaire/participant-lists
       $respondent_class_name = lib::get_class_name( 'database\respondent' );
       $respondent_class_name::db()->execute(
@@ -80,7 +80,9 @@ class post extends \cenozo\service\post
    */
   protected function execute()
   {
+    $qnaire_class_name = lib::get_class_name( 'database\qnaire' );
     $service_class_name = lib::get_class_name( 'service\service' );
+    $action = $this->get_argument( 'action', NULL );
     if( $this->get_argument( 'time_report', false ) )
     {
       $service_class_name::execute();
@@ -100,6 +102,34 @@ class post extends \cenozo\service\post
       $modifier->group( 'time_report.id' );
 
       $this->set_data( $response_class_name::select( $select, $modifier ) );
+    }
+    else if( 'get_respondents' == $action )
+    {
+      $modifier = lib::create( 'database\modifier' );
+      $modifier->where( 'beartooth_url', '!=', NULL );
+      $modifier->where( 'beartooth_username', '!=', NULL );
+      $modifier->where( 'beartooth_password', '!=', NULL );
+      foreach( $qnaire_class_name::select_objects( $modifier ) as $db_qnaire )
+      {
+        $db_qnaire->sync_with_parent();
+        $db_qnaire->get_respondents_from_beartooth();
+      }
+    }
+    else if( 'export' == $action )
+    {
+      $uid_list = [];
+      $modifier = lib::create( 'database\modifier' );
+      $modifier->where( 'beartooth_url', '!=', NULL );
+      $modifier->where( 'beartooth_username', '!=', NULL );
+      $modifier->where( 'beartooth_password', '!=', NULL );
+      foreach( $qnaire_class_name::select_objects( $modifier ) as $db_qnaire )
+      {
+        $db_qnaire->sync_with_parent();
+        $uid_list = array_merge( $uid_list, $db_qnaire->export_respondent_data() );
+      }
+
+      // set the list of exported UIDs as the returned data
+      $this->set_data( $uid_list );
     }
     else parent::execute();
   }

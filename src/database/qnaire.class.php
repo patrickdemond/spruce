@@ -2303,12 +2303,11 @@ class qnaire extends \cenozo\database\record
       'respondent_current_response.respondent_id'
     );
     $respondent_mod->left_join( 'response', 'respondent_current_response.response_id', 'response.id' );
-    $respondent_mod->qnaire_id = $this->id;
-    $respondent_mod->where( 'IF_NULL( response.stage_selection, false )', '=', false );
-    $respondent_mod->where( 'IF_NULL( response.submitted, false )', '=', false );
-    $respondent_mod->where( 'IF_NULL( response.checked_in, false )', '=', false );
+    $respondent_mod->where( 'IFNULL( response.stage_selection, false )', '=', false );
+    $respondent_mod->where( 'IFNULL( response.submitted, false )', '=', false );
+    $respondent_mod->where( 'IFNULL( response.checked_in, false )', '=', false );
 
-    foreach( $respondent_class_name::select_objects( $respondent_mod ) as $db_respondent )
+    foreach( $this->get_respondent_object_list( $respondent_mod ) as $db_respondent )
       $db_respondent->delete();
 
     // now load all data provided by the response from beartooth

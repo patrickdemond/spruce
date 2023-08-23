@@ -23,14 +23,52 @@ cenozoApp.extendModule({
                 angular
                   .element(element[0].querySelector(".inner-view-frame div"))
                   .append(
-                    '<cn-respondent-list model="respondentModel"></cn-respondent-list>'
+                    '<div class="noselect">' +
+                      '<cn-respondent-list model="todayRespondentModel"></cn-respondent-list>' +
+                      '<div class="spacer"></div>' +
+                      '<cn-respondent-list model="inProgressRespondentModel"></cn-respondent-list>' +
+                    "</div>"
                   );
                 $compile(element.contents())(scope);
               };
             },
             controller: function ($scope) {
               oldController($scope);
-              $scope.respondentModel = CnRespondentModelFactory.instance();
+
+              // setup today's respondent list
+              $scope.todayRespondentModel = CnRespondentModelFactory.instance();
+              $scope.todayRespondentModel.listModel.heading =
+                "Today's " + $scope.todayRespondentModel.listModel.heading;
+              angular.extend($scope.todayRespondentModel, {
+                subList: "today",  
+
+                // get a list of all respondents for all qnaires
+                getServiceCollectionPath: (ignoreParent) => "respondent",
+
+                // restrict the respondent list to those starting today
+                getServiceData: function (type, columnRestrictLists) {
+                  let data = this.$$getServiceData(type, columnRestrictLists);
+
+                  if (angular.isUndefined(data.modifier) ) data.modifier = {};
+                  if (angular.isUndefined(data.modifier.w) ) data.modifier.w = [];
+                  data.modifier.w.push({
+                    c: "respondent.start_datetime",
+                    op: "LIKE",
+                    v: moment().format("YYYY-MM-DD") + " %",
+                  });
+
+                  return data;
+                },
+              });
+
+              // setup the full respondent list
+              $scope.inProgressRespondentModel = CnRespondentModelFactory.instance();
+              $scope.inProgressRespondentModel.listModel.heading =
+                "Full " + $scope.inProgressRespondentModel.listModel.heading;
+              angular.extend($scope.inProgressRespondentModel, {
+                // get a list of all respondents for all qnaires
+                getServiceCollectionPath: (ignoreParent) => "respondent",
+              });
             },
           });
         }

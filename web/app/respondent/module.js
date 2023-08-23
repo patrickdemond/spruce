@@ -52,12 +52,12 @@ cenozoApp.defineModule({
           }, // this is changed by the qnaire module
         },
         start_datetime: {
-          column: 'respondent.start_datetime',
+          column: "respondent.start_datetime",
           title: "Start Date",
           type: "datetime",
         },
         end_datetime: {
-          column: 'respondent.end_datetime',
+          column: "respondent.end_datetime",
           title: "End Date",
           type: "datetime",
         },
@@ -229,7 +229,7 @@ cenozoApp.defineModule({
         model.getRespondents();
       },
       isIncluded: function ($state, model) {
-        return model.isDetached();
+        return "today" != model.subList && model.isDetached();
       },
       isDisabled: function ($state, model) {
         return model.workInProgress;
@@ -237,12 +237,12 @@ cenozoApp.defineModule({
     });
 
     module.addExtraOperation("list", {
-      title: "Export Completed",
+      title: "Export",
       operation: async function ($state, model) {
         await model.export();
       },
       isIncluded: function ($state, model) {
-        return model.isDetached();
+        return "today" != model.subList && model.isDetached();
       },
       isDisabled: function ($state, model) {
         return model.workInProgress;
@@ -257,7 +257,7 @@ cenozoApp.defineModule({
         });
       },
       isIncluded: function ($state, model) {
-        return !model.isDetached();
+        return "today" != model.subList && "qnaire" == model.getSubjectFromState() && !model.isDetached();
       },
     });
 
@@ -269,7 +269,7 @@ cenozoApp.defineModule({
         });
       },
       isIncluded: function ($state, model) {
-        return !model.isDetached();
+        return "today" != model.subList && "qnaire" == model.getSubjectFromState() && !model.isDetached();
       },
     });
 
@@ -477,22 +477,6 @@ cenozoApp.defineModule({
     ]);
 
     /* ############################################################################################## */
-    cenozo.providers.factory("CnRespondentListFactory", [
-      "CnBaseListFactory",
-      function (CnBaseListFactory) {
-        var object = function (parentModel) {
-          CnBaseListFactory.construct(this, parentModel);
-          if ('root' == this.parentModel.getSubjectFromState()) this.heading = "Today's " + this.heading;
-        };
-        return {
-          instance: function (parentModel) {
-            return new object(parentModel);
-          },
-        };
-      },
-    ]);
-
-    /* ############################################################################################## */
     cenozo.providers.factory("CnRespondentModelFactory", [
       "CnBaseModelFactory",
       "CnRespondentAddFactory",
@@ -525,6 +509,10 @@ cenozoApp.defineModule({
               return CnSession.setting.detached;
             },
 
+            getAddEnabled: function() {
+              return this.$$getAddEnabled() && "qnaire" == this.getSubjectFromState();
+            },
+
             getMetadata: async function () {
               await this.$$getMetadata();
 
@@ -547,31 +535,6 @@ cenozoApp.defineModule({
               };
             },
 
-            getServiceCollectionPath: function (ignoreParent) {
-              let path = this.$$getServiceCollectionPath(ignoreParent);
-
-              // when viewing the respondent list from the home page show all respondents
-              if ('root' == this.getSubjectFromState()) path = 'respondent';
-
-              return path;
-            },
-
-            getServiceData: function (type, columnRestrictLists) {
-              let data = this.$$getServiceData(type, columnRestrictLists);
-
-              if ('root' == this.getSubjectFromState()) {
-                if (angular.isUndefined(data.modifier) ) data.modifier = {};
-                if (angular.isUndefined(data.modifier.w) ) data.modifier.w = [];
-                data.modifier.w.push({
-                  c: "respondent.start_datetime",
-                  op: "LIKE",
-                  v: moment().format("YYYY-MM-DD") + " %",
-                });
-              }
-
-              return data;
-            },
-
             getRespondents: async function () {
               var modal = CnModalMessageFactory.instance({
                 title: "Communicating with Remote Server",
@@ -582,17 +545,17 @@ cenozoApp.defineModule({
 
               try {
                 this.workInProgress = true;
-                await CnHttpFactory.instance({
-                  path:
-                    "qnaire/" +
-                    $state.params.identifier +
-                    "/respondent?action=get_respondents",
-                }).post();
-                await this.listModel.onList(true);
+                const httpData = { path: "respondent?action=get_respondents" };
+                if ("qnaire" == this.getSubjectFromState())
+                  httpData.path = "qnaire/" + $state.params.identifier + "/" + httpData.path;
+
+                await CnHttpFactory.instance(httpData).post();
               } finally {
                 modal.close();
                 this.workInProgress = false;
               }
+
+              await this.listModel.onList(true);
             },
 
             export: async function (respondentId) {
@@ -606,13 +569,16 @@ cenozoApp.defineModule({
 
               try {
                 this.workInProgress = true;
-                var http = CnHttpFactory.instance({
-                  path: angular.isDefined(respondentId)
-                    ? "respondent/" + respondentId + "?action=export"
-                    : "qnaire/" +
-                      $state.params.identifier +
-                      "/respondent?action=export",
-                });
+                const httpData = {
+                  path: "respondent" + (
+                    angular.isDefined(respondentId) ? "/" + respondentId : ""
+                  ) + "?action=export"
+                };
+
+                if ("qnaire" == this.getSubjectFromState())
+                  httpData.path = "qnaire/" + $state.params.identifier + "/" + httpData.path;
+
+                var http = CnHttpFactory.instance(httpData);
                 var response = angular.isDefined(respondentId)
                   ? await http.patch()
                   : await http.post();
@@ -626,15 +592,15 @@ cenozoApp.defineModule({
                       response.data.join(", ")
                     : "No respondents have been exported.",
                 }).show();
-
-                if (angular.isDefined(respondentId)) {
-                  await this.viewModel.onView(true);
-                } else {
-                  await this.listModel.onList(true);
-                }
               } finally {
                 modal.close();
                 this.workInProgress = false;
+              }
+
+              if (angular.isDefined(respondentId)) {
+                await this.viewModel.onView(true);
+              } else {
+                await this.listModel.onList(true);
               }
             },
           });
