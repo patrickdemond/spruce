@@ -234,7 +234,6 @@ class ui extends \cenozo\ui\ui
     {
       $this->remove_listitem( 'Consent Types' );
       $this->add_listitem( 'Problem Reports', 'problem_report' );
-      $this->remove_listitem( 'Questionnaires' );
       $this->remove_listitem( 'Users' );
     }
   }

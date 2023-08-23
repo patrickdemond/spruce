@@ -16,6 +16,10 @@ cenozoApp.defineModule({
         possessive: "respondent's",
       },
       columnList: {
+        qnaire: {
+          column: "qnaire.name",
+          title: "Questionnaire",
+        },
         uid: {
           column: "participant.uid",
           title: "Participant",
@@ -473,6 +477,22 @@ cenozoApp.defineModule({
     ]);
 
     /* ############################################################################################## */
+    cenozo.providers.factory("CnRespondentListFactory", [
+      "CnBaseListFactory",
+      function (CnBaseListFactory) {
+        var object = function (parentModel) {
+          CnBaseListFactory.construct(this, parentModel);
+          if ('root' == this.parentModel.getSubjectFromState()) this.heading = "Today's " + this.heading;
+        };
+        return {
+          instance: function (parentModel) {
+            return new object(parentModel);
+          },
+        };
+      },
+    ]);
+
+    /* ############################################################################################## */
     cenozo.providers.factory("CnRespondentModelFactory", [
       "CnBaseModelFactory",
       "CnRespondentAddFactory",
@@ -525,6 +545,31 @@ cenozoApp.defineModule({
                   return list;
                 }, []),
               };
+            },
+
+            getServiceCollectionPath: function (ignoreParent) {
+              let path = this.$$getServiceCollectionPath(ignoreParent);
+
+              // when viewing the respondent list from the home page show all respondents
+              if ('root' == this.getSubjectFromState()) path = 'respondent';
+
+              return path;
+            },
+
+            getServiceData: function (type, columnRestrictLists) {
+              let data = this.$$getServiceData(type, columnRestrictLists);
+
+              if ('root' == this.getSubjectFromState()) {
+                if (angular.isUndefined(data.modifier) ) data.modifier = {};
+                if (angular.isUndefined(data.modifier.w) ) data.modifier.w = [];
+                data.modifier.w.push({
+                  c: "respondent.start_datetime",
+                  op: "LIKE",
+                  v: moment().format("YYYY-MM-DD") + " %",
+                });
+              }
+
+              return data;
             },
 
             getRespondents: async function () {
