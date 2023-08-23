@@ -249,9 +249,15 @@ cenozoApp.defineModule({
       beartooth_url: {
         title: "Beartooth URL",
         type: "string",
-        help:
-          "The URL used to connect to Beartooth. " +
-          "This information is never included in the import/export process.",
+        help: "The URL used to connect to Beartooth.",
+        isExcluded: function ($state, model) {
+          return model.isRole("interviewer") || !model.isDetached();
+        },
+      },
+      beartooth_appointment_type: {
+        title: "Beartooth Appointment Type",
+        type: "string",
+        help: "This can be used to restrict the list of appointments from Beartooth by appointment type.",
         isExcluded: function ($state, model) {
           return model.isRole("interviewer") || !model.isDetached();
         },
@@ -259,9 +265,7 @@ cenozoApp.defineModule({
       beartooth_username: {
         title: "Beartooth Username",
         type: "string",
-        help:
-          "The interviewing instance's username used to connect to Beartooth " +
-          "This information is never included in the import/export process.",
+        help: "The interviewing instance's username used to connect to Beartooth.",
         isExcluded: function ($state, model) {
           return model.isRole("interviewer") || !model.isDetached();
         },
@@ -269,9 +273,7 @@ cenozoApp.defineModule({
       beartooth_password: {
         title: "Beartooth Password",
         type: "string",
-        help:
-          "The interviewing instance's password used to connect to Beartooth " +
-          "This information is never included in the import/export process.",
+        help: "The interviewing instance's password used to connect to Beartooth.",
         isExcluded: function ($state, model) {
           return model.isRole("interviewer") || !model.isDetached();
         },

@@ -771,7 +771,11 @@ class qnaire extends \cenozo\database\record
       return 'This instance of Pine is not detached so there is no remote connection to test.';
 
     // test the beartooth connection
-    $url = sprintf( '%s/api/appointment', $this->beartooth_url );
+    $url = sprintf(
+      '%s/api/appointment%s',
+      $this->beartooth_url,
+      is_null( $this->beartooth_appointment_type ) ? '' : sprintf( '?type=%s', $this->beartooth_appointment_type )
+    );
     $curl = curl_init();
     curl_setopt( $curl, CURLOPT_URL, $url );
     curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
@@ -2242,7 +2246,11 @@ class qnaire extends \cenozo\database\record
       );
     }
 
-    $url = sprintf( '%s/api/appointment', $this->beartooth_url );
+    $url = sprintf(
+      '%s/api/appointment%s',
+      $this->beartooth_url,
+      is_null( $this->beartooth_appointment_type ) ? '' : sprintf( '?type=%s', $this->beartooth_appointment_type )
+    );
     $curl = curl_init();
     curl_setopt( $curl, CURLOPT_URL, $url );
     curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
