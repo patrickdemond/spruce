@@ -2302,7 +2302,7 @@ class qnaire extends \cenozo\database\record
       'respondent.id',
       'respondent_current_response.respondent_id'
     );
-    $respondent_mod->left_join( 'response', 'respondent_current_response.response_id', 'rsponse.id' );
+    $respondent_mod->left_join( 'response', 'respondent_current_response.response_id', 'response.id' );
     $respondent_mod->qnaire_id = $this->id;
     $respondent_mod->where( 'IF_NULL( response.stage_selection, false )', '=', false );
     $respondent_mod->where( 'IF_NULL( response.submitted, false )', '=', false );
