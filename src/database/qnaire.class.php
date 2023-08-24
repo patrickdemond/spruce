@@ -1109,6 +1109,9 @@ class qnaire extends \cenozo\database\record
    */
   public function export_respondent_data( $db_specific_respondent = NULL )
   {
+    ini_set( 'memory_limit', '2G' );
+    set_time_limit( 900 ); // 15 minutes max
+
     if( is_null( PARENT_INSTANCE_URL ) ) return;
 
     // encode all respondent and response data into an array
@@ -1518,6 +1521,9 @@ class qnaire extends \cenozo\database\record
    */
   public function import_response_data_from_csv( $csv_data, $apply = false, $new_only = false )
   {
+    ini_set( 'memory_limit', '2G' );
+    set_time_limit( 900 ); // 15 minutes max
+
     // a private function for testing data values
     function test_value( $type, $value )
     {
@@ -2017,6 +2023,9 @@ class qnaire extends \cenozo\database\record
    */
   public function import_response_data( $respondent_list )
   {
+    ini_set( 'memory_limit', '2G' );
+    set_time_limit( 900 ); // 15 minutes max
+
     $participant_class_name = lib::get_class_name( 'database\participant' );
     $respondent_class_name = lib::get_class_name( 'database\respondent' );
     $response_class_name = lib::get_class_name( 'database\response' );
@@ -2520,7 +2529,7 @@ class qnaire extends \cenozo\database\record
    */
   public function mass_respondent( $db_identifier, $identifier_list )
   {
-    ini_set( 'memory_limit', '1G' );
+    ini_set( 'memory_limit', '2G' );
     set_time_limit( 900 ); // 15 minutes max
 
     $participant_class_name = lib::get_class_name( 'database\participant' );
@@ -2675,7 +2684,7 @@ class qnaire extends \cenozo\database\record
   public function get_response_data(
     $modifier = NULL, $exporting = false, $attributes = false, $answers_only = false )
   {
-    ini_set( 'memory_limit', '-1' ); // unlimited memory
+    ini_set( 'memory_limit', '2G' );
     set_time_limit( 900 ); // 15 minutes max
 
     $response_class_name = lib::get_class_name( 'database\response' );
@@ -2964,7 +2973,7 @@ class qnaire extends \cenozo\database\record
    */
   public function process_patch( $patch_object, $apply = false )
   {
-    ini_set( 'memory_limit', '1G' );
+    ini_set( 'memory_limit', '2G' );
     set_time_limit( 900 ); // 15 minutes max
 
     $language_class_name = lib::get_class_name( 'database\language' );
@@ -5039,6 +5048,9 @@ class qnaire extends \cenozo\database\record
    */
   public static function import( $qnaire_object )
   {
+    ini_set( 'memory_limit', '2G' );
+    set_time_limit( 900 ); // 15 minutes max
+
     $language_class_name = lib::get_class_name( 'database\language' );
     $reminder_class_name = lib::get_class_name( 'database\reminder' );
     $attribute_class_name = lib::get_class_name( 'database\attribute' );
