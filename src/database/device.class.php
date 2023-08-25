@@ -14,7 +14,7 @@ use cenozo\lib, cenozo\log, pine\util;
 class device extends \cenozo\database\record
 {
   /**
-   * Test a detached instance's connection to the parent beartooth and pine servers
+   * Test the connection to the device
    */
   public function get_status()
   {
