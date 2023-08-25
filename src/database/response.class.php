@@ -743,6 +743,7 @@ class response extends \cenozo\database\has_rank
   {
     $response_attribute_class_name = lib::get_class_name( 'database\response_attribute' );
 
+    $session = lib::create( 'business\session' );
     $db_participant = $this->get_participant();
     $db_qnaire = $this->get_qnaire();
 
@@ -774,7 +775,7 @@ class response extends \cenozo\database\has_rank
             "\n",
             $e->get_raw_message()
           ) );
-          $this->attribute_error_list[$db_attribute->name] = $e->get_raw_message();
+          $session->attribute_error_list[$db_attribute->name] = $e->get_raw_message();
         }
 
         $db_response_attribute = lib::create( 'database\response_attribute' );
@@ -1324,19 +1325,4 @@ class response extends \cenozo\database\has_rank
 
     return $compiled;
   }
-
-  /**
-   * Gets the list of errors that occured while creating attributes when the response is first created
-   * @return array
-   */
-  public function get_attribute_error_list()
-  {
-    return $this->attribute_error_list;
-  }
-
-  /**
-   * A list of errors that occured while creating attributes when the response is first created
-   * @var attribute_error_list
-   */
-  private $attribute_error_list = [];
 }

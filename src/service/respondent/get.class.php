@@ -137,11 +137,11 @@ class get extends \cenozo\service\get
     // show any attribute errors as a notice when in debug mode
     if( !is_null( $this->db_response ) && $this->db_response->get_qnaire()->debug )
     {
-      $error_list = $this->db_response->get_attribute_error_list();
+      $error_list = lib::create( 'business\session' )->attribute_error_list;
       if( 0 < count( $error_list ) )
       {
         $notice = "The following errors occurred while creating the participant's attribute values:\n\n";
-        foreach( $error_list as $name => $error ) $notice .= sprintf( "\"%s\": %s", $name, $error );
+        foreach( $error_list as $name => $error ) $notice .= sprintf( "\"%s\": %s\n", $name, $error );
         $notice .=
           "\n".
           'Empty values have been created so you can proceed with the questionnaire by reloading the page.'.
