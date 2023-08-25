@@ -107,6 +107,7 @@ class ui extends \cenozo\ui\ui
       $module->add_child( 'qnaire_consent_type_trigger' );
       $module->add_child( 'qnaire_alternate_consent_type_trigger' );
       $module->add_child( 'qnaire_proxy_type_trigger' );
+      $module->add_child( 'qnaire_equipment_type_trigger' );
       $module->add_child( 'stage' );
       $module->add_child( 'qnaire_report' );
       $module->add_child( 'device' );
@@ -202,6 +203,7 @@ class ui extends \cenozo\ui\ui
       $module->add_child( 'qnaire_consent_type_trigger' );
       $module->add_child( 'qnaire_alternate_consent_type_trigger' );
       $module->add_child( 'qnaire_proxy_type_trigger' );
+      $module->add_child( 'qnaire_equipment_type_trigger' );
       $module->add_action( 'clone', '/{identifier}' );
     }
 

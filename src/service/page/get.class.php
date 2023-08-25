@@ -32,7 +32,7 @@ class get extends \cenozo\service\get
 
     // handle hidden text in prompts and popups
     $expression_manager->process_hidden_text( $data );
-    
+
     if( array_key_exists( 'prompts', $data ) )
     {
       $data['prompts'] = $db_qnaire->compile_description( $data['prompts'] );
@@ -98,7 +98,14 @@ class get extends \cenozo\service\get
           // apply the default answer if there is one
           if( !is_null( $question['default_answer'] ) )
           {
-            $value = $expression_manager->compile( $question['default_answer'] );
+            $default = $question['default_answer'];
+            $len = strlen( $default );
+
+            // default answers enclosed in single or double quotes must be compiled as strings (descriptions)
+            $value = preg_match( '/^(\'.*\')|(".*")$/', $default )
+                   ? $this->db_response->compile_description( $default )
+                   : $expression_manager->compile( $default );
+
             if( 'null' != $value )
             {
               $db_answer->value = in_array( $question['type'], array( 'date', 'string', 'text', 'time' ) )

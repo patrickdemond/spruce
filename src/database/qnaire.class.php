@@ -529,6 +529,18 @@ class qnaire extends \cenozo\database\record
       $db_qnaire_proxy_type_trigger->save();
     }
 
+    // copy all equipment triggers
+    foreach( $db_source_qnaire->get_qnaire_equipment_type_trigger_object_list() as $db_source_equipment_type )
+    {
+      $db_question = $this->get_question( $db_source_equipment_type->get_question()->name );
+      $db_qnaire_equipment_type_trigger = lib::create( 'database\qnaire_equipment_type_trigger' );
+      $db_qnaire_equipment_type_trigger->qnaire_id = $this->id;
+      $db_qnaire_equipment_type_trigger->equipment_type_id = $db_source_equipment_type->equipment_type_id;
+      $db_qnaire_equipment_type_trigger->question_id = $db_question->id;
+      $db_qnaire_equipment_type_trigger->loaned = $db_source_equipment_type->loaned;
+      $db_qnaire_equipment_type_trigger->save();
+    }
+
     // now copy the descriptions
     $update_mod = lib::create( 'database\modifier' );
     $update_mod->where( 'destination.qnaire_id', '=', $this->id );
@@ -1176,86 +1188,6 @@ class qnaire extends \cenozo\database\record
         )
       );
 
-      // add any consent trigger records (NOTE: exporting alternate consent types has not yet been implemented)
-      $consent_list = array();
-      $consent_sel = lib::create( 'database\select' );
-      $consent_sel->add_table_column( 'consent_type', 'name' );
-      $consent_sel->add_table_column( 'consent', 'accept' );
-      $consent_sel->add_table_column( 'consent', 'datetime' );
-      $consent_mod = lib::create( 'database\modifier' );
-      $consent_mod->join( 'consent_type', 'qnaire_consent_type_trigger.consent_type_id', 'consent_type.id' );
-      $join_mod = lib::create( 'database\modifier' );
-      $join_mod->where( 'consent_type.id', '=', 'participant_last_consent.consent_type_id', false );
-      $join_mod->where( 'participant_last_consent.participant_id', '=', $db_participant->id );
-      $consent_mod->join_modifier( 'participant_last_consent', $join_mod );
-      $consent_mod->join( 'consent', 'participant_last_consent.consent_id', 'consent.id' );
-      foreach( $this->get_qnaire_consent_type_trigger_list( $consent_sel, $consent_mod ) as $consent )
-      {
-        $consent_list[] = array(
-          'name' => $consent['name'],
-          'accept' => $consent['accept'],
-          'datetime' => $consent['datetime'],
-          'type' => 'trigger'
-        );
-      }
-
-      // add any consent confirm records
-      $consent_sel = lib::create( 'database\select' );
-      $consent_sel->add_table_column( 'consent_type', 'name' );
-      $consent_sel->add_table_column( 'consent', 'accept' );
-      $consent_sel->add_table_column( 'consent', 'datetime' );
-      $consent_mod = lib::create( 'database\modifier' );
-      $consent_mod->join( 'consent_type', 'qnaire_consent_type_confirm.consent_type_id', 'consent_type.id' );
-      $join_mod = lib::create( 'database\modifier' );
-      $join_mod->where( 'consent_type.id', '=', 'participant_last_consent.consent_type_id', false );
-      $join_mod->where( 'participant_last_consent.participant_id', '=', $db_participant->id );
-      $consent_mod->join_modifier( 'participant_last_consent', $join_mod );
-      $consent_mod->join( 'consent', 'participant_last_consent.consent_id', 'consent.id' );
-      foreach( $this->get_qnaire_consent_type_confirm_list( $consent_sel, $consent_mod ) as $consent )
-      {
-        // ignore if the consent already exists from a trigger
-        $found = false;
-        foreach( $consent_list as $c )
-        {
-          if( $consent['name'] == $c['name'] ) { $found = true; break; }
-        }
-
-        if( !$found )
-        {
-          $consent_list[] = array(
-            'name' => $consent['name'],
-            'accept' => $consent['accept'],
-            'datetime' => $consent['datetime'],
-            'type' => 'confirm'
-          );
-        }
-      }
-
-      if( 0 < count( $consent_list ) ) $participant['consent_list'] = $consent_list;
-
-      // add any proxy trigger records
-      $proxy_list = array();
-      $proxy_sel = lib::create( 'database\select' );
-      $proxy_sel->add_table_column( 'proxy_type', 'name' );
-      $proxy_sel->add_table_column( 'proxy', 'datetime' );
-      $proxy_mod = lib::create( 'database\modifier' );
-
-      $proxy_mod->join( 'participant_last_proxy', 'participant_last_proxy.participant_id', $db_participant->id );
-      $proxy_mod->join( 'proxy', 'participant_last_proxy.proxy_id', 'proxy.id' );
-      $proxy_mod->join( 'proxy_type', 'proxy.proxy_type_id', 'proxy_type.id' );
-      $proxy_mod->where( 'proxy_type.id', '=', 'qnaire_proxy_type_trigger.proxy_type_id' );
-
-      foreach( $this->get_qnaire_proxy_type_trigger_list( $proxy_sel, $proxy_mod ) as $proxy )
-      {
-        $proxy_list[] = array(
-          'name' => $proxy['name'],
-          'datetime' => $proxy['datetime'],
-          'type' => 'trigger'
-        );
-      }
-
-      if( 0 < count( $proxy_list ) ) $participant['proxy_list'] = $proxy_list;
-
       $respondent = array(
         'uid' => $db_participant->uid,
         'token' => $db_respondent->token,
@@ -1537,6 +1469,7 @@ class qnaire extends \cenozo\database\record
       else if( 'boolean' == $type ) return in_array( $value, ['YES', 'NO'] );
       else if( 'date' == $type ) return preg_match( '/^[0-9]{4}-[0-1][0-9]-[0-3][0-9]$/', $value );
       else if( 'device' == $type ) return true;
+      else if( 'equipment' == $type ) return true;
       else if( 'list' == $type ) return true;
       else if( 'lookup' == $type ) return true;
       else if( 'number' == $type ) return util::string_matches_float( $value );
@@ -2103,7 +2036,6 @@ class qnaire extends \cenozo\database\record
 
           $db_response->language_id = $language_class_name::get_unique_record( 'code', $response->language )->id;
           if( !is_null( $db_page ) ) $db_response->page_id = $db_page->id;
-          $db_response->submitted = $response->submitted;
           $db_response->show_hidden = $response->show_hidden;
           $db_response->start_datetime = $response->start_datetime;
           $db_response->last_datetime = $response->last_datetime;
@@ -2202,6 +2134,14 @@ class qnaire extends \cenozo\database\record
               $db_response_stage->comments = $stage->comments;
               $db_response_stage->save();
             }
+          }
+
+          // If the importing response is submitted do so now and safe the response again.
+          // This is necessary in order to get all triggers from the imported response to fire.
+          if( $response->submitted )
+          {
+            $db_response->submitted = $response->submitted;
+            $db_response->save();
           }
         }
       }
@@ -4648,6 +4588,7 @@ class qnaire extends \cenozo\database\record
         foreach( $db_page->get_question_object_list( $question_mod ) as $db_question )
         {
           $db_device = $db_question->get_device();
+          $db_equipment_type = $db_question->get_equipment_type();
           $db_lookup = $db_question->get_lookup();
           $question = array(
             'rank' => $db_question->rank,
@@ -4658,6 +4599,7 @@ class qnaire extends \cenozo\database\record
             'dkna_allowed' => $db_question->dkna_allowed,
             'refuse_allowed' => $db_question->refuse_allowed,
             'device_name' => is_null( $db_device ) ? NULL : $db_device->name,
+            'equipment_type_name' => is_null( $db_equipment_type ) ? NULL : $db_equipment_type->name,
             'lookup_name' => is_null( $db_lookup ) ? NULL : $db_lookup->name,
             'unit_list' => $db_question->unit_list,
             'minimum' => $db_question->minimum,
@@ -5214,6 +5156,13 @@ class qnaire extends \cenozo\database\record
                          array( $db_qnaire->id, $question_object->device_name )
                        );
 
+          $db_equipment_type = is_null( $question_object->equipment_type_name )
+                     ? NULL
+                     : $equipment_type_class_name::get_unique_record(
+                         'name',
+                         $question_object->equipment_type_name
+                       );
+
           $db_lookup = is_null( $question_object->lookup_name )
                      ? NULL
                      : $lookup_class_name::get_unique_record( 'name', $question_object->lookup_name );
@@ -5228,6 +5177,7 @@ class qnaire extends \cenozo\database\record
           $db_question->dkna_allowed = $question_object->dkna_allowed;
           $db_question->refuse_allowed = $question_object->refuse_allowed;
           if( !is_null( $db_device ) ) $db_question->device_id = $db_device->id;
+          if( !is_null( $db_equipment_type ) ) $db_question->equipment_type_id = $db_equipment_type->id;
           if( !is_null( $db_lookup ) ) $db_question->lookup_id = $db_lookup->id;
           $db_question->unit_list = $question_object->unit_list;
           $db_question->minimum = $question_object->minimum;

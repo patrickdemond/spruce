@@ -1057,6 +1057,40 @@ cenozoApp.defineModule({
               return retVal;
             },
 
+            getEquipmentValues: async function(question, viewValue) {
+              question.isLoading = true;
+
+              let retVal = undefined;
+              try {
+                const response = await CnHttpFactory.instance({
+                  path: ["equipment_type",question.equipment_type.id,"equipment"].join("/"),
+                  data: {
+                    select: { column: "serial_number" },
+                    modifier: {
+                      where: [{
+                        column: "equipment.site_id",
+                        operator: "=",
+                        value: CnSession.site.id,
+                      },{
+                        column: "equipment.serial_number",
+                        operator: "like",
+                        value: "%" + viewValue + "%"
+                      }],
+                      order: 'serial_number',
+                    },
+                  }
+                }).get();
+                retVal = response.data.reduce((list,item) => {
+                  list.push(item.serial_number);
+                  return list;
+                }, []);
+              } finally {
+                question.isLoading = false;
+              }
+
+              return retVal;
+            },
+
             onReady: async function () {
               this.previewMode = "respondent" != parentModel.getSubjectFromState();
 
@@ -1489,6 +1523,8 @@ cenozoApp.defineModule({
                           "popups",
                           "device_id",
                           { table: "device", column: "name", alias: "device" },
+                          "equipment_type_id",
+                          { table: "equipment_type", column: "name", alias: "equipment_type" },
                           "lookup_id",
                           { table: "lookup", column: "name", alias: "lookup" },
                         ],
@@ -1648,6 +1684,13 @@ cenozoApp.defineModule({
                         question.file = cenozo.convertBase64ToBlob(question.file, "audio/wav");
                         question.objectURL = window.URL.createObjectURL(question.file);
                       }
+                    } else if ("equipment" == question.type) {
+                      question.equipment_type = {
+                        "id": question.equipment_type_id,
+                        "name": question.equipment_type,
+                        "isLoading": false,
+                      };
+                      delete question.equipment_type_id;
                     } else if ("lookup" == question.type) {
                       question.lookup = {
                         "id": question.lookup_id,
@@ -1808,6 +1851,14 @@ cenozoApp.defineModule({
                 question.answer = angular.isObject( question.value )
                                 ? question.value
                                 : { value: null, unit: null };
+              } else if ("equipment" == question.type) {
+                if( angular.isObject( question.value ) ) {
+                  question.answer = { value: question.value.serial_number };
+                } else if( angular.isString( question.value ) ) {
+                  question.answer = { value: question.value };
+                } else {
+                  question.answer = { value: null };
+                }
               } else if ("lookup" == question.type) {
                 if( angular.isObject( question.value ) ) {
                   question.answer = {

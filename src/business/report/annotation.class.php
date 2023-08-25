@@ -310,7 +310,7 @@ class annotation extends \cenozo\business\report\base_report
             $row['valueType'] = 'decimal';
           }
         }
-        // all remaining types (lookup, string, text) are treated as strings, so there's nothing to change
+        // all remaining types (equipment, lookup, string, text) are treated as strings (nothing to change)
 
         // and add the question row
         $variables_data[] = $row;

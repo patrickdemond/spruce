@@ -13,7 +13,7 @@ global $SETTINGS;
 $SETTINGS['general']['application_name'] = 'pine';
 $SETTINGS['general']['instance_name'] = $SETTINGS['general']['application_name'];
 $SETTINGS['general']['version'] = '2.9';
-$SETTINGS['general']['build'] = 'b159d8e';
+$SETTINGS['general']['build'] = '8d74fc2';
 
 // the default maximum number of seconds that a page should take to complete
 $SETTINGS['general']['default_page_max_time'] = 60;
@@ -41,3 +41,6 @@ $SETTINGS['module']['pdf'] = true;
 
 // the number of days after which exported respondents are purged (used by detached instances only)
 $SETTINGS['general']['purge_delay'] = 7;
+
+// add modules used by the application
+$SETTINGS['module']['equipment'] = true;

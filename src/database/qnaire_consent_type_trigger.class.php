@@ -14,28 +14,64 @@ use cenozo\lib, cenozo\log, pine\util;
 class qnaire_consent_type_trigger extends \cenozo\database\record
 {
   /**
-   * Creates a qnaire_consent_type_trigger from an object
-   * @param object $qnaire_consent_type_trigger
-   * @param database\question $db_question The question to associate the qnaire_consent_type_trigger to
-   * @return database\qnaire_consent_type_trigger
-   * @static
+   * Executes this trigger for a given response
+   * @param database\response $db_response
    */
-  public static function create_from_object( $qnaire_consent_type_trigger, $db_question )
+  public function execute( $db_response )
   {
-    $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
-    $db_consent_type = $consent_type_class_name::get_unique_record(
-      'name',
-      $qnaire_consent_type_trigger->consent_type_name
+    $hold_class_name = lib::get_class_name( 'database\answer' );
+
+    // some triggers may be skipped
+    if( !$this->check_trigger( $db_response ) ) return;
+
+    $db_participant = $db_response->get_respondent()->get_participant();
+    $db_qnaire = $this->get_qnaire();
+    $db_question = $this->get_question();
+    $db_effective_user = lib::create( 'business\session' )->get_effective_user();
+
+    if( $db_qnaire->debug )
+    {
+      log::info( sprintf(
+        'Creating new %s "%s" consent due to question "%s" having the value "%s" (questionnaire "%s")',
+        $this->accept ? 'accept' : 'deny',
+        $this->get_consent_type()->name,
+        $db_question->name,
+        $this->answer_value,
+        $db_qnaire->name
+      ) );
+    }
+
+    $db_consent = lib::create( 'database\consent' );
+    $db_consent->participant_id = $db_participant->id;
+    $db_consent->consent_type_id = $this->consent_type_id;
+    $db_consent->accept = $this->accept;
+    $db_consent->written = false;
+    $db_consent->datetime = util::get_datetime_object( $db_response->last_datetime );
+    $db_consent->note = sprintf(
+      'Created by Pine after questionnaire "%s" '.
+      'was completed by user "%s" '.
+      'with question "%s" '.
+      'having the value "%s"',
+      $db_qnaire->name,
+      $db_effective_user->name,
+      $db_question->name,
+      $this->answer_value
     );
+    $db_consent->save();
 
-    $db_qnaire_consent_type_trigger = new static();
-    $db_qnaire_consent_type_trigger->qnaire_id = $db_question->get_qnaire()->id;
-    $db_qnaire_consent_type_trigger->consent_type_id = $db_consent_type->id;
-    $db_qnaire_consent_type_trigger->question_id = $db_question->id;
-    $db_qnaire_consent_type_trigger->answer_value = $qnaire_consent_type_trigger->answer_value;
-    $db_qnaire_consent_type_trigger->accept = $qnaire_consent_type_trigger->accept;
-    $db_qnaire_consent_type_trigger->save();
-
-    return $db_qnaire_consent_type_trigger;
+    // if this is a participation consent then set the new hold record's user to the effective user
+    if( 'participation' == $db_consent->get_consent_type()->name )
+    {
+      $db_hold = $hold_class_name::get_unique_record(
+        ['participant_id', 'datetime'],
+        [$db_participant->id, $db_consent->datetime]
+      );
+      $db_hold_type = $db_hold->get_hold_type();
+      if( 'final' == $db_hold_type->type && 'Withdrawn' == $db_hold_type->name )
+      {
+        $db_hold->user_id = $db_effective_user->id;
+        $db_hold->save();
+      }
+    }
   }
 }

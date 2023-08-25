@@ -14,22 +14,34 @@ use cenozo\lib, cenozo\log, pine\util;
 class qnaire_participant_trigger extends \cenozo\database\record
 {
   /**
-   * Creates a qnaire_participant_trigger from an object
-   * @param object $qnaire_participant_trigger
-   * @param database\question $db_question The question to associate the qnaire_participant_trigger to
-   * @return database\qnaire_participant_trigger
-   * @static
+   * Executes this trigger for a given response
+   * @param database\response $db_response
    */
-  public static function create_from_object( $qnaire_participant_trigger, $db_question )
+  public function execute( $db_response )
   {
-    $db_qnaire_participant_trigger = new static();
-    $db_qnaire_participant_trigger->qnaire_id = $db_question->get_qnaire()->id;
-    $db_qnaire_participant_trigger->question_id = $db_question->id;
-    $db_qnaire_participant_trigger->answer_value = $qnaire_participant_trigger->answer_value;
-    $db_qnaire_participant_trigger->column_name = $qnaire_participant_trigger->column_name;
-    $db_qnaire_participant_trigger->value = $qnaire_participant_trigger->value;
-    $db_qnaire_participant_trigger->save();
+    // some triggers may be skipped
+    if( !$this->check_trigger( $db_response ) ) return;
 
-    return $db_qnaire_participant_trigger;
+    $db_participant = $db_response->get_respondent()->get_participant();
+    $db_qnaire = $this->get_qnaire();
+    $db_question = $this->get_question();
+
+    if( $db_qnaire->debug )
+    {
+      log::info( sprintf(
+        'Updating participant.%s to %s due to question "%s" having the value "%s" (questionnaire "%s")',
+        $this->column_name,
+        $this->value,
+        $db_question->name,
+        $this->answer_value,
+        $db_qnaire->name
+      ) );
+    }
+
+    // this is safe because the column_name is an enum type, so dangerous column names can't exist here
+    $column_name = $this->column_name;
+    // currently only boolean columns are supported
+    $db_participant->$column_name = 'true' == $this->value;
+    $db_participant->save();
   }
 }

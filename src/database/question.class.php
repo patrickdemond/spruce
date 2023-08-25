@@ -155,6 +155,8 @@ class question extends base_qnaire_part
 
     // create the base column array to be used throughout
     $db_device = $this->get_device();
+    $db_equipment_type = $this->get_equipment_type();
+    $db_lookup = $this->get_lookup();
     $base_column = array(
       'module_name' => $db_module->name,
       'page_name' => $db_page->name,
@@ -162,6 +164,8 @@ class question extends base_qnaire_part
       'question_id' => $this->id,
       'type' => $this->type,
       'device' => is_null( $db_device ) ? NULL : $db_device->name,
+      'equipment_type' => is_null( $db_equipment_type ) ? NULL : $db_equipment_type->name,
+      'lookup' => is_null( $db_lookup ) ? NULL : $db_lookup->name,
       'minimum' => $this->minimum,
       'maximum' => $this->maximum,
       'dkna_allowed' => $this->dkna_allowed,

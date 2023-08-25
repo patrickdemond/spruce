@@ -156,6 +156,7 @@ abstract class base_qnaire_part extends \cenozo\database\has_rank
 
     $language_class_name = lib::get_class_name( 'database\language' );
     $device_class_name = lib::get_class_name( 'database\device' );
+    $equipment_type_class_name = lib::get_class_name( 'database\equipment_type' );
     $lookup_class_name = lib::get_class_name( 'database\lookup' );
     $description_name = sprintf( 'database\%s_description', $subject );
     $description_class_name = lib::get_class_name( $description_name );
@@ -364,6 +365,38 @@ abstract class base_qnaire_part extends \cenozo\database\has_rank
           else
           {
             $difference_list['device_name'] = $patch_object->device_name;
+          }
+        }
+      }
+      else if( 'equipment_type_name' == $property )
+      {
+        $db_current_equipment_type = $this->get_equipment_type();
+        if(
+          (
+            !is_null( $db_current_equipment_type ) &&
+            $patch_object->equipment_type_name != $db_current_equipment_type->name
+          ) ||
+          ( is_null( $db_current_equipment_type ) && $patch_object->equipment_type_name )
+        ) {
+          if( $apply )
+          {
+            // questions may link to an equipment_type
+            if( is_null( $patch_object->equipment_type_name ) )
+            {
+              $this->equipment_type_id = NULL;
+            }
+            else
+            {
+              $db_equipment_type = $equipment_type_class_name::get_unique_record(
+                'name',
+                $patch_object->equipment_type_name
+              );
+              if( !is_null( $db_equipment_type ) ) $this->equipment_type_id = $db_equipment_type->id;
+            }
+          }
+          else
+          {
+            $difference_list['equipment_type_name'] = $patch_object->equipment_type_name;
           }
         }
       }

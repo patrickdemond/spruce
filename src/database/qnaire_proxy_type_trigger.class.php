@@ -14,27 +14,52 @@ use cenozo\lib, cenozo\log, pine\util;
 class qnaire_proxy_type_trigger extends \cenozo\database\record
 {
   /**
-   * Creates a qnaire_proxy_type_trigger from an object
-   * @param object $qnaire_proxy_type_trigger
-   * @param database\question $db_question The question to associate the qnaire_proxy_type_trigger to
-   * @return database\qnaire_proxy_type_trigger
-   * @static
+   * Executes this trigger for a given response
+   * @param database\response $db_response
    */
-  public static function create_from_object( $qnaire_proxy_type_trigger, $db_question )
+  public function execute( $db_response )
   {
-    $proxy_type_class_name = lib::get_class_name( 'database\proxy_type' );
-    $db_proxy_type = $proxy_type_class_name::get_unique_record(
-      'name',
-      $qnaire_proxy_type_trigger->proxy_type_name
+    // some triggers may be skipped
+    if( !$this->check_trigger( $this ) ) return;
+
+    $session = lib::create( 'business\session' );
+    $db_participant = $db_response->get_respondent()->get_participant();
+    $db_qnaire = $this->get_qnaire();
+    $db_question = $this->get_question();
+    $db_effective_user = lib::create( 'business\session' )->get_effective_user();
+
+    if( $db_qnaire->debug )
+    {
+      $db_proxy_type = $this->get_proxy_type();
+      log::info( sprintf(
+        'Creating new "%s" proxy due to question "%s" having the value "%s" (questionnaire "%s")',
+        is_null( $db_proxy_type ) ? 'empty' : $db_proxy_type->name,
+        $db_question->name,
+        $this->answer_value,
+        $db_qnaire->name
+      ) );
+    }
+
+    $db_proxy = lib::create( 'database\proxy' );
+    $db_proxy->participant_id = $db_participant->id;
+    $db_proxy->proxy_type_id = $this->proxy_type_id;
+    $db_proxy->datetime = util::get_datetime_object( $db_response->last_datetime );
+    $db_proxy->user_id = $db_effective_user->id;
+    $db_proxy->site_id = $session->get_site()->id;
+    $db_proxy->role_id = $session->get_role()->id;
+    $db_proxy->application_id = $session->get_application()->id;
+    $db_proxy->note = sprintf(
+      'Created by Pine after questionnaire "%s" '.
+      'was completed by user "%s" '.
+      'with question "%s" '.
+      'having the value "%s"',
+      $db_qnaire->name,
+      $db_effective_user->name,
+      $db_question->name,
+      $this->answer_value
     );
 
-    $db_qnaire_proxy_type_trigger = new static();
-    $db_qnaire_proxy_type_trigger->qnaire_id = $db_question->get_qnaire()->id;
-    $db_qnaire_proxy_type_trigger->proxy_type_id = is_null( $db_proxy_type ) ? NULL : $db_proxy_type->id;
-    $db_qnaire_proxy_type_trigger->question_id = $db_question->id;
-    $db_qnaire_proxy_type_trigger->answer_value = $qnaire_proxy_type_trigger->answer_value;
-    $db_qnaire_proxy_type_trigger->save();
-
-    return $db_qnaire_proxy_type_trigger;
+    // save the proxy file ignoring runtime errors (that denotes a duplicate which we can ignore)
+    try { $db_proxy->save(); } catch( \cenozo\exception\runtime $e ) {}
   }
 }

@@ -80,6 +80,13 @@ cenozoApp.defineModule({
         return "device" != model.viewModel.record.type ? true : "add";
       },
     });
+    module.addInput("", "equipment_type_id", {
+      title: "Equipment Type",
+      type: "enum",
+      isExcluded: function ($state, model) {
+        return "equipment" != model.viewModel.record.type ? true : "add";
+      },
+    });
     module.addInput("", "lookup_id", {
       title: "Lookup",
       type: "enum",
@@ -322,6 +329,7 @@ cenozoApp.defineModule({
 
                 if (angular.isDefined(data.type)) {
                   if ("device" != object.record.type) object.record.device_id = null;
+                  if ("equipment" != object.record.type) object.record.equipment_type_id = null;
                   if ("lookup" != object.record.type) object.record.lookup_id = null;
                   if ("number with unit" != object.record.type) object.record.unit_list = null;
                   if (!["date", "number","number with unit"].includes(object.record.type)) {
@@ -375,6 +383,14 @@ cenozoApp.defineModule({
 
               let queryList = [
                 CnHttpFactory.instance({
+                  path: "equipment_type",
+                  data: {
+                    select: { column: ["id", "name"] },
+                    modifier: { order: "name" },
+                  },
+                }).query(),
+
+                CnHttpFactory.instance({
                   path: "lookup",
                   data: {
                     select: { column: ["id", "name"] },
@@ -401,15 +417,21 @@ cenozoApp.defineModule({
               
               const responseList = await Promise.all(queryList);
 
-              this.metadata.columnList.lookup_id.enumList =
+              this.metadata.columnList.equipment_type_id.enumList =
                 responseList[0].data.reduce((list, item) => {
+                  list.push({ value: item.id, name: item.name });
+                  return list;
+                }, []);
+
+              this.metadata.columnList.lookup_id.enumList =
+                responseList[1].data.reduce((list, item) => {
                   list.push({ value: item.id, name: item.name });
                   return list;
                 }, []);
 
               if( 'question' == this.getSubjectFromState() && 'view' == this.getActionFromState() ) {
                 this.metadata.columnList.device_id.enumList =
-                  responseList[1].data.reduce((list, item) => {
+                  responseList[2].data.reduce((list, item) => {
                     list.push({ value: item.id, name: item.name });
                     return list;
                   }, []);
