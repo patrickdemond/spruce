@@ -176,6 +176,12 @@ class session extends \cenozo\business\session
   }
 
   /**
+   * An array of errors found while generating attributes (only used when in debug mode)
+   * @var array(string)
+   */
+  public $attribute_error_list = [];
+
+  /**
    * Stores whether the current response's qnaire uses stages
    * @var boolean
    */

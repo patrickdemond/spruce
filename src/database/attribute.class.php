@@ -23,14 +23,24 @@ class attribute extends \cenozo\database\record
   public function get_participant_value( $db_participant )
   {
     $data_manager = lib::create( 'business\data_manager' );
+    $session = lib::create( 'business\session' );
+
+    $value = NULL;
     if( 0 === strpos( $this->code, 'participant.' ) )
     {
-      return util::utf8_encode(
-        is_null( $db_participant ) ? NULL : $data_manager->get_participant_value( $db_participant, $this->code )
-      );
+      if( !is_null( $db_participant ) )
+      {
+        $warning = NULL;
+        $value = $data_manager->get_participant_value( $db_participant, $this->code, $warning );
+        if( !is_null( $warning ) ) $session->attribute_error_list[$this->name] = $warning;
+      }
+    }
+    else
+    {
+      $value = $data_manager->get_value( $this->code );
     }
 
-    return util::utf8_encode( $data_manager->get_value( $this->code ) );
+    return util::utf8_encode( $value );
   }
 
   /**
