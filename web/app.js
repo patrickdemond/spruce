@@ -915,13 +915,13 @@ cenozo.service("CnTranslationHelper", [
             // replace hidden and reverse-hidden codes
             part = showHidden
               ? part
-                  .replace(/{{!.*!}}/g, "")
+                  .replace(/{{!.*!}}/sg, "") // s = include newlines in .*; g = global
                   .replace(/{{/g, "")
                   .replace(/}}/g, "")
               : part
                   .replace(/{{!/g, "")
                   .replace(/!}}/g, "")
-                  .replace(/{{.*}}/g, "");
+                  .replace(/{{.*}}/sg, ""); // s = include newlines in .*; g = global
           }
 
           if (null == code) {

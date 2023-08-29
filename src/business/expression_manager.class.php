@@ -71,9 +71,9 @@ class expression_manager extends \cenozo\singleton
    */
   public function process_hidden_text( &$array )
   {
-    $search1 = $this->show_hidden ? array( '/{{/', '/}}/' ) : '/{{.*?}}/s';
+    $search1 = $this->show_hidden ? array( '/{{/', '/}}/' ) : '/{{.*?}}/s'; // s = include newlines in .*
     $replace1 = $this->show_hidden ? array( '<span class="text-warning">', '</span>' ) : '';
-    $search2 = !$this->show_hidden ? array( '/{{!/', '/!}}/' ) : '/{{!.*?!}}/s';
+    $search2 = !$this->show_hidden ? array( '/{{!/', '/!}}/' ) : '/{{!.*?!}}/s'; // s = include newlines in .*
     $replace2 = !$this->show_hidden ? array( '<span class="text-warning">', '</span>' ) : '';
     foreach( $array as $key => $value )
       if( false !== strpos( $key, 'prompts' ) || false !== strpos( $key, 'popups' ) )
