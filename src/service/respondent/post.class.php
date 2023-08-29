@@ -80,8 +80,14 @@ class post extends \cenozo\service\post
    */
   protected function execute()
   {
+    $study_class_name = lib::get_class_name( 'database\study' );
+    $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
+    $alternate_consent_type_class_name = lib::get_class_name( 'database\alternate_consent_type' );
+    $proxy_type_class_name = lib::get_class_name( 'database\proxy_type' );
+    $lookup_class_name = lib::get_class_name( 'database\lookup' );
     $qnaire_class_name = lib::get_class_name( 'database\qnaire' );
     $service_class_name = lib::get_class_name( 'service\service' );
+
     $action = $this->get_argument( 'action', NULL );
     if( $this->get_argument( 'time_report', false ) )
     {
@@ -105,23 +111,29 @@ class post extends \cenozo\service\post
     }
     else if( 'get_respondents' == $action )
     {
+      // first update table data
+      $study_class_name::sync_with_parent();
+      $consent_type_class_name::sync_with_parent();
+      $alternate_consent_type_class_name::sync_with_parent();
+      $proxy_type_class_name::sync_with_parent();
+
+      // now update all qnaires
       $modifier = lib::create( 'database\modifier' );
-      $modifier->where( 'beartooth_url', '!=', NULL );
-      $modifier->where( 'beartooth_username', '!=', NULL );
-      $modifier->where( 'beartooth_password', '!=', NULL );
+      $modifier->where( 'beartooth', '=', true );
       foreach( $qnaire_class_name::select_objects( $modifier ) as $db_qnaire )
       {
         $db_qnaire->sync_with_parent();
         $db_qnaire->get_respondents_from_beartooth();
       }
+
+      // after updating all qnaires we can now update the lookups
+      $lookup_class_name::sync_with_parent();
     }
     else if( 'export' == $action )
     {
       $uid_list = [];
       $modifier = lib::create( 'database\modifier' );
-      $modifier->where( 'beartooth_url', '!=', NULL );
-      $modifier->where( 'beartooth_username', '!=', NULL );
-      $modifier->where( 'beartooth_password', '!=', NULL );
+      $modifier->where( 'beartooth', '=', true );
       foreach( $qnaire_class_name::select_objects( $modifier ) as $db_qnaire )
       {
         $db_qnaire->sync_with_parent();

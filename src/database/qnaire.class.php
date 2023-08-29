@@ -779,14 +779,18 @@ class qnaire extends \cenozo\database\record
    */
   public function test_connection()
   {
-    if( is_null( PARENT_INSTANCE_URL ) )
+    $setting_manager = lib::create( 'business\setting_manager' );
+    if( !$setting_manager->get_setting( 'general', 'detached' ) || is_null( PARENT_INSTANCE_URL ) )
       return 'This instance of Pine is not detached so there is no remote connection to test.';
+
+    $machine_username = $setting_manager->get_setting( 'general', 'machine_username' );
+    $machine_password = $setting_manager->get_setting( 'general', 'machine_password' );
 
     // test the beartooth connection
     $url = sprintf(
       '%s/api/appointment%s',
-      $this->beartooth_url,
-      is_null( $this->beartooth_appointment_type ) ? '' : sprintf( '?type=%s', $this->beartooth_appointment_type )
+      BEARTOOTH_INSTANCE_URL,
+      is_null( $this->appointment_type ) ? '' : sprintf( '?type=%s', $this->appointment_type )
     );
     $curl = curl_init();
     curl_setopt( $curl, CURLOPT_URL, $url );
@@ -799,7 +803,7 @@ class qnaire extends \cenozo\database\record
       array(
         sprintf(
           'Authorization: Basic %s',
-          base64_encode( sprintf( '%s:%s', $this->beartooth_username, $this->beartooth_password ) )
+          base64_encode( sprintf( '%s:%s', $machine_username, $machine_password ) )
         )
       )
     );
@@ -844,7 +848,7 @@ class qnaire extends \cenozo\database\record
       CURLOPT_HTTPHEADER,
       array( sprintf(
         'Authorization: Basic %s',
-        base64_encode( sprintf( '%s:%s', $this->beartooth_username, $this->beartooth_password ) )
+        base64_encode( sprintf( '%s:%s', $machine_username, $machine_password ) )
       ) )
     );
 
@@ -891,118 +895,12 @@ class qnaire extends \cenozo\database\record
   {
     if( is_null( PARENT_INSTANCE_URL ) ) return;
 
-    $study_class_name = lib::get_class_name( 'database\study' );
-    $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
-    $alternate_consent_type_class_name = lib::get_class_name( 'database\alternate_consent_type' );
-    $proxy_type_class_name = lib::get_class_name( 'database\proxy_type' );
-    $role_class_name = lib::get_class_name( 'database\role' );
-    $lookup_class_name = lib::get_class_name( 'database\lookup' );
-    $indicator_class_name = lib::get_class_name( 'database\indicator' );
-    $lookup_item_class_name = lib::get_class_name( 'database\lookup_item' );
-
-    // update the study list
-    $url_postfix =
-      '?select={"column":["name","description"]}'.
-      '&modifier={"limit":1000000}';
-    foreach( $this->get_parent_data( 'study', $url_postfix ) as $study )
-    {
-      // see if the study exists and create it if it doesn't
-      $db_study = $study_class_name::get_unique_record( 'name', $study->name );
-      if( is_null( $db_study ) ) $db_study = lib::create( 'database\study' );
-
-      $db_study->name = $study->name;
-      $db_study->description = $study->description;
-      $db_study->save();
-    }
-
-    // update the consent type list
-    $url_postfix =
-      '?select={"column":["name","description","role_list"]}'.
-      '&modifier={"limit":1000000}';
-    foreach( $this->get_parent_data( 'consent_type', $url_postfix ) as $consent_type )
-    {
-      // see if the consent type exists and create it if it doesn't
-      $db_consent_type = $consent_type_class_name::get_unique_record( 'name', $consent_type->name );
-      if( is_null( $db_consent_type ) ) $db_consent_type = lib::create( 'database\consent_type' );
-
-      $db_consent_type->name = $consent_type->name;
-      $db_consent_type->description = $consent_type->description;
-      $db_consent_type->save();
-
-      // replace all role access
-      $db_consent_type->remove_role( NULL );
-      if( !is_null( $consent_type->role_list ) )
-      {
-        foreach( preg_split( '/, */', $consent_type->role_list ) as $role )
-        {
-          $db_role = $role_class_name::get_unique_record( 'name', $role );
-          if( !is_null( $db_role ) ) $db_consent_type->add_role( $db_role->id );
-        }
-      }
-    }
-
-    // update the alternate consent type list
-    $url_postfix =
-      '?select={"column":["name","description","role_list"]}'.
-      '&modifier={"limit":1000000}';
-    foreach( $this->get_parent_data( 'alternate_consent_type', $url_postfix ) as $alternate_consent_type )
-    {
-      // see if the alternate_consent type exists and create it if it doesn't
-      $db_aconsent_type = $alternate_consent_type_class_name::get_unique_record(
-        'name',
-        $alternate_consent_type->name
-      );
-      if( is_null( $db_aconsent_type ) ) $db_aconsent_type = lib::create( 'database\alternate_consent_type' );
-
-      $db_aconsent_type->name = $alternate_consent_type->name;
-      $db_aconsent_type->description = $alternate_consent_type->description;
-      $db_aconsent_type->save();
-
-      // replace all role access
-      $db_aconsent_type->remove_role( NULL );
-      if( !is_null( $alternate_consent_type->role_list ) )
-      {
-        foreach( preg_split( '/, */', $alternate_consent_type->role_list ) as $role )
-        {
-          $db_role = $role_class_name::get_unique_record( 'name', $role );
-          if( !is_null( $db_role ) ) $db_aconsent_type->add_role( $db_role->id );
-        }
-      }
-    }
-
-    // update the proxy type list
-    $url_postfix =
-      '?select={"column":["name","description","prompt","role_list"]}'.
-      '&modifier={"limit":1000000}';
-    foreach( $this->get_parent_data( 'proxy_type', $url_postfix ) as $proxy_type )
-    {
-      // see if the proxy type exists and create it if it doesn't
-      $db_proxy_type = $proxy_type_class_name::get_unique_record( 'name', $proxy_type->name );
-      if( is_null( $db_proxy_type ) ) $db_proxy_type = lib::create( 'database\proxy_type' );
-
-      $db_proxy_type->name = $proxy_type->name;
-      $db_proxy_type->description = $proxy_type->description;
-      $db_proxy_type->prompt = $proxy_type->prompt;
-      $db_proxy_type->save();
-
-      // replace all role access
-      $db_proxy_type->remove_role( NULL );
-      if( !is_null( $proxy_type->role_list ) )
-      {
-        foreach( preg_split( '/, */', $proxy_type->role_list ) as $role )
-        {
-          $db_role = $role_class_name::get_unique_record( 'name', $role );
-          if( !is_null( $db_role ) ) $db_proxy_type->add_role( $db_role->id );
-        }
-      }
-    }
-
     // update the qnaire (but only if the version is different)
     $url_postfix = sprintf(
       '/name=%s?select={"column":["version"]}',
       util::full_urlencode( $this->name )
     );
-    $parent_qnaire = $this->get_parent_data( 'qnaire', $url_postfix );
+    $parent_qnaire = util::get_data_from_parent( 'qnaire', $url_postfix );
 
     if( $this->version != $parent_qnaire->version )
     {
@@ -1014,7 +912,7 @@ class qnaire extends \cenozo\database\record
         '/name=%s?output=export&download=true',
         util::full_urlencode( $this->name )
       );
-      $parent_qnaire = $this->get_parent_data( 'qnaire', $url_postfix );
+      $parent_qnaire = util::get_data_from_parent( 'qnaire', $url_postfix );
       $this->process_patch( $parent_qnaire, true );
       log::info( sprintf(
         'Questionnaire "%s" has been upgraded from version "%s" to "%s".',
@@ -1022,100 +920,6 @@ class qnaire extends \cenozo\database\record
         $old_version,
         $new_version
       ) );
-    }
-
-    // update the lookup list
-    // Note: updating the qnaire (in the previous code block) will also update any lookup that a question
-    // in that qnaire is using.  However, we still want to check for any lookups that aren't up to date,
-    // because it's possible a lookup has changed but the parent qnaire has not.
-    $url_postfix =
-      '?select={'.
-        '"column":['.
-          '{"table":"lookup","column":"name"},'.
-          '{"table":"lookup","column":"version"},'.
-          '{"table":"lookup","column":"description"}'.
-        '],'.
-        '"distinct":true'.
-      '}'.
-      '&modifier={'.
-        '"where":[{'.
-          '"column":"question.lookup_id",'.
-          '"operator":"!=",'.
-          '"value":null'.
-        '}],'.
-        '"limit":1000000'.
-      '}';
-    foreach( $this->get_parent_data( 'question', $url_postfix ) as $lookup )
-    {
-      // see if the lookup exists and create it if it doesn't
-      $new_lookup = false;
-      $db_lookup = $lookup_class_name::get_unique_record( 'name', $lookup->name );
-      if( is_null( $db_lookup ) )
-      {
-        $new_lookup = true;
-        $db_lookup = lib::create( 'database\lookup' );
-      }
-      else
-      {
-        // don't proceed if the version hasn't changed
-        if( $db_lookup->version == $lookup->version ) continue;
-      }
-
-      // since lookups can be big only update the rest of the lookup data if the lookup is new
-      if( $new_lookup )
-      {
-        // get the indicators
-        $url_postfix = sprintf(
-          '/name=%s/indicator'.
-          '?select={"column":[{"table":"indicator","column":"name"}]}'.
-          '&modifier={"limit":1000000}',
-          $db_lookup->name
-        );
-        foreach( $this->get_parent_data( 'lookup', $url_postfix ) as $indicator )
-        {
-          $db_indicator = lib::create( 'database\indicator' );
-          $db_indicator->lookup_id = $db_lookup->id;
-          $db_indicator->name = $indicator->name;
-          $db_indicator->save();
-        }
-
-        // get the items
-        $url_postfix = sprintf(
-          '/name=%s/lookup_item'.
-          '?select={'.
-            '"column":['.
-              '{"table":"lookup_item","column":"identifier"},'.
-              '{"table":"lookup_item","column":"name"},'.
-              '{"table":"lookup_item","column":"description"},'.
-              '"indicator_list"'.
-            ']'.
-          '}'.
-          '&modifier={"limit":1000000}',
-          $db_lookup->name
-        );
-        foreach( $this->get_parent_data( 'lookup', $url_postfix ) as $lookup_item )
-        {
-          $db_lookup_item = lib::create( 'database\lookup_item' );
-          $db_lookup_item->lookup_id = $db_lookup->id;
-          $db_lookup_item->identifier = $lookup_item->identifier;
-          $db_lookup_item->name = $lookup_item->name;
-          $db_lookup_item->description = $lookup_item->description;
-          $db_lookup_item->save();
-
-          if( !is_null( $lookup_item->indicator_list ) )
-          {
-            $indicator_id_list = array();
-            foreach( preg_split( '/, */', $lookup_item->indicator_list ) as $indicator_name )
-            {
-              $indicator_id_list[] = $indicator_class_name::get_unique_record(
-                array( 'lookup_id', 'name' ),
-                array( $db_lookup->id, $indicator_name )
-              )->id;
-            }
-            if( 0 < count( $indicator_id_list ) ) $db_lookup_item->add_indicator( $indicator_id_list );
-          }
-        }
-      }
     }
   }
 
@@ -1128,7 +932,11 @@ class qnaire extends \cenozo\database\record
     ini_set( 'memory_limit', '2G' );
     set_time_limit( 900 ); // 15 minutes max
 
-    if( is_null( PARENT_INSTANCE_URL ) ) return;
+    $setting_manager = lib::create( 'business\setting_manager' );
+    if( !$setting_manager->get_setting( 'general', 'detached' ) || is_null( PARENT_INSTANCE_URL ) ) return;
+
+    $machine_username = $setting_manager->get_setting( 'general', 'machine_username' );
+    $machine_password = $setting_manager->get_setting( 'general', 'machine_password' );
 
     // encode all respondent and response data into an array
     $data = array( 'participant' => array(), 'respondent' => array() );
@@ -1321,7 +1129,7 @@ class qnaire extends \cenozo\database\record
         array(
           sprintf(
             'Authorization: Basic %s',
-            base64_encode( sprintf( '%s:%s', $this->beartooth_username, $this->beartooth_password ) )
+            base64_encode( sprintf( '%s:%s', $machine_username, $machine_password ) )
           ),
           'Content-Type: application/json'
         )
@@ -1387,7 +1195,7 @@ class qnaire extends \cenozo\database\record
     if( 0 < count( $data['participant'] ) )
     {
       // Now export the participant's details to beartooth
-      $url = sprintf( '%s/api/pine', $this->beartooth_url );
+      $url = sprintf( '%s/api/pine', BEARTOOTH_INSTANCE_URL );
       $curl = curl_init();
       curl_setopt( $curl, CURLOPT_URL, $url );
       curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
@@ -1401,7 +1209,7 @@ class qnaire extends \cenozo\database\record
         array(
           sprintf(
             'Authorization: Basic %s',
-            base64_encode( sprintf( '%s:%s', $this->beartooth_username, $this->beartooth_password ) )
+            base64_encode( sprintf( '%s:%s', $machine_username, $machine_password ) )
           ),
           'Content-Type: application/json'
         )
@@ -2155,7 +1963,7 @@ class qnaire extends \cenozo\database\record
   public function delete_purged_respondents()
   {
     $setting_manager = lib::create( 'business\setting_manager' );
-    if( !$setting_manager->get_setting( 'general', 'detached' ) )
+    if( !$setting_manager->get_setting( 'general', 'detached' ) || is_null( PARENT_INSTANCE_URL ) )
     {
       log::warning( 'Tried to purge respondents from an undetached instance of Pine.' );
       return;
@@ -2185,9 +1993,13 @@ class qnaire extends \cenozo\database\record
     $identifier_class_name = lib::get_class_name( 'database\identifier' );
     $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
 
-    if( is_null( $this->beartooth_url ) ||
-        is_null( $this->beartooth_username ) ||
-        is_null( $this->beartooth_password ) )
+    $setting_manager = lib::create( 'business\setting_manager' );
+    if( !$setting_manager->get_setting( 'general', 'detached' ) || is_null( PARENT_INSTANCE_URL ) ) return;
+
+    $machine_username = $setting_manager->get_setting( 'general', 'machine_username' );
+    $machine_password = $setting_manager->get_setting( 'general', 'machine_password' );
+
+    if( is_null( BEARTOOTH_INSTANCE_URL ) || is_null( $machine_username ) || is_null( $machine_password ) )
     {
       throw lib::create( 'expression\runtime',
         'Tried to get respondents from Beartooth without a URL, username and password.',
@@ -2197,8 +2009,8 @@ class qnaire extends \cenozo\database\record
 
     $url = sprintf(
       '%s/api/appointment%s',
-      $this->beartooth_url,
-      is_null( $this->beartooth_appointment_type ) ? '' : sprintf( '?type=%s', $this->beartooth_appointment_type )
+      BEARTOOTH_INSTANCE_URL,
+      is_null( $this->appointment_type ) ? '' : sprintf( '?type=%s', $this->appointment_type )
     );
     $curl = curl_init();
     curl_setopt( $curl, CURLOPT_URL, $url );
@@ -2211,7 +2023,7 @@ class qnaire extends \cenozo\database\record
       array(
         sprintf(
           'Authorization: Basic %s',
-          base64_encode( sprintf( '%s:%s', $this->beartooth_username, $this->beartooth_password ) )
+          base64_encode( sprintf( '%s:%s', $machine_username, $machine_password ) )
         )
       )
     );
@@ -5432,89 +5244,6 @@ class qnaire extends \cenozo\database\record
       $select->get_sql(),
       $modifier->get_sql()
     ) );
-  }
-
-  /**
-   * Utility function used to download data from the parent instance
-   * @param string $subject The subject to download (study, consent_type, etc...)
-   * @param string $url_postfix A string to add to the end of the remote URL (after api/<subject>)
-   * @return $object (decoded json response from remote server)
-   */
-  private function get_parent_data( $subject, $url_postfix = '' )
-  {
-    // get subject data from the parent
-    $url = sprintf(
-      '%s/api/%s%s',
-      PARENT_INSTANCE_URL,
-      $subject,
-      $url_postfix
-    );
-    $curl = curl_init();
-    curl_setopt( $curl, CURLOPT_URL, $url );
-    curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
-    curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
-    curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, 5 );
-    curl_setopt(
-      $curl,
-      CURLOPT_HTTPHEADER,
-      array( sprintf(
-        'Authorization: Basic %s',
-        base64_encode( sprintf( '%s:%s', $this->beartooth_username, $this->beartooth_password ) )
-      ) )
-    );
-
-    $response = curl_exec( $curl );
-    if( curl_errno( $curl ) )
-    {
-      throw lib::create( 'exception\runtime',
-        sprintf(
-          'Got error code %s when synchronizing %s data with parent instance.'."\n".
-          'URL: "%s"'."\n".
-          'Message: %s',
-          curl_errno( $curl ),
-          $subject,
-          curl_error( $curl ),
-          $url
-        ),
-        __METHOD__
-      );
-    }
-
-    $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
-    if( 401 == $code )
-    {
-      throw lib::create( 'exception\notice',
-        'Unable to synchronize, invalid Beartooth username and/or password.',
-        __METHOD__
-      );
-    }
-
-    if( 306 == $code )
-    {
-      throw lib::create( 'exception\notice',
-        sprintf(
-          "Parent Pine instance responded with the following notice\n\n\"%s\"",
-          util::json_decode( $response )
-        ),
-        __METHOD__
-      );
-    }
-
-    if( 204 == $code || 300 <= $code )
-    {
-      throw lib::create( 'exception\runtime',
-        sprintf(
-          'Got error code %s when synchronizing %s data with parent instance.'."\n".
-          'URL: "%s"',
-          $code,
-          $subject,
-          $url
-        ),
-        __METHOD__
-      );
-    }
-
-    return util::json_decode( $response );
   }
 
   /**

@@ -13,7 +13,7 @@ global $SETTINGS;
 $SETTINGS['general']['application_name'] = 'pine';
 $SETTINGS['general']['instance_name'] = $SETTINGS['general']['application_name'];
 $SETTINGS['general']['version'] = '2.9';
-$SETTINGS['general']['build'] = '9254524';
+$SETTINGS['general']['build'] = 'ecb3f59';
 
 // the default maximum number of seconds that a page should take to complete
 $SETTINGS['general']['default_page_max_time'] = 60;
@@ -24,8 +24,17 @@ $SETTINGS['general']['respondent_access_id'] = NULL;
 // whether this instance gets its respondents from a detached beartooth instance
 $SETTINGS['general']['detached'] = false;
 
-// the parent instance of pine that this instance will sync its qnaires with
+// the parent instance of pine that this instance will sync its qnaires with (for detached only)
 $SETTINGS['url']['PARENT_INSTANCE'] = NULL;
+
+// the instance of beartooth to get respondent lists (appointments) (for detached only)
+$SETTINGS['url']['BEARTOOTH_INSTANCE'] = NULL;
+
+// the password to use when connecting to the parent and beartooth instances (for detached only)
+$SETTINGS['general']['machine_username'] = NULL;
+
+// the password to use when connecting to the parent and beartooth instances (for detached only)
+$SETTINGS['general']['machine_password'] = NULL;
 
 // the location of the application's internal path
 $SETTINGS['path']['APPLICATION'] = str_replace( '/settings.ini.php', '', __FILE__ );

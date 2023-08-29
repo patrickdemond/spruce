@@ -125,6 +125,7 @@ cenozoApp.defineModule({
         isExcluded: true,
       },
       has_devices: { type: "hidden", },
+      beartooth: { column: "qnaire.beartooth", type: "hidden", },
     });
 
     module.addInputGroup(
@@ -229,7 +230,7 @@ cenozoApp.defineModule({
         model.getRespondents();
       },
       isIncluded: function ($state, model) {
-        return "today" != model.subList && model.isDetached();
+        return "today" != model.subList && model.usesBeartooth;
       },
       isDisabled: function ($state, model) {
         return model.workInProgress;
@@ -242,7 +243,7 @@ cenozoApp.defineModule({
         await model.export();
       },
       isIncluded: function ($state, model) {
-        return "today" != model.subList && model.isDetached();
+        return "today" != model.subList && model.usesBeartooth;
       },
       isDisabled: function ($state, model) {
         return model.workInProgress;
@@ -283,6 +284,7 @@ cenozoApp.defineModule({
       isIncluded: function ($state, model) {
         return (
           model.isDetached() &&
+          model.viewModel.record.beartooth &&
           null != model.viewModel.record.end_datetime &&
           "Exported" != model.viewModel.record.status
         );
@@ -302,6 +304,7 @@ cenozoApp.defineModule({
       isIncluded: function ($state, model) {
         return (
           model.isDetached() &&
+          model.viewModel.record.beartooth &&
           model.isRole("administrator") &&
           "Exported" == model.viewModel.record.status
         );
@@ -498,16 +501,31 @@ cenozoApp.defineModule({
       ) {
         var object = function (root) {
           CnBaseModelFactory.construct(this, module);
-          this.addModel = CnRespondentAddFactory.instance(this);
-          this.listModel = CnRespondentListFactory.instance(this);
-          this.viewModel = CnRespondentViewFactory.instance(this, root);
 
           angular.extend(this, {
-            workInProgress: false,
+            addModel: CnRespondentAddFactory.instance(this),
+            listModel: CnRespondentListFactory.instance(this),
+            viewModel: CnRespondentViewFactory.instance(this, root),
 
-            isDetached: function () {
-              return CnSession.setting.detached;
+            workInProgress: false,
+            usesBeartooth: null,
+
+            updateUsesBeartooth: async function() {
+              if (this.isDetached() &&
+                  "qnaire" == this.getSubjectFromState() &&
+                  "view" == this.getActionFromState()) {
+                const response = await CnHttpFactory.instance({
+                  path: 'qnaire/' + $state.params.identifier,
+                  data: { select: { column: "beartooth" } }
+                }).get();
+
+                this.usesBeartooth = response.data.beartooth;
+              } else {
+                this.usesBeartooth = null;
+              }
             },
+
+            isDetached: function () { return CnSession.setting.detached; },
 
             getAddEnabled: function() {
               return this.$$getAddEnabled() && "qnaire" == this.getSubjectFromState();
@@ -604,6 +622,8 @@ cenozoApp.defineModule({
               }
             },
           });
+
+          this.updateUsesBeartooth();
         };
 
         return {

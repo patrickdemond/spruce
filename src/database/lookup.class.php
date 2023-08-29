@@ -19,7 +19,7 @@ class lookup extends \cenozo\database\record
    * @param boolean $apply Whether to apply or evaluate the patch
    * @return stdObject
    */
-  public function process_data( $data, $apply = false )
+  public function import_from_array( $data, $apply = false )
   {
     ini_set( 'memory_limit', '1G' );
     set_time_limit( 900 ); // 15 minutes max
@@ -64,8 +64,8 @@ class lookup extends \cenozo\database\record
         $result_data['lookup_item']['exists']++;
       }
 
-      // process all indications
-      if( 'NULL' != $row[3] )
+      // process all indicators
+      if( 'NULL' != $row[3] && 0 < strlen( $row[3] ) )
       {
         $indicator_id_list = array();
         foreach( explode( ';', $row[3] ) as $indicator )
@@ -158,5 +158,166 @@ class lookup extends \cenozo\database\record
     }
 
     return $db_lookup;
+  }
+
+  /**
+   * Synchronizes all records with a parent instance
+   * @param database\qnaire Restrict lookups used by a particular qnaire
+   */
+  public static function sync_with_parent( $db_qnaire = NULL )
+  {
+    if( is_null( PARENT_INSTANCE_URL ) ) return;
+
+    $qnaire_class_name = lib::get_class_name( 'database\qnaire' );
+    $indicator_class_name = lib::get_class_name( 'database\indicator' );
+
+    $qnaire_name_list = [];
+    if( is_null( $db_qnaire ) )
+    {
+      $qnaire_sel = lib::create( 'database\select' );
+      $qnaire_sel->add_column( 'name' );
+      foreach( $qnaire_class_name::select( $qnaire_sel ) as $qnaire )
+        $qnaire_name_list[] = $qnaire['name'];
+    }
+    else
+    {
+      $qnaire_name_list[] = $db_qnaire->name;
+    }
+
+    // update the lookup list (restricting to a lookup used by the given, or all qnaires)
+    $url_postfix = sprintf(
+      '?select={'.
+        '"column":['.
+          '{"table":"lookup","column":"name"},'.
+          '{"table":"lookup","column":"version"},'.
+          '{"table":"lookup","column":"description"}'.
+        '],'.
+        '"distinct":true'.
+      '}'.
+      '&modifier={'.
+        '"join":[{'.
+          '"table":"question",'.
+          '"onleft":"lookup.id",'.
+          '"onright":"question.lookup_id"'.
+        '},{'.
+          '"table":"page",'.
+          '"onleft":"question.page_id",'.
+          '"onright":"page.id"'.
+        '},{'.
+          '"table":"module",'.
+          '"onleft":"page.module_id",'.
+          '"onright":"module.id"'.
+        '},{'.
+          '"table":"qnaire",'.
+          '"onleft":"module.qnaire_id",'.
+          '"onright":"qnaire.id"'.
+        '}],'.
+        '"where":[{'.
+          '"column":"qnaire.name",'.
+          '"operator":"IN",'.
+          '"value":["%s"]'.
+        '}],'.
+        '"limit":1000000'.
+      '}',
+      implode( '","', $qnaire_name_list )
+    );
+
+    foreach( util::get_data_from_parent( 'lookup', $url_postfix ) as $lookup )
+    {
+      $db_lookup = static::get_unique_record( 'name', $lookup->name );
+
+      if( is_null( $db_lookup ) )
+      {
+        // create the lookup if it doesn't already exist
+        $db_lookup = new static();
+        log::info( sprintf( 'Importing new "%s" lookup from parent instance.', $lookup->name ) );
+      }
+      else if( $db_lookup->version == $lookup->version )
+      {
+        // don't proceed if the version hasn't changed
+        continue;
+      }
+      else
+      {
+        log::info( sprintf(
+          'Updating "%s" lookup from parent instance (version %s to %s).',
+          $lookup->name,
+          $db_lookup->version,
+          $lookup->version
+        ) );
+      }
+
+      $db_lookup->name = $lookup->name;
+      $db_lookup->version = $lookup->version;
+      $db_lookup->description = $lookup->description;
+      $db_lookup->save();
+
+      // re-write all indicators
+      $url_postfix = sprintf(
+        '/name=%s/indicator'.
+        '?select={"column":[{"table":"indicator","column":"name"}]}'.
+        '&modifier={"limit":1000000}',
+        $db_lookup->name
+      );
+      $indicator_list = util::get_data_from_parent( 'lookup', $url_postfix );
+
+      $indicator_mod = lib::create( 'database\modifier' );
+      $indicator_mod->where( 'lookup_id', '=', $db_lookup->id );
+      static::db()->execute( sprintf(
+        'DELETE FROM indicator %s',
+        $indicator_mod->get_sql()
+      ) );
+
+      foreach( $indicator_list as $indicator )
+      {
+        $db_indicator = lib::create( 'database\indicator' );
+        $db_indicator->lookup_id = $db_lookup->id;
+        $db_indicator->name = $indicator->name;
+        $db_indicator->save();
+      }
+
+      // re-write all lookup items
+      $url_postfix = sprintf(
+        '/name=%s/lookup_item'.
+        '?select={'.
+          '"column":['.
+            '{"table":"lookup_item","column":"identifier"},'.
+            '{"table":"lookup_item","column":"name"},'.
+            '{"table":"lookup_item","column":"description"},'.
+            '"indicator_list"'.
+          ']'.
+        '}'.
+        '&modifier={"limit":1000000}',
+        $db_lookup->name
+      );
+      $lookup_item_list = util::get_data_from_parent( 'lookup', $url_postfix );
+
+      // convert the items into a CSV list so we can import them using the above ::import_from_array() method
+      $data = [];
+      foreach( $lookup_item_list as $lookup_item )
+      {
+        $data[] = [
+          $lookup_item->identifier,
+          $lookup_item->name,
+          $lookup_item->description,
+          $lookup_item->indicator_list
+        ];
+      }
+
+      $lookup_item_mod = lib::create( 'database\modifier' );
+      $lookup_item_mod->where( 'lookup_id', '=', $db_lookup->id );
+      static::db()->execute( sprintf(
+        'DELETE FROM lookup_item %s',
+        $lookup_item_mod->get_sql()
+      ) );
+
+      $db_lookup->import_from_array( $data, true );
+
+      log::info( sprintf(
+        'Done, lookup now has %d indicators and %d items',
+        count( $indicator_list ),
+        count( $data )
+      ) );
+    }
   }
 }

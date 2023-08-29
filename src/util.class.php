@@ -166,4 +166,93 @@ class util extends \cenozo\util
       if( !$modifier->has_group( 'qnaire.id' ) ) $modifier->group( 'qnaire.id' );
     }
   }
+
+  /**
+   * Utility function used to download data from the parent instance
+   * @param string $subject The subject to download (study, consent_type, etc...)
+   * @param string $url_postfix A string to add to the end of the remote URL (after api/<subject>)
+   * @return $object (decoded json response from remote server)
+   */
+  public static function get_data_from_parent( $subject, $url_postfix = '' )
+  {
+    $setting_manager = lib::create( 'business\setting_manager' );
+    if( !$setting_manager->get_setting( 'general', 'detached' ) || is_null( PARENT_INSTANCE_URL ) ) return NULL;
+
+    $machine_username = $setting_manager->get_setting( 'general', 'machine_username' );
+    $machine_password = $setting_manager->get_setting( 'general', 'machine_password' );
+
+    // get subject data from the parent
+    $url = sprintf(
+      '%s/api/%s%s',
+      PARENT_INSTANCE_URL,
+      $subject,
+      $url_postfix
+    );
+    $curl = curl_init();
+    curl_setopt( $curl, CURLOPT_URL, $url );
+    curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
+    curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+    curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, 5 );
+    curl_setopt(
+      $curl,
+      CURLOPT_HTTPHEADER,
+      array( sprintf(
+        'Authorization: Basic %s',
+        base64_encode( sprintf( '%s:%s', $machine_username, $machine_password ) )
+      ) )
+    );
+
+    $response = curl_exec( $curl );
+    if( curl_errno( $curl ) )
+    {
+      throw lib::create( 'exception\runtime',
+        sprintf(
+          'Got error code %s when synchronizing %s data with parent instance.'."\n".
+          'URL: "%s"'."\n".
+          'Message: %s',
+          curl_errno( $curl ),
+          $subject,
+          curl_error( $curl ),
+          $url
+        ),
+        __METHOD__
+      );
+    }
+
+    $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
+    if( 401 == $code )
+    {
+      throw lib::create( 'exception\notice',
+        'Unable to synchronize, invalid Beartooth username and/or password.',
+        __METHOD__
+      );
+    }
+
+    if( 306 == $code )
+    {
+      throw lib::create( 'exception\notice',
+        sprintf(
+          "Parent Pine instance responded with the following notice\n\n\"%s\"",
+          util::json_decode( $response )
+        ),
+        __METHOD__
+      );
+    }
+
+    if( 204 == $code || 300 <= $code )
+    {
+      throw lib::create( 'exception\runtime',
+        sprintf(
+          'Got error code %s when synchronizing %s data with parent instance.'."\n".
+          'URL: "%s"',
+          $code,
+          $subject,
+          $url
+        ),
+        __METHOD__
+      );
+    }
+
+    return util::json_decode( $response );
+  }
 }

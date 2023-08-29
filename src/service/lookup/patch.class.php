@@ -30,7 +30,7 @@ class patch extends \cenozo\service\patch
       $csv_data = str_getcsv( $this->get_file_as_raw(), "\n" );
       foreach( $csv_data as &$row ) $row = str_getcsv( $row );
 
-      $this->set_data( $db_lookup->process_data( $csv_data, 'apply' == $lookup_item ) );
+      $this->set_data( $db_lookup->import_from_array( $csv_data, 'apply' == $lookup_item ) );
     }
     else
     {

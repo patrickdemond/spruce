@@ -178,6 +178,76 @@ cenozoApp.defineModule({
           return model.isRole("interviewer") ? true : "add";
         },
       },
+      token_regex: {
+        title: "Token Regex",
+        type: "string",
+        help:
+          "A regular expression that restricts the format of tokens when in stage-mode.",
+        isExcluded: function ($state, model) {
+          return model.isRole("interviewer") ? true : "add";
+        },
+      },
+      token_check: {
+        title: "Token Check",
+        type: "boolean",
+        help:
+          "Whether to check the token at check-in and before launching a stage.",
+        isExcluded: function ($state, model) {
+          return model.isRole("interviewer") ? true : "add";
+        },
+      },
+      description: {
+        title: "Description",
+        type: "text",
+        isConstant: function ($state, model) {
+          return model.viewModel.record.readonly;
+        },
+      },
+      note: {
+        title: "Note",
+        type: "text",
+        isConstant: function ($state, model) {
+          return model.viewModel.record.readonly;
+        },
+      },
+      first_page_id: { isExcluded: true },
+    });
+
+    module.addInputGroup("Email Communication", {
+      email_invitation: {
+        title: "Send Invitation Email",
+        type: "boolean",
+        isExcluded: function ($state, model) {
+          return model.isRole("interviewer");
+        },
+        isConstant: function ($state, model) {
+          return model.viewModel.record.readonly;
+        },
+      },
+      email_from_name: {
+        title: "Email From Name",
+        type: "string",
+        isExcluded: function ($state, model) {
+          return model.isRole("interviewer");
+        },
+        isConstant: function ($state, model) {
+          return model.viewModel.record.readonly;
+        },
+      },
+      email_from_address: {
+        title: "Email From Address",
+        type: "string",
+        format: "email",
+        isExcluded: function ($state, model) {
+          return model.isRole("interviewer");
+        },
+        isConstant: function ($state, model) {
+          return model.viewModel.record.readonly;
+        },
+      },
+    });
+
+    module.addInputGroup("Repeated Questionnaires", {
       repeated: {
         title: "Repeated",
         type: "enum",
@@ -215,102 +285,29 @@ cenozoApp.defineModule({
         },
         help: "If set to 0 then there will be no maximum number of responses",
       },
-      email_invitation: {
-        title: "Send Invitation Email",
+    });
+
+    module.addInputGroup("Detached Settings", {
+      beartooth: {
+        title: "Beartooth Appointments",
         type: "boolean",
-        isExcluded: function ($state, model) {
-          return model.isRole("interviewer");
-        },
-        isConstant: function ($state, model) {
-          return model.viewModel.record.readonly;
-        },
-      },
-      email_from_name: {
-        title: "Email From Name",
-        type: "string",
-        isExcluded: function ($state, model) {
-          return model.isRole("interviewer");
-        },
-        isConstant: function ($state, model) {
-          return model.viewModel.record.readonly;
-        },
-      },
-      email_from_address: {
-        title: "Email From Address",
-        type: "string",
-        format: "email",
-        isExcluded: function ($state, model) {
-          return model.isRole("interviewer");
-        },
-        isConstant: function ($state, model) {
-          return model.viewModel.record.readonly;
-        },
-      },
-      beartooth_url: {
-        title: "Beartooth URL",
-        type: "string",
-        help: "The URL used to connect to Beartooth.",
+        help: "Whether to fetch new respondents from an instance of Beartooth.<br/>\n" +
+              "WARNING: this information is never included in the import/export process. It must be set " +
+              "in every instance independently!",
         isExcluded: function ($state, model) {
           return model.isRole("interviewer") || !model.isDetached();
         },
       },
-      beartooth_appointment_type: {
-        title: "Beartooth Appointment Type",
+      appointment_type: {
+        title: "Appointment Type",
         type: "string",
-        help: "This can be used to restrict the list of appointments from Beartooth by appointment type.",
+        help: "This can be used to restrict the list of appointments from Beartooth by appointment type.<br/>\n" +
+              "WARNING: this information is never included in the import/export process. It must be set " +
+              "in every instance independently!",
         isExcluded: function ($state, model) {
           return model.isRole("interviewer") || !model.isDetached();
         },
       },
-      beartooth_username: {
-        title: "Beartooth Username",
-        type: "string",
-        help: "The interviewing instance's username used to connect to Beartooth.",
-        isExcluded: function ($state, model) {
-          return model.isRole("interviewer") || !model.isDetached();
-        },
-      },
-      beartooth_password: {
-        title: "Beartooth Password",
-        type: "string",
-        help: "The interviewing instance's password used to connect to Beartooth.",
-        isExcluded: function ($state, model) {
-          return model.isRole("interviewer") || !model.isDetached();
-        },
-      },
-      token_regex: {
-        title: "Token Regex",
-        type: "string",
-        help:
-          "A regular expression that restricts the format of tokens when in stage-mode.",
-        isExcluded: function ($state, model) {
-          return model.isRole("interviewer") ? true : "add";
-        },
-      },
-      token_check: {
-        title: "Token Check",
-        type: "boolean",
-        help:
-          "Whether to check the token at check-in and before launching a stage.",
-        isExcluded: function ($state, model) {
-          return model.isRole("interviewer") ? true : "add";
-        },
-      },
-      description: {
-        title: "Description",
-        type: "text",
-        isConstant: function ($state, model) {
-          return model.viewModel.record.readonly;
-        },
-      },
-      note: {
-        title: "Note",
-        type: "text",
-        isConstant: function ($state, model) {
-          return model.viewModel.record.readonly;
-        },
-      },
-      first_page_id: { isExcluded: true },
     });
 
     module.addExtraOperation("list", {
@@ -367,7 +364,7 @@ cenozoApp.defineModule({
     module.addExtraOperation("view", {
       title: "Test Connection",
       isIncluded: function ($state, model) {
-        return !model.isRole("interviewer") && model.isDetached();
+        return model.viewModel.record.beartooth && model.isDetached();
       },
       operation: function ($state, model) {
         model.viewModel.testConnection();
@@ -388,16 +385,16 @@ cenozoApp.defineModule({
 
             // a special function to define whether to show certain inputs based on the repeated property
             function defineRepeatedExcludes() {
-              var mainInputGroup =
-                $scope.model.module.inputGroupList.findByProperty("title", "");
+              var repeatedInputGroup =
+                $scope.model.module.inputGroupList.findByProperty("title", "Repeated Questionnaires");
 
-              mainInputGroup.inputList.repeat_offset.isExcluded = function ($state, model) {
+              repeatedInputGroup.inputList.repeat_offset.isExcluded = function ($state, model) {
                 return !("add" == model.getActionFromState()
                   ? cnRecordAddScope.record.repeated
                   : model.viewModel.record.repeated);
               };
 
-              mainInputGroup.inputList.max_responses.isExcluded = function ($state, model) {
+              repeatedInputGroup.inputList.max_responses.isExcluded = function ($state, model) {
                 return !("add" == model.getActionFromState()
                   ? cnRecordAddScope.record.repeated
                   : model.viewModel.record.repeated);
@@ -1098,6 +1095,11 @@ cenozoApp.defineModule({
 
             onView: async function (force) {
               await this.$$onView(force);
+
+              if (this.parentModel.isDetached() && angular.isDefined(this.respondentModel)) {
+                await this.respondentModel.updateUsesBeartooth();
+              }
+
               this.record.average_time = $filter("cnSeconds")(
                 Math.round(this.record.average_time)
               );
@@ -1131,8 +1133,16 @@ cenozoApp.defineModule({
 
             onPatch: async function (data) {
               await this.$$onPatch(data);
-              if (angular.isDefined(data.repeated) && data.repeated)
+              
+              if (angular.isDefined(data.repeated) && data.repeated) {
                 await this.onView();
+              }
+              
+              if (angular.isDefined(data.beartooth)) {
+                if (angular.isDefined(this.respondentModel)) {
+                  await this.respondentModel.updateUsesBeartooth();
+                }
+              }
             },
 
             cancel: async function () {

@@ -27,14 +27,20 @@ class post extends \cenozo\service\post
       if( 'import' != $action )
       {
         // make sure the qnaire has beartooth credentials
-        if( is_null( $db_qnaire->beartooth_url ) ||
-            is_null( $db_qnaire->beartooth_username ) ||
-            is_null( $db_qnaire->beartooth_password ) )
-        {
+        $setting_manager = lib::create( 'business\setting_manager' );
+        $machine_username = $setting_manager->get_setting( 'general', 'machine_username' );
+        $machine_password = $setting_manager->get_setting( 'general', 'machine_password' );
+        if(
+          !$setting_manager->get_setting( 'general', 'detached' ) ||
+          is_null( PARENT_INSTANCE_URL ) ||
+          is_null( BEARTOOTH_INSTANCE_URL ) ||
+          is_null( $machine_username ) ||
+          is_null( $machine_password )
+        ) {
           $this->status->set_code( 306 );
           $this->set_data(
-            'You cannot get respondents without first defining the URL, username and password of an instance of Beartooth '.
-            'to get appointments from.'
+            'This instance has not been properly setup to receive respondents from an instance of Beartooth. '.
+            'Please check the settings file and try again.'
           );
         }
       }
@@ -100,9 +106,23 @@ class post extends \cenozo\service\post
     $action = $this->get_argument( 'action', NULL );
     if( 'get_respondents' == $action )
     {
+      $study_class_name = lib::get_class_name( 'database\study' );
+      $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
+      $alternate_consent_type_class_name = lib::get_class_name( 'database\alternate_consent_type' );
+      $proxy_type_class_name = lib::get_class_name( 'database\proxy_type' );
+      $lookup_class_name = lib::get_class_name( 'database\lookup' );
+
+      $study_class_name::sync_with_parent();
+      $consent_type_class_name::sync_with_parent();
+      $alternate_consent_type_class_name::sync_with_parent();
+      $proxy_type_class_name::sync_with_parent();
+
       $db_qnaire = $this->get_parent_record();
       $db_qnaire->sync_with_parent();
       $db_qnaire->get_respondents_from_beartooth();
+
+      // after updating the qnaire we can now update the lookups
+      $lookup_class_name::sync_with_parent( $db_qnaire );
     }
     else if( 'import' == $action )
     {

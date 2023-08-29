@@ -15,16 +15,64 @@ CREATE PROCEDURE patch_qnaire()
       ALTER TABLE qnaire ADD COLUMN anonymous TINYINT(1) NOT NULL DEFAULT 0 AFTER readonly;
     END IF;
 
-    SELECT "Adding beartooth_appointment_type column to qnaire table" AS "";
+    SELECT "Removing beartooth_url column from qnaire table" AS "";
 
     SELECT COUNT(*) INTO @test
     FROM information_schema.COLUMNS
     WHERE table_schema = DATABASE()
     AND table_name = "qnaire"
-    AND column_name = "beartooth_appointment_type";
+    AND column_name = "beartooth_url";
+
+    IF @test = 1 THEN
+      ALTER TABLE qnaire DROP COLUMN beartooth_url;
+    END IF;
+
+    SELECT "Removing beartooth_username column from qnaire table" AS "";
+
+    SELECT COUNT(*) INTO @test
+    FROM information_schema.COLUMNS
+    WHERE table_schema = DATABASE()
+    AND table_name = "qnaire"
+    AND column_name = "beartooth_username";
+
+    IF @test = 1 THEN
+      ALTER TABLE qnaire DROP COLUMN beartooth_username;
+    END IF;
+
+    SELECT "Removing beartooth_password column from qnaire table" AS "";
+
+    SELECT COUNT(*) INTO @test
+    FROM information_schema.COLUMNS
+    WHERE table_schema = DATABASE()
+    AND table_name = "qnaire"
+    AND column_name = "beartooth_password";
+
+    IF @test = 1 THEN
+      ALTER TABLE qnaire DROP COLUMN beartooth_password;
+    END IF;
+
+    SELECT "Adding beartooth column to qnaire table" AS "";
+
+    SELECT COUNT(*) INTO @test
+    FROM information_schema.COLUMNS
+    WHERE table_schema = DATABASE()
+    AND table_name = "qnaire"
+    AND column_name = "beartooth";
 
     IF @test = 0 THEN
-      ALTER TABLE qnaire ADD COLUMN beartooth_appointment_type VARCHAR(45) NULL DEFAULT NULL AFTER beartooth_url;
+      ALTER TABLE qnaire ADD COLUMN beartooth TINYINT(1) NOT NULL DEFAULT 0 AFTER email_invitation;
+    END IF;
+
+    SELECT "Adding appointment_type column to qnaire table" AS "";
+
+    SELECT COUNT(*) INTO @test
+    FROM information_schema.COLUMNS
+    WHERE table_schema = DATABASE()
+    AND table_name = "qnaire"
+    AND column_name = "appointment_type";
+
+    IF @test = 0 THEN
+      ALTER TABLE qnaire ADD COLUMN appointment_type VARCHAR(45) NULL DEFAULT NULL AFTER beartooth;
     END IF;
 
   END //
