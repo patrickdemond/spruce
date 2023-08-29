@@ -28,17 +28,11 @@ class get extends \cenozo\service\get
 
       $db_respondent = $this->get_leaf_record();
       $db_qnaire = $db_respondent->get_qnaire();
-      $this->db_response = $db_respondent->get_current_response();
+      $this->db_response = $db_respondent->get_current_response( true );
 
-      // make sure there is a response
-      if( is_null( $this->db_response ) )
-      {
-        // always create the first response
-        $this->db_response = lib::create( 'database\response' );
-        $this->db_response->respondent_id = $db_respondent->id;
-        $this->db_response->show_hidden = $this->get_argument( 'show_hidden', false );
-        $this->db_response->save();
-      }
+      // always set the show hidden property as it may have changed since the response record was created
+      $this->db_response->show_hidden = $this->get_argument( 'show_hidden', false );
+      $this->db_response->save();
 
       if( !is_null( $db_qnaire->repeated ) )
       {
@@ -50,6 +44,9 @@ class get extends \cenozo\service\get
         );
 
         /*
+        // NOTE: Since this was disabled the code above (creating the response record, setting show_hidden)
+        //       has changed so the commented out block may no longer be valid
+
         $response_class_name = lib::get_class_name( 'database\response' );
         $respondent_mail_class_name = lib::get_class_name( 'database\respondent_mail' );
 
