@@ -912,16 +912,17 @@ cenozo.service("CnTranslationHelper", [
         if (!angular.isString(descriptionList)) descriptionList = "";
         return descriptionList.split("`").reduce((list, part) => {
           if (angular.isDefined(showHidden)) {
+            // Replace newlines with \\n so we can search across multiple lines without using
+            // the newer "s" RegExp option (Firefox doesn't support until 2020)
+            part = part.replace(/\n/g, "\\n");
+
             // replace hidden and reverse-hidden codes
             part = showHidden
-              ? part
-                  .replace(/{{!.*!}}/sg, "") // s = include newlines in .*; g = global
-                  .replace(/{{/g, "")
-                  .replace(/}}/g, "")
-              : part
-                  .replace(/{{!/g, "")
-                  .replace(/!}}/g, "")
-                  .replace(/{{.*}}/sg, ""); // s = include newlines in .*; g = global
+              ? part.replace(/{{!.*!}}/g, "").replace(/{{/g, "").replace(/}}/g, "")
+              : part.replace(/{{!/g, "").replace(/!}}/g, "").replace(/{{.*}}/g, "");
+
+            // convert the \\n back into newlines
+            part = part.replace(/\\n/g, "\n");
           }
 
           if (null == code) {
