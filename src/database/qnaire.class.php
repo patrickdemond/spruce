@@ -1274,7 +1274,6 @@ class qnaire extends \cenozo\database\record
       // null values are valid for all types
       if( 'null' == $value ) return true;
       else if( 'audio' == $type ) return 'YES' == $value;
-      else if( 'boolean' == $type ) return in_array( $value, ['YES', 'NO'] );
       else if( 'date' == $type ) return preg_match( '/^[0-9]{4}-[0-1][0-9]-[0-3][0-9]$/', $value );
       else if( 'device' == $type ) return true;
       else if( 'equipment' == $type ) return true;
@@ -1718,14 +1717,36 @@ class qnaire extends \cenozo\database\record
             }
           }
         }
+        else if( 'boolean' == $question['type'] )
+        {
+          // the value must be in the boolean list
+          $option = NULL;
+          if( array_key_exists( 'boolean_list', $question ) )
+          {
+            foreach( $question['boolean_list'] as $o )
+            {
+              if( $value == $o['name'] ) { $option = $o; break; }
+            }
+          }
+
+          if( is_null( $option ) ) $invalid = true;
+          else if( $apply_this_row )
+          {
+            if( 'DK_NA' == $option['name'] )
+              $db_answer->value = util::json_encode( (object) ['dkna' => true] );
+            else if( 'REFUSED' == $option['name'] )
+              $db_answer->value = util::json_encode( (object) ['refuse' => true] );
+            else $db_answer->value = util::json_encode( 'YES' == $value );
+            $db_answer->save();
+          }
+        }
         else
         {
           if( !test_value( $question['type'], $value ) ) $invalid = true;
           else if( $apply_this_row )
           {
             $formatted_value = $value;
-            if( 'boolean' == $question['type'] ) $formatted_value = 'YES' == $value;
-            else if( 'number' == $question['type'] ) $formatted_value = convert_to_number( $value );
+            if( 'number' == $question['type'] ) $formatted_value = convert_to_number( $value );
             $db_answer->value = util::json_encode( $formatted_value );
             $db_answer->save();
           }
@@ -2585,6 +2606,7 @@ class qnaire extends \cenozo\database\record
             }
             else if( $non_exclusive_list ||
                      array_key_exists( 'option_list', $column ) ||
+                     array_key_exists( 'boolean_list', $column ) ||
                      array_key_exists( 'missing_list', $column ) )
             {
               $row_value = 'REFUSED';
