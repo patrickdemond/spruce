@@ -1558,6 +1558,18 @@ class qnaire extends \cenozo\database\record
             {
               // this unit belongs to extra data in a "list" question
               $new_value = util::json_decode( $db_answer->value );
+              if( !is_array( $new_value ) )
+              {
+                throw lib::create( 'exception\notice',
+                  sprintf(
+                    'Can\'t set unit value, value for answer to %s on row %d is not an array!',
+                    $db_answer->get_question()->name,
+                    $row_index + 1
+                  ),
+                  __METHOD__
+                );
+              }
+
               foreach( $new_value as $i => $v )
               {
                 if( is_object( $v ) && $v->id == $question['option_id'] )
@@ -1569,9 +1581,22 @@ class qnaire extends \cenozo\database\record
             }
             else
             {
+              $temp_value = util::json_decode( $db_answer->value );
+              if( is_object( $temp_value ) )
+              {
+                throw lib::create( 'exception\notice',
+                  sprintf(
+                    'Can\'t set unit value, value for answer to %s on row %d is set to DK_NA or MISSING!',
+                    $db_answer->get_question()->name,
+                    $row_index + 1
+                  ),
+                  __METHOD__
+                );
+              }
+
               // this unit belongs to a "number with unit" question
               $new_value = (object) [
-                'value' => convert_to_number( util::json_decode( $db_answer->value ) ),
+                'value' => convert_to_number( $temp_value ),
                 'unit' => $unit
               ];
             }
