@@ -70,25 +70,19 @@ cenozoApp.defineModule({
             await $scope.model.viewModel.onView();
             $scope.model.viewModel.dataSummary = null;
 
-            CnSession.setBreadcrumbTrail([
-              {
-                title: "Lookups",
-                go: async function() {
-                  await $state.go("lookup.list");
-                },
-              },
-              {
-                title: $scope.model.viewModel.record.name,
-                go: async function () {
-                  await $state.go("lookup.view", {
-                    identifier: $scope.model.viewModel.record.getIdentifier(),
-                  });
-                }
-              },
-              {
-                title: "Upload Data",
-              },
-            ]);
+            CnSession.setBreadcrumbTrail([{
+              title: "Lookups",
+              go: async function() { await $state.go("lookup.list"); },
+            }, {
+              title: $scope.model.viewModel.record.name,
+              go: async function () {
+                await $state.go("lookup.view", {
+                  identifier: $scope.model.viewModel.record.getIdentifier(),
+                });
+              }
+            }, {
+              title: "Upload Data",
+            }]);
           },
         };
       }
@@ -109,13 +103,7 @@ cenozoApp.defineModule({
         $rootScope
       ) {
         var object = function (parentModel, root) {
-          // the respondent only has one list (respondent list) so the default tab for them is null
-          CnBaseViewFactory.construct(
-            this,
-            parentModel,
-            root,
-            "indicator"
-          );
+          CnBaseViewFactory.construct( this, parentModel, root, "indicator" );
 
           angular.extend(this, {
             working: false,
@@ -123,10 +111,8 @@ cenozoApp.defineModule({
             dataSummary: null,
 
             cancel: async function () {
-              $scope.model.viewModel.dataSummary = null;
-              await $state.go("lookup.view", {
-                identifier: this.record.getIdentifier(),
-              });
+              this.dataSummary = null;
+              await $state.go("lookup.view", { identifier: this.record.getIdentifier() });
             },
 
             checkData: function () {
@@ -140,10 +126,7 @@ cenozoApp.defineModule({
 
                   // check the data file
                   var response = await CnHttpFactory.instance({
-
-                    path:
-                      this.parentModel.getServiceResourcePath() +
-                      "?action=check",
+                    path: this.parentModel.getServiceResourcePath() + "?action=check",
                     data: this.file,
                   }).patch();
 
@@ -170,8 +153,7 @@ cenozoApp.defineModule({
                   // apply the data file
                   this.working = true;
                   await CnHttpFactory.instance({
-                    path:
-                      this.parentModel.getServiceResourcePath() + "?action=apply",
+                    path: this.parentModel.getServiceResourcePath() + "?action=apply",
                     data: this.file,
                   }).patch();
                   await $state.go("lookup.view", {

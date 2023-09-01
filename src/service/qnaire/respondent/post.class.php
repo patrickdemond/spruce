@@ -111,18 +111,18 @@ class post extends \cenozo\service\post
       $alternate_consent_type_class_name = lib::get_class_name( 'database\alternate_consent_type' );
       $proxy_type_class_name = lib::get_class_name( 'database\proxy_type' );
       $lookup_class_name = lib::get_class_name( 'database\lookup' );
+      $equipment_type_class_name = lib::get_class_name( 'database\equipment_type' );
 
       $study_class_name::sync_with_parent();
       $consent_type_class_name::sync_with_parent();
       $alternate_consent_type_class_name::sync_with_parent();
       $proxy_type_class_name::sync_with_parent();
+      $lookup_class_name::sync_with_parent();
+      $equipment_type_class_name::sync_with_parent();
 
       $db_qnaire = $this->get_parent_record();
       $db_qnaire->sync_with_parent();
       $db_qnaire->get_respondents_from_beartooth();
-
-      // after updating the qnaire we can now update the lookups
-      $lookup_class_name::sync_with_parent( $db_qnaire );
     }
     else if( 'import' == $action )
     {

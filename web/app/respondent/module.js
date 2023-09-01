@@ -230,7 +230,7 @@ cenozoApp.defineModule({
         model.getRespondents();
       },
       isIncluded: function ($state, model) {
-        return "today" != model.subList && model.usesBeartooth;
+        return "today" != model.subList && model.isDetached();
       },
       isDisabled: function ($state, model) {
         return model.workInProgress;
@@ -243,7 +243,7 @@ cenozoApp.defineModule({
         await model.export();
       },
       isIncluded: function ($state, model) {
-        return "today" != model.subList && model.usesBeartooth;
+        return "today" != model.subList && model.isDetached();
       },
       isDisabled: function ($state, model) {
         return model.workInProgress;

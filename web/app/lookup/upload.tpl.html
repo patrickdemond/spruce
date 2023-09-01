@@ -8,10 +8,24 @@
          tooltip-placement="left"
          ng-click="model.showNotation(); $event.stopPropagation()"></i>
     </div>
-    Upload Lookup Data
+    Upload {{ model.viewModel.record.name }} Lookup Data
   </h4>
 </div>
 <form name="form" class="form-horizontal" novalidate>
+  <div class="spacer">
+    <p style="margin-top: 1em">
+      This utility allows you to upload lookup data from a CSV file.
+      The file must contain the following columns:
+    </p>
+    <div class="container-fluid">
+      <ul>
+        <li>Identifier</li>
+        <li>Name</li>
+        <li>Description (may be blank)</li>
+        <li>Indicators (semicolon delimited list of indicators, may be blank)</li>
+      </ul>
+    </div>
+  </div>
   <div class="form-body">
     <div class="form-group">
       <label for="name" class="control-label col-sm-2">Data File</label>

@@ -14,8 +14,12 @@ use cenozo\lib, cenozo\log, pine\util;
 class lookup extends \cenozo\database\record
 {
   /**
-   * Applies data from a CSV file which defines indicators and lookup_item
-   * @param array $data An array of lookup data (with columns: indicator, name, description, indication)
+   * Applies data from a CSV file which defines lookup items and their indicators
+   * @param array $data An array of lookup data with columns:
+   *                    identifier (mandatory)
+   *                    name (mandatory)
+   *                    description (may be blank)
+   *                    indicators delimited by a semicolon (may be blank)
    * @param boolean $apply Whether to apply or evaluate the patch
    * @return stdObject
    */
@@ -37,11 +41,16 @@ class lookup extends \cenozo\database\record
       // skip the header row
       if( 0 == $index && 'identifier' == $row[0] ) continue;
 
+      $identifier = $row[0];
+      $name = $row[1];
+      $description = $row[2];
+      $indicators = $row[3];
+
       $lookup_item_is_new = false;
 
       $db_lookup_item = $lookup_item_class_name::get_unique_record(
         array( 'lookup_id', 'identifier' ),
-        array( $this->id, $row[0] )
+        array( $this->id, $identifier )
       );
 
       if( is_null( $db_lookup_item ) )
@@ -53,9 +62,9 @@ class lookup extends \cenozo\database\record
         {
           $db_lookup_item = lib::create( 'database\lookup_item' );
           $db_lookup_item->lookup_id = $this->id;
-          $db_lookup_item->identifier = $row[0];
-          $db_lookup_item->name = $row[1];
-          $db_lookup_item->description = $row[2];
+          $db_lookup_item->identifier = $identifier;
+          $db_lookup_item->name = $name;
+          $db_lookup_item->description = $description;
           $db_lookup_item->save();
         }
       }
@@ -65,10 +74,10 @@ class lookup extends \cenozo\database\record
       }
 
       // process all indicators
-      if( 'NULL' != $row[3] && 0 < strlen( $row[3] ) )
+      if( !is_null( $indicators ) && 'NULL' != $indicators && 0 < strlen( $indicators ) )
       {
         $indicator_id_list = array();
-        foreach( explode( ';', $row[3] ) as $indicator )
+        foreach( explode( ';', $indicators ) as $indicator )
         {
           if( !array_key_exists( $indicator, $result_data['indicator_list'] ) )
           {
