@@ -24,10 +24,10 @@ abstract class qnaire_trigger extends \cenozo\database\record
   {
     $db_qnaire_trigger = new static();
 
-    foreach( $this->get_column_names() as $column_name )
+    foreach( static::db()->get_column_names( static::get_table_name() ) as $column_name )
     {
       // ignore timestamp columns
-      if( in_array( $column_name, array( 'update_timestamp', 'create_timestamp' ) ) ) continue;
+      if( in_array( $column_name, array( 'id', 'update_timestamp', 'create_timestamp' ) ) ) continue;
 
       $matches = NULL;
       if( 'qnaire_id' == $column_name )

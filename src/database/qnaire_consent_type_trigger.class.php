@@ -11,7 +11,7 @@ use cenozo\lib, cenozo\log, pine\util;
 /**
  * qnaire_consent_type_trigger: record
  */
-class qnaire_consent_type_trigger extends \cenozo\database\record
+class qnaire_consent_type_trigger extends qnaire_trigger
 {
   /**
    * Executes this trigger for a given response

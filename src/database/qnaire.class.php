@@ -2791,12 +2791,14 @@ class qnaire extends \cenozo\database\record
     $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
     $alternate_consent_type_class_name = lib::get_class_name( 'database\alternate_consent_type' );
     $proxy_type_class_name = lib::get_class_name( 'database\proxy_type' );
+    $equipment_type_class_name = lib::get_class_name( 'database\equipment_type' );
     $qnaire_consent_type_confirm_class_name = lib::get_class_name( 'database\qnaire_consent_type_confirm' );
     $qnaire_participant_trigger_class_name = lib::get_class_name( 'database\qnaire_participant_trigger' );
     $qnaire_consent_type_trigger_class_name = lib::get_class_name( 'database\qnaire_consent_type_trigger' );
     $qnaire_aconsent_type_trigger_class_name =
       lib::get_class_name( 'database\qnaire_alternate_consent_type_trigger' );
     $qnaire_proxy_type_trigger_class_name = lib::get_class_name( 'database\qnaire_proxy_type_trigger' );
+    $qnaire_equipment_type_trigger_class_name = lib::get_class_name( 'database\qnaire_equipment_type_trigger' );
     $module_class_name = lib::get_class_name( 'database\module' );
     $stage_class_name = lib::get_class_name( 'database\stage' );
     $lookup_class_name = lib::get_class_name( 'database\lookup' );
@@ -4145,6 +4147,149 @@ class qnaire extends \cenozo\database\record
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
         if( 0 < count( $diff_list ) ) $difference_list['qnaire_proxy_type_trigger_list'] = $diff_list;
       }
+      else if( 'qnaire_equipment_type_trigger_list' == $property )
+      {
+        // check every item in the patch object for additions and changes
+        $add_list = array();
+        $change_list = array();
+        foreach( $patch_object->qnaire_equipment_type_trigger_list as $qnaire_equipment_type_trigger )
+        {
+          $db_equipment_type = $equipment_type_class_name::get_unique_record(
+            'name',
+            $qnaire_equipment_type_trigger->equipment_type_name
+          );
+
+          if( is_null( $db_equipment_type ) )
+          {
+            if( !$apply )
+            {
+              $error = new \stdClass();
+              $error->WARNING = sprintf(
+                'Proxy trigger for "%s" will be ignore since the equipment type does not exist.',
+                $qnaire_equipment_type_trigger->equipment_type_name
+              );
+              $add_list[] = $error;
+            }
+          }
+          else
+          {
+            $db_question = $this->get_question(
+              array_key_exists( $qnaire_equipment_type_trigger->question_name, $change_question_name_list ) ?
+              $change_question_name_list[$qnaire_equipment_type_trigger->question_name] :
+              $qnaire_equipment_type_trigger->question_name
+            );
+
+            // check to see if the question has been renamed as part of the applied patch
+            if( $apply && is_null( $db_question ) )
+            {
+              $db_question = $this->get_question(
+                sprintf(
+                  '%s_%s',
+                  $qnaire_equipment_type_trigger->question_name,
+                  $name_suffix
+                )
+              );
+            }
+
+            $db_qnaire_equipment_type_trigger = $qnaire_equipment_type_trigger_class_name::get_unique_record(
+              array( 'qnaire_id', 'equipment_type_id', 'question_id' ),
+              array( $this->id, $db_equipment_type->id, $db_question->id )
+            );
+
+            if( is_null( $db_qnaire_equipment_type_trigger ) )
+            {
+              if( $apply )
+              {
+                $qnaire_equipment_type_trigger_class_name::create_from_object(
+                  $qnaire_equipment_type_trigger,
+                  $db_question
+                );
+              }
+              else
+              {
+                // if the equipment type name is an empty string then show (empty) instead
+                if( !$qnaire_equipment_type_trigger->equipment_type_name )
+                  $qnaire_equipment_type_trigger->equipment_type_name = '(empty)';
+                $add_list[] = $qnaire_equipment_type_trigger;
+              }
+            }
+            else
+            {
+              // find and add all differences
+              $diff = array();
+              foreach( $qnaire_equipment_type_trigger as $property => $value )
+                if( !in_array( $property, [ 'equipment_type_name', 'question_name' ] ) &&
+                    $db_qnaire_equipment_type_trigger->$property != $qnaire_equipment_type_trigger->$property )
+                  $diff[$property] = $qnaire_equipment_type_trigger->$property;
+
+              if( 0 < count( $diff ) )
+              {
+                if( $apply )
+                {
+                  $db_qnaire_equipment_type_trigger->loaned = $qnaire_equipment_type_trigger->loaned;
+                  $db_qnaire_equipment_type_trigger->save();
+                }
+                else
+                {
+                  $index = sprintf(
+                    '%s [%s]',
+                    $qnaire_equipment_type_trigger->equipment_type_name ?
+                      $qnaire_equipment_type_trigger->equipment_type_name : '(empty)',
+                    $qnaire_equipment_type_trigger->question_name
+                  );
+                  $change_list[$index] = $diff;
+                }
+              }
+            }
+          }
+        }
+
+        // check every item in this object for removals
+        $remove_list = array();
+        foreach( $this->get_qnaire_equipment_type_trigger_object_list() as $db_qnaire_equipment_type_trigger )
+        {
+          $db_equipment_type = $db_qnaire_equipment_type_trigger->get_equipment_type();
+          $equipment_type_name = is_null( $db_equipment_type ) ? '' : $db_equipment_type->name;
+          $changed_name = array_search(
+            $db_qnaire_equipment_type_trigger->get_question()->name,
+            $change_question_name_list
+          );
+          $question_name = $changed_name ? $changed_name : $db_qnaire_equipment_type_trigger->get_question()->name;
+          if( $apply ) $question_name = preg_replace( sprintf( '/_%s$/', $name_suffix ), '', $question_name );
+
+          $found = false;
+          foreach( $patch_object->qnaire_equipment_type_trigger_list as $qnaire_equipment_type_trigger )
+          {
+            // see if the qnaire_equipment_type_trigger exists
+            if( ( $equipment_type_name == $qnaire_equipment_type_trigger->equipment_type_name &&
+                  $question_name == $qnaire_equipment_type_trigger->question_name ) )
+            {
+              $found = true;
+              break;
+            }
+          }
+
+          if( !$found )
+          {
+            if( $apply ) $db_qnaire_equipment_type_trigger->delete();
+            else
+            {
+              $index = sprintf(
+                '%s [%s]',
+                $equipment_type_name ? $equipment_type_name : '(empty)',
+                $question_name
+              );
+              $remove_list[] = $index;
+            }
+          }
+        }
+
+        $diff_list = array();
+        if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
+        if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
+        if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
+        if( 0 < count( $diff_list ) ) $difference_list['qnaire_equipment_type_trigger_list'] = $diff_list;
+      }
       else
       {
         if( $patch_object->$property != $this->$property )
@@ -4291,6 +4436,7 @@ class qnaire extends \cenozo\database\record
     $qnaire_data['qnaire_consent_type_trigger_list'] = array();
     $qnaire_data['qnaire_alternate_consent_type_trigger_list'] = array();
     $qnaire_data['qnaire_proxy_type_trigger_list'] = array();
+    $qnaire_data['qnaire_equipment_type_trigger_list'] = array();
 
     $language_sel = lib::create( 'database\select' );
     $language_sel->add_column( 'code' );
@@ -4615,69 +4761,83 @@ class qnaire extends \cenozo\database\record
       foreach( $this->get_stage_list( $stage_sel, $stage_mod ) as $item ) $qnaire_data['stage_list'][] = $item;
     }
 
-    $qnaire_cconfirm_sel = lib::create( 'database\select' );
-    $qnaire_cconfirm_sel->add_table_column( 'consent_type', 'name', 'consent_type_name' );
-    $qnaire_cconfirm_mod = lib::create( 'database\modifier' );
-    $qnaire_cconfirm_mod->join(
+    $qc_confirm_sel = lib::create( 'database\select' );
+    $qc_confirm_sel->add_table_column( 'consent_type', 'name', 'consent_type_name' );
+    $qc_confirm_mod = lib::create( 'database\modifier' );
+    $qc_confirm_mod->join(
       'consent_type',
       'qnaire_consent_type_confirm.consent_type_id',
       'consent_type.id'
     );
-    foreach( $this->get_qnaire_consent_type_confirm_list( $qnaire_cconfirm_sel, $qnaire_cconfirm_mod ) as $item )
+    foreach( $this->get_qnaire_consent_type_confirm_list( $qc_confirm_sel, $qc_confirm_mod ) as $item )
       $qnaire_data['qnaire_consent_type_confirm_list'][] = $item;
 
-    $qnaire_ptrigger_sel = lib::create( 'database\select' );
-    $qnaire_ptrigger_sel->add_table_column( 'question', 'name', 'question_name' );
-    $qnaire_ptrigger_sel->add_column( 'answer_value' );
-    $qnaire_ptrigger_sel->add_column( 'column_name' );
-    $qnaire_ptrigger_sel->add_column( 'value' );
-    $qnaire_ptrigger_mod = lib::create( 'database\modifier' );
-    $qnaire_ptrigger_mod->join( 'question', 'qnaire_participant_trigger.question_id', 'question.id' );
-    foreach( $this->get_qnaire_participant_trigger_list( $qnaire_ptrigger_sel, $qnaire_ptrigger_mod ) as $item )
+    $qp_trigger_sel = lib::create( 'database\select' );
+    $qp_trigger_sel->add_table_column( 'question', 'name', 'question_name' );
+    $qp_trigger_sel->add_column( 'answer_value' );
+    $qp_trigger_sel->add_column( 'column_name' );
+    $qp_trigger_sel->add_column( 'value' );
+    $qp_trigger_mod = lib::create( 'database\modifier' );
+    $qp_trigger_mod->join( 'question', 'qnaire_participant_trigger.question_id', 'question.id' );
+    foreach( $this->get_qnaire_participant_trigger_list( $qp_trigger_sel, $qp_trigger_mod ) as $item )
       $qnaire_data['qnaire_participant_trigger_list'][] = $item;
 
-    $qnaire_ctrigger_sel = lib::create( 'database\select' );
-    $qnaire_ctrigger_sel->add_table_column( 'consent_type', 'name', 'consent_type_name' );
-    $qnaire_ctrigger_sel->add_table_column( 'question', 'name', 'question_name' );
-    $qnaire_ctrigger_sel->add_column( 'answer_value' );
-    $qnaire_ctrigger_sel->add_column( 'accept' );
-    $qnaire_ctrigger_mod = lib::create( 'database\modifier' );
-    $qnaire_ctrigger_mod->join(
+    $qc_trigger_sel = lib::create( 'database\select' );
+    $qc_trigger_sel->add_table_column( 'consent_type', 'name', 'consent_type_name' );
+    $qc_trigger_sel->add_table_column( 'question', 'name', 'question_name' );
+    $qc_trigger_sel->add_column( 'answer_value' );
+    $qc_trigger_sel->add_column( 'accept' );
+    $qc_trigger_mod = lib::create( 'database\modifier' );
+    $qc_trigger_mod->join(
       'consent_type',
       'qnaire_consent_type_trigger.consent_type_id',
       'consent_type.id'
     );
-    $qnaire_ctrigger_mod->join( 'question', 'qnaire_consent_type_trigger.question_id', 'question.id' );
-    foreach( $this->get_qnaire_consent_type_trigger_list( $qnaire_ctrigger_sel, $qnaire_ctrigger_mod ) as $item )
+    $qc_trigger_mod->join( 'question', 'qnaire_consent_type_trigger.question_id', 'question.id' );
+    foreach( $this->get_qnaire_consent_type_trigger_list( $qc_trigger_sel, $qc_trigger_mod ) as $item )
       $qnaire_data['qnaire_consent_type_trigger_list'][] = $item;
 
-    $qnaire_ctrigger_sel = lib::create( 'database\select' );
-    $qnaire_ctrigger_sel->add_table_column( 'alternate_consent_type', 'name', 'alternate_consent_type_name' );
-    $qnaire_ctrigger_sel->add_table_column( 'question', 'name', 'question_name' );
-    $qnaire_ctrigger_sel->add_column( 'answer_value' );
-    $qnaire_ctrigger_sel->add_column( 'accept' );
-    $qnaire_ctrigger_mod = lib::create( 'database\modifier' );
-    $qnaire_ctrigger_mod->join(
+    $qc_trigger_sel = lib::create( 'database\select' );
+    $qc_trigger_sel->add_table_column( 'alternate_consent_type', 'name', 'alternate_consent_type_name' );
+    $qc_trigger_sel->add_table_column( 'question', 'name', 'question_name' );
+    $qc_trigger_sel->add_column( 'answer_value' );
+    $qc_trigger_sel->add_column( 'accept' );
+    $qc_trigger_mod = lib::create( 'database\modifier' );
+    $qc_trigger_mod->join(
       'alternate_consent_type',
       'qnaire_alternate_consent_type_trigger.alternate_consent_type_id',
       'alternate_consent_type.id'
     );
-    $qnaire_ctrigger_mod->join( 'question', 'qnaire_alternate_consent_type_trigger.question_id', 'question.id' );
-    foreach( $this->get_qnaire_alternate_consent_type_trigger_list( $qnaire_ctrigger_sel, $qnaire_ctrigger_mod )
+    $qc_trigger_mod->join( 'question', 'qnaire_alternate_consent_type_trigger.question_id', 'question.id' );
+    foreach( $this->get_qnaire_alternate_consent_type_trigger_list( $qc_trigger_sel, $qc_trigger_mod )
       as $item )
     {
       $qnaire_data['qnaire_alternate_consent_type_trigger_list'][] = $item;
     }
 
-    $qnaire_ptrigger_sel = lib::create( 'database\select' );
-    $qnaire_ptrigger_sel->add_column( 'IFNULL( proxy_type.name, "" )', 'proxy_type_name', false );
-    $qnaire_ptrigger_sel->add_table_column( 'question', 'name', 'question_name' );
-    $qnaire_ptrigger_sel->add_column( 'answer_value' );
-    $qnaire_ptrigger_mod = lib::create( 'database\modifier' );
-    $qnaire_ptrigger_mod->left_join( 'proxy_type', 'qnaire_proxy_type_trigger.proxy_type_id', 'proxy_type.id' );
-    $qnaire_ptrigger_mod->join( 'question', 'qnaire_proxy_type_trigger.question_id', 'question.id' );
-    foreach( $this->get_qnaire_proxy_type_trigger_list( $qnaire_ptrigger_sel, $qnaire_ptrigger_mod ) as $item )
+    $qp_trigger_sel = lib::create( 'database\select' );
+    $qp_trigger_sel->add_column( 'IFNULL( proxy_type.name, "" )', 'proxy_type_name', false );
+    $qp_trigger_sel->add_table_column( 'question', 'name', 'question_name' );
+    $qp_trigger_sel->add_column( 'answer_value' );
+    $qp_trigger_mod = lib::create( 'database\modifier' );
+    $qp_trigger_mod->left_join( 'proxy_type', 'qnaire_proxy_type_trigger.proxy_type_id', 'proxy_type.id' );
+    $qp_trigger_mod->join( 'question', 'qnaire_proxy_type_trigger.question_id', 'question.id' );
+    foreach( $this->get_qnaire_proxy_type_trigger_list( $qp_trigger_sel, $qp_trigger_mod ) as $item )
       $qnaire_data['qnaire_proxy_type_trigger_list'][] = $item;
+
+    $qe_trigger_sel = lib::create( 'database\select' );
+    $qe_trigger_sel->add_column( 'IFNULL( equipment_type.name, "" )', 'equipment_type_name', false );
+    $qe_trigger_sel->add_table_column( 'question', 'name', 'question_name' );
+    $qe_trigger_sel->add_column( 'loaned' );
+    $qe_trigger_mod = lib::create( 'database\modifier' );
+    $qe_trigger_mod->left_join(
+      'equipment_type',
+      'qnaire_equipment_type_trigger.equipment_type_id',
+      'equipment_type.id'
+    );
+    $qe_trigger_mod->join( 'question', 'qnaire_equipment_type_trigger.question_id', 'question.id' );
+    foreach( $this->get_qnaire_equipment_type_trigger_list( $qe_trigger_sel, $qe_trigger_mod ) as $item )
+      $qnaire_data['qnaire_equipment_type_trigger_list'][] = $item;
 
     if( 'export' == $type )
     {
@@ -4866,6 +5026,7 @@ class qnaire extends \cenozo\database\record
     $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
     $alternate_consent_type_class_name = lib::get_class_name( 'database\alternate_consent_type' );
     $proxy_type_class_name = lib::get_class_name( 'database\proxy_type' );
+    $equipment_type_class_name = lib::get_class_name( 'database\equipment_type' );
     $module_class_name = lib::get_class_name( 'database\module' );
     $stage_class_name = lib::get_class_name( 'database\stage' );
     $device_class_name = lib::get_class_name( 'database\device' );
@@ -4879,6 +5040,7 @@ class qnaire extends \cenozo\database\record
     $qnaire_aconsent_type_trigger_class_name =
       lib::get_class_name( 'database\qnaire_alternate_consent_type_trigger' );
     $qnaire_proxy_type_trigger_class_name = lib::get_class_name( 'database\qnaire_proxy_type_trigger' );
+    $qnaire_equipment_type_trigger_class_name = lib::get_class_name( 'database\qnaire_equipment_type_trigger' );
 
     $default_page_max_time =
       lib::create( 'business\setting_manager' )->get_setting( 'general', 'default_page_max_time' );
@@ -5256,6 +5418,35 @@ class qnaire extends \cenozo\database\record
 
       $db_question = $db_qnaire->get_question( $qnaire_proxy_type_trigger->question_name );
       $qnaire_proxy_type_trigger_class_name::create_from_object( $qnaire_proxy_type_trigger, $db_question );
+    }
+
+    foreach( $qnaire_object->qnaire_equipment_type_trigger_list as $qnaire_equipment_type_trigger )
+    {
+      $db_equipment_type = NULL;
+      if( $qnaire_equipment_type_trigger->equipment_type_name )
+      {
+        $db_equipment_type = $equipment_type_class_name::get_unique_record(
+          'name',
+          $qnaire_equipment_type_trigger->equipment_type_name
+        );
+        if( is_null( $db_equipment_type ) )
+        {
+          throw lib::create( 'exception\notice',
+            sprintf(
+              'Unable to import questionnaire since it has a equipment trigger '.
+              'for equipment type "%s" which does not exist.',
+              $qnaire_equipment_type_trigger->equipment_type_name
+            ),
+            __METHOD__
+          );
+        }
+      }
+
+      $db_question = $db_qnaire->get_question( $qnaire_equipment_type_trigger->question_name );
+      $qnaire_equipment_type_trigger_class_name::create_from_object(
+        $qnaire_equipment_type_trigger,
+        $db_question
+      );
     }
 
     if( $qnaire_object->readonly )
