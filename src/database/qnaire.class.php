@@ -1943,6 +1943,7 @@ class qnaire extends \cenozo\database\record
               }
             }
 
+            $db_answer->user_id = $db_current_user->id;
             $db_answer->language_id = $language_class_name::get_unique_record( 'code', $answer->language )->id;
             $db_answer->value = $value;
             $db_answer->save();
