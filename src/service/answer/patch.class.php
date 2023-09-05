@@ -21,10 +21,10 @@ class patch extends \cenozo\service\patch
     // replace username with a user_id (if the user exists)
     $patch_array = parent::get_file_as_array();
 
-    if( array_key_exists( 'username', $patch_array ) )
+    $username = $this->get_argument( 'username', NULL );
+    if( !is_null( $username ) )
     {
-      $db_user = $user_class_name::get_unique_record( 'name', $patch_array['username'] );
-      unset( $patch_array['username'] );
+      $db_user = $user_class_name::get_unique_record( 'name', $username );
       if( !is_null( $db_user ) ) $patch_array['user_id'] = $db_user->id;
     }
 
