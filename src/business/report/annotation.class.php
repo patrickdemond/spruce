@@ -264,7 +264,7 @@ class annotation extends \cenozo\business\report\base_report
           else
           {
             // multi-selection questions are represented by one item for all possible options
-            // make all types boolean (dkna and refused options will be provided in the question list)
+            // make all types boolean (dkna and refuse options will be provided in the question list)
             $row['valueType'] = 'boolean';
           }
         }

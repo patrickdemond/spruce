@@ -174,7 +174,7 @@ class answer extends \cenozo\database\record
     // null values are never complete
     if( is_null( $value ) ) return false;
 
-    // dkna/refused questions are always complete
+    // dkna/refuse questions are always complete
     if( $this->is_dkna_or_refuse() ) return true;
 
     if( 'list' == $db_question->type )

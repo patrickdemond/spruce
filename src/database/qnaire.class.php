@@ -1606,7 +1606,7 @@ class qnaire extends \cenozo\database\record
             $db_answer->save();
           }
         }
-        else if( // dkna or refused column
+        else if( // dkna or refuse column
           array_key_exists( 'option_id', $question ) &&
           in_array( $question['option_id'], ['dkna', 'refuse'] )
         ) {
@@ -2644,7 +2644,7 @@ class qnaire extends \cenozo\database\record
             { // this is a multiple-answer question, so every possible answer has its own variable
               if( 'dkna' == $column['option_id'] || 'refuse' == $column['option_id'] )
               {
-                // whatever the answer is it isn't dkna or refused
+                // whatever the answer is it isn't dkna or refuse
                 $row_value = 0;
               }
               else

@@ -248,7 +248,7 @@ class question extends base_qnaire_part
 
       $column_list[$column_name] = $base_column;
 
-      // if there is a possibility for dkna or refused then add it as a "missing" column
+      // if there is a possibility for dkna or refuse then add it as a "missing" column
       if( in_array( $this->type, ['boolean', 'list'] ) )
       {
         if( 'boolean' == $this->type )
