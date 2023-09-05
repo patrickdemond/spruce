@@ -2020,7 +2020,15 @@ class qnaire extends \cenozo\database\record
       'UTC_TIMESTAMP()',
       false
     );
-    foreach( $this->get_respondent_object_list( $respondent_mod ) as $db_respondent ) $db_respondent->delete();
+    foreach( $this->get_respondent_object_list( $respondent_mod ) as $db_respondent )
+    {
+      log::info( sprintf(
+        'Purged respondent %s from questionnaire "%s"',
+        $db_respondent->get_participant()->uid,
+        $this->name
+      ) );
+      $db_respondent->delete();
+    }
   }
 
   /**

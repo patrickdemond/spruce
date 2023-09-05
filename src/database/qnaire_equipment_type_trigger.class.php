@@ -109,11 +109,20 @@ class qnaire_equipment_type_trigger extends qnaire_trigger
       }
       else
       {
+        // close any existing loan records
+        $db_current_equipment_loan = $db_equipment->get_current_equipment_loan();
+        if( !is_null( $db_current_equipment_loan ) )
+        {
+          $db_current_equipment_loan->end_datetime = $datetime_obj;
+          $db_current_equipment_loan->save();
+        }
+
         // create the loan record if it doesn't already exist
         $db_equipment_loan = lib::create( 'database\equipment_loan' );
         $db_equipment_loan->participant_id = $db_participant->id;
         $db_equipment_loan->equipment_id = $db_equipment->id;
         $db_equipment_loan->start_datetime = $datetime_obj;
+        $db_equipment_loan->end_datetime = $datetime_obj;
         $db_equipment_loan->note = 'Automatically setting start date because loan was never created.';
         $db_equipment_loan->save();
       }
