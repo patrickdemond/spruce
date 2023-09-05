@@ -254,7 +254,7 @@ class answer extends \cenozo\database\record
    */
   public function set_dkna()
   {
-    $db_answer->value = self::DKNA;
+    $this->value = self::DKNA;
   }
 
   /**
@@ -262,7 +262,7 @@ class answer extends \cenozo\database\record
    */
   public function set_refuse()
   {
-    $db_answer->value = self::REFUSE;
+    $this->value = self::REFUSE;
   }
 
   /**
@@ -271,7 +271,7 @@ class answer extends \cenozo\database\record
    */
   public function is_dkna()
   {
-    return self::DKNA == $db_answer->value;
+    return self::DKNA == $this->value;
   }
 
   /**
@@ -280,7 +280,7 @@ class answer extends \cenozo\database\record
    */
   public function is_refuse()
   {
-    return self::REFUSE == $db_answer->value;
+    return self::REFUSE == $this->value;
   }
 
   /**
@@ -289,7 +289,7 @@ class answer extends \cenozo\database\record
    */
   public function is_dkna_or_refuse()
   {
-    return in_array( $db_answer->value, [self::DKNA, self::REFUSE] );
+    return in_array( $this->value, [self::DKNA, self::REFUSE] );
   }
 
   /**

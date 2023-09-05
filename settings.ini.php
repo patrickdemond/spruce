@@ -43,7 +43,7 @@ $SETTINGS['path']['APPLICATION'] = str_replace( '/settings.ini.php', '', __FILE_
 $SETTINGS['utility']['qnaire_username'] = 'pine';
 
 // the location to store response data
-$SETTINGS['path']['RESPONSE_DATA'] = str_replace( 'settings.ini.php', 'doc/response_data', __FILE__ );
+$SETTINGS['path']['RESPONSE_DATA'] = sprintf( '%s/doc/response_data', $SETTINGS['path']['APPLICATION'] );
 
 // add modules used by the application
 $SETTINGS['module']['pdf'] = true;
