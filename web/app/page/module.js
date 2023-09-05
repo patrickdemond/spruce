@@ -1669,6 +1669,11 @@ cenozoApp.defineModule({
                           this.setAnswer(question, true);
                         },
                         onTimeout: (recorder) => {
+                          // play a beep
+                          const beep = new Audio(cenozoApp.baseUrl + "/img/beep.mp3");
+                          beep.play();
+
+                          // and show to the user that the max time has been reached
                           CnModalMessageFactory.instance({
                             title: this.text("misc.maxRecordingTimeTitle"),
                             message: this.text("misc.maxRecordingTimeMessage"),
