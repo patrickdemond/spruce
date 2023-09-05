@@ -88,11 +88,11 @@ abstract class qnaire_trigger extends \cenozo\database\record
     {
       $answer_value = util::json_decode( $db_answer->value );
       $refuse_check = str_replace( ' ', '', $this->answer_value );
-      if( in_array( $refuse_check, [ '{"dkna":true}', '{"refuse":true}' ] ) )
+      if( in_array( $refuse_check, [$answer_class_name::DKNA, $answer_class_name::REFUSE] ) )
       {
         $create = $refuse_check == $db_answer->value;
       }
-      else if( '{"dkna":true}' != $db_answer->value && '{"refuse":true}' != $db_answer->value )
+      else if( !$db_answer->is_dkna_or_refuse() )
       {
         if( 'boolean' == $db_question->type )
         {

@@ -953,8 +953,8 @@ class expression_manager extends \cenozo\singleton
           array( $this->db_response->id, $db_question->id )
         );
         $value = is_null( $db_answer ) ? NULL : util::json_decode( $db_answer->value );
-        $dkna = is_object( $value ) && property_exists( $value, 'dkna' ) && $value->dkna;
-        $refuse = is_object( $value ) && property_exists( $value, 'refuse' ) && $value->refuse;
+        $dkna = is_null( $db_answer ) ? false : $db_answer->is_dkna();
+        $refuse = is_null( $db_answer ) ? false : $db_answer->is_refuse();
 
         if( 'empty' == $special_function ) $compiled = is_null( $value ) ? 'true' : 'false';
         else if( 'dkna' == $special_function ) $compiled = $dkna ? 'true' : 'false';

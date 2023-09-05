@@ -787,13 +787,13 @@ class response extends \cenozo\database\has_rank
           );
           $value = is_null( $db_answer ) ? NULL : util::json_decode( $db_answer->value );
 
-          if( is_object( $value ) && property_exists( $value, 'dkna' ) && $value->dkna )
+          if( $db_answer::DKNA == $db_answer->value )
           {
             $compiled = 'fr' == $this->get_language()->code
                       ? 'Ne sais pas / pas de réponse'
                       : 'Don\'t Know / No Answer';
           }
-          else if( is_object( $value ) && property_exists( $value, 'refuse' ) && $value->refuse )
+          else if( $db_answer::REFUSE == $db_answer->value )
           {
             $compiled = 'fr' == $this->get_language()->code
                       ? 'Refus'

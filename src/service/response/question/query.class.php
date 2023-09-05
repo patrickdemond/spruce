@@ -32,6 +32,7 @@ class query extends \cenozo\service\query
     $page_class_name = lib::get_class_name( 'database\page' );
     $question_class_name = lib::get_class_name( 'database\question' );
     $question_option_class_name = lib::get_class_name( 'database\question_option' );
+    $answer_class_name = lib::get_class_name( 'database\answer' );
 
     parent::setup();
 
@@ -142,22 +143,23 @@ class query extends \cenozo\service\query
                 // get the answer for this question, if one exists
                 $decoded_value = is_null( $question['answer'] ) ? NULL : util::json_decode( $question['answer'] );
                 $print_answer = NULL;
+
                 if( !is_null( $question['answer'] ) )
                 {
                   // Print in english if the base is french and the question language disagrees, or
                   // the base is english and the question language does not disagree (XOR)
                   $english = ( 'fr' == $db_language->code xor $question['language_id'] == $db_language->id );
-                  if( is_object( $decoded_value ) )
+                  if( $answer_class_name::DKNA == $question['answer'] )
                   {
-                    if( property_exists( $decoded_value, 'dkna' ) && $decoded_value->dkna )
-                    {
-                      $print_answer = $english ? 'Don\'t Know / No Answer' : 'Ne sais pas / pas de réponse';
-                    }
-                    else if( property_exists( $decoded_value, 'refuse' ) && $decoded_value->refuse )
-                    {
-                      $print_answer = $english ? 'Refused' : 'Refus';
-                    }
-                    else if(
+                    $print_answer = $english ? 'Don\'t Know / No Answer' : 'Ne sais pas / pas de réponse';
+                  }
+                  else if( $answer_class_name::REFUSE == $question['answer'] )
+                  {
+                    $print_answer = $english ? 'Refused' : 'Refus';
+                  }
+                  else if( is_object( $decoded_value ) )
+                  {
+                    if(
                       property_exists( $decoded_value, 'value' ) &&
                       property_exists( $decoded_value, 'unit' )
                     ) {

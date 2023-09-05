@@ -1532,7 +1532,8 @@ class qnaire extends \cenozo\database\record
           {
             if( in_array( $missing, ['DK_NA', 'REFUSED'] ) )
             {
-              $db_answer->value = util::json_encode( (object) ['DK_NA' == $missing ? 'dkna' : 'refuse' => true] );
+              if( 'DK_NA' == $missing ) $db_answer->set_dkna();
+              else $db_answer->set_refuse();
               $db_answer->save();
             }
           }
@@ -1726,10 +1727,8 @@ class qnaire extends \cenozo\database\record
             {
               if( $apply_this_row )
               {
-                if( 'DK_NA' == $option['name'] )
-                  $db_answer->value = util::json_encode( (object) ['dkna' => true] );
-                else if( 'REFUSED' == $option['name'] )
-                  $db_answer->value = util::json_encode( (object) ['refuse' => true] );
+                if( 'DK_NA' == $option['name'] ) $db_answer->set_dkna();
+                else if( 'REFUSED' == $option['name'] ) $db_answer->set_refuse();
                 else
                 {
                   $new_value = util::json_decode( $db_answer->value );
@@ -1757,10 +1756,8 @@ class qnaire extends \cenozo\database\record
           if( is_null( $option ) ) $invalid = true;
           else if( $apply_this_row )
           {
-            if( 'DK_NA' == $option['name'] )
-              $db_answer->value = util::json_encode( (object) ['dkna' => true] );
-            else if( 'REFUSED' == $option['name'] )
-              $db_answer->value = util::json_encode( (object) ['refuse' => true] );
+            if( 'DK_NA' == $option['name'] ) $db_answer->set_dkna();
+            else if( 'REFUSED' == $option['name'] ) $db_answer->set_refuse();
             else $db_answer->value = util::json_encode( 'YES' == $value );
             $db_answer->save();
           }
@@ -2609,8 +2606,7 @@ class qnaire extends \cenozo\database\record
         if( !is_null( $answer_list ) && array_key_exists( $column['question_id'], $answer_list ) )
         {
           $non_exclusive_list = 'list' == $column['type'] && !$column['all_exclusive'];
-          $answer = util::json_decode( $answer_list[$column['question_id']] );
-          if( is_object( $answer ) && property_exists( $answer, 'dkna' ) && $answer->dkna )
+          if( $answer_class_name::DKNA == $answer_list[$column['question_id']] )
           {
             if( $non_exclusive_list && array_key_exists( 'option_id', $column ) )
             { // this is a multiple-answer question, so set the value to false unless this is the DN_KA column
@@ -2623,7 +2619,7 @@ class qnaire extends \cenozo\database\record
               $row_value = 'DK_NA';
             }
           }
-          else if( is_object( $answer ) && property_exists( $answer, 'refuse' ) && $answer->refuse )
+          else if( $answer_class_name::REFUSE == $answer_list[$column['question_id']] )
           {
             if( $non_exclusive_list && array_key_exists( 'option_id', $column ) )
             { // this is a multiple-answer question, so set the value to false unless this is the REFUSED column
@@ -2639,6 +2635,7 @@ class qnaire extends \cenozo\database\record
           }
           else
           {
+            $answer = util::json_decode( $answer_list[$column['question_id']] );
             if( array_key_exists( 'missing_list', $column ) )
             {
               // leave the row value null

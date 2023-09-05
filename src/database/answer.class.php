@@ -12,12 +12,12 @@ use cenozo\lib, cenozo\log, pine\util;
  * answer: record
  * 
  * Note that the value column of this record is a JSON value with the following example values:
- * dkna: { "dkna": true }
- * refuse: { "refuse": true }
+ * dkna: {"dkna": true}
+ * refuse: {"refuse": true}
  * boolean: true
  * number: 1
  * string: "value"
- * list: [ 1, 2, { "id":3, "value":"rawr"}, { "id":12, "value": ["one", "two", "three"] } ]
+ * list: [1, 2, {"id":3, "value":"rawr"}, {"id":12, "value": ["one", "two", "three"]}]
  */
 class answer extends \cenozo\database\record
 {
@@ -128,17 +128,6 @@ class answer extends \cenozo\database\record
           if( !is_null( $db_answer ) ) $db_answer->remove_answer_value_by_option_id( $question_option['id'] );
         }
       }
-
-      // dkna/refused device answers must have their response device records deleted
-      if( 'device' == $db_question->type )
-      {
-        $value = util::json_decode( $this->value );
-        if( is_object( $value ) )
-        {
-          $dkna = property_exists( $value, 'dkna' ) && $value->dkna;
-          $refuse = property_exists( $value, 'refuse' ) && $value->refuse;
-        }
-      }
     }
   }
 
@@ -186,12 +175,7 @@ class answer extends \cenozo\database\record
     if( is_null( $value ) ) return false;
 
     // dkna/refused questions are always complete
-    if( is_object( $value ) )
-    {
-      $dkna = property_exists( $value, 'dkna' ) && $value->dkna;
-      $refuse = property_exists( $value, 'refuse' ) && $value->refuse;
-      if( $dkna || $refuse ) return true;
-    }
+    if( $this->is_dkna_or_refuse() ) return true;
 
     if( 'list' == $db_question->type )
     {
@@ -263,6 +247,49 @@ class answer extends \cenozo\database\record
     }
 
     return true;
+  }
+
+  /**
+   * Sets the answer to "Don't Know / No Answer"
+   */
+  public function set_dkna()
+  {
+    $db_answer->value = self::DKNA;
+  }
+
+  /**
+   * Sets the answer to "Refused"
+   */
+  public function set_refuse()
+  {
+    $db_answer->value = self::REFUSE;
+  }
+
+  /**
+   * Returns whether the answer is "Don't Know / No Answer"
+   * @return boolean
+   */
+  public function is_dkna()
+  {
+    return self::DKNA == $db_answer->value;
+  }
+
+  /**
+   * Returns whether the answer is "Refused"
+   * @return boolean
+   */
+  public function is_refuse()
+  {
+    return self::REFUSE == $db_answer->value;
+  }
+
+  /**
+   * Returns whether the answer is either "Don't Know / No Answer" or "Refused"
+   * @return boolean
+   */
+  public function is_dkna_or_refuse()
+  {
+    return in_array( $db_answer->value, [self::DKNA, self::REFUSE] );
   }
 
   /**
@@ -371,4 +398,16 @@ class answer extends \cenozo\database\record
   {
     return glob( sprintf( '%s/*', $this->get_data_directory() ) );
   }
+
+  /**
+   * The JSON representation of "Don't Know / No Answer"
+   * @const string
+   */
+  const DKNA = '{"dkna":true}';
+
+  /**
+   * The JSON representation of "Refused"
+   * @const string
+   */
+  const REFUSE = '{"refuse":true}';
 }
