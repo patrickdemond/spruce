@@ -6,12 +6,6 @@
  */
 
 /**
- * Make sure to fill in the following
- */
-
-define( 'URL', 'https://localhost/<PATH-TO-APPLICATION>/api/' );
-
-/**
  * Do not edit any of the following lines
  */
 
