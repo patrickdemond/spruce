@@ -2322,6 +2322,10 @@ class qnaire extends \cenozo\database\record
         $db_respondent->start_datetime = $participant->datetime;
         $db_respondent->save();
       }
+
+      // Since some attributes may require access to a remote server we must immediately
+      // create the response record to make sure attributes are available
+      $db_respondent->get_current_response( true );
     }
   }
 
