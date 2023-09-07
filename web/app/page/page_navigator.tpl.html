@@ -66,7 +66,7 @@
               ng-if="model.renderModel.data.stages"
               ng-click="model.renderModel.runStageOperation( null, 'pause' )"
               class="btn btn-default larger"
-              style="width: 12em;">Pause Stage</button>
+              style="width: 12em;">{{ text( 'misc.pause' ) }}</button>
       <button type="button"
               ng-disabled="!isComplete || model.renderModel.working || model.renderModel.checkForIncompleteQuestions()"
               ng-click="model.renderModel.proceed()"

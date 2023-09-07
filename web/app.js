@@ -790,6 +790,7 @@ cenozo.service("CnTranslationHelper", [
           begin: { en: "Begin", fr: "Commencer" },
           next: { en: "Next", fr: "Suivant" },
           previous: { en: "Previous", fr: "Précédent" },
+          pause: { en: "Pause", fr: "Interrompre" },
           submit: { en: "Submit", fr: "Envoyer" },
           submitWaitTitle: { en: "Please Wait", fr: "Veuillez patienter" },
           submitWaitMessage: {
