@@ -13,6 +13,11 @@ use cenozo\lib, cenozo\log;
  */
 class util extends \cenozo\util
 {
+  /**
+   * Used by the respondent and response service modules to prepare their select and modifier objects
+   * @param database\select $select
+   * @param database\modifier $modifier
+   */
   public static function prepare_respondent_read_objects( $select, $modifier )
   {
     if( $select->has_column( 'page_progress' ) )
@@ -168,6 +173,40 @@ class util extends \cenozo\util
   }
 
   /**
+   * Returns a curl object used by detached instances
+   * @param string $url The url to connect to
+   * @return cURL handle
+   */
+  public static function get_detached_curl_object( $url )
+  {
+    $setting_manager = lib::create( 'business\setting_manager' );
+
+    $curl = curl_init();
+    curl_setopt( $curl, CURLOPT_URL, $url );
+    curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
+    curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+    curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, 5 );
+    curl_setopt(
+      $curl,
+      CURLOPT_HTTPHEADER,
+      [
+        sprintf(
+          'Authorization: Basic %s',
+          base64_encode(
+            sprintf(
+              '%s:%s',
+              $setting_manager->get_setting( 'general', 'machine_username' ),
+              $setting_manager->get_setting( 'general', 'machine_password' )
+            )
+          )
+        )
+      ]
+    );
+
+    return $curl;
+  }
+
+  /**
    * Utility function used to download data from the parent instance
    * @param string $subject The subject to download (study, consent_type, etc...)
    * @param string $url_postfix A string to add to the end of the remote URL (after api/<subject>)
@@ -178,9 +217,6 @@ class util extends \cenozo\util
     $setting_manager = lib::create( 'business\setting_manager' );
     if( !$setting_manager->get_setting( 'general', 'detached' ) || is_null( PARENT_INSTANCE_URL ) ) return NULL;
 
-    $machine_username = $setting_manager->get_setting( 'general', 'machine_username' );
-    $machine_password = $setting_manager->get_setting( 'general', 'machine_password' );
-
     // get subject data from the parent
     $url = sprintf(
       '%s/api/%s%s',
@@ -188,19 +224,7 @@ class util extends \cenozo\util
       $subject,
       $url_postfix
     );
-    $curl = curl_init();
-    curl_setopt( $curl, CURLOPT_URL, $url );
-    curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
-    curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
-    curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, 5 );
-    curl_setopt(
-      $curl,
-      CURLOPT_HTTPHEADER,
-      array( sprintf(
-        'Authorization: Basic %s',
-        base64_encode( sprintf( '%s:%s', $machine_username, $machine_password ) )
-      ) )
-    );
+    $curl = static::get_detached_curl_object( $url );
 
     $response = curl_exec( $curl );
     if( curl_errno( $curl ) )

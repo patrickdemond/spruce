@@ -43,7 +43,7 @@ class qnaire extends \cenozo\database\record
       throw lib::create( 'exception\argument', 'return_alt', $return_alt, __METHOD__ );
 
     // artificially create a relationship between response and qnaire
-    $return_value = 'count' == $return_alt ? 0 : array();
+    $return_value = 'count' == $return_alt ? 0 : [];
     if( 'response' == $record_type )
     {
       if( is_null( $this->id ) )
@@ -206,10 +206,7 @@ class qnaire extends \cenozo\database\record
     }
 
     $module_class_name = lib::get_class_name( 'database\module' );
-    return $module_class_name::get_unique_record(
-      array( 'qnaire_id', 'rank' ),
-      array( $this->id, 1 )
-    );
+    return $module_class_name::get_unique_record( ['qnaire_id', 'rank'], [$this->id, 1] );
   }
 
   /**
@@ -227,8 +224,8 @@ class qnaire extends \cenozo\database\record
 
     $module_class_name = lib::get_class_name( 'database\module' );
     return $module_class_name::get_unique_record(
-      array( 'qnaire_id', 'rank' ),
-      array( $this->id, $this->get_module_count() )
+      ['qnaire_id', 'rank'],
+      [$this->id, $this->get_module_count()]
     );
   }
 
@@ -299,7 +296,7 @@ class qnaire extends \cenozo\database\record
   {
     $reminder_description_class_name = lib::get_class_name( 'database\reminder_description' );
 
-    $ignore_columns = array( 'id', 'update_timestamp', 'create_timestamp', 'name' );
+    $ignore_columns = ['id', 'update_timestamp', 'create_timestamp', 'name'];
     foreach( $this->get_column_names() as $column_name )
       if( !in_array( $column_name, $ignore_columns ) )
         $this->$column_name = $db_source_qnaire->$column_name;
@@ -312,7 +309,7 @@ class qnaire extends \cenozo\database\record
     // copy all languages
     $language_sel = lib::create( 'database\select' );
     $language_sel->add_table_column( 'language', 'id' );
-    $language_id_list = array();
+    $language_id_list = [];
     foreach( $db_source_qnaire->get_language_list( $language_sel ) as $language )
       $language_id_list[] = $language['id'];
     $this->add_language( $language_id_list );
@@ -352,12 +349,12 @@ class qnaire extends \cenozo\database\record
       foreach( $db_source_reminder->get_reminder_description_object_list() as $db_source_reminder_description )
       {
         $db_reminder_description = $reminder_description_class_name::get_unique_record(
-          array( 'reminder_id', 'language_id', 'type' ),
-          array(
+          ['reminder_id', 'language_id', 'type'],
+          [
             $db_reminder->id,
             $db_source_reminder_description->language_id,
             $db_source_reminder_description->type
-          )
+          ]
         );
         $db_reminder_description->value = $db_source_reminder_description->value;
         $db_reminder_description->save();
@@ -566,8 +563,8 @@ class qnaire extends \cenozo\database\record
   {
     $qnaire_description_class_name = lib::get_class_name( 'database\qnaire_description' );
     return $qnaire_description_class_name::get_unique_record(
-      array( 'qnaire_id', 'language_id', 'type' ),
-      array( $this->id, $db_language->id, $type )
+      ['qnaire_id', 'language_id', 'type'],
+      [$this->id, $db_language->id, $type]
     );
   }
 
@@ -725,12 +722,12 @@ class qnaire extends \cenozo\database\record
       $db_participant = is_null( $db_identifier )
                       ? $participant_class_name::get_unique_record( 'uid', $identifier )
                       : $participant_identifier_class_name::get_unique_record(
-                          array( 'identifier_id', 'value' ),
-                          array( $db_identifier->id, $identifier )
+                          ['identifier_id', 'value'],
+                          [$db_identifier->id, $identifier]
                         )->get_participant();
       $db_respondent = $respondent_class_name::get_unique_record(
-        array( 'qnaire_id', 'participant_id' ),
-        array( $this->id, $db_participant->id )
+        ['qnaire_id', 'participant_id'],
+        [$this->id, $db_participant->id]
       );
       $db_respondent->send_all_mail();
     }
@@ -792,21 +789,7 @@ class qnaire extends \cenozo\database\record
       BEARTOOTH_INSTANCE_URL,
       is_null( $this->appointment_type ) ? '' : sprintf( '?type=%s', $this->appointment_type )
     );
-    $curl = curl_init();
-    curl_setopt( $curl, CURLOPT_URL, $url );
-    curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
-    curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
-    curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, 5 );
-    curl_setopt(
-      $curl,
-      CURLOPT_HTTPHEADER,
-      array(
-        sprintf(
-          'Authorization: Basic %s',
-          base64_encode( sprintf( '%s:%s', $machine_username, $machine_password ) )
-        )
-      )
-    );
+    $curl = util::get_detached_curl_object( $url );
 
     $response = curl_exec( $curl );
     if( curl_errno( $curl ) )
@@ -838,19 +821,7 @@ class qnaire extends \cenozo\database\record
       PARENT_INSTANCE_URL,
       util::full_urlencode( $this->name )
     );
-    $curl = curl_init();
-    curl_setopt( $curl, CURLOPT_URL, $url );
-    curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
-    curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
-    curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, 5 );
-    curl_setopt(
-      $curl,
-      CURLOPT_HTTPHEADER,
-      array( sprintf(
-        'Authorization: Basic %s',
-        base64_encode( sprintf( '%s:%s', $machine_username, $machine_password ) )
-      ) )
-    );
+    $curl = util::get_detached_curl_object( $url );;
 
     $response = curl_exec( $curl );
     if( curl_errno( $curl ) )
@@ -939,10 +910,10 @@ class qnaire extends \cenozo\database\record
     $machine_password = $setting_manager->get_setting( 'general', 'machine_password' );
 
     // encode all respondent and response data into an array
-    $data = array( 'participant' => array(), 'respondent' => array() );
+    $data = ['participant' => [], 'respondent' => []];
 
     // if no respondent is provided then export all completed and un-exported respondents
-    $respondent_list = array();
+    $respondent_list = [];
     if( is_null( $db_specific_respondent ) )
     {
       $respondent_mod = lib::create( 'database\modifier' );
@@ -966,9 +937,9 @@ class qnaire extends \cenozo\database\record
 
       $db_address = $db_participant->get_primary_address();
 
-      $participant = array(
+      $participant = [
         'uid' => $db_participant->uid,
-        'participant' => array(
+        'participant' => [
           'honorific' => $db_participant->honorific,
           'first_name' => $db_participant->first_name,
           'other_name' => $db_participant->other_name,
@@ -984,28 +955,28 @@ class qnaire extends \cenozo\database\record
           'override_stratum' => $db_participant->override_stratum,
           'sex' => $db_participant->sex,
           'withdraw_third_party' => $db_participant->withdraw_third_party
-        ),
-        'address' => array(
+        ],
+        'address' => [
           'address1' => $db_address->address1,
           'address2' => $db_address->address2,
           'city' => $db_address->city,
           'postcode' => $db_address->postcode
-        ),
-        'interview' => array(
+        ],
+        'interview' => [
           'datetime' => $db_respondent->end_datetime->format( 'c' )
-        )
-      );
+        ]
+      ];
 
-      $respondent = array(
+      $respondent = [
         'uid' => $db_participant->uid,
         'token' => $db_respondent->token,
         'start_datetime' => $db_respondent->start_datetime->format( 'c' ),
         'end_datetime' => $db_respondent->end_datetime->format( 'c' ),
-        'response_list' => array()
-      );
+        'response_list' => []
+      ];
 
       // add all responses belonging to the respondent
-      $comment_list = array();
+      $comment_list = [];
       $response_mod = lib::create( 'database\modifier' );
       $response_mod->order( 'rank' );
       foreach( $db_respondent->get_response_object_list( $response_mod ) as $db_response )
@@ -1014,7 +985,7 @@ class qnaire extends \cenozo\database\record
 
         $db_page = $db_response->get_page();
         $db_module = is_null( $db_page ) ? NULL : $db_page->get_module();
-        $response = array(
+        $response = [
           'rank' => $db_response->rank,
           'qnaire_version' => $db_response->qnaire_version,
           'language' => $db_response->get_language()->code,
@@ -1025,8 +996,8 @@ class qnaire extends \cenozo\database\record
           'start_datetime' => $db_response->start_datetime->format( 'c' ),
           'last_datetime' => $db_response->last_datetime->format( 'c' ),
           'comments' => $db_response->comments,
-          'answer_list' => array()
-        );
+          'answer_list' => []
+        ];
 
         $answer_sel = lib::create( 'database\select' );
         $answer_sel->add_table_column( 'question', 'name', 'question' );
@@ -1073,7 +1044,7 @@ class qnaire extends \cenozo\database\record
 
         if( $this->stages )
         {
-          $response['stage_list'] = array();
+          $response['stage_list'] = [];
 
           $response_stage_sel = lib::create( 'database\select' );
           $response_stage_sel->add_table_column( 'stage', 'rank', 'stage' );
@@ -1107,7 +1078,7 @@ class qnaire extends \cenozo\database\record
       $data['respondent'][] = $respondent;
     }
 
-    $result = array();
+    $result = [];
     if( 0 < count( $data['respondent'] ) )
     {
       // First export the data to the master pine application
@@ -1116,24 +1087,9 @@ class qnaire extends \cenozo\database\record
         PARENT_INSTANCE_URL,
         util::full_urlencode( $this->name )
       );
-      $curl = curl_init();
-      curl_setopt( $curl, CURLOPT_URL, $url );
-      curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
-      curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
-      curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, 5 );
+      $curl = util::get_detached_curl_object( $url );;
       curl_setopt( $curl, CURLOPT_POST, true );
       curl_setopt( $curl, CURLOPT_POSTFIELDS, util::json_encode( $data['respondent'] ) );
-      curl_setopt(
-        $curl,
-        CURLOPT_HTTPHEADER,
-        array(
-          sprintf(
-            'Authorization: Basic %s',
-            base64_encode( sprintf( '%s:%s', $machine_username, $machine_password ) )
-          ),
-          'Content-Type: application/json'
-        )
-      );
 
       $response = curl_exec( $curl );
       if( curl_errno( $curl ) )
@@ -1196,24 +1152,9 @@ class qnaire extends \cenozo\database\record
     {
       // Now export the participant's details to beartooth
       $url = sprintf( '%s/api/pine', BEARTOOTH_INSTANCE_URL );
-      $curl = curl_init();
-      curl_setopt( $curl, CURLOPT_URL, $url );
-      curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
-      curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
-      curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, 5 );
+      $curl = util::get_detached_curl_object( $url );;
       curl_setopt( $curl, CURLOPT_POST, true );
       curl_setopt( $curl, CURLOPT_POSTFIELDS, util::json_encode( $data['participant'] ) );
-      curl_setopt(
-        $curl,
-        CURLOPT_HTTPHEADER,
-        array(
-          sprintf(
-            'Authorization: Basic %s',
-            base64_encode( sprintf( '%s:%s', $machine_username, $machine_password ) )
-          ),
-          'Content-Type: application/json'
-        )
-      );
 
       $response = curl_exec( $curl );
       if( curl_errno( $curl ) )
@@ -1834,8 +1775,8 @@ class qnaire extends \cenozo\database\record
       if( !is_null( $db_participant ) )
       {
         $db_respondent = $respondent_class_name::get_unique_record(
-          array( 'qnaire_id', 'participant_id' ),
-          array( $this->id, $db_participant->id )
+          ['qnaire_id', 'participant_id'],
+          [$this->id, $db_participant->id]
         );
 
         $new_respondent = false;
@@ -1859,8 +1800,8 @@ class qnaire extends \cenozo\database\record
           if( !$new_respondent )
           { // only bother to check for an existing response if the respondent isn't new
             $db_response = $response_class_name::get_unique_record(
-              array( 'respondent_id', 'rank' ),
-              array( $db_respondent->id, $response->rank )
+              ['respondent_id', 'rank'],
+              [$db_respondent->id, $response->rank]
             );
           }
 
@@ -1875,14 +1816,14 @@ class qnaire extends \cenozo\database\record
           }
 
           $db_module = $module_class_name::get_unique_record(
-            array( 'qnaire_id', 'name' ),
-            array( $this->id, $response->module )
+            ['qnaire_id', 'name'],
+            [$this->id, $response->module]
           );
           $db_page = is_null( $db_module )
                    ? NULL
                    : $page_class_name::get_unique_record(
-                       array( 'module_id', 'name' ),
-                       array( $db_module->id, $response->page )
+                       ['module_id', 'name'],
+                       [$db_module->id, $response->page]
                      );
 
           $db_response->language_id = $language_class_name::get_unique_record( 'code', $response->language )->id;
@@ -1900,8 +1841,8 @@ class qnaire extends \cenozo\database\record
             if( !$new_response )
             { // only bother to check for an existing answer if the response isn't new
               $db_answer = $answer_class_name::get_unique_record(
-                array( 'response_id', 'question_id' ),
-                array( $db_response->id, $db_question->id )
+                ['response_id', 'question_id'],
+                [$db_response->id, $db_question->id]
               );
             }
 
@@ -1954,13 +1895,13 @@ class qnaire extends \cenozo\database\record
             foreach( $response->stage_list as $stage )
             {
               $db_stage = $stage_class_name::get_unique_record(
-                array( 'qnaire_id', 'rank' ),
-                array( $this->id, $stage->stage )
+                ['qnaire_id', 'rank'],
+                [$this->id, $stage->stage]
               );
 
               $db_response_stage = $response_stage_class_name::get_unique_record(
-                array( 'response_id', 'stage_id' ),
-                array( $db_response->id, $db_stage->id )
+                ['response_id', 'stage_id'],
+                [$db_response->id, $db_stage->id]
               );
 
               $db_user = $user_class_name::get_unique_record( 'name', $stage->user );
@@ -1970,8 +1911,8 @@ class qnaire extends \cenozo\database\record
               if( !is_null( $stage->deviation_type ) )
               {
                 $db_deviation_type = $deviation_type_class_name::get_unique_record(
-                  array( 'qnaire_id', 'type', 'name' ),
-                  array( $this->id, $stage->deviation_type, $stage->deviation_name )
+                  ['qnaire_id', 'type', 'name'],
+                  [$this->id, $stage->deviation_type, $stage->deviation_name]
                 );
               }
 
@@ -2064,21 +2005,7 @@ class qnaire extends \cenozo\database\record
       BEARTOOTH_INSTANCE_URL,
       is_null( $this->appointment_type ) ? '' : sprintf( '?type=%s', $this->appointment_type )
     );
-    $curl = curl_init();
-    curl_setopt( $curl, CURLOPT_URL, $url );
-    curl_setopt( $curl, CURLOPT_SSL_VERIFYPEER, false );
-    curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
-    curl_setopt( $curl, CURLOPT_CONNECTTIMEOUT, 5 );
-    curl_setopt(
-      $curl,
-      CURLOPT_HTTPHEADER,
-      array(
-        sprintf(
-          'Authorization: Basic %s',
-          base64_encode( sprintf( '%s:%s', $machine_username, $machine_password ) )
-        )
-      )
-    );
+    $curl = util::get_detached_curl_object( $url );;
 
     $response = curl_exec( $curl );
     if( curl_errno( $curl ) )
@@ -2227,10 +2154,10 @@ class qnaire extends \cenozo\database\record
       {
         // entries have the format: identifier_name$value, convert to an associative array
         $participant_identifier_data = explode( '$', $participant_identifier_entry );
-        $participant_identifier = array(
+        $participant_identifier = [
           'name' => $participant_identifier_data[0],
           'value' => $participant_identifier_data[1]
-        );
+        ];
         $db_identifier = $identifier_class_name::get_unique_record( 'name', $participant_identifier['name'] );
 
         // create any missing identifiers
@@ -2272,7 +2199,7 @@ class qnaire extends \cenozo\database\record
       {
         // entries have the format: consent_type_name$accept$datetime, convert to an associative array
         $consent_data = explode( '$', $consent_entry );
-        $consent = array( 'consent_type' => $consent_data[0] );
+        $consent = ['consent_type' => $consent_data[0]];
         if( array_key_exists( 1, $consent_data ) ) $consent['accept'] = $consent_data[1];
         if( array_key_exists( 2, $consent_data ) ) $consent['datetime'] = $consent_data[2];
 
@@ -2319,8 +2246,8 @@ class qnaire extends \cenozo\database\record
 
       // add the participant's respondent file
       $db_respondent = $respondent_class_name::get_unique_record(
-        array( 'qnaire_id', 'participant_id' ),
-        array( $this->id, $db_participant->id )
+        ['qnaire_id', 'participant_id'],
+        [$this->id, $db_participant->id]
       );
 
       if( is_null( $db_respondent ) )
@@ -2355,8 +2282,8 @@ class qnaire extends \cenozo\database\record
       $db_participant = is_null( $db_identifier )
                       ? $participant_class_name::get_unique_record( 'uid', $identifier )
                       : $participant_identifier_class_name::get_unique_record(
-                          array( 'identifier_id', 'value' ),
-                          array( $db_identifier->id, $identifier )
+                          ['identifier_id', 'value'],
+                          [$db_identifier->id, $identifier]
                         )->get_participant();
       $db_respondent = lib::create( 'database\respondent' );
       $db_respondent->qnaire_id = $this->id;
@@ -2460,7 +2387,7 @@ class qnaire extends \cenozo\database\record
    */
   public function get_output_column_list( $descriptions = false, $export_only = false )
   {
-    $column_list = array();
+    $column_list = [];
 
     // first get a list of all columns to include in the data
     $module_mod = lib::create( 'database\modifier' );
@@ -2494,7 +2421,7 @@ class qnaire extends \cenozo\database\record
    * @param boolean $exporting Whether the data is being exported (some questions are marked to not be exported)
    * @param boolean $attributes Whether to include attribute values
    * @param boolean $answers_only Whether to restrict responses to those with one or more answers
-   * @return array( 'header', 'data' )
+   * @return ['header', 'data']
    */
   public function get_response_data(
     $modifier = NULL, $exporting = false, $attributes = false, $answers_only = false )
@@ -2506,10 +2433,10 @@ class qnaire extends \cenozo\database\record
     $answer_class_name = lib::get_class_name( 'database\answer' );
     $response_attribute_class_name = lib::get_class_name( 'database\response_attribute' );
     $column_list = $this->get_output_column_list( false, $exporting ); // exclude questions not marked for export
-    $attribute_list = array();
+    $attribute_list = [];
 
     // now loop through all responses and fill in the data array
-    $data = array();
+    $data = [];
     $response_mod = lib::create( 'database\modifier' );
     $response_mod->join( 'respondent', 'response.respondent_id', 'respondent.id' );
     $response_mod->left_join( 'participant', 'respondent.participant_id', 'participant.id' );
@@ -2553,14 +2480,14 @@ class qnaire extends \cenozo\database\record
     $answer_mod->order( 'question_id' );
     if( !is_null( $modifier ) ) $answer_mod->merge( $modifier );
 
-    $answer_data = array();
+    $answer_data = [];
     foreach( $answer_class_name::select( $answer_sel, $answer_mod ) as $answer )
     {
       if( !array_key_exists( $answer['response_id'], $answer_data ) ) $answer_data[$answer['response_id']] = [];
       $answer_data[$answer['response_id']][$answer['question_id']] = $answer['value'];
     }
 
-    $response_attribute_data = array();
+    $response_attribute_data = [];
     if( $attributes )
     {
       // get a list of all attributes for this qnaire
@@ -2603,14 +2530,14 @@ class qnaire extends \cenozo\database\record
       // if requested, don't add responses with no answers
       if( $answers_only && is_null( $answer_list ) ) continue;
 
-      $data_row = array(
+      $data_row = [
         $response['uid'],
         $response['rank'],
         $response['qnaire_version'],
         $response['submitted'] ? 1 : 0,
         $response['start_datetime'],
         $response['last_datetime']
-      );
+      ];
 
       foreach( $column_list as $column_name => $column )
       {
@@ -2749,7 +2676,7 @@ class qnaire extends \cenozo\database\record
     $header = array_keys( $column_list );
     array_unshift( $header, 'uid', 'rank', 'qnaire_version', 'submitted', 'start_datetime', 'last_datetime' );
     if( $attributes ) foreach( $attribute_list as $attribute ) $header[] = sprintf( 'attribute:%s', $attribute );
-    return array( 'header' => $header, 'data' => $data );
+    return ['header' => $header, 'data' => $data];
   }
 
   /**
@@ -2768,8 +2695,8 @@ class qnaire extends \cenozo\database\record
       // images may have a width argument, for example: @name.width(123)@
       $width = array_key_exists( 3, $matches ) ? $matches[3][$index] : NULL;
       $db_embedded_file = $embedded_file_class_name::get_unique_record(
-        array( 'qnaire_id', 'name' ),
-        array( $this->id, $name )
+        ['qnaire_id', 'name'],
+        [$this->id, $name]
       );
       if( !is_null( $db_embedded_file ) )
       {
@@ -2821,8 +2748,8 @@ class qnaire extends \cenozo\database\record
     // made remove the offset/suffix
     $name_suffix = bin2hex( openssl_random_pseudo_bytes( 5 ) );
 
-    $difference_list = array();
-    $change_question_name_list = array();
+    $difference_list = [];
+    $change_question_name_list = [];
 
     foreach( $patch_object as $property => $value )
     {
@@ -2838,7 +2765,7 @@ class qnaire extends \cenozo\database\record
       else if( 'language_list' == $property )
       {
         // check every item in the patch object for additions
-        $add_list = array();
+        $add_list = [];
         foreach( $patch_object->language_list as $lang )
         {
           $language_mod = lib::create( 'database\modifier' );
@@ -2855,7 +2782,7 @@ class qnaire extends \cenozo\database\record
         }
 
         // check every item in this object for removals
-        $remove_list = array();
+        $remove_list = [];
         $language_sel = lib::create( 'database\select' );
         $language_sel->add_column( 'id' );
         $language_sel->add_column( 'code' );
@@ -2874,7 +2801,7 @@ class qnaire extends \cenozo\database\record
           }
         }
 
-        $diff_list = array();
+        $diff_list = [];
         if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
         if( 0 < count( $diff_list ) ) $difference_list['language_list'] = $diff_list;
@@ -2882,8 +2809,8 @@ class qnaire extends \cenozo\database\record
       else if( 'reminder_list' == $property )
       {
         // check every item in the patch object for additions and changes
-        $add_list = array();
-        $change_list = array();
+        $add_list = [];
+        $change_list = [];
         foreach( $patch_object->reminder_list as $reminder )
         {
           $reminder_mod = lib::create( 'database\modifier' );
@@ -2913,7 +2840,7 @@ class qnaire extends \cenozo\database\record
         }
 
         // check every item in this object for removals
-        $remove_list = array();
+        $remove_list = [];
         foreach( $this->get_reminder_object_list() as $db_reminder )
         {
           $found = false;
@@ -2935,7 +2862,7 @@ class qnaire extends \cenozo\database\record
           }
         }
 
-        $diff_list = array();
+        $diff_list = [];
         if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
         if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
@@ -2944,8 +2871,8 @@ class qnaire extends \cenozo\database\record
       else if( 'lookup_list' == $property )
       {
         // check every item in the patch object for additions and changes
-        $add_list = array();
-        $change_list = array();
+        $add_list = [];
+        $change_list = [];
         foreach( $patch_object->lookup_list as $lookup )
         {
           $db_lookup = $lookup_class_name::get_unique_record( 'name', $lookup->name );
@@ -2968,7 +2895,7 @@ class qnaire extends \cenozo\database\record
         }
 
         // check every item in this object for removals (lookups referenced by the qnaire only)
-        $remove_list = array();
+        $remove_list = [];
         foreach( $this->get_lookup_object_list() as $db_lookup )
         {
           $found = false;
@@ -2988,7 +2915,7 @@ class qnaire extends \cenozo\database\record
           }
         }
 
-        $diff_list = array();
+        $diff_list = [];
         if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
         if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
@@ -2997,13 +2924,13 @@ class qnaire extends \cenozo\database\record
       else if( 'device_list' == $property )
       {
         // check every item in the patch object for additions and changes
-        $add_list = array();
-        $change_list = array();
+        $add_list = [];
+        $change_list = [];
         foreach( $patch_object->device_list as $device )
         {
           $db_device = $device_class_name::get_unique_record(
-            array( 'qnaire_id', 'name' ),
-            array( $this->id, $device->name )
+            ['qnaire_id', 'name'],
+            [$this->id, $device->name]
           );
 
           if( is_null( $db_device ) )
@@ -3024,7 +2951,7 @@ class qnaire extends \cenozo\database\record
         }
 
         // check every item in this object for removals
-        $remove_list = array();
+        $remove_list = [];
         foreach( $this->get_device_object_list() as $db_device )
         {
           $found = false;
@@ -3044,7 +2971,7 @@ class qnaire extends \cenozo\database\record
           }
         }
 
-        $diff_list = array();
+        $diff_list = [];
         if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
         if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
@@ -3053,14 +2980,14 @@ class qnaire extends \cenozo\database\record
       else if( 'qnaire_report_list' == $property )
       {
         // check every item in the patch object for additions and changes
-        $add_list = array();
-        $change_list = array();
+        $add_list = [];
+        $change_list = [];
         foreach( $patch_object->qnaire_report_list as $qnaire_report )
         {
           $db_language = $language_class_name::get_unique_record( 'code', $qnaire_report->language );
           $db_qnaire_report = $qnaire_report_class_name::get_unique_record(
-            array( 'qnaire_id', 'language_id' ),
-            array( $this->id, $db_language->id )
+            ['qnaire_id', 'language_id'],
+            [$this->id, $db_language->id]
           );
 
           if( is_null( $db_qnaire_report ) )
@@ -3081,7 +3008,7 @@ class qnaire extends \cenozo\database\record
         }
 
         // check every item in this object for removals
-        $remove_list = array();
+        $remove_list = [];
         foreach( $this->get_qnaire_report_object_list() as $db_qnaire_report )
         {
           $language = $db_qnaire_report->get_language()->code;
@@ -3102,7 +3029,7 @@ class qnaire extends \cenozo\database\record
           }
         }
 
-        $diff_list = array();
+        $diff_list = [];
         if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
         if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
@@ -3111,12 +3038,12 @@ class qnaire extends \cenozo\database\record
       else if( 'deviation_type_list' == $property )
       {
         // check every item in the patch object for additions and changes
-        $add_list = array();
+        $add_list = [];
         foreach( $patch_object->deviation_type_list as $deviation_type )
         {
           $db_deviation_type = $deviation_type_class_name::get_unique_record(
-            array( 'qnaire_id', 'type', 'name' ),
-            array( $this->id, $deviation_type->type, $deviation_type->name )
+            ['qnaire_id', 'type', 'name'],
+            [$this->id, $deviation_type->type, $deviation_type->name]
           );
 
           if( is_null( $db_deviation_type ) )
@@ -3127,7 +3054,7 @@ class qnaire extends \cenozo\database\record
         }
 
         // check every item in this object for removals
-        $remove_list = array();
+        $remove_list = [];
         foreach( $this->get_deviation_type_object_list() as $db_deviation_type )
         {
           $found = false;
@@ -3152,7 +3079,7 @@ class qnaire extends \cenozo\database\record
           }
         }
 
-        $diff_list = array();
+        $diff_list = [];
         if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
         if( 0 < count( $diff_list ) ) $difference_list['deviation_type_list'] = $diff_list;
@@ -3160,13 +3087,13 @@ class qnaire extends \cenozo\database\record
       else if( 'attribute_list' == $property )
       {
         // check every item in the patch object for additions and changes
-        $add_list = array();
-        $change_list = array();
+        $add_list = [];
+        $change_list = [];
         foreach( $patch_object->attribute_list as $attribute )
         {
           $db_attribute = $attribute_class_name::get_unique_record(
-            array( 'qnaire_id', 'name' ),
-            array( $this->id, $attribute->name )
+            ['qnaire_id', 'name'],
+            [$this->id, $attribute->name]
           );
 
           if( is_null( $db_attribute ) )
@@ -3177,7 +3104,7 @@ class qnaire extends \cenozo\database\record
           else
           {
             // find and add all differences
-            $diff = array();
+            $diff = [];
             foreach( $attribute as $property => $value )
               if( $db_attribute->$property != $attribute->$property )
                 $diff[$property] = $attribute->$property;
@@ -3197,7 +3124,7 @@ class qnaire extends \cenozo\database\record
         }
 
         // check every item in this object for removals
-        $remove_list = array();
+        $remove_list = [];
         foreach( $this->get_attribute_object_list() as $db_attribute )
         {
           $found = false;
@@ -3217,7 +3144,7 @@ class qnaire extends \cenozo\database\record
           }
         }
 
-        $diff_list = array();
+        $diff_list = [];
         if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
         if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
@@ -3228,13 +3155,13 @@ class qnaire extends \cenozo\database\record
         // Note: the embedded_file object used to be called image, so just assume they are the same
 
         // check every item in the patch object for additions and changes
-        $add_list = array();
-        $change_list = array();
+        $add_list = [];
+        $change_list = [];
         foreach( $patch_object->embedded_file_list as $embedded_file )
         {
           $db_embedded_file = $embedded_file_class_name::get_unique_record(
-            array( 'qnaire_id', 'name' ),
-            array( $this->id, $embedded_file->name )
+            ['qnaire_id', 'name'],
+            [$this->id, $embedded_file->name]
           );
 
           if( is_null( $db_embedded_file ) )
@@ -3245,7 +3172,7 @@ class qnaire extends \cenozo\database\record
           else
           {
             // find and add all differences
-            $diff = array();
+            $diff = [];
             foreach( $embedded_file as $property => $value )
               if( $db_embedded_file->$property != $embedded_file->$property )
                 $diff[$property] = $embedded_file->$property;
@@ -3266,7 +3193,7 @@ class qnaire extends \cenozo\database\record
         }
 
         // check every item in this object for removals
-        $remove_list = array();
+        $remove_list = [];
         foreach( $this->get_embedded_file_object_list() as $db_embedded_file )
         {
           $found = false;
@@ -3286,7 +3213,7 @@ class qnaire extends \cenozo\database\record
           }
         }
 
-        $diff_list = array();
+        $diff_list = [];
         if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
         if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
@@ -3295,14 +3222,14 @@ class qnaire extends \cenozo\database\record
       else if( 'qnaire_description_list' == $property )
       {
         // check every item in the patch object for changes (additions aren't possible)
-        $change_list = array();
+        $change_list = [];
         foreach( $patch_object->qnaire_description_list as $qnaire_description )
         {
           $db_language = $language_class_name::get_unique_record( 'code', $qnaire_description->language );
           $db_qnaire_description = $this->get_description( $qnaire_description->type, $db_language );
 
           // find and add all differences
-          $diff = array();
+          $diff = [];
           foreach( $qnaire_description as $property => $value )
             if( 'language' != $property && $db_qnaire_description->$property != $qnaire_description->$property )
               $diff[$property] = $qnaire_description->$property;
@@ -3322,28 +3249,28 @@ class qnaire extends \cenozo\database\record
           }
         }
 
-        $diff_list = array();
+        $diff_list = [];
         if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
         if( 0 < count( $diff_list ) ) $difference_list['qnaire_description_list'] = $diff_list;
       }
       else if( 'module_list' == $property )
       {
         // check every item in the patch object for additions and changes
-        $add_list = array();
-        $change_list = array();
+        $add_list = [];
+        $change_list = [];
         foreach( $patch_object->module_list as $module )
         {
           // match module by name or rank
           $db_module = $module_class_name::get_unique_record(
-            array( 'qnaire_id', 'name' ),
-            array( $this->id, $module->name )
+            ['qnaire_id', 'name'],
+            [$this->id, $module->name]
           );
           if( is_null( $db_module ) )
           {
             // we may have renamed the module, so see if it exists exactly the same under the same rank
             $db_module = $module_class_name::get_unique_record(
-              array( 'qnaire_id', 'rank' ),
-              array( $this->id, $module->rank )
+              ['qnaire_id', 'rank'],
+              [$this->id, $module->rank]
             );
             if( !is_null( $db_module ) )
             {
@@ -3384,7 +3311,7 @@ class qnaire extends \cenozo\database\record
         }
 
         // check every item in this object for removals
-        $remove_list = array();
+        $remove_list = [];
         $module_mod = lib::create( 'database\modifier' );
         $module_mod->order( 'rank' );
         foreach( $this->get_module_object_list( $module_mod ) as $db_module )
@@ -3410,7 +3337,7 @@ class qnaire extends \cenozo\database\record
           }
         }
 
-        $diff_list = array();
+        $diff_list = [];
         if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
         if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
@@ -3446,21 +3373,21 @@ class qnaire extends \cenozo\database\record
       else if( 'stage_list' == $property )
       {
         // check every item in the patch object for additions and changes
-        $add_list = array();
-        $change_list = array();
+        $add_list = [];
+        $change_list = [];
         foreach( $patch_object->stage_list as $stage )
         {
           // match stage by name or rank
           $db_stage = $stage_class_name::get_unique_record(
-            array( 'qnaire_id', 'name' ),
-            array( $this->id, $stage->name )
+            ['qnaire_id', 'name'],
+            [$this->id, $stage->name]
           );
           if( is_null( $db_stage ) )
           {
             // we may have renamed the stage, so see if it exists exactly the same under the same rank
             $db_stage = $stage_class_name::get_unique_record(
-              array( 'qnaire_id', 'rank' ),
-              array( $this->id, $stage->rank )
+              ['qnaire_id', 'rank'],
+              [$this->id, $stage->rank]
             );
             if( !is_null( $db_stage ) )
             {
@@ -3498,7 +3425,7 @@ class qnaire extends \cenozo\database\record
         }
 
         // check every item in this object for removals
-        $remove_list = array();
+        $remove_list = [];
         $stage_mod = lib::create( 'database\modifier' );
         $stage_mod->order( 'rank' );
         foreach( $this->get_stage_object_list( $stage_mod ) as $db_stage )
@@ -3524,7 +3451,7 @@ class qnaire extends \cenozo\database\record
           }
         }
 
-        $diff_list = array();
+        $diff_list = [];
         if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
         if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
@@ -3533,7 +3460,7 @@ class qnaire extends \cenozo\database\record
       else if( 'qnaire_consent_type_confirm_list' == $property )
       {
         // check every item in the patch object for additions
-        $add_list = array();
+        $add_list = [];
         foreach( $patch_object->qnaire_consent_type_confirm_list as $qnaire_consent_type_confirm )
         {
           $db_consent_type = $consent_type_class_name::get_unique_record(
@@ -3556,8 +3483,8 @@ class qnaire extends \cenozo\database\record
           else
           {
             $db_qnaire_consent_type_confirm = $qnaire_consent_type_confirm_class_name::get_unique_record(
-              array( 'qnaire_id', 'consent_type_id' ),
-              array( $this->id, $db_consent_type->id )
+              ['qnaire_id', 'consent_type_id'],
+              [$this->id, $db_consent_type->id]
             );
 
             if( is_null( $db_qnaire_consent_type_confirm ) )
@@ -3575,7 +3502,7 @@ class qnaire extends \cenozo\database\record
         }
 
         // check every item in this object for removals
-        $remove_list = array();
+        $remove_list = [];
         foreach( $this->get_qnaire_consent_type_confirm_object_list() as $db_qnaire_consent_type_confirm )
         {
           $consent_type_name = $db_qnaire_consent_type_confirm->get_consent_type()->name;
@@ -3598,7 +3525,7 @@ class qnaire extends \cenozo\database\record
           }
         }
 
-        $diff_list = array();
+        $diff_list = [];
         if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
         if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
@@ -3607,8 +3534,8 @@ class qnaire extends \cenozo\database\record
       else if( 'qnaire_participant_trigger_list' == $property )
       {
         // check every item in the patch object for additions and changes
-        $add_list = array();
-        $change_list = array();
+        $add_list = [];
+        $change_list = [];
         foreach( $patch_object->qnaire_participant_trigger_list as $qnaire_participant_trigger )
         {
           $db_question = $this->get_question(
@@ -3630,13 +3557,13 @@ class qnaire extends \cenozo\database\record
           }
 
           $db_qnaire_participant_trigger = $qnaire_participant_trigger_class_name::get_unique_record(
-            array( 'qnaire_id', 'question_id', 'answer_value', 'column_name' ),
-            array(
+            ['qnaire_id', 'question_id', 'answer_value', 'column_name'],
+            [
               $this->id,
               $db_question->id,
               $qnaire_participant_trigger->answer_value,
               $qnaire_participant_trigger->column_name
-            )
+            ]
           );
 
           if( is_null( $db_qnaire_participant_trigger ) )
@@ -3653,7 +3580,7 @@ class qnaire extends \cenozo\database\record
           else
           {
             // find and add all differences
-            $diff = array();
+            $diff = [];
             foreach( $qnaire_participant_trigger as $property => $value )
               if( 'question_name' != $property &&
                   $db_qnaire_participant_trigger->$property != $qnaire_participant_trigger->$property )
@@ -3681,7 +3608,7 @@ class qnaire extends \cenozo\database\record
         }
 
         // check every item in this object for removals
-        $remove_list = array();
+        $remove_list = [];
         foreach( $this->get_qnaire_participant_trigger_object_list() as $db_qnaire_participant_trigger )
         {
           $changed_name = array_search(
@@ -3720,7 +3647,7 @@ class qnaire extends \cenozo\database\record
           }
         }
 
-        $diff_list = array();
+        $diff_list = [];
         if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
         if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
@@ -3729,8 +3656,8 @@ class qnaire extends \cenozo\database\record
       else if( 'qnaire_consent_type_trigger_list' == $property )
       {
         // check every item in the patch object for additions and changes
-        $add_list = array();
-        $change_list = array();
+        $add_list = [];
+        $change_list = [];
         foreach( $patch_object->qnaire_consent_type_trigger_list as $qnaire_consent_type_trigger )
         {
           $db_consent_type = $consent_type_class_name::get_unique_record(
@@ -3771,13 +3698,13 @@ class qnaire extends \cenozo\database\record
             }
 
             $db_qnaire_consent_type_trigger = $qnaire_consent_type_trigger_class_name::get_unique_record(
-              array( 'qnaire_id', 'consent_type_id', 'question_id', 'answer_value' ),
-              array(
+              ['qnaire_id', 'consent_type_id', 'question_id', 'answer_value'],
+              [
                 $this->id,
                 $db_consent_type->id,
                 $db_question->id,
                 $qnaire_consent_type_trigger->answer_value
-              )
+              ]
             );
 
             if( is_null( $db_qnaire_consent_type_trigger ) )
@@ -3794,7 +3721,7 @@ class qnaire extends \cenozo\database\record
             else
             {
               // find and add all differences
-              $diff = array();
+              $diff = [];
               foreach( $qnaire_consent_type_trigger as $property => $value )
                 if( !in_array( $property, [ 'consent_type_name', 'question_name' ] ) &&
                     $db_qnaire_consent_type_trigger->$property != $qnaire_consent_type_trigger->$property )
@@ -3823,7 +3750,7 @@ class qnaire extends \cenozo\database\record
         }
 
         // check every item in this object for removals
-        $remove_list = array();
+        $remove_list = [];
         foreach( $this->get_qnaire_consent_type_trigger_object_list() as $db_qnaire_consent_type_trigger )
         {
           $consent_type_name = $db_qnaire_consent_type_trigger->get_consent_type()->name;
@@ -3863,7 +3790,7 @@ class qnaire extends \cenozo\database\record
           }
         }
 
-        $diff_list = array();
+        $diff_list = [];
         if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
         if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
@@ -3872,8 +3799,8 @@ class qnaire extends \cenozo\database\record
       else if( 'qnaire_alternate_consent_type_trigger_list' == $property )
       {
         // check every item in the patch object for additions and changes
-        $add_list = array();
-        $change_list = array();
+        $add_list = [];
+        $change_list = [];
         foreach( $patch_object->qnaire_alternate_consent_type_trigger_list as $qnaire_aconsent_type_trigger )
         {
           $db_aconsent_type = $alternate_consent_type_class_name::get_unique_record(
@@ -3915,13 +3842,13 @@ class qnaire extends \cenozo\database\record
             }
 
             $db_qnaire_aconsent_type_trigger = $qnaire_aconsent_type_trigger_class_name::get_unique_record(
-              array( 'qnaire_id', 'alternate_consent_type_id', 'question_id', 'answer_value' ),
-              array(
+              ['qnaire_id', 'alternate_consent_type_id', 'question_id', 'answer_value'],
+              [
                 $this->id,
                 $db_aconsent_type->id,
                 $db_question->id,
                 $qnaire_aconsent_type_trigger->answer_value
-              )
+              ]
             );
 
             if( is_null( $db_qnaire_aconsent_type_trigger ) )
@@ -3938,7 +3865,7 @@ class qnaire extends \cenozo\database\record
             else
             {
               // find and add all differences
-              $diff = array();
+              $diff = [];
               foreach( $qnaire_aconsent_type_trigger as $property => $value )
                 if( !in_array( $property, [ 'alternate_consent_type_name', 'question_name' ] ) &&
                     $db_qnaire_aconsent_type_trigger->$property != $qnaire_aconsent_type_trigger->$property )
@@ -3967,7 +3894,7 @@ class qnaire extends \cenozo\database\record
         }
 
         // check every item in this object for removals
-        $remove_list = array();
+        $remove_list = [];
         foreach( $this->get_qnaire_alternate_consent_type_trigger_object_list()
           as $db_qnaire_aconsent_type_trigger )
         {
@@ -4008,7 +3935,7 @@ class qnaire extends \cenozo\database\record
           }
         }
 
-        $diff_list = array();
+        $diff_list = [];
         if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
         if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
@@ -4017,8 +3944,8 @@ class qnaire extends \cenozo\database\record
       else if( 'qnaire_proxy_type_trigger_list' == $property )
       {
         // check every item in the patch object for additions and changes
-        $add_list = array();
-        $change_list = array();
+        $add_list = [];
+        $change_list = [];
         foreach( $patch_object->qnaire_proxy_type_trigger_list as $qnaire_proxy_type_trigger )
         {
           $db_proxy_type = $qnaire_proxy_type_trigger->proxy_type_name ?
@@ -4058,9 +3985,13 @@ class qnaire extends \cenozo\database\record
             }
 
             $db_qnaire_proxy_type_trigger = $qnaire_proxy_type_trigger_class_name::get_unique_record(
-              array( 'qnaire_id', 'proxy_type_id', 'question_id', 'answer_value' ),
-              array( $this->id, is_null( $db_proxy_type ) ? NULL : $db_proxy_type->id,
-                     $db_question->id, $qnaire_proxy_type_trigger->answer_value )
+              ['qnaire_id', 'proxy_type_id', 'question_id', 'answer_value'],
+              [
+                $this->id,
+                is_null( $db_proxy_type ) ? NULL : $db_proxy_type->id,
+                $db_question->id,
+                $qnaire_proxy_type_trigger->answer_value
+              ]
             );
 
             if( is_null( $db_qnaire_proxy_type_trigger ) )
@@ -4083,7 +4014,7 @@ class qnaire extends \cenozo\database\record
             else
             {
               // find and add all differences
-              $diff = array();
+              $diff = [];
               foreach( $qnaire_proxy_type_trigger as $property => $value )
                 if( !in_array( $property, [ 'proxy_type_name', 'question_name' ] ) &&
                     $db_qnaire_proxy_type_trigger->$property != $qnaire_proxy_type_trigger->$property )
@@ -4112,7 +4043,7 @@ class qnaire extends \cenozo\database\record
         }
 
         // check every item in this object for removals
-        $remove_list = array();
+        $remove_list = [];
         foreach( $this->get_qnaire_proxy_type_trigger_object_list() as $db_qnaire_proxy_type_trigger )
         {
           $db_proxy_type = $db_qnaire_proxy_type_trigger->get_proxy_type();
@@ -4151,7 +4082,7 @@ class qnaire extends \cenozo\database\record
           }
         }
 
-        $diff_list = array();
+        $diff_list = [];
         if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
         if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
@@ -4160,8 +4091,8 @@ class qnaire extends \cenozo\database\record
       else if( 'qnaire_equipment_type_trigger_list' == $property )
       {
         // check every item in the patch object for additions and changes
-        $add_list = array();
-        $change_list = array();
+        $add_list = [];
+        $change_list = [];
         foreach( $patch_object->qnaire_equipment_type_trigger_list as $qnaire_equipment_type_trigger )
         {
           $db_equipment_type = $equipment_type_class_name::get_unique_record(
@@ -4202,8 +4133,8 @@ class qnaire extends \cenozo\database\record
             }
 
             $db_qnaire_equipment_type_trigger = $qnaire_equipment_type_trigger_class_name::get_unique_record(
-              array( 'qnaire_id', 'equipment_type_id', 'question_id' ),
-              array( $this->id, $db_equipment_type->id, $db_question->id )
+              ['qnaire_id', 'equipment_type_id', 'question_id'],
+              [$this->id, $db_equipment_type->id, $db_question->id]
             );
 
             if( is_null( $db_qnaire_equipment_type_trigger ) )
@@ -4226,7 +4157,7 @@ class qnaire extends \cenozo\database\record
             else
             {
               // find and add all differences
-              $diff = array();
+              $diff = [];
               foreach( $qnaire_equipment_type_trigger as $property => $value )
                 if( !in_array( $property, [ 'equipment_type_name', 'question_name' ] ) &&
                     $db_qnaire_equipment_type_trigger->$property != $qnaire_equipment_type_trigger->$property )
@@ -4255,7 +4186,7 @@ class qnaire extends \cenozo\database\record
         }
 
         // check every item in this object for removals
-        $remove_list = array();
+        $remove_list = [];
         foreach( $this->get_qnaire_equipment_type_trigger_object_list() as $db_qnaire_equipment_type_trigger )
         {
           $db_equipment_type = $db_qnaire_equipment_type_trigger->get_equipment_type();
@@ -4294,7 +4225,7 @@ class qnaire extends \cenozo\database\record
           }
         }
 
-        $diff_list = array();
+        $diff_list = [];
         if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
         if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
@@ -4403,7 +4334,7 @@ class qnaire extends \cenozo\database\record
   public function generate( $type = 'export', $return_value = false )
   {
     $separator = "====================================================================================\n\n";
-    $qnaire_data = array(
+    $qnaire_data = [
       'base_language' => $this->get_base_language()->code,
       'name' => $this->name,
       'version' => $this->version,
@@ -4423,30 +4354,30 @@ class qnaire extends \cenozo\database\record
       'token_check' => $this->token_check,
       'description' => $this->description,
       'note' => $this->note,
-      'language_list' => array(),
-      'attribute_list' => array(),
-      'embedded_file_list' => array(),
-      'reminder_list' => array(),
-      'qnaire_description_list' => array(),
-      'lookup_list' => array()
-    );
+      'language_list' => [],
+      'attribute_list' => [],
+      'embedded_file_list' => [],
+      'reminder_list' => [],
+      'qnaire_description_list' => [],
+      'lookup_list' => []
+    ];
 
     if( $this->stages )
     {
-      $qnaire_data['device_list'] = array();
-      $qnaire_data['qnaire_report_list'] = array();
-      $qnaire_data['deviation_type_list'] = array();
-      $qnaire_data['stage_list'] = array();
+      $qnaire_data['device_list'] = [];
+      $qnaire_data['qnaire_report_list'] = [];
+      $qnaire_data['deviation_type_list'] = [];
+      $qnaire_data['stage_list'] = [];
     }
 
     // The following properties must come after the optional stage properties
-    $qnaire_data['module_list'] = array();
-    $qnaire_data['qnaire_participant_trigger_list'] = array();
-    $qnaire_data['qnaire_consent_type_confirm_list'] = array();
-    $qnaire_data['qnaire_consent_type_trigger_list'] = array();
-    $qnaire_data['qnaire_alternate_consent_type_trigger_list'] = array();
-    $qnaire_data['qnaire_proxy_type_trigger_list'] = array();
-    $qnaire_data['qnaire_equipment_type_trigger_list'] = array();
+    $qnaire_data['module_list'] = [];
+    $qnaire_data['qnaire_participant_trigger_list'] = [];
+    $qnaire_data['qnaire_consent_type_confirm_list'] = [];
+    $qnaire_data['qnaire_consent_type_trigger_list'] = [];
+    $qnaire_data['qnaire_alternate_consent_type_trigger_list'] = [];
+    $qnaire_data['qnaire_proxy_type_trigger_list'] = [];
+    $qnaire_data['qnaire_equipment_type_trigger_list'] = [];
 
     $language_sel = lib::create( 'database\select' );
     $language_sel->add_column( 'code' );
@@ -4512,11 +4443,11 @@ class qnaire extends \cenozo\database\record
 
     foreach( $this->get_reminder_object_list() as $db_reminder )
     {
-      $item = array(
+      $item = [
         'delay_offset' => $db_reminder->delay_offset,
         'delay_unit' => $db_reminder->delay_unit,
-        'reminder_description_list' => array()
-      );
+        'reminder_description_list' => []
+      ];
 
       $description_sel = lib::create( 'database\select' );
       $description_sel->add_table_column( 'language', 'code', 'language' );
@@ -4550,14 +4481,14 @@ class qnaire extends \cenozo\database\record
     $module_mod->order( 'module.rank' );
     foreach( $this->get_module_object_list( $module_mod ) as $db_module )
     {
-      $module = array(
+      $module = [
         'rank' => $db_module->rank,
         'name' => $db_module->name,
         'precondition' => $db_module->precondition,
         'note' => $db_module->note,
-        'module_description_list' => array(),
-        'page_list' => array()
-      );
+        'module_description_list' => [],
+        'page_list' => []
+      ];
 
       $description_sel = lib::create( 'database\select' );
       $description_sel->add_table_column( 'language', 'code', 'language' );
@@ -4577,15 +4508,15 @@ class qnaire extends \cenozo\database\record
       $page_mod->order( 'page.rank' );
       foreach( $db_module->get_page_object_list( $page_mod ) as $db_page )
       {
-        $page = array(
+        $page = [
           'rank' => $db_page->rank,
           'name' => $db_page->name,
           'precondition' => $db_page->precondition,
           'tabulate' => $db_page->tabulate,
           'note' => $db_page->note,
-          'page_description_list' => array(),
-          'question_list' => array()
-        );
+          'page_description_list' => [],
+          'question_list' => []
+        ];
 
         $description_sel = lib::create( 'database\select' );
         $description_sel->add_table_column( 'language', 'code', 'language' );
@@ -4605,7 +4536,7 @@ class qnaire extends \cenozo\database\record
           $db_device = $db_question->get_device();
           $db_equipment_type = $db_question->get_equipment_type();
           $db_lookup = $db_question->get_lookup();
-          $question = array(
+          $question = [
             'rank' => $db_question->rank,
             'name' => $db_question->name,
             'type' => $db_question->type,
@@ -4622,9 +4553,9 @@ class qnaire extends \cenozo\database\record
             'default_answer' => $db_question->default_answer,
             'precondition' => $db_question->precondition,
             'note' => $db_question->note,
-            'question_description_list' => array(),
-            'question_option_list' => array()
-          );
+            'question_description_list' => [],
+            'question_option_list' => []
+          ];
 
           if( !is_null( $db_lookup ) )
           {
@@ -4641,13 +4572,13 @@ class qnaire extends \cenozo\database\record
 
             if( !$found )
             {
-              $lookup = array(
+              $lookup = [
                 'name' => $db_lookup->name,
                 'version' => $db_lookup->version,
                 'description' => $db_lookup->description,
-                'indicator_list' => array(),
-                'lookup_item_list' => array()
-              );
+                'indicator_list' => [],
+                'lookup_item_list' => []
+              ];
 
               $indicator_sel = lib::create( 'database\select' );
               $indicator_sel->add_column( 'name' );
@@ -4655,7 +4586,7 @@ class qnaire extends \cenozo\database\record
               $indicator_mod->order( 'name' );
               foreach( $db_lookup->get_indicator_list( $indicator_sel, $indicator_mod ) as $indicator )
               {
-                $lookup['indicator_list'][] = array( 'name' => $indicator['name'] );
+                $lookup['indicator_list'][] = ['name' => $indicator['name']];
               }
 
               $lookup_item_sel = lib::create( 'database\select' );
@@ -4682,12 +4613,12 @@ class qnaire extends \cenozo\database\record
               $lookup_item_mod->order( 'identifier' );
               foreach( $db_lookup->get_lookup_item_list( $lookup_item_sel, $lookup_item_mod ) as $lookup_item )
               {
-                $item = array(
+                $item = [
                   'identifier' => $lookup_item['identifier'],
                   'name' => $lookup_item['name'],
                   'description' => $lookup_item['description'],
-                  'indicator_list' => array()
-                );
+                  'indicator_list' => []
+                ];
 
                 foreach( explode( ',', $lookup_item['indicator_list'] ) as $indicator )
                 {
@@ -4719,7 +4650,7 @@ class qnaire extends \cenozo\database\record
           $question_option_mod->order( 'question_option.rank' );
           foreach( $db_question->get_question_option_object_list( $question_option_mod ) as $db_question_option )
           {
-            $question_option = array(
+            $question_option = [
               'rank' => $db_question_option->rank,
               'name' => $db_question_option->name,
               'exclusive' => $db_question_option->exclusive,
@@ -4729,8 +4660,8 @@ class qnaire extends \cenozo\database\record
               'minimum' => $db_question_option->minimum,
               'maximum' => $db_question_option->maximum,
               'precondition' => $db_question_option->precondition,
-              'question_option_description_list' => array()
-            );
+              'question_option_description_list' => []
+            ];
 
             $qod_sel = lib::create( 'database\select' );
             $qod_sel->add_table_column( 'language', 'code', 'language' );
@@ -4865,7 +4796,7 @@ class qnaire extends \cenozo\database\record
       ) . $separator;
       if( $qnaire_data['description'] )$contents .= sprintf( "%s\n\n", $qnaire_data['description'] );
 
-      $description = array( 'introduction' => array(), 'conclusion' => array(), 'closed' => array() );
+      $description = ['introduction' => [], 'conclusion' => [], 'closed' => []];
       foreach( $qnaire_data['qnaire_description_list'] as $d )
         if( in_array( $d['type'], ['introduction', 'conclusion', 'closed'] ) )
           $description[$d['type']][$d['language']] = $d['value'];
@@ -4891,7 +4822,7 @@ class qnaire extends \cenozo\database\record
           is_null( $module['precondition'] ) ? '' : sprintf( ' (precondition: %s)', $module['precondition'] )
         ) . $separator;
 
-        $description = array( 'prompt' => array(), 'popup' => array() );
+        $description = ['prompt' => [], 'popup' => []];
         foreach( $module['module_description_list'] as $d )
           $description[$d['type']][$d['language']] = $d['value'];
 
@@ -4917,7 +4848,7 @@ class qnaire extends \cenozo\database\record
             is_null( $page['precondition'] ) ? '' : sprintf( ' (precondition: %s)', $page['precondition'] )
           ) . $separator;
 
-          $description = array( 'prompt' => array(), 'popup' => array() );
+          $description = ['prompt' => [], 'popup' => []];
           foreach( $page['page_description_list'] as $d ) $description[$d['type']][$d['language']] = $d['value'];
 
           foreach( $description['prompt'] as $language => $value )
@@ -4946,7 +4877,7 @@ class qnaire extends \cenozo\database\record
               )
             ) . $separator;
 
-            $description = array( 'prompt' => array(), 'popup' => array() );
+            $description = ['prompt' => [], 'popup' => []];
             foreach( $question['question_description_list'] as $d )
               $description[$d['type']][$d['language']] = $d['value'];
 
@@ -4977,7 +4908,7 @@ class qnaire extends \cenozo\database\record
                   )
                 );
 
-                $description = array( 'prompt' => array(), 'popup' => array() );
+                $description = ['prompt' => [], 'popup' => []];
                 foreach( $question_option['question_option_description_list'] as $d )
                   $description[$d['type']][$d['language']] = $d['value'];
 
@@ -5183,8 +5114,8 @@ class qnaire extends \cenozo\database\record
           $db_device = is_null( $question_object->device_name )
                      ? NULL
                      : $device_class_name::get_unique_record(
-                         array( 'qnaire_id', 'name' ),
-                         array( $db_qnaire->id, $question_object->device_name )
+                         ['qnaire_id', 'name'],
+                         [$db_qnaire->id, $question_object->device_name]
                        );
 
           $db_equipment_type = is_null( $question_object->equipment_type_name )
@@ -5268,8 +5199,8 @@ class qnaire extends \cenozo\database\record
         $db_stage->name = $stage->name;
 
         $db_first_module = $module_class_name::get_unique_record(
-          array( 'qnaire_id', 'rank' ),
-          array( $db_qnaire->id, $stage->first_module_rank )
+          ['qnaire_id', 'rank'],
+          [$db_qnaire->id, $stage->first_module_rank]
         );
         if( is_null( $db_first_module ) )
         {
@@ -5284,8 +5215,8 @@ class qnaire extends \cenozo\database\record
         }
 
         $db_last_module = $module_class_name::get_unique_record(
-          array( 'qnaire_id', 'rank' ),
-          array( $db_qnaire->id, $stage->last_module_rank )
+          ['qnaire_id', 'rank'],
+          [$db_qnaire->id, $stage->last_module_rank]
         );
         if( is_null( $db_last_module ) )
         {
