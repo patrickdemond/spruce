@@ -222,7 +222,7 @@ class util extends \cenozo\util
       '%s/api/%s%s',
       PARENT_INSTANCE_URL,
       $subject,
-      $url_postfix
+      util::full_urlencode( $url_postfix )
     );
     $curl = static::get_detached_curl_object( $url );
 
@@ -236,8 +236,8 @@ class util extends \cenozo\util
           'Message: %s',
           curl_errno( $curl ),
           $subject,
-          curl_error( $curl ),
-          $url
+          $url,
+          curl_error( $curl )
         ),
         __METHOD__
       );

@@ -186,11 +186,11 @@ class lookup extends \cenozo\database\record
       $qnaire_sel = lib::create( 'database\select' );
       $qnaire_sel->add_column( 'name' );
       foreach( $qnaire_class_name::select( $qnaire_sel ) as $qnaire )
-        $qnaire_name_list[] = $qnaire['name'];
+        $qnaire_name_list[] = util::full_urlencode( $qnaire['name'] );
     }
     else
     {
-      $qnaire_name_list[] = $db_qnaire->name;
+      $qnaire_name_list[] = util::full_urlencode( $db_qnaire->name );
     }
 
     // update the lookup list (restricting to a lookup used by the given, or all qnaires)
@@ -266,7 +266,7 @@ class lookup extends \cenozo\database\record
         '/name=%s/indicator'.
         '?select={"column":[{"table":"indicator","column":"name"}]}'.
         '&modifier={"limit":1000000}',
-        $db_lookup->name
+        util::full_urlencode( $db_lookup->name )
       );
       $indicator_list = util::get_data_from_parent( 'lookup', $url_postfix );
 
@@ -297,7 +297,7 @@ class lookup extends \cenozo\database\record
           ']'.
         '}'.
         '&modifier={"limit":1000000}',
-        $db_lookup->name
+        util::full_urlencode( $db_lookup->name )
       );
       $lookup_item_list = util::get_data_from_parent( 'lookup', $url_postfix );
 

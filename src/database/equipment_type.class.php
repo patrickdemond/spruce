@@ -27,11 +27,11 @@ class equipment_type extends \cenozo\database\equipment_type
       $qnaire_sel = lib::create( 'database\select' );
       $qnaire_sel->add_column( 'name' );
       foreach( $qnaire_class_name::select( $qnaire_sel ) as $qnaire )
-        $qnaire_name_list[] = $qnaire['name'];
+        $qnaire_name_list[] = util::full_urlencode( $qnaire['name'] );
     }
     else
     {
-      $qnaire_name_list[] = $db_qnaire->name;
+      $qnaire_name_list[] = util::full_urlencode( $db_qnaire->name );
     }
 
     // update the equipment type list (restricting to a equipment type used by the given, or all qnaires)
@@ -100,7 +100,7 @@ class equipment_type extends \cenozo\database\equipment_type
           ']'.
         '}'.
         '&modifier={"limit":1000000}',
-        $db_equipment_type->name
+        util::full_urlencode( $db_equipment_type->name )
       );
       $equipment_list = util::get_data_from_parent( 'equipment_type', $url_postfix );
 
