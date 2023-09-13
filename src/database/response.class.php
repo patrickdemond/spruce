@@ -114,10 +114,11 @@ class response extends \cenozo\database\has_rank
     // create the response's attributes
     if( $new ) $this->create_attributes();
 
+    if( is_null( $db_respondent ) ) $db_respondent = $this->get_respondent();
+
     // see if the qnaire exists as a script and apply the started/finished events if it does
     if( $new && 1 == $this->rank )
     {
-      if( is_null( $db_respondent ) ) $db_respondent = $this->get_respondent();
       if( is_null( $db_participant ) ) $db_participant = $db_respondent->get_participant();
       if( !is_null( $db_participant ) )
       {
@@ -135,7 +136,6 @@ class response extends \cenozo\database\has_rank
     else if( $submitted )
     {
       $db_effective_user = $session->get_effective_user();
-      if( is_null( $db_respondent ) ) $db_respondent = $this->get_respondent();
       if( is_null( $db_participant ) ) $db_participant = $db_respondent->get_participant();
       if( is_null( $db_qnaire ) ) $db_qnaire = $db_respondent->get_qnaire();
 
@@ -176,6 +176,45 @@ class response extends \cenozo\database\has_rank
         $db_trigger->execute( $this );
       foreach( $db_qnaire->get_qnaire_equipment_type_trigger_object_list() as $db_trigger )
         $db_trigger->execute( $this );
+    }
+
+    // The respondent may have a date in the future, so make sure to back it up to the response's start
+    // if it comes after it
+    if( !is_null( $this->start_datetime ) && $db_respondent->start_datetime > $this->start_datetime )
+    {
+      $db_respondent->start_datetime = $this->start_datetime;
+      $db_respondent->save();
+    }
+  }
+
+  /**
+   * Override the parent method
+   */
+  public function delete()
+  {
+    // Note: we must delete all files associated with this response
+    $db_respondent = $this->get_respondent();
+
+    parent::delete();
+
+    if( !is_null( $db_respondent ) )
+    {
+      $data_dir_list = glob(
+        sprintf(
+          '%s/*/%s',
+          $db_respondent->get_qnaire()->get_data_directory(),
+          is_null( $db_respondent->participant_id ) ? $db_respondent->id : $db_respondent->get_participant()->uid
+        ),
+        GLOB_ONLYDIR
+      );
+      foreach( $data_dir_list as $dir )
+      {
+        // delete all files in the directory
+        foreach( glob( sprintf( '%s/*', $dir ) ) as $file ) if( is_file( $file ) ) unlink( $file );
+
+        // now delete the directory itself
+        rmdir( $dir );
+      }
     }
   }
 

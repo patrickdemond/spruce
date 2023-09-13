@@ -41,9 +41,35 @@ class respondent extends \cenozo\database\record
    */
   public function delete()
   {
+    // Note: we must delete all files associated with this response
+    $db_qnaire = $this->get_qnaire();
+    $db_participant = $this->get_participant();
+    $respondent_id = $this->id;
+    
     $this->remove_unsent_mail();
     parent::delete();
+
+    if( !is_null( $respondent_id ) && !is_null( $db_qnaire ) )
+    {
+      $data_dir_list = glob(
+        sprintf(
+          '%s/*/%s',
+          $db_qnaire->get_data_directory(),
+          is_null( $db_participant ) ? $respondent_id : $db_participant->uid
+        ),
+        GLOB_ONLYDIR
+      );
+      foreach( $data_dir_list as $dir )
+      {
+        // delete all files in the directory
+        foreach( glob( sprintf( '%s/*', $dir ) ) as $file ) if( is_file( $file ) ) unlink( $file );
+
+        // now delete the directory itself
+        rmdir( $dir );
+      }
+    }
   }
+
 
   /**
    * Determines whether the respondent has completed all required responses

@@ -127,7 +127,8 @@ class post extends \cenozo\service\post
     else if( 'import' == $action )
     {
       $db_qnaire = $this->get_parent_record();
-      $db_qnaire->import_response_data( $this->get_file_as_object() );
+      $data = $this->get_file_as_object();
+      $db_qnaire->import_response_data( $data->respondents, $data->files );
     }
     else if( 'export' == $action )
     {

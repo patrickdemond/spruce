@@ -910,7 +910,20 @@ class qnaire extends \cenozo\database\record
     $machine_password = $setting_manager->get_setting( 'general', 'machine_password' );
 
     // encode all respondent and response data into an array
-    $data = ['participant' => [], 'respondent' => []];
+    $participant_data = [];
+    $respondent_data = [];
+
+    // get a list of all sub-directories (question names) in the qnaire's data directory
+    $file_data = array_fill_keys(
+      array_map(
+        'basename',
+        glob(
+          sprintf( '%s/*', $this->get_data_directory() ),
+          GLOB_ONLYDIR
+        )
+      ),
+      []
+    );
 
     // if no respondent is provided then export all completed and un-exported respondents
     $respondent_list = [];
@@ -1074,12 +1087,31 @@ class qnaire extends \cenozo\database\record
 
       if( 0 < count( $comment_list ) ) $participant['interview']['comment_list'] = $comment_list;
 
-      $data['participant'][] = $participant;
-      $data['respondent'][] = $respondent;
+      $participant_data[] = $participant;
+      $respondent_data[] = $respondent;
+
+      // search for data files if needed
+      foreach( $file_data as $question_name => $unused )
+      {
+        $file_list = glob(
+          sprintf(
+            '%s/%s/%s/*',
+            $this->get_data_directory(),
+            $question_name,
+            $db_participant->uid
+          )
+        );
+        if( 0 < count( $file_list ) )
+        {
+          $file_data_list = [];
+          foreach( $file_list as $filename )
+            $file_data_list[basename( $filename )] = base64_encode( file_get_contents( $filename ) );
+          $file_data[$question_name][$db_participant->uid] = $file_data_list;
+        }
+      }
     }
 
-    $result = [];
-    if( 0 < count( $data['respondent'] ) )
+    if( 0 < count( $respondent_data ) )
     {
       // First export the data to the master pine application
       $url = sprintf(
@@ -1089,7 +1121,14 @@ class qnaire extends \cenozo\database\record
       );
       $curl = util::get_detached_curl_object( $url );;
       curl_setopt( $curl, CURLOPT_POST, true );
-      curl_setopt( $curl, CURLOPT_POSTFIELDS, util::json_encode( $data['respondent'] ) );
+      curl_setopt(
+        $curl,
+        CURLOPT_POSTFIELDS,
+        util::json_encode( [
+          'respondents' => $respondent_data,
+          'files' => $file_data
+        ] )
+      );
 
       $response = curl_exec( $curl );
       if( curl_errno( $curl ) )
@@ -1148,13 +1187,14 @@ class qnaire extends \cenozo\database\record
       }
     }
 
-    if( 0 < count( $data['participant'] ) )
+    $result = [];
+    if( 0 < count( $participant_data ) )
     {
       // Now export the participant's details to beartooth
       $url = sprintf( '%s/api/pine', BEARTOOTH_INSTANCE_URL );
       $curl = util::get_detached_curl_object( $url );;
       curl_setopt( $curl, CURLOPT_POST, true );
-      curl_setopt( $curl, CURLOPT_POSTFIELDS, util::json_encode( $data['participant'] ) );
+      curl_setopt( $curl, CURLOPT_POSTFIELDS, util::json_encode( $participant_data ) );
 
       $response = curl_exec( $curl );
       if( curl_errno( $curl ) )
@@ -1191,7 +1231,7 @@ class qnaire extends \cenozo\database\record
       }
 
       // return a list of all exported UIDs
-      foreach( $data['participant'] as $participant ) $result[] = $participant['uid'];
+      foreach( $participant_data as $participant ) $result[] = $participant['uid'];
     }
 
     return $result;
@@ -1748,9 +1788,10 @@ class qnaire extends \cenozo\database\record
 
   /**
    * Imports response data from a child instance of Pine
-   * @param array $respondent_list
+   * @param array $respondent_list Respondent questionnaire data
+   * @param array $file_list File data
    */
-  public function import_response_data( $respondent_list )
+  public function import_response_data( $respondent_list, $file_list )
   {
     ini_set( 'memory_limit', '2G' );
     set_time_limit( 900 ); // 15 minutes max
@@ -1769,6 +1810,7 @@ class qnaire extends \cenozo\database\record
     $deviation_type_class_name = lib::get_class_name( 'database\deviation_type' );
     $db_current_user = lib::create( 'business\session' )->get_user();
 
+    // first import the respondent data
     foreach( $respondent_list as $respondent )
     {
       $db_participant = $participant_class_name::get_unique_record( 'uid', $respondent->uid );
@@ -1936,6 +1978,34 @@ class qnaire extends \cenozo\database\record
             $db_response->submitted = $response->submitted;
             $db_response->save();
           }
+        }
+      }
+    }
+
+    // now import the file data
+    foreach( $file_list as $question_name => $participant )
+    {
+      $db_question = $this->get_question( $question_name );
+      if( is_null( $db_question ) )
+      {
+        log::warning( sprintf(
+          'Tried to import file data for question "%s" which doesn\'t exist.',
+          $question_name
+        ) );
+        continue;
+      }
+
+      $base_dir = $db_question->get_data_directory();
+      foreach( $participant as $uid => $file_list )
+      {
+        $directory = sprintf( '%s/%s', $base_dir, $uid );
+        if( !file_exists( $directory ) ) mkdir( $directory, 0755, true );
+        foreach( $file_list as $filename => $base64_file )
+        {
+          file_put_contents(
+            sprintf( '%s/%s', $directory, $filename ),
+            base64_decode( $base64_file )
+          );
         }
       }
     }

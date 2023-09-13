@@ -75,6 +75,10 @@ class answer extends \cenozo\database\record
 
     parent::save();
 
+    // Note: we don't delete associated files when the answer changes since the UI does, however, deleting the
+    // parent response or respondent records will automatically delete all associated files in their respective
+    // ::delete() methods
+
     // When changing an answer we may have to update other answers on the same page which are affected by the answer that
     // was just provided since their preconditions may depend on it.
     if( !$new )
