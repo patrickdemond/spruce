@@ -2541,6 +2541,8 @@ class qnaire extends \cenozo\database\record
     $response_mod = lib::create( 'database\modifier' );
     $response_mod->join( 'respondent', 'response.respondent_id', 'respondent.id' );
     $response_mod->left_join( 'participant', 'respondent.participant_id', 'participant.id' );
+    $response_mod->join( 'language', 'response.language_id', 'language.id' );
+    $response_mod->left_join( 'site', 'response.site_id', 'site.id' );
     $response_mod->where( 'respondent.qnaire_id', '=', $this->id );
     $response_mod->order( 'respondent.end_datetime' );
 
@@ -2555,6 +2557,8 @@ class qnaire extends \cenozo\database\record
     $response_sel->add_column( 'id' );
     $response_sel->add_column( 'rank' );
     $response_sel->add_column( 'qnaire_version' );
+    $response_sel->add_table_column( 'language', 'code', 'language' );
+    $response_sel->add_table_column( 'site', 'name', 'site' );
     $response_sel->add_column( 'submitted' );
     $response_sel->add_column(
       'DATE_FORMAT( response.start_datetime, "%Y-%m-%dT%T+00:00" )',
@@ -2635,6 +2639,8 @@ class qnaire extends \cenozo\database\record
         $response['uid'],
         $response['rank'],
         $response['qnaire_version'],
+        $response['language'],
+        $response['site'],
         $response['submitted'] ? 1 : 0,
         $response['start_datetime'],
         $response['last_datetime']
