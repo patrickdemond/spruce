@@ -2781,7 +2781,10 @@ class qnaire extends \cenozo\database\record
     }
 
     $header = array_keys( $column_list );
-    array_unshift( $header, 'uid', 'rank', 'qnaire_version', 'submitted', 'start_datetime', 'last_datetime' );
+    array_unshift(
+      $header,
+      'uid', 'rank', 'qnaire_version', 'language', 'site', 'submitted', 'start_datetime', 'last_datetime'
+    );
     if( $attributes ) foreach( $attribute_list as $attribute ) $header[] = sprintf( 'attribute:%s', $attribute );
     return ['header' => $header, 'data' => $data];
   }
