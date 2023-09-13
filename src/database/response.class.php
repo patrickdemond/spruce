@@ -116,6 +116,9 @@ class response extends \cenozo\database\has_rank
 
     if( is_null( $db_respondent ) ) $db_respondent = $this->get_respondent();
 
+    $db_effective_site = $session->get_effective_site();
+    $db_effective_user = $session->get_effective_user();
+
     // see if the qnaire exists as a script and apply the started/finished events if it does
     if( $new && 1 == $this->rank )
     {
@@ -128,14 +131,14 @@ class response extends \cenozo\database\has_rank
           $db_script->add_started_event(
             $db_participant,
             $this->last_datetime,
-            $session->get_effective_user()
+            $db_effective_site,
+            $db_effective_user
           );
         }
       }
     }
     else if( $submitted )
     {
-      $db_effective_user = $session->get_effective_user();
       if( is_null( $db_participant ) ) $db_participant = $db_respondent->get_participant();
       if( is_null( $db_qnaire ) ) $db_qnaire = $db_respondent->get_qnaire();
 
@@ -153,7 +156,8 @@ class response extends \cenozo\database\has_rank
             $db_script->add_finished_event(
               $db_participant,
               $this->last_datetime,
-              $session->get_effective_user()
+              $db_effective_site,
+              $db_effective_user
             );
           }
         }

@@ -1002,6 +1002,7 @@ class qnaire extends \cenozo\database\record
           'rank' => $db_response->rank,
           'qnaire_version' => $db_response->qnaire_version,
           'language' => $db_response->get_language()->code,
+          'site' => is_null( $db_response->site_id ) ? NULL : $db_response->get_site()->name,
           'module' => is_null( $db_module ) ? NULL : $db_module->name,
           'page' => is_null( $db_page ) ? NULL : $db_page->name,
           'submitted' => $db_response->submitted,
@@ -1282,6 +1283,7 @@ class qnaire extends \cenozo\database\record
     $response_class_name = lib::get_class_name( 'database\response' );
     $answer_class_name = lib::get_class_name( 'database\answer' );
     $language_class_name = lib::get_class_name( 'database\language' );
+    $site_class_name = lib::get_class_name( 'database\site' );
 
     // get a list of all questions in this array (without qnaire name prefix)
     $question_list = $this->get_output_column_list();
@@ -1329,6 +1331,7 @@ class qnaire extends \cenozo\database\record
           else if( 'qnaire_version' == $column_name ) $metadata_columns['qnaire_version'] = $index;
           else if( 'submitted' == $column_name ) $metadata_columns['submitted'] = $index;
           else if( 'language' == $column_name ) $metadata_columns['language'] = $index;
+          else if( 'site' == $column_name ) $metadata_columns['site'] = $index;
           else if( 'start_datetime' == $column_name ) $metadata_columns['start_datetime'] = $index;
           else if( 'last_datetime' == $column_name ) $metadata_columns['last_datetime'] = $index;
           $column_name_list[] = $column_name;
@@ -1457,6 +1460,14 @@ class qnaire extends \cenozo\database\record
             $db_language = $language_class_name::get_unique_record( 'name', $metadata['language'] );
           if( !is_null( $db_language ) ) $db_response->language_id = $db_language->id;
         }
+
+        $db_response->site_id = NULL;
+        if( array_key_exists( 'site', $metadata ) )
+        {
+          $db_site = $site_class_name::get_unique_record( 'name', $metadata['site'] );
+          if( !is_null( $db_site ) ) $db_response->site_id = $db_site->id;
+        }
+
         $db_response->submitted = $metadata['submitted'];
         $db_response->comments = 'Imported from CSV';
 
@@ -1800,6 +1811,7 @@ class qnaire extends \cenozo\database\record
     $respondent_class_name = lib::get_class_name( 'database\respondent' );
     $response_class_name = lib::get_class_name( 'database\response' );
     $language_class_name = lib::get_class_name( 'database\language' );
+    $site_class_name = lib::get_class_name( 'database\site' );
     $module_class_name = lib::get_class_name( 'database\module' );
     $page_class_name = lib::get_class_name( 'database\page' );
     $answer_class_name = lib::get_class_name( 'database\answer' );
@@ -1869,6 +1881,25 @@ class qnaire extends \cenozo\database\record
                      );
 
           $db_response->language_id = $language_class_name::get_unique_record( 'code', $response->language )->id;
+          
+          // the site may be NULL, so ignore it if it is
+          if( !is_null( $response->site ) )
+          {
+            // make sure the site exists and warn if it doesn't
+            $db_site = $site_class_name::get_unique_record( 'name', $response->site );
+            if( is_null( $db_site ) )
+            {
+              log::warning( sprintf(
+                'Invalid site name "%s" found while importing response data.',
+                $response->site
+              ) );
+            }
+            else
+            {
+              $db_response->site_id = $db_site->id;
+            }
+          }
+
           if( !is_null( $db_page ) ) $db_response->page_id = $db_page->id;
           $db_response->show_hidden = $response->show_hidden;
           $db_response->start_datetime = $response->start_datetime;

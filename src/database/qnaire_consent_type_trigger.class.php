@@ -24,10 +24,12 @@ class qnaire_consent_type_trigger extends qnaire_trigger
     // some triggers may be skipped
     if( !$this->check_trigger( $db_response ) ) return;
 
+    $session = lib::create( 'business\session' );
     $db_participant = $db_response->get_respondent()->get_participant();
     $db_qnaire = $this->get_qnaire();
     $db_question = $this->get_question();
-    $db_effective_user = lib::create( 'business\session' )->get_effective_user();
+    $db_effective_site = $session->get_effective_site();
+    $db_effective_user = $session->get_effective_user();
 
     if( $db_qnaire->debug )
     {
@@ -50,16 +52,18 @@ class qnaire_consent_type_trigger extends qnaire_trigger
     $db_consent->note = sprintf(
       'Created by Pine after questionnaire "%s" '.
       'was completed by user "%s" '.
+      'from site "%s" '.
       'with question "%s" '.
       'having the value "%s"',
       $db_qnaire->name,
       $db_effective_user->name,
+      $db_effective_site->name,
       $db_question->name,
       $this->answer_value
     );
     $db_consent->save();
 
-    // if this is a participation consent then set the new hold record's user to the effective user
+    // if this is a participation consent then set the new hold record's user and site
     if( 'participation' == $db_consent->get_consent_type()->name )
     {
       $db_hold = $hold_class_name::get_unique_record(
@@ -69,6 +73,7 @@ class qnaire_consent_type_trigger extends qnaire_trigger
       $db_hold_type = $db_hold->get_hold_type();
       if( 'final' == $db_hold_type->type && 'Withdrawn' == $db_hold_type->name )
       {
+        $db_hold->site_id = $db_effective_site->id;
         $db_hold->user_id = $db_effective_user->id;
         $db_hold->save();
       }

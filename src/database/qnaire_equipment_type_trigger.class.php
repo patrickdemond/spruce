@@ -25,7 +25,6 @@ class qnaire_equipment_type_trigger extends qnaire_trigger
     $answer_class_name = lib::get_class_name( 'database\answer' );
     $equipment_class_name = lib::get_class_name( 'database\equipment' );
 
-    $session = lib::create( 'business\session' );
     $db_participant = $db_response->get_respondent()->get_participant();
     $db_qnaire = $this->get_qnaire();
     $db_question = $this->get_question();
@@ -55,16 +54,22 @@ class qnaire_equipment_type_trigger extends qnaire_trigger
     $db_equipment = $equipment_class_name::get_unique_record( 'serial_number', $serial_number );
     if( is_null( $db_equipment ) )
     {
+      $session = lib::create( 'business\session' );
+      $db_effective_site = $session->get_effective_site();
+      $db_effective_user = $session->get_effective_user();
+
       $db_equipment = lib::create( 'database\equipment' );
       $db_equipment->equipment_type_id = $this->equipment_type_id;
-      $db_equipment->site_id = $session->get_site()->id;
+      $db_equipment->site_id = $db_effective_site->id;
       $db_equipment->serial_number = $serial_number;
       $db_equipment->note = sprintf(
         'Created by Pine after questionnaire "%s" '.
         'was completed by user "%s" '.
+        'from site "%s" '.
         'with question "%s"',
         $db_qnaire->name,
-        $session->get_effective_user()->name,
+        $db_effective_user->name,
+        $db_effective_site->name,
         $db_question->name,
       );
       $db_equipment->save();

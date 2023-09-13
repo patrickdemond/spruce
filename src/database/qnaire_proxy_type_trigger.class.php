@@ -26,7 +26,8 @@ class qnaire_proxy_type_trigger extends qnaire_trigger
     $db_participant = $db_response->get_respondent()->get_participant();
     $db_qnaire = $this->get_qnaire();
     $db_question = $this->get_question();
-    $db_effective_user = lib::create( 'business\session' )->get_effective_user();
+    $db_effective_site = $session->get_effective_site();
+    $db_effective_user = $session->get_effective_user();
 
     if( $db_qnaire->debug )
     {
@@ -45,16 +46,18 @@ class qnaire_proxy_type_trigger extends qnaire_trigger
     $db_proxy->proxy_type_id = $this->proxy_type_id;
     $db_proxy->datetime = util::get_datetime_object( $db_response->last_datetime );
     $db_proxy->user_id = $db_effective_user->id;
-    $db_proxy->site_id = $session->get_site()->id;
+    $db_proxy->site_id = $db_effective_site->id;
     $db_proxy->role_id = $session->get_role()->id;
     $db_proxy->application_id = $session->get_application()->id;
     $db_proxy->note = sprintf(
       'Created by Pine after questionnaire "%s" '.
       'was completed by user "%s" '.
+      'from site "%s" '.
       'with question "%s" '.
       'having the value "%s"',
       $db_qnaire->name,
       $db_effective_user->name,
+      $db_effective_site->name,
       $db_question->name,
       $this->answer_value
     );

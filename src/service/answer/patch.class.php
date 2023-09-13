@@ -80,6 +80,18 @@ class patch extends \cenozo\service\patch
     $db_answer = $this->get_leaf_record();
     $filename = $this->get_argument( 'filename', NULL );
 
+    // if the site was specified then update the response's site
+    $site = $this->get_argument( 'site', NULL );
+    if( !is_null( $site ) )
+    {
+      $db_site = $site_class_name::get_unique_record( 'name', $site );
+      if( !is_null( $db_site ) && $db_site->id != $db_answer->response_id )
+      {
+        $db_response = $db_answer->get_response();
+        $db_response->site_id = $db_site->id;
+      }
+    }
+
     if( !is_null( $filename ) )
     {
       $directory = $db_answer->get_data_directory();

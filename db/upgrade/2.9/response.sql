@@ -55,6 +55,32 @@ CREATE PROCEDURE patch_response()
       EXECUTE statement;
       DEALLOCATE PREPARE statement;
     END IF;
+
+    SELECT "Adding site_id column to response table" AS "";
+
+    SELECT COUNT(*) INTO @test
+    FROM information_schema.COLUMNS
+    WHERE table_schema = DATABASE()
+    AND table_name = "response"
+    AND column_name = "site_id";
+
+    IF @test = 0 THEN
+      ALTER TABLE response ADD COLUMN site_id INT(10) UNSIGNED NULL DEFAULT NULL AFTER language_id;
+
+      SET @sql = CONCAT(
+        "ALTER TABLE response ",
+        "ADD KEY fk_site_id (site_id), ",
+        "ADD CONSTRAINT fk_response_site_id ",
+          "FOREIGN KEY (site_id) ",
+          "REFERENCES ", @cenozo, ".site (id) ",
+          "ON DELETE NO ACTION ",
+          "ON UPDATE NO ACTION"
+      );
+      PREPARE statement FROM @sql;
+      EXECUTE statement;
+      DEALLOCATE PREPARE statement;
+    END IF;
+
   END //
 DELIMITER ;
 

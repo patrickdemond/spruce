@@ -133,6 +133,7 @@ class session extends \cenozo\business\session
    */
   public function initialize( $no_activity = false )
   {
+    $site_class_name = lib::get_class_name( 'database\site' );
     $user_class_name = lib::get_class_name( 'database\user' );
 
     // turn off activity when using the special access role
@@ -143,16 +144,36 @@ class session extends \cenozo\business\session
         $_SESSION['access.id'] == $respondent_access_id ) $no_activity = true;
     parent::initialize( $no_activity );
 
-    // convert the username from the query string to a user record as the referring user
+    // convert site and username from the query string to referring site/user
     if( array_key_exists( 'REDIRECT_QUERY_STRING', $_SERVER ) )
     {
       $query_params = [];
       parse_str( $_SERVER['REDIRECT_QUERY_STRING'], $query_params );
+      if( array_key_exists( 'site', $query_params ) )
+        $this->db_referring_site = $site_class_name::get_unique_record( 'name', $query_params['site'] );
       if( array_key_exists( 'username', $query_params ) )
-      {
         $this->db_referring_user = $user_class_name::get_unique_record( 'name', $query_params['username'] );
-      }
     }
+  }
+
+  /**
+   * Get the referring site.
+   * 
+   * Note that the referring site is only set when running a respondent record (URL: respondent/run/*)
+   * @return database\site
+   * @access public
+   */
+  public function get_referring_site() { return $this->db_referring_site; }
+
+  /**
+   * Gets the referring site if there is one, otherwise the current (session) site is returned.
+   * 
+   * @return database\site
+   * @access public
+   */
+  public function get_effective_site()
+  {
+    return is_null( $this->db_referring_site ) ? $this->get_site() : $this->db_referring_site;
   }
 
   /**
@@ -192,6 +213,12 @@ class session extends \cenozo\business\session
    * @var database\response
    */
   private $db_response = false;
+
+  /**
+   * Stores the referring site record (if there is one)
+   * @var database\site
+   */
+  private $db_referring_site = NULL;
 
   /**
    * Stores the referring user record (if there is one)

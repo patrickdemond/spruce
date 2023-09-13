@@ -154,7 +154,7 @@ class ui extends \cenozo\ui\ui
     {
       $module->add_child( 'response' );
       $module->add_child( 'respondent_mail' );
-      $module->add_action( 'run', '/{token}?{show_hidden}&{username}&{alternate_id}' );
+      $module->add_action( 'run', '/{token}?{show_hidden}&{site}&{username}&{alternate_id}' );
 
       // add response children and actions here in case the qnaire is only done once
       $module->add_child( 'response_stage' );

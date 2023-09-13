@@ -55,6 +55,10 @@ class qnaire_alternate_consent_type_trigger extends qnaire_trigger
     }
     else
     {
+      $session = lib::create( 'business\session' );
+      $db_effective_site = $session->get_effective_site();
+      $db_effective_user = $session->get_effective_user();
+
       $db_alternate_consent = lib::create( 'database\alternate_consent' );
       $db_alternate_consent->alternate_id = $db_answer->alternate_id;
       $db_alternate_consent->alternate_consent_type_id = $this->alternate_consent_type_id;
@@ -64,10 +68,12 @@ class qnaire_alternate_consent_type_trigger extends qnaire_trigger
       $db_alternate_consent->note = sprintf(
         'Created by Pine after questionnaire "%s" '.
         'was completed by user "%s" '.
+        'from site "%s" '.
         'with question "%s" '.
         'having the value "%s"',
         $db_qnaire->name,
-        lib::create( 'business\session' )->get_effective_user()->name,
+        $db_effective_user->name,
+        $db_effective_site->name,
         $db_question->name,
         $this->answer_value
       );
