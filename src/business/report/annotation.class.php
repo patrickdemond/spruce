@@ -69,6 +69,9 @@ class annotation extends \cenozo\business\report\base_report
       'validation' => ''
     ];
 
+    $token_column = $meta_column_template;
+    $token_column['name'] = 'token';
+    $token_column['valueType'] = 'text';
     $rank_column = $meta_column_template;
     $rank_column['name'] = 'rank';
     $rank_column['valueType'] = 'integer';
@@ -79,7 +82,6 @@ class annotation extends \cenozo\business\report\base_report
     $language_column = $meta_column_template;
     $language_column['name'] = 'language';
     $language_column['valueType'] = 'text';
-    $language_column['required'] = 1;
     $site_column = $meta_column_template;
     $site_column['name'] = 'site';
     $site_column['valueType'] = 'text';
@@ -97,6 +99,7 @@ class annotation extends \cenozo\business\report\base_report
     // Get all questions from the qnaire (including descriptions, exported questions only) and build the
     // table data from there.  Start with the qnaire metadata.
     $variables_data = [
+      $token_column,
       $rank_column,
       $qnaire_version_column,
       $language_column,

@@ -2555,6 +2555,7 @@ class qnaire extends \cenozo\database\record
 
     $response_sel = lib::create( 'database\select' );
     $response_sel->add_column( 'id' );
+    $response_sel->add_table_column( 'respondent', 'token' );
     $response_sel->add_column( 'rank' );
     $response_sel->add_column( 'qnaire_version' );
     $response_sel->add_table_column( 'language', 'code', 'language' );
@@ -2637,6 +2638,7 @@ class qnaire extends \cenozo\database\record
 
       $data_row = [
         $response['uid'],
+        $response['token'],
         $response['rank'],
         $response['qnaire_version'],
         $response['language'],
@@ -2783,7 +2785,7 @@ class qnaire extends \cenozo\database\record
     $header = array_keys( $column_list );
     array_unshift(
       $header,
-      'uid', 'rank', 'qnaire_version', 'language', 'site', 'submitted', 'start_datetime', 'last_datetime'
+      'uid', 'token', 'rank', 'qnaire_version', 'language', 'site', 'submitted', 'start_datetime', 'last_datetime'
     );
     if( $attributes ) foreach( $attribute_list as $attribute ) $header[] = sprintf( 'attribute:%s', $attribute );
     return ['header' => $header, 'data' => $data];
