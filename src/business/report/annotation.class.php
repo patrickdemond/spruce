@@ -76,14 +76,14 @@ class annotation extends \cenozo\business\report\base_report
     $qnaire_version_column['name'] = 'qnaire_version';
     $qnaire_version_column['valueType'] = 'text';
     $qnaire_version_column['required'] = 0;
-    $site_column = $meta_column_template;
-    $site_column['name'] = 'site';
-    $site_column['valueType'] = 'text';
-    $site_column['required'] = 0;
     $language_column = $meta_column_template;
     $language_column['name'] = 'language';
     $language_column['valueType'] = 'text';
     $language_column['required'] = 1;
+    $site_column = $meta_column_template;
+    $site_column['name'] = 'site';
+    $site_column['valueType'] = 'text';
+    $site_column['required'] = 0;
     $submitted_column = $meta_column_template;
     $submitted_column['name'] = 'submitted';
     $submitted_column['valueType'] = 'boolean';
@@ -99,6 +99,8 @@ class annotation extends \cenozo\business\report\base_report
     $variables_data = [
       $rank_column,
       $qnaire_version_column,
+      $language_column,
+      $site_column,
       $submitted_column,
       $start_datetime_column,
       $last_datetime_column
