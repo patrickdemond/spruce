@@ -47,5 +47,26 @@ cenozoApp.defineModule({
         reverse: true,
       },
     });
+
+    /* ############################################################################################## */
+    cenozo.providers.factory("CnAnswerDeviceModelFactory", [
+      "CnBaseModelFactory",
+      "CnAnswerDeviceListFactory",
+      function (CnBaseModelFactory, CnAnswerDeviceListFactory) {
+        var object = function (root) {
+          var self = this;
+          CnBaseModelFactory.construct(this, module);
+          this.listModel = CnAnswerDeviceListFactory.instance(this);
+          this.getViewEnabled = function () { return false; };
+        };
+
+        return {
+          root: new object(true),
+          instance: function () {
+            return new object(false);
+          },
+        };
+      },  
+    ]); 
   },
 });
