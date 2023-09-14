@@ -1523,6 +1523,7 @@ cenozoApp.defineModule({
                           "unit_list",
                           "minimum",
                           "maximum",
+                          "default_answer",
                           "precondition",
                           "prompts",
                           "popups",
@@ -2506,6 +2507,12 @@ cenozoApp.defineModule({
                           this.convertValueToModel(q);
                         }
                       } else {
+                        // re-apply default answers if the answer is currently null
+                        if (null != q.default_answer && null == q.value) {
+                          q.value = q.default_answer;
+                          this.convertValueToModel(q);
+                        }
+
                         // re-evaluate descriptions as they may have changed based on the new answer
                         q.prompts = CnTranslationHelper.parseDescriptions(
                           this.evaluateDescription(q.rawPrompts)

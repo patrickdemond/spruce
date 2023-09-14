@@ -80,6 +80,7 @@ class get extends \cenozo\service\get
       $question_sel = lib::create( 'database\select' );
       $question_sel->add_column( 'id' );
       $question_sel->add_column( 'type' );
+      $question_sel->add_column( 'precondition' );
       $question_sel->add_column( 'default_answer' );
       $question_mod = lib::create( 'database\modifier' );
       $question_mod->where( 'type', '!=', 'comment' ); // comment questions don't have answers
@@ -95,19 +96,17 @@ class get extends \cenozo\service\get
           $db_answer->question_id = $question['id'];
           $db_answer->user_id = $qnaire_username == $db_effective_user->name ? NULL : $db_effective_user->id;
 
-          // apply the default answer if there is one
-          if( !is_null( $question['default_answer'] ) )
+          // check if the question has a default answer, and if the question is visible then apply it
+          if(
+            !is_null( $question['default_answer'] ) &&
+            $expression_manager->validate( $question['precondition'] )
+          )
           {
-            $default = $question['default_answer'];
-            $len = strlen( $default );
-
             // default answers enclosed in single or double quotes must be compiled as strings (descriptions)
-            $value = preg_match( '/^(\'.*\')|(".*")$/', $default )
-                   ? $this->db_response->compile_description( $default )
-                   : $expression_manager->compile( $default );
-
+            $value = $this->db_response->compile_default_answer( $question['default_answer'] );
             if( 'null' != $value )
             {
+              // only apply the value if the question's precondition is true
               $db_answer->value = in_array( $question['type'], array( 'date', 'string', 'text', 'time' ) )
                                 ? preg_replace( '/^[\'"]?(.*?)[\'"]?$/', '"$1"', $value )
                                 : $value;

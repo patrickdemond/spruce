@@ -75,6 +75,12 @@ class query extends \cenozo\service\query
       // alter data if respondent data is included in the request
       if( $respondent )
       {
+        // default answers enclosed in single or double quotes must be compiled as strings (descriptions)
+        if( !is_null( $record['default_answer'] ) )
+        {
+          $record['default_answer'] = $db_response->compile_default_answer( $record['default_answer'] );
+        }
+
         if( 'device' == $record['type'] && $record['device_id'] )
         {
           // count the number of files on disk for this record

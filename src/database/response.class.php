@@ -700,6 +700,26 @@ class response extends \cenozo\database\has_rank
   }
 
   /**
+   * Compiles a default answer
+   * @param string $default_answer
+   * @return string
+   */
+  public function compile_default_answer( $default )
+  {
+    $expression_manager = lib::create( 'business\expression_manager', $this );
+
+    // default answers enclosed in single or double quotes must be compiled as strings (descriptions)
+    $matches = [];
+    if( preg_match( '/^(\'(.*)\')|("(.*)")$/', $default, $matches ) )
+    {
+      // the expression inside the quotes will either be in index 2 or 4 (for single or double quotes)
+      return $this->compile_description( $matches[2] ? $matches[2] : $matches[4] );
+    }
+
+    return $expression_manager->compile( $default );
+  }
+
+  /**
    * Compiles a question's or option's description
    * @param string $description
    * @param boolean $force Whether to force compile values even if they are on the current page

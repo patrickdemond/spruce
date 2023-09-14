@@ -91,21 +91,37 @@ class answer extends \cenozo\database\record
       // 1) the answer refers to a question which should no longer be asked due to this answer's value or selected option
       $question_sel = lib::create( 'database\select' );
       $question_sel->add_column( 'id' );
+      $question_sel->add_column( 'default_answer' );
       $question_sel->add_column( 'precondition' );
       $question_mod = lib::create( 'database\modifier' );
       $question_mod->where( 'question.precondition', 'RLIKE', sprintf( '\\$%s(:[^$]+)?\\$', $db_question->name ) );
       foreach( $db_question->get_page()->get_question_list( $question_sel, $question_mod ) as $question )
       {
-        if( !$expression_manager->evaluate( $question['precondition'] ) )
+        $db_answer = static::get_unique_record(
+          array( 'response_id', 'question_id' ),
+          array( $db_response->id, $question['id'] )
+        );
+        if( !is_null( $db_answer ) )
         {
-          $db_answer = static::get_unique_record(
-            array( 'response_id', 'question_id' ),
-            array( $db_response->id, $question['id'] )
-          );
-          if( !is_null( $db_answer ) && 'null' != $db_answer->value )
+          if( $expression_manager->evaluate( $question['precondition'] ) )
           {
-            $db_answer->value = 'null';
-            $db_answer->save();
+            // apply default answers, if there is one
+            if( !is_null( $question['default_answer'] ) && 'null' == $db_answer->value )
+            {
+              $db_answer->value = util::json_encode(
+                $db_response->compile_default_answer( $question['default_answer'] )
+              );
+              $db_answer->save();
+            }
+          }
+          else
+          {
+            // set the answer to null since it's question no longer passes the precondition
+            if( 'null' != $db_answer->value )
+            {
+              $db_answer->value = 'null';
+              $db_answer->save();
+            }
           }
         }
       }
