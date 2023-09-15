@@ -29,7 +29,7 @@ CREATE PROCEDURE patch_role_has_service()
       "SELECT role.id, service.id ",
       "FROM ", @cenozo, ".role, service ",
       "WHERE role.name = 'administrator' ",
-      "AND service.subject = 'qnaire_equipment_type_trigger' ",
+      "AND service.subject IN( 'qnaire_document', 'qnaire_equipment_type_trigger' ) ",
       "AND service.restricted = 1"
     );
     PREPARE statement FROM @sql;

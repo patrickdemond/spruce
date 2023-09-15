@@ -1067,7 +1067,7 @@ cenozoApp.defineModule({
             this,
             parentModel,
             root,
-            parentModel.isRole("interviewer") ? null : "respondent"
+            "respondent"
           );
 
           angular.extend(this, {
@@ -1085,11 +1085,12 @@ cenozoApp.defineModule({
                 "qnaire_consent_type_confirm",
               ];
               return this.$$getChildList().filter(
-                (child) =>
-                  (this.record.stages ||
-                    !stagesChildList.includes(child.subject.snake)) &&
-                  (!this.parentModel.isRole("interviewer") ||
-                    "respondent" == child.subject.snake)
+                (child) => (
+                  this.record.stages || !stagesChildList.includes(child.subject.snake)
+                ) && (
+                  !this.parentModel.isRole("interviewer") ||
+                  ["qnaire_document","respondent"].includes(child.subject.snake)
+                )
               );
             },
 

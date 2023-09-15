@@ -109,6 +109,7 @@ class ui extends \cenozo\ui\ui
       $module->add_child( 'qnaire_proxy_type_trigger' );
       $module->add_child( 'qnaire_equipment_type_trigger' );
       $module->add_child( 'stage' );
+      $module->add_child( 'qnaire_document' );
       $module->add_child( 'qnaire_report' );
       $module->add_child( 'device' );
       $module->add_child( 'deviation_type' );
