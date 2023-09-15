@@ -2730,7 +2730,7 @@ class qnaire extends \cenozo\database\record
   public function get_response_data(
     $modifier = NULL, $exporting = false, $attributes = false, $answers_only = false )
   {
-    ini_set( 'memory_limit', '4G' );
+    ini_set( 'memory_limit', '2G' );
     set_time_limit( 900 ); // 15 minutes max
 
     $response_class_name = lib::get_class_name( 'database\response' );
@@ -2771,26 +2771,6 @@ class qnaire extends \cenozo\database\record
     );
     $response_sel->add_table_column( 'participant', 'uid' );
 
-    // get all answers for all responses
-    $answer_sel = lib::create( 'database\select' );
-    $answer_sel->add_column( 'response_id' );
-    $answer_sel->add_column( 'question_id' );
-    $answer_sel->add_column( 'value' );
-    $answer_mod = lib::create( 'database\modifier' );
-    $answer_mod->join( 'response', 'answer.response_id', 'response.id' );
-    $answer_mod->join( 'respondent', 'response.respondent_id', 'respondent.id' );
-    $answer_mod->where( 'respondent.qnaire_id', '=', $this->id );
-    $answer_mod->order( 'response_id' );
-    $answer_mod->order( 'question_id' );
-    if( !is_null( $modifier ) ) $answer_mod->merge( $modifier );
-
-    $answer_data = array();
-    foreach( $answer_class_name::select( $answer_sel, $answer_mod ) as $answer )
-    {
-      if( !array_key_exists( $answer['response_id'], $answer_data ) ) $answer_data[$answer['response_id']] = [];
-      $answer_data[$answer['response_id']][$answer['question_id']] = $answer['value'];
-    }
-
     $response_attribute_data = array();
     if( $attributes )
     {
@@ -2822,6 +2802,25 @@ class qnaire extends \cenozo\database\record
           $response_attribute_data[$ra['response_id']] = [];
         $response_attribute_data[$ra['response_id']][$ra['name']] = $ra['value'];
       }
+    }
+
+    // get a list of all response IDs so we can use it to get all answers
+    $response_id_list = [];
+    foreach( $response_class_name::select( $response_sel, $response_mod ) as $response )
+      $response_id_list[] = $response['id'];
+
+    $answer_sel = lib::create( 'database\select' );
+    $answer_sel->add_column( 'response_id' );
+    $answer_sel->add_column( 'question_id' );
+    $answer_sel->add_column( 'value' );
+    $answer_mod = lib::create( 'database\modifier' );
+    $answer_mod->where( 'response_id', 'IN', $response_id_list );
+    $answer_mod->order( 'response_id' );
+    $answer_mod->order( 'question_id' );
+    $answer_data = [];
+    foreach( $answer_class_name::select( $answer_sel, $answer_mod ) as $answer )
+    {
+      if( !array_key_exists( $answer['response_id'], $answer_data ) ) $answer_data[$answer['response_id']] = [];
     }
 
     // loop through each response and build the data
