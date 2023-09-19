@@ -1010,8 +1010,29 @@ class qnaire extends \cenozo\database\record
           'start_datetime' => $db_response->start_datetime->format( 'c' ),
           'last_datetime' => $db_response->last_datetime->format( 'c' ),
           'comments' => $db_response->comments,
+          'page_time_list' => [],
           'answer_list' => []
         ];
+
+        $page_time_sel = lib::create( 'database\select' );
+        $page_time_sel->add_table_column( 'module', 'name', 'module' );
+        $page_time_sel->add_table_column( 'page', 'name', 'page' );
+        $page_time_sel->add_column( 'datetime' );
+        $page_time_sel->add_column( 'microtime' );
+        $page_time_sel->add_column( 'time' );
+        $page_time_mod = lib::create( 'database\modifier' );
+        $page_time_mod->join( 'page', 'page_time.page_id', 'page.id' );
+        $page_time_mod->join( 'module', 'page.module_id', 'module.id' );
+        foreach( $db_response->get_page_time_list( $page_time_sel, $page_time_mod ) as $page_time )
+        {
+          $response['page_time_list'][] = [
+            'module' => $page_time['module'],
+            'page' => $page_time['page'],
+            'datetime' => $page_time['datetime'],
+            'microtime' => $page_time['microtime'],
+            'time' => $page_time['time']
+          ];
+        }
 
         $answer_sel = lib::create( 'database\select' );
         $answer_sel->add_table_column( 'question', 'name', 'question' );
@@ -1814,6 +1835,7 @@ class qnaire extends \cenozo\database\record
     $site_class_name = lib::get_class_name( 'database\site' );
     $module_class_name = lib::get_class_name( 'database\module' );
     $page_class_name = lib::get_class_name( 'database\page' );
+    $page_time_class_name = lib::get_class_name( 'database\page_time' );
     $answer_class_name = lib::get_class_name( 'database\answer' );
     $question_option_class_name = lib::get_class_name( 'database\question_option' );
     $stage_class_name = lib::get_class_name( 'database\stage' );
@@ -1906,6 +1928,39 @@ class qnaire extends \cenozo\database\record
           $db_response->last_datetime = $response->last_datetime;
           $db_response->comments = $response->comments;
           $db_response->save();
+
+          foreach( $response->page_time_list as $page_time )
+          {
+            $db_pt_module = $module_class_name::get_unique_record(
+              ['qnaire_id', 'name'],
+              [$this->id, $page_time->module]
+            );
+            $db_pt_page = $page_class_name::get_unique_record(
+              ['module_id', 'name'],
+              [$db_pt_module->id, $page_time->page]
+            );
+
+            $db_page_time = NULL;
+            if( !$new_response )
+            { // only bother to check for an existing page_time if the response isn't new
+              $db_page_time = $page_time_class_name::get_unique_record(
+                ['response_id', 'page_id'],
+                [$db_response->id, $db_pt_page->id]
+              );
+            }
+
+            if( is_null( $db_page_time ) )
+            {
+              $db_page_time = lib::create( 'database\page_time' );
+              $db_page_time->response_id = $db_response->id;
+              $db_page_time->page_id = $db_pt_page->id;
+            }
+
+            $db_page_time->datetime = $page_time->datetime;
+            $db_page_time->microtime = $page_time->microtime;
+            $db_page_time->time = $page_time->time;
+            $db_page_time->save();
+          }
 
           foreach( $response->answer_list as $answer )
           {
