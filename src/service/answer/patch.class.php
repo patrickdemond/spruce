@@ -75,6 +75,8 @@ class patch extends \cenozo\service\patch
    */
   public function execute()
   {
+    $site_class_name = lib::get_class_name( 'database\site' );
+
     parent::execute();
 
     $db_answer = $this->get_leaf_record();
