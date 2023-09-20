@@ -325,6 +325,16 @@ class qnaire extends \cenozo\database\record
       $db_attribute->save();
     }
 
+    // copy all qnaire_document files
+    foreach( $db_source_qnaire->get_qnaire_document_object_list() as $db_source_qnaire_document )
+    {
+      $db_qnaire_document = lib::create( 'database\qnaire_document' );
+      $db_qnaire_document->qnaire_id = $this->id;
+      $db_qnaire_document->name = $db_source_qnaire_document->name;
+      $db_qnaire_document->data = $db_source_qnaire_document->data;
+      $db_qnaire_document->save();
+    }
+
     // copy all embedded files
     foreach( $db_source_qnaire->get_embedded_file_object_list() as $db_source_embedded_file )
     {
@@ -2887,6 +2897,7 @@ class qnaire extends \cenozo\database\record
 
     $language_class_name = lib::get_class_name( 'database\language' );
     $attribute_class_name = lib::get_class_name( 'database\attribute' );
+    $qnaire_document_class_name = lib::get_class_name( 'database\qnaire_document' );
     $embedded_file_class_name = lib::get_class_name( 'database\embedded_file' );
     $deviation_type_class_name = lib::get_class_name( 'database\deviation_type' );
     $reminder_class_name = lib::get_class_name( 'database\reminder' );
@@ -3315,6 +3326,71 @@ class qnaire extends \cenozo\database\record
         if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
         if( 0 < count( $diff_list ) ) $difference_list['attribute_list'] = $diff_list;
+      }
+      else if( 'qnaire_document_list' == $property )
+      {
+        // check every item in the patch object for additions and changes
+        $add_list = [];
+        $change_list = [];
+        foreach( $patch_object->qnaire_document_list as $qnaire_document )
+        {
+          $db_qnaire_document = $qnaire_document_class_name::get_unique_record(
+            ['qnaire_id', 'name'],
+            [$this->id, $qnaire_document->name]
+          );
+
+          if( is_null( $db_qnaire_document ) )
+          {
+            if( $apply ) $qnaire_document_class_name::create_from_object( $qnaire_document, $this );
+            else $add_list[] = $qnaire_document;
+          }
+          else
+          {
+            // find and add all differences
+            $diff = [];
+            foreach( $qnaire_document as $property => $value )
+              if( $db_qnaire_document->$property != $qnaire_document->$property )
+                $diff[$property] = $qnaire_document->$property;
+
+            if( 0 < count( $diff ) )
+            {
+              if( $apply )
+              {
+                $db_qnaire_document->name = $qnaire_document->name;
+                $db_qnaire_document->data = $qnaire_document->data;
+                $db_qnaire_document->save();
+              }
+              else $change_list[$db_qnaire_document->name] = $diff;
+            }
+          }
+        }
+
+        // check every item in this object for removals
+        $remove_list = [];
+        foreach( $this->get_qnaire_document_object_list() as $db_qnaire_document )
+        {
+          $found = false;
+          foreach( $patch_object->qnaire_document_list as $qnaire_document )
+          {
+            if( $db_qnaire_document->name == $qnaire_document->name )
+            {
+              $found = true;
+              break;
+            }
+          }
+
+          if( !$found )
+          {
+            if( $apply ) $db_qnaire_document->delete();
+            else $remove_list[] = $db_qnaire_document->name;
+          }
+        }
+
+        $diff_list = [];
+        if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
+        if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
+        if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
+        if( 0 < count( $diff_list ) ) $difference_list['qnaire_document_list'] = $diff_list;
       }
       else if( 'image_list' == $property || 'embedded_file_list' == $property )
       {
@@ -4522,6 +4598,7 @@ class qnaire extends \cenozo\database\record
       'note' => $this->note,
       'language_list' => [],
       'attribute_list' => [],
+      'qnaire_document_list' => [],
       'embedded_file_list' => [],
       'reminder_list' => [],
       'qnaire_description_list' => [],
@@ -4556,6 +4633,12 @@ class qnaire extends \cenozo\database\record
     $attribute_sel->add_column( 'note' );
     foreach( $this->get_attribute_list( $attribute_sel ) as $item )
       $qnaire_data['attribute_list'][] = $item;
+
+    $qnaire_document_sel = lib::create( 'database\select' );
+    $qnaire_document_sel->add_column( 'name' );
+    $qnaire_document_sel->add_column( 'data' );
+    foreach( $this->get_qnaire_document_list( $qnaire_document_sel ) as $item )
+      $qnaire_data['qnaire_document_list'][] = $item;
 
     $embedded_file_sel = lib::create( 'database\select' );
     $embedded_file_sel->add_column( 'name' );
@@ -5129,6 +5212,7 @@ class qnaire extends \cenozo\database\record
     $language_class_name = lib::get_class_name( 'database\language' );
     $reminder_class_name = lib::get_class_name( 'database\reminder' );
     $attribute_class_name = lib::get_class_name( 'database\attribute' );
+    $qnaire_document_class_name = lib::get_class_name( 'database\qnaire_document' );
     $embedded_file_class_name = lib::get_class_name( 'database\embedded_file' );
     $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
     $alternate_consent_type_class_name = lib::get_class_name( 'database\alternate_consent_type' );
@@ -5197,6 +5281,9 @@ class qnaire extends \cenozo\database\record
 
     foreach( $qnaire_object->attribute_list as $attribute )
       $attribute_class_name::create_from_object( $attribute, $db_qnaire );
+
+    foreach( $qnaire_object->qnaire_document_list as $qnaire_document )
+      $qnaire_document_class_name::create_from_object( $qnaire_document, $db_qnaire );
 
     foreach( $qnaire_object->embedded_file_list as $embedded_file )
       $embedded_file_class_name::create_from_object( $embedded_file, $db_qnaire );

@@ -9,7 +9,13 @@
           }}:</label>
           <div class="col-sm-10 col-slim form-text">
             <div ng-if="subject+'_description_list' != property"
-                 ng-bind-html="(child|cnIsArray) ? ('(list with ' + child.length + ' items)') : child"></div>
+                 ng-bind-html="
+                   (child|cnIsArray) ?
+                   ('(list with ' + child.length + ' items)') :
+                   'data' == property ?
+                   (child.length|cnSize) :
+                   child
+                 "></div>
             <div ng-if="subject+'_description_list' == property">
               <cn-description-patch model="child"></cn-description-patch>
             </div>

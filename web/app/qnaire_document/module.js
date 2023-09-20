@@ -28,9 +28,6 @@ cenozoApp.defineModule({
         title: "Name",
         type: "string",
       },
-      mime_type: {
-        type: "hidden",
-      },
       data: {
         title: "PDF File",
         type: "base64",
@@ -93,7 +90,7 @@ cenozoApp.defineModule({
                   data: { select: { column: 'data' } }
                 }).get();
                 const data = response.data.data;
-                const blob = cenozo.convertBase64ToBlob(data.data, data.mime_type);
+                const blob = cenozo.convertBase64ToBlob(data.data, "application/pdf");
 
                 modal.close();
                 window.open(window.URL.createObjectURL(blob));
