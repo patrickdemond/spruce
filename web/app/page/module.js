@@ -1668,13 +1668,13 @@ cenozoApp.defineModule({
                     } else if ("audio" == question.type) {
                       // setup the audio recording for this question
                       question.audio = CnAudioRecordingFactory.instance({
-                        timeLimit: 0 < question.maximum ? question.maximum : 60,
-                        onComplete: (recorder, blob) => {
+                        timeLimit: 0 < question.maximum ? 1000*question.maximum : 60000,
+                        onComplete: (blob) => {
                           question.file = blob;
                           question.objectURL = window.URL.createObjectURL(question.file);
                           this.setAnswer(question, true);
                         },
-                        onTimeout: (recorder) => {
+                        onTimeout: () => {
                           // play a beep
                           const beep = new Audio(cenozoApp.baseUrl + "/img/beep.mp3");
                           beep.play();

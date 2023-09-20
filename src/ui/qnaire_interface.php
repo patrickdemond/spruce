@@ -24,7 +24,6 @@
   <script src="<?php print LIB_URL; ?>/chart.js/dist/Chart.min.js?build=<?php print CENOZO_BUILD; ?>"></script>
   <script src="<?php print LIB_URL; ?>/angular-chart.js/dist/angular-chart.min.js?build=<?php print CENOZO_BUILD; ?>"></script>
   <script src="<?php print LIB_URL; ?>/file-saver/dist/FileSaver.min.js?build=<?php print CENOZO_BUILD; ?>"></script>
-  <script src="<?php print LIB_URL; ?>/web-audio-recorder-js/lib-minified/WebAudioRecorder.min.js?build=<?php print CENOZO_BUILD; ?>"></script>
 
   <script src="<?php print CENOZO_URL; ?>/cenozo<?php print $min; ?>.js?build=<?php print CENOZO_BUILD; ?>" id="cenozo"></script>
   <script src="<?php print ROOT_URL; ?>/app<?php print $min; ?>.js?build=<?php print APP_BUILD; ?>" id="app"></script>
