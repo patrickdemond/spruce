@@ -126,7 +126,7 @@ class response_stage extends \cenozo\database\record
     $db_response->page_id = $this->page_id;
     $db_response->save();
 
-    $this->user_id = lib::create( 'business\session' )->get_user()->id;
+    $this->user_id = lib::create( 'business\session' )->get_effective_user()->id;
     $this->status = 'active';
     if( !is_null( $this->deviation_type_id ) )
     {
@@ -138,6 +138,9 @@ class response_stage extends \cenozo\database\record
       }
     }
     $this->save();
+
+    // close any open pauses
+    $this->close_pauses();
   }
 
   /**
@@ -152,6 +155,11 @@ class response_stage extends \cenozo\database\record
 
     $this->status = 'paused';
     $this->save();
+
+    $db_response_stage_pause = lib::create( 'database\response_stage_pause' );
+    $db_response_stage_pause->response_stage_id = $this->id;
+    $db_response_stage_pause->user_id = lib::create( 'business\session' )->get_effective_user()->id;
+    $db_response_stage_pause->save();
   }
 
   /**
@@ -160,7 +168,7 @@ class response_stage extends \cenozo\database\record
   public function skip()
   {
     $this->delete_answers();
-    $this->user_id = lib::create( 'business\session' )->get_user()->id;
+    $this->user_id = lib::create( 'business\session' )->get_effective_user()->id;
     $this->status = 'skipped';
     $this->page_id = NULL;
     $this->start_datetime = NULL;
@@ -169,6 +177,9 @@ class response_stage extends \cenozo\database\record
 
     // now update the response's status in case this results in ending the interview
     $this->get_response()->update_status();
+
+    // and delete all pause records
+    $this->remove_response_stage_pause( NULL );
   }
 
   /**
@@ -187,6 +198,9 @@ class response_stage extends \cenozo\database\record
     $this->end_datetime = NULL;
     $this->comments = NULL;
     $this->update_status();
+
+    // and delete all pause records
+    $this->remove_response_stage_pause( NULL );
   }
 
   /**
@@ -205,6 +219,9 @@ class response_stage extends \cenozo\database\record
     $this->page_id = NULL;
     $this->end_datetime = util::get_datetime_object();
     $this->save();
+
+    // close any open pauses
+    $this->close_pauses();
   }
 
   /**
@@ -246,5 +263,21 @@ class response_stage extends \cenozo\database\record
       $sql = sprintf( 'DELETE FROM page_time %s', $page_time_mod->get_sql() );
       static::db()->execute( $sql );
     }
+  }
+
+  /**
+   * Closes all pause records
+   */
+  private function close_pauses()
+  {
+    $pause_mod = lib::create( 'database\modifier' );
+    $pause_mod->where( 'response_stage_id', '=', $this->id );
+    $pause_mod->where( 'end_datetime', '=', NULL );
+
+    static::db()->execute( sprintf(
+      'UPDATE response_stage_pause SET end_datetime = %s %s',
+      static::db()->format_string( util::get_datetime_object()->format( 'Y-m-d H:i:s' ) ),
+      $pause_mod->get_sql()
+    ) );
   }
 }
