@@ -913,6 +913,7 @@ class qnaire extends \cenozo\database\record
     ini_set( 'memory_limit', '2G' );
     set_time_limit( 900 ); // 15 minutes max
 
+    $response_stage_pause_class_name = lib::get_class_name( 'database\response_stage_pause' );
     $setting_manager = lib::create( 'business\setting_manager' );
     if( !$setting_manager->get_setting( 'general', 'detached' ) || is_null( PARENT_INSTANCE_URL ) ) return;
 
@@ -1089,9 +1090,9 @@ class qnaire extends \cenozo\database\record
 
         if( $this->stages )
         {
-          $response['stage_list'] = [];
-
+          // add response stage details
           $response_stage_sel = lib::create( 'database\select' );
+          $response_stage_sel->add_column( 'id' );
           $response_stage_sel->add_table_column( 'stage', 'rank', 'stage' );
           $response_stage_sel->add_table_column( 'user', 'name', 'user' );
           $response_stage_sel->add_table_column( 'deviation_type', 'type', 'deviation_type' );
@@ -1110,8 +1111,30 @@ class qnaire extends \cenozo\database\record
             'deviation_type.id'
           );
           $response_stage_mod->order( 'stage.rank' );
-          $response['stage_list'] =
+          $response_stage_list =
             $db_response->get_response_stage_list( $response_stage_sel, $response_stage_mod );
+
+          // add any pauses
+          foreach( $response_stage_list as $index => $response_stage )
+          {
+            $pause_sel = lib::create( 'database\select' );
+            $pause_sel->add_table_column( 'user', 'name', 'user' );
+            $pause_sel->add_column( 'start_datetime' );
+            $pause_sel->add_column( 'end_datetime' );
+            
+            $pause_mod = lib::create( 'database\modifier' );
+            $pause_mod->join( 'user', 'response_stage_pause.user_id', 'user.id' );
+            $pause_mod->where( 'response_stage_id', '=', $response_stage['id'] );
+            $pause_mod->order( 'start_datetime' );
+
+            $response_stage_list[$index]['pause_list'] =
+              $response_stage_pause_class_name::select( $pause_sel, $pause_mod );
+
+            // remove the response stage's id now that we don't need it anymore
+            unset( $response_stage_list[$index]['id'] );
+          }
+
+          $response['stage_list'] = $response_stage_list;
         }
 
         $respondent['response_list'][] = $response;
@@ -2064,6 +2087,21 @@ class qnaire extends \cenozo\database\record
               $db_response_stage->end_datetime = $stage->end_datetime;
               $db_response_stage->comments = $stage->comments;
               $db_response_stage->save();
+
+              // replace all pauses
+              $db_response_stage->remove_response_stage_pause( NULL );
+              foreach( $stage->pause_list as $pause )
+              {
+                $db_user = $user_class_name::get_unique_record( 'name', $pause->user );
+                if( is_null( $db_user ) ) $db_user = $db_current_user;
+
+                $db_response_stage_pause = lib::create( 'database\response_stage_pause' );
+                $db_response_stage_pause->response_stage_id = $db_response_stage->id;
+                $db_response_stage_pause->user_id = $db_user->id;
+                $db_response_stage_pause->start_datetime = $pause->start_datetime;
+                $db_response_stage_pause->end_datetime = $pause->end_datetime;
+                $db_response_stage_pause->save();
+              }
             }
           }
 
