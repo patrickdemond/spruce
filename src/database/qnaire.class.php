@@ -2821,6 +2821,7 @@ class qnaire extends \cenozo\database\record
     foreach( $answer_class_name::select( $answer_sel, $answer_mod ) as $answer )
     {
       if( !array_key_exists( $answer['response_id'], $answer_data ) ) $answer_data[$answer['response_id']] = [];
+      $answer_data[$answer['response_id']][$answer['question_id']] = $answer['value'];
     }
 
     // loop through each response and build the data
