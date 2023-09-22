@@ -224,6 +224,27 @@ class response_stage extends \cenozo\database\record
     $this->close_pauses();
   }
 
+  public static function get_elapsed_column()
+  {
+    return (
+      'TIMESTAMPDIFF( '.
+        'SECOND, '.
+        'response_stage.start_datetime, '.
+        'response_stage.end_datetime '.
+      ') - '.
+      'IFNULL( '.
+        'SUM( '.
+          'TIMESTAMPDIFF( '.
+            'SECOND, '.
+            'response_stage_pause.start_datetime, '.
+            'response_stage_pause.end_datetime '.
+          ') '.
+        '), '.
+        '0 '.
+      ')'
+    );
+  }
+
   /**
    * Delete all answers belonging to the stage
    */

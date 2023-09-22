@@ -2620,6 +2620,138 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
+   * Returns an array of all response metadata for this qnaire
+   * @param database\modifier $modifier
+   * @return ['header', 'data']
+   */
+  public function get_response_metadata( $modifier = NULL )
+  {
+    ini_set( 'memory_limit', '2G' );
+    set_time_limit( 900 ); // 15 minutes max
+
+    $response_class_name = lib::get_class_name( 'database\response' );
+    $response_stage_class_name = lib::get_class_name( 'database\response_stage' );
+
+    $data = [];
+
+    // now loop through all responses and fill in the data array
+    $response_mod = lib::create( 'database\modifier' );
+    $response_mod->join( 'respondent', 'response.respondent_id', 'respondent.id' );
+    $response_mod->left_join( 'participant', 'respondent.participant_id', 'participant.id' );
+    $response_mod->join( 'language', 'response.language_id', 'language.id' );
+    $response_mod->left_join( 'site', 'response.site_id', 'site.id' );
+    $response_mod->where( 'respondent.qnaire_id', '=', $this->id );
+    // make sure the response has stages, 
+    $response_mod->join( 'response_stage', 'response.id', 'response_stage.response_id' );
+    $response_mod->group( 'response.id' );
+    $response_mod->order( 'respondent.end_datetime' );
+
+    if( !is_null( $modifier ) )
+    {
+      $response_mod->merge( $modifier );
+      $response_mod->limit( $modifier->get_limit() );
+      $response_mod->offset( $modifier->get_offset() );
+    }
+
+    $response_sel = lib::create( 'database\select' );
+    $response_sel->add_column( 'id' );
+    $response_sel->add_table_column( 'respondent', 'token' );
+    $response_sel->add_column( 'rank' );
+    $response_sel->add_column( 'qnaire_version' );
+    $response_sel->add_table_column( 'language', 'code', 'language' );
+    $response_sel->add_table_column( 'site', 'name', 'site' );
+    $response_sel->add_column( 'submitted' );
+    $response_sel->add_column(
+      'DATE_FORMAT( response.start_datetime, "%Y-%m-%dT%T+00:00" )',
+      'start_datetime',
+      false
+    );
+    $response_sel->add_column(
+      'DATE_FORMAT( response.last_datetime, "%Y-%m-%dT%T+00:00" )',
+      'last_datetime',
+      false
+    );
+    $response_sel->add_table_column( 'participant', 'uid' );
+
+    // add the base response data
+    $data = [];
+    foreach( $response_class_name::select( $response_sel, $response_mod ) as $response )
+    {
+      $data[$response['id']] = [
+        'uid' => $response['uid'],
+        'token' => $response['token'],
+        'rank' => $response['rank'],
+        'qnaire_version' => $response['qnaire_version'],
+        'language' => $response['language'],
+        'site' => $response['site'],
+        'submitted' => $response['submitted'],
+        'start_datetime' => $response['start_datetime'],
+        'last_datetime' => $response['last_datetime']
+      ];
+    }
+
+    // now get a list of all response stage details for all selected response IDs
+    $stage_sel = lib::create( 'database\select' );
+    $stage_sel->add_column( 'response_id' );
+    $stage_sel->add_table_column( 'stage', 'rank', 'stage_rank' );
+    $stage_sel->add_table_column( 'stage', 'name', 'stage_name' );
+    $stage_sel->add_table_column( 'user', 'name', 'stage_user' );
+    $stage_sel->add_column( 'start_datetime', 'stage_start_datetime' );
+    $stage_sel->add_column( 'end_datetime', 'stage_end_datetime' );
+    $stage_sel->add_column(
+      $response_stage_class_name::get_elapsed_column(),
+      'stage_duration',
+      false
+    );
+    $stage_sel->add_column( 'status', 'stage_status' );
+    $stage_sel->add_table_column( 'deviation_type', 'type', 'stage_deviation_type' );
+    $stage_sel->add_table_column( 'deviation_type', 'name', 'stage_deviation_name' );
+    $stage_sel->add_column( 'deviation_comments', 'stage_deviation_comments' );
+    $stage_sel->add_column( 'comments', 'stage_comments' );
+    
+    $stage_mod = lib::create( 'database\modifier' );
+    $stage_mod->where( 'response_id', 'IN', array_keys( $data ) );
+    $stage_mod->join( 'stage', 'response_stage.stage_id', 'stage.id' );
+    $stage_mod->left_join( 'user', 'response_stage.user_id', 'user.id' );
+    $stage_mod->left_join( 'deviation_type', 'response_stage.deviation_type_id', 'deviation_type.id' );
+    $join_mod = lib::create( 'database\modifier' );
+    $join_mod->where( 'response_stage.id', '=', 'response_stage_pause.response_stage_id', false );
+    $join_mod->where( 'response_stage_pause.end_datetime', '!=', NULL );
+    $stage_mod->join_modifier( 'response_stage_pause', $join_mod, 'left' );
+    $stage_mod->group( 'response_stage.id' );
+    $stage_mod->order( 'response_id' );
+    $stage_mod->order( 'stage.rank' );
+    $stage_data = [];
+
+    $name_list = [
+      'stage_name', 'stage_user', 'stage_start_datetime', 'stage_end_datetime', 'stage_duration', 'stage_status',
+      'stage_deviation_type', 'stage_deviation_name', 'stage_deviation_comments', 'stage_comments'
+    ];
+    $column_list = [];
+    foreach( $response_stage_class_name::select( $stage_sel, $stage_mod ) as $response_stage )
+    {
+      // make sure to add new columns as we go
+      $stage_rank = $response_stage['stage_rank'];
+      foreach( $name_list as $name )
+      {
+        $column_name = sprintf( '%s_%d', $name, $stage_rank );
+        // add this rank to the column list if we haven't done it yet
+        if( !array_key_exists( sprintf( 'stage_name_%d', $stage_rank ), $column_list ) )
+          array_push( $column_list, $column_name );
+
+        $data[$response_stage['response_id']][$column_name] = $response_stage[$name];
+      }
+    }
+
+    $header = $column_list;
+    array_unshift(
+      $header,
+      'uid', 'token', 'rank', 'qnaire_version', 'language', 'site', 'submitted', 'start_datetime', 'last_datetime'
+    );
+    return ['header' => $header, 'data' => array_values( $data )];
+  }
+
+  /**
    * Returns an array of all responses to this qnaire
    * @param database\modifier $modifier
    * @param boolean $exporting Whether the data is being exported (some questions are marked to not be exported)

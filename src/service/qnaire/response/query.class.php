@@ -38,7 +38,6 @@ class query extends \cenozo\service\query
   {
     $data = array();
 
-    // if exporting data then we need the qnaire class to generate it for us
     if( $this->get_argument( 'export', false ) )
     {
       $modifier = lib::create( 'database\modifier');
@@ -52,6 +51,17 @@ class query extends \cenozo\service\query
         $this->get_argument( 'attributes', false ), // whether to include attributes
         $this->get_argument( 'submitted_only', false ) // only include responses with answers
       );
+      $data = $response_data['data'];
+      foreach( $data as $index => $row ) $data[$index] = array_combine( $response_data['header'], $data[$index] );
+    }
+    else if( $this->get_argument( 'metadata', false ) )
+    {
+      $modifier = lib::create( 'database\modifier');
+      $modifier->limit( $this->modifier->get_limit() );
+      $modifier->offset( $this->modifier->get_offset() );
+
+      // get response metadata
+      $response_data = $this->get_parent_record()->get_response_metadata( $modifier );
       $data = $response_data['data'];
       foreach( $data as $index => $row ) $data[$index] = array_combine( $response_data['header'], $data[$index] );
     }

@@ -44,6 +44,10 @@ cenozoApp.defineModule({
           title: "End Date & Time",
           type: "datetimesecond",
         },
+        elapsed: {
+          title: "Elapsed",
+          type: "seconds"
+        },
         comments: {
           title: "Comments",
           type: "text",
