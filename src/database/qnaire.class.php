@@ -2736,8 +2736,7 @@ class qnaire extends \cenozo\database\record
       {
         $column_name = sprintf( '%s_%d', $name, $stage_rank );
         // add this rank to the column list if we haven't done it yet
-        if( !array_key_exists( sprintf( 'stage_name_%d', $stage_rank ), $column_list ) )
-          array_push( $column_list, $column_name );
+        if( !in_array( $column_name, $column_list ) ) $column_list[] = $column_name;
 
         $data[$response_stage['response_id']][$column_name] = $response_stage[$name];
       }
