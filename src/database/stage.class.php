@@ -32,7 +32,7 @@ class stage extends \cenozo\database\has_rank
     parent::save();
 
     // update all preconditions if the stage's name is changing
-    if( $changing_name ) $this->get_qnaire()->update_name_in_preconditions( 'stage', $old_name, $this->name );
+    if( $changing_name ) $this->get_qnaire()->update_name_in_preconditions( $this, $old_name );
   }
 
   /**

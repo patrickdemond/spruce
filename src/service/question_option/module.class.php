@@ -31,7 +31,12 @@ class module extends \pine\service\base_qnaire_part_module
       $db_qnaire = $db_question_option->get_qnaire();
 
       // question options appear in preconditions proceeded  by a : and followed by a $
-      $match = sprintf( ':%s\\$', $db_question_option->name );
+      $match = sprintf(
+        '\\$(%s((\\.extra\\( *%s *\\))|(:%s)))\\$',
+        $db_question_option->get_question()->name,
+        $db_question_option->name,
+        $db_question_option->name
+      );
 
       if( $select->has_column( 'module_precondition_dependencies' ) )
       {
