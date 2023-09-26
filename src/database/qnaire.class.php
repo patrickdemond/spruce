@@ -894,7 +894,23 @@ class qnaire extends \cenozo\database\record
         util::full_urlencode( $this->name )
       );
       $parent_qnaire = util::get_data_from_parent( 'qnaire', $url_postfix );
+      $readonly = $this->readonly;
+
+      // override the readonly property while syncing with the parent instance
+      if( $readonly )
+      {
+        $this->readonly = false;
+        $this->save();
+      }
+
       $this->process_patch( $parent_qnaire, true );
+
+      if( $readonly && !$this->readonly )
+      {
+        $this->readonly = true;
+        $this->save();
+      }
+
       log::info( sprintf(
         'Questionnaire "%s" has been upgraded from version "%s" to "%s".',
         $this->name,
