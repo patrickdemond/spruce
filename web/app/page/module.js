@@ -1672,7 +1672,7 @@ cenozoApp.defineModule({
                         onComplete: (blob) => {
                           question.file = blob;
                           question.objectURL = window.URL.createObjectURL(question.file);
-                          this.setAnswer(question, true);
+                          this.setAnswer(question, {filesize: question.file.size});
                         },
                         onTimeout: () => {
                           // play a beep
@@ -2446,8 +2446,8 @@ cenozoApp.defineModule({
                       var self = this;
 
                       if ("audio" == question.type) {
-                        if (true !== value) {
-                          // if setting an audio answer to anything other than true, delete the file
+                        if (!angular.isObject(value) || !angular.isDefined(value.filesize)) {
+                          // if the audio file's size isn't provided then delete the file
                           question.file = '';
                           question.objectURL = null;
                         }

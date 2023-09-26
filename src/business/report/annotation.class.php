@@ -305,10 +305,6 @@ class annotation extends \cenozo\business\report\base_report
         {
           $row['valueType'] = 'date';
         }
-        else if( 'device' == $question['type'] )
-        {
-          // TODO: implement
-        }
         else if( 'number' == $question['type'] )
         {
           $row['valueType'] = 'decimal';
