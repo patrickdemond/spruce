@@ -578,39 +578,98 @@ class qnaire extends \cenozo\database\record
 
   /**
    * Updates all preconditions refering to a question name to a new name
-   * @param string type One of "question" or "question_option"
-   * @param string $old_name The question or option's old name
-   * @param string $new_name The question or option's new name
+   * 
+   * @param database\record Either a stage, question or question_option
+   * @param string $old_name The record's old name
    */
-  public function update_name_in_preconditions( $type, $old_name, $new_name )
+  public function update_name_in_preconditions( $db_record, $old_name )
   {
+    // make sure the record is a stage, question or question_option
+    if( is_null( $db_record ) )
+      throw lib::create( 'exception\argument', 'db_record', $db_record, __METHOD__ );
+
+    $type = NULL;
+    if( is_a( $db_record, lib::get_class_name( 'database\stage' ) ) ) $type = 'stage';
+    else if( is_a( $db_record, lib::get_class_name( 'database\question' ) ) ) $type = 'question';
+    else if( is_a( $db_record, lib::get_class_name( 'database\question_option' ) ) ) $type = 'question_option';
+
+    if( is_null( $type ) )
+      throw lib::create( 'exception\argument', 'db_record', $db_record, __METHOD__ );
+
+    $new_name = $db_record->name;
+
     // The sql regex match depends on what type of change we're making
+    // Stages will all start with a # and end with either:
+    //   "#" (for direct references),
+    //   "." (for function)
     // Questions will all start with a $ and end with either:
     //   "$" (for direct references),
     //   ":" (for options)
     //   "." (for functions)
-    // Stages will all start and end with a "#"
+    // Question options will take the form of $QUESTION:OPTION$ or $QUESTION.extra(OPTION)$
     $match = '';
     if( 'stage' == $type )
     {
-      $match = sprintf( '#%s#', $old_name );
-      $replace = sprintf( 'REPLACE( %%s.precondition, "#%s#", "#%s#" )', $old_name, $new_name );
+      $match = sprintf( '#%s[#:.]', $old_name );
+      $replace = sprintf(
+         'REPLACE( '.
+           'REPLACE( '.
+             '%%s.precondition, '.
+             '"#%s#", '.
+             '"#%s#" '.
+           '), '.
+           '"#%s.", '.
+           '"#%s." '.
+         ')',
+         $old_name, $new_name,
+         $old_name, $new_name
+      );
     }
-    else
+    else if( 'question' == $type )
     {
-      $match = sprintf( 'question' == $type ? '\\$%s[$:.]' : ':%s\\$', $old_name );
+      $match = sprintf( '\\$%s[$:.]', $old_name );
+      $replace = sprintf(
+        'REPLACE( '.
+          'REPLACE( '.
+            'REPLACE( '.
+              '%%s.precondition, '.
+              '"$%s$", '.
+              '"$%s$" '.
+            '), '.
+            '"$%s:", '.
+            '"$%s:" '.
+          '), '.
+          '"$%s.", '.
+          '"$%s." '.
+        ')',
+        $old_name, $new_name,
+        $old_name, $new_name,
+        $old_name, $new_name
+      );
+    }
+    else // 'question_option' == $type
+    {
+      $db_question = $db_record->get_question();
 
-      // The replacement syntax is also different for question or question-options
-      $replace = 'question' == $type
-               ? sprintf(
-                   'REPLACE( REPLACE( REPLACE( '.
-                     '%%s.precondition, '.
-                     '"$%s$", "$%s$" ), '.
-                     '"$%s:", "$%s:" ), '.
-                     '"$%s.", "$%s." )',
-                   $old_name, $new_name, $old_name, $new_name, $old_name, $new_name
-                 )
-               : sprintf( 'REPLACE( %%s.precondition, ":%s$", ":%s$" )', $old_name, $new_name );
+      $match = sprintf(
+        '\\$(%s((\\.extra\\( *%s *\\))|(:%s)))\\$',
+        $db_question->name,
+        $old_name,
+        $old_name
+      );
+      $replace = sprintf(
+        'REPLACE( '.
+          'REPLACE( '.
+            '%%s.precondition, '.
+            '"$%s:%s$", '.
+            '"$%s:%s$" '.
+          '), '.
+          '"$%s.extra(%s)$", '.
+          '"$%s.extra(%s)$" '.
+        ')',
+        $db_question->name, $old_name, $db_question->name, $new_name,
+        $db_question->name, $old_name, $db_question->name, $new_name
+      );
     }
 
     // update all stages

@@ -32,7 +32,7 @@ class question_option extends base_qnaire_part
     parent::save();
 
     // update all preconditions if the question's name is changing
-    if( $changing_name ) $this->get_qnaire()->update_name_in_preconditions( 'question_option', $old_name, $this->name ); 
+    if( $changing_name ) $this->get_qnaire()->update_name_in_preconditions( $this, $old_name );
   }
 
   /**

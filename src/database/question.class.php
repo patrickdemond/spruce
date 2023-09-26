@@ -38,7 +38,7 @@ class question extends base_qnaire_part
     if( $changing_name )
     {
       // update all preconditions if the question's name is changing
-      $this->get_qnaire()->update_name_in_preconditions( 'question', $old_name, $this->name );
+      $this->get_qnaire()->update_name_in_preconditions( $this, $old_name );
 
       // rename response data directories, if necessary
       if( file_exists( $old_data_directory ) ) rename( $old_data_directory, $this->get_data_directory() );
