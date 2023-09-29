@@ -1034,8 +1034,6 @@ class qnaire extends \cenozo\database\record
       // do not export anonymous respondents
       if( is_null( $db_participant ) ) continue;
 
-      $db_address = $db_participant->get_primary_address();
-
       $participant = [
         'uid' => $db_participant->uid,
         'participant' => [
@@ -1054,12 +1052,6 @@ class qnaire extends \cenozo\database\record
           'override_stratum' => $db_participant->override_stratum,
           'sex' => $db_participant->sex,
           'withdraw_third_party' => $db_participant->withdraw_third_party
-        ],
-        'address' => [
-          'address1' => $db_address->address1,
-          'address2' => $db_address->address2,
-          'city' => $db_address->city,
-          'postcode' => $db_address->postcode
         ],
         'interview' => [
           'datetime' => $db_respondent->end_datetime->format( 'c' )

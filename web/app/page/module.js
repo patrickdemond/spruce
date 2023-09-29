@@ -1408,16 +1408,19 @@ cenozoApp.defineModule({
                       key: "address1",
                       title: "Address Line 1",
                       type: "string",
+                      isConstant: true,
                     },
                     {
                       key: "address2",
                       title: "Address Line 2",
                       type: "string",
+                      isConstant: true,
                     },
                     {
                       key: "city",
                       title: "City",
                       type: "string",
+                      isConstant: true,
                     },
                     {
                       key: "region_id",
@@ -1433,6 +1436,7 @@ cenozoApp.defineModule({
                       key: "postcode",
                       title: "Postcode",
                       type: "string",
+                      isConstant: true,
                     },
                   ];
                 }
