@@ -850,13 +850,13 @@ class response extends \cenozo\database\has_rank
           );
           $value = is_null( $db_answer ) ? NULL : util::json_decode( $db_answer->value );
 
-          if( $db_answer::DKNA == $db_answer->value )
+          if( !is_null( $db_answer ) && $answer_class_name::DKNA == $db_answer->value )
           {
             $compiled = 'fr' == $this->get_language()->code
                       ? 'Ne sais pas / pas de réponse'
                       : 'Don\'t Know / No Answer';
           }
-          else if( $db_answer::REFUSE == $db_answer->value )
+          else if( !is_null( $db_answer ) && $answer_class_name::REFUSE == $db_answer->value )
           {
             $compiled = 'fr' == $this->get_language()->code
                       ? 'Refus'
@@ -967,7 +967,7 @@ class response extends \cenozo\database\has_rank
               $compiled = $value ? 'Yes' : 'No';
             }
           }
-          else if( 'audio' == $db_question->type )
+          else if( 'audio' == $db_question->type && !is_null( $db_answer ) )
           {
             // audio files are stored on disk, not in the database
             $filename = sprintf( '%s/audio.wav', $db_answer->get_data_directory() );
