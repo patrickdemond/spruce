@@ -19,7 +19,7 @@ class qnaire_consent_type_trigger extends qnaire_trigger
    */
   public function execute( $db_response )
   {
-    $hold_class_name = lib::get_class_name( 'database\answer' );
+    $hold_class_name = lib::get_class_name( 'database\hold' );
 
     // some triggers may be skipped
     if( !$this->check_trigger( $db_response ) ) return;
