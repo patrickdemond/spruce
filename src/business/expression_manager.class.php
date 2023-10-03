@@ -136,8 +136,13 @@ class expression_manager extends \cenozo\singleton
    *   @NAME@ (response attribute)
    *   $NAME$ (question value or stage: true if the stage is either skipped or complete)
    *   $NAME.empty()$ (true if question hasn't been answered, false if it has)
+   *   $NAME.not_empty()$ (true if question has been answered, false if it hasn't)
    *   $NAME.dkna()$ (true if a question's answer is "Don't Know / No Answer")
-   *   $NAME.refuse()$ (true if a question is "Refused")
+   *   $NAME.refuse()$ (true if a question's answer is "Refused")
+   *   $NAME.dkna_refuse()$ (true if a question's answer is "DK/NA" or "Refused")
+   *   $NAME.dkna_refuse_empty()$ (true if a question's answer is "DK/NA" or "Refused" or not answered)
+   *   $NAME.not_dkna_refuse()$ (true if a question's answer is not "DK/NA" and not "Refused")
+   *   $NAME.not_dkna_refuse_empty()$ (true if a question's answer is not "DK/NA" and not "Refused" and must be answered)
    *   $NAME.status()$ (gets a stage's current status)
    *   $NAME.value("PATH")$ (a particular property of an object-based answer)
    *   $respondent.token$ (gets the respondent's token)
@@ -836,7 +841,13 @@ class expression_manager extends \cenozo\singleton
 
             $object_path = $sub_matches[1];
           }
-          else if( in_array( $question_function, ['empty()', 'dkna()', 'refuse()'] ) )
+          else if( in_array(
+            $question_function,
+            [
+              'empty()', 'not_empty()', 'dkna()', 'refuse()', 'dkna_refuse()',
+              'dkna_refuse_empty()', 'not_dkna_refuse()', 'not_dkna_refuse_empty()'
+            ]
+          ) )
           {
             $special_function = substr( $question_function, 0, -2 );
           }
@@ -957,8 +968,15 @@ class expression_manager extends \cenozo\singleton
         $refuse = is_null( $db_answer ) ? false : $db_answer->is_refuse();
 
         if( 'empty' == $special_function ) $compiled = is_null( $value ) ? 'true' : 'false';
+        else if( 'not_empty' == $special_function ) $compiled = is_null( $value ) ? 'false' : 'true';
         else if( 'dkna' == $special_function ) $compiled = $dkna ? 'true' : 'false';
         else if( 'refuse' == $special_function ) $compiled = $refuse ? 'true' : 'false';
+        else if( 'dkna_refuse' == $special_function ) $compiled = $dkna || $refuse ? 'true' : 'false';
+        else if( 'dkna_refuse_empty' == $special_function )
+          $compiled = $dkna || $refuse || is_null( $value ) ? 'true' : 'false';
+        else if( 'not_dkna_refuse' == $special_function ) $compiled = $dkna || $refuse ? 'false' : 'true';
+        else if( 'not_dkna_refuse_empty' == $special_function )
+          $compiled = $dkna || $refuse || is_null( $value ) ? 'false' : 'true';
         else if( 'count' == $special_function ) { $compiled = is_array( $value ) ? count( $value ) : 0; }
         else if( is_null( $value ) || $dkna || $refuse ) $compiled = 'NULL';
         else if( !is_null( $db_question_option ) )
