@@ -217,20 +217,29 @@ class answer extends \cenozo\database\record
           $option = $option_list[$selected_option_id];
           if( $expression_manager->evaluate( $option['precondition'] ) )
           {
-            if(
-              ( is_array( $selected_option->value ) && 0 == count( $selected_option->value ) ) ||
-              is_null( $selected_option->value )
-            ) return false;
-
-            if(
-              'number with unit' == $option['extra'] && (
+            if( 'number with unit' == $option['extra'] )
+            {
+              if(
                 !is_object( $selected_option->value ) ||
                 !property_exists( $selected_option->value, 'value' ) ||
                 is_null( $selected_option->value->value ) ||
                 !property_exists( $selected_option->value, 'unit' ) ||
                 is_null( $selected_option->value->unit ) 
-              )
-            ) return false;
+              ) return false;
+            }
+            else if( is_null( $selected_option->value ) )
+            {
+              // if the value is null then the extra value is missing
+              return false;
+            }
+            else if( is_array( $selected_option->value ) )
+            {
+              // if the value is an empty array (after removing null values)
+              $count = 0;
+              foreach( $selected_option->value as $v )
+                if( !is_null( $v ) ) $count++;
+              if( 0 == $count ) return false;
+            }
           }
         }
       }

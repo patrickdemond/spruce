@@ -1977,13 +1977,12 @@ cenozoApp.defineModule({
                           null == selectedOption.value.unit) {
                         return selectedOption.id;
                       }
-                    } else {
-                      // for other extra types...
-                      if( null == selectedOption.value ) {
-                        // if the value is null then the extra value is missing
-                        return selectedOption.id;
-                      } else if( angular.isArray(selectedOption.value) && 0 == selectedOption.value.length ) {
-                        // and if there is an empty array then just mark the question as incomplete
+                    } else if( null == selectedOption.value ) {
+                      // if the value is null then the extra value is missing
+                      return selectedOption.id;
+                    } else if( angular.isArray(selectedOption.value) ) {
+                      // if the value is an empty array (after removing null values)
+                      if( 0 == selectedOption.value.filter(v => null != v).length ) {
                         return false;
                       }
                     }
@@ -2660,7 +2659,7 @@ cenozoApp.defineModule({
                 value.splice(optionIndex, 1);
               if (0 == value.length) value = null;
 
-              await this.setAnswer(question, value, true);
+              await this.setAnswer(question, value);
             },
 
             selectDateOrTimeForQuestionOrOption: async function (question, option, valueIndex, value, type) {
