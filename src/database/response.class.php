@@ -6,7 +6,7 @@
  */
 
 namespace pine\database;
-use cenozo\lib, cenozo\log, pine\util;
+use cenozo\lib, cenozo\log, pine\util, \Flow\JSONPath\JSONPath;
 
 /**
  * response: record
@@ -1077,18 +1077,7 @@ class response extends \cenozo\database\has_rank
     if( $match )
     {
       $object_path = $device_matches[1];
-      foreach( explode( '.', $object_path ) as $property )
-      {
-        if( property_exists( $compiled, $property ) )
-        {
-          $compiled = $compiled->$property;
-        }
-        else
-        {
-          $compiled = false;
-          break;
-        }
-      }
+      $compiled = (new JSONPath( $value ))->find( sprintf( '$.%s', $object_path ) )->data()[0];
     }
 
     return $compiled;

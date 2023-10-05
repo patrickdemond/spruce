@@ -690,6 +690,8 @@ cenozoApp.defineModule({
                       question.device_status = response.data.status;
                       question.device_uuid = response.data.uuid;
 
+                      this.evaluateAllDescriptions();
+
                       if( 'in progress' != question.device_status ) $interval.cancel(promise);
                     }
                   },
@@ -2025,6 +2027,27 @@ cenozoApp.defineModule({
               return true;
             },
 
+            evaluateAllDescriptions: function() {
+              this.questionList.filter(q => this.evaluate(q.precondition)).forEach((q) => {
+                q.prompts = CnTranslationHelper.parseDescriptions(this.evaluateDescription(q.rawPrompts));
+                q.popups = CnTranslationHelper.parseDescriptions(this.evaluateDescription(q.rawPopups));
+
+                if ("list" == q.type) {
+                  q.optionList.forEach((o) => {
+                    o.prompts = CnTranslationHelper.parseDescriptions(this.evaluateDescription(o.rawPrompts));
+                    o.popups = CnTranslationHelper.parseDescriptions(this.evaluateDescription(o.rawPopups));
+                  });
+                }
+
+                if ("list" == q.type) {
+                  q.optionList.forEach((o) => {
+                    o.prompts = CnTranslationHelper.parseDescriptions(this.evaluateDescription(o.rawPrompts));
+                    o.popups = CnTranslationHelper.parseDescriptions(this.evaluateDescription(o.rawPopups));
+                  });
+                }
+              });
+            },
+
             evaluateDescription: function (description) {
               return this.evaluate(description, "description");
             },
@@ -2108,15 +2131,20 @@ cenozoApp.defineModule({
                   var subparts = parts[0].toLowerCase().split(":");
                   var questionName = subparts[0];
                   var optionName = null;
+                  var pathName = null;
+
                   if (1 < subparts.length) {
                     if ("count()" == subparts[1]) fnName = "count()";
                     else optionName = subparts[1];
-                  } else if (
-                    null != fnName &&
-                    "extra(" == fnName.substr(0, 6)
-                  ) {
-                    optionName = fnName.match(/extra\(([^)]+)\)/)[1];
-                    fnName = "extra()";
+                  } else if (null != fnName) {
+                    if( "extra(" == fnName.substr(0, 6)) {
+                      optionName = fnName.match(/extra\(([^)]+)\)/)[1];
+                      fnName = "extra()";
+                    } else if ("value(" == fnName.substr(0, 6)) {
+                      pathName = match.match(/value\("([^"]+)"\)/)[1];
+                      //pathName = fnName.match(/value\("([^"]+)"\)/)[1];
+                      fnName = "value()";
+                    }
                   }
 
                   // find the referenced question
@@ -2131,36 +2159,53 @@ cenozoApp.defineModule({
                   var compiled = "null";
                   if (null != matchedQuestion) {
                     if ("empty()" == fnName) {
-                      compiled =
-                        null == matchedQuestion.value ? "true" : "false";
+                      compiled = null == matchedQuestion.value ? "true" : "false";
+                    } else if ("not_empty()" == fnName) {
+                      compiled = null == matchedQuestion.value ? "false" : "true";
                     } else if ("dkna()" == fnName) {
-                      compiled = isDkna(matchedQuestion.value)
-                        ? "true"
-                        : "false";
+                      compiled = isDkna(matchedQuestion.value) ? "true" : "false";
                     } else if ("refuse()" == fnName) {
-                      compiled = isRefuse(matchedQuestion.value)
-                        ? "true"
-                        : "false";
+                      compiled = isRefuse(matchedQuestion.value) ? "true" : "false";
+                    } else if ("dkna_refuse()" == fnName) {
+                      compiled =
+                        isDkna(matchedQuestion.value) ||
+                        isRefuse(matchedQuestion.value) ?
+                        "true" : "false";
+                    } else if ("not_dkna_refuse()" == fnName) {
+                      compiled =
+                        isDkna(matchedQuestion.value) ||
+                        isRefuse(matchedQuestion.value) ?
+                        "false" : "true";
+                    } else if ("dkna_refuse_empty()" == fnName) {
+                      compiled =
+                        isDkna(matchedQuestion.value) ||
+                        isRefuse(matchedQuestion.value) ||
+                        null == matchedQuestion.value ?
+                        "true" : "false";
+                    } else if ("not_dkna_refuse_empty()" == fnName) {
+                      compiled =
+                        isDkna(matchedQuestion.value) ||
+                        isRefuse(matchedQuestion.value) ||
+                        null == matchedQuestion.value ?
+                        "false" : "true";
                     } else if ("count()" == fnName) {
-                      compiled = angular.isArray(matchedQuestion.value)
-                        ? matchedQuestion.value.length
-                        : 0;
+                      compiled = angular.isArray(matchedQuestion.value) ? matchedQuestion.value.length : 0;
                     } else if ("boolean" == matchedQuestion.type) {
                       if (true === matchedQuestion.value) compiled = "true";
-                      else if (false === matchedQuestion.value)
-                        compiled = "false";
+                      else if (false === matchedQuestion.value) compiled = "false";
                     } else if ("number" == matchedQuestion.type) {
-                      if (angular.isNumber(matchedQuestion.value))
-                        compiled = matchedQuestion.value;
+                      if (angular.isNumber(matchedQuestion.value)) compiled = matchedQuestion.value;
                     } else if ("date" == matchedQuestion.type) {
-                      if (angular.isString(matchedQuestion.value))
-                        compiled = matchedQuestion.value;
+                      if (angular.isString(matchedQuestion.value)) compiled = matchedQuestion.value;
                     } else if ("string" == matchedQuestion.type) {
                       if (angular.isString(matchedQuestion.value))
-                        compiled =
-                          "'" +
-                          matchedQuestion.value.replace(/'/g, "\\'") +
-                          "'";
+                        compiled = "'" + matchedQuestion.value.replace(/'/g, "\\'") + "'";
+                    } else if ("device" == matchedQuestion.type) {
+                      if (pathName) {
+                        if (angular.isObject(matchedQuestion.value)) {
+                          compiled = jsonpath.query(matchedQuestion.value, "$."+pathName);
+                        }
+                      }
                     } else if ("list" == matchedQuestion.type) {
                       if (null == optionName) {
                         // print the description of all selected options
@@ -2348,6 +2393,7 @@ cenozoApp.defineModule({
                 this.addDevicePromise(question);
               } finally {
                 this.convertValueToModel(question);
+                this.evaluateAllDescriptions();
                 modal.close();
                 this.working = false;
               }
@@ -2368,6 +2414,7 @@ cenozoApp.defineModule({
                   this.devicePromiseList.splice(promiseIndex, 1);
                 }
               } finally {
+                this.evaluateAllDescriptions();
                 this.working = false;
               }
             },
@@ -2516,36 +2563,6 @@ cenozoApp.defineModule({
                           this.convertValueToModel(q);
                         }
 
-                        // re-evaluate descriptions as they may have changed based on the new answer
-                        q.prompts = CnTranslationHelper.parseDescriptions(
-                          this.evaluateDescription(q.rawPrompts)
-                        );
-                        q.popups = CnTranslationHelper.parseDescriptions(
-                          this.evaluateDescription(q.rawPopups)
-                        );
-
-                        if ("list" == q.type) {
-                          q.optionList.forEach((o) => {
-                            o.prompts = CnTranslationHelper.parseDescriptions(
-                              this.evaluateDescription(o.rawPrompts)
-                            );
-                            o.popups = CnTranslationHelper.parseDescriptions(
-                              this.evaluateDescription(o.rawPopups)
-                            );
-                          });
-                        }
-
-                        if ("list" == q.type) {
-                          q.optionList.forEach((o) => {
-                            o.prompts = CnTranslationHelper.parseDescriptions(
-                              this.evaluateDescription(o.rawPrompts)
-                            );
-                            o.popups = CnTranslationHelper.parseDescriptions(
-                              this.evaluateDescription(o.rawPopups)
-                            );
-                          });
-                        }
-
                         // q is visible, now check its options (assuming we haven't selected dkna/refused)
                         if (
                           "list" == q.type &&
@@ -2572,6 +2589,8 @@ cenozoApp.defineModule({
                         }
                       }
                     });
+
+                    this.evaluateAllDescriptions();
 
                     if (!noCompleteCheck) {
                       var complete = this.questionIsComplete(question);

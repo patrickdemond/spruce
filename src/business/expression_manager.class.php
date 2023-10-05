@@ -6,7 +6,7 @@
  */
 
 namespace pine\business;
-use cenozo\lib, cenozo\log, pine\util;
+use cenozo\lib, cenozo\log, pine\util, \Flow\JSONPath\JSONPath;
 
 /**
  * Manages the preconditions defined in modules, pages, questions and question_options
@@ -312,7 +312,10 @@ class expression_manager extends \cenozo\singleton
                 }
               }
 
-              if( $question ) $compiled .= $this->process_question( $override_question_object );
+              if( $question )
+              {
+                $compiled .= $this->process_question( $override_question_object );
+              }
             }
           }
           $process_char = false;
@@ -831,10 +834,10 @@ class expression_manager extends \cenozo\singleton
           {
             $special_function = 'value';
 
-            if( !preg_match( '/value\( *"([^"]+)" *\)/', $question_function, $sub_matches ) )
+            if( !preg_match( '/value\( *"([^"]+)" *\)/', $this->term, $sub_matches ) )
             {
               throw lib::create( 'exception\runtime',
-                sprintf( 'Invalid syntax "%s"', $question_function ),
+                sprintf( 'Invalid syntax "%s"', $this->term ),
                 __METHOD__
               );
             }
@@ -1024,26 +1027,11 @@ class expression_manager extends \cenozo\singleton
         }
         else if( 'value' == $special_function )
         {
-          $compiled = false;
-
-          foreach( explode( '.', $object_path ) as $property )
-          {
-            if( property_exists( $value, $property ) )
-            {
-              $value = $value->$property;
-            }
-            else
-            {
-              $value = false;
-              break;
-            }
-          }
-
+          $compiled = (new JSONPath( $value ))->find( sprintf( '$.%s', $object_path ) )->data()[0];
           if( is_null( $value ) ) $compiled = 'NULL';
           else if( is_bool( $value ) ) $compiled = $value ? 'true' : 'false';
           else if( is_string( $value ) )
             $compiled = sprintf( "'%s'", str_replace( "'", "\\'", $value ) );
-          else $compiled = $value;
         }
         else
         {
