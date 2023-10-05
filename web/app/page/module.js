@@ -2022,6 +2022,8 @@ cenozoApp.defineModule({
                   angular.isDefined(question.value.value) && null != question.value.value &&
                   angular.isDefined(question.value.unit) && null != question.value.unit
                 );
+              } else if ("device" == question.type) {
+                return "completed" == question.device_status;
               }
 
               return true;

@@ -274,6 +274,11 @@ class answer extends \cenozo\database\record
           !property_exists( $value, 'value' ) || is_null( $value->value ) ||
           !property_exists( $value, 'unit' ) || is_null( $value->unit ) ) return false;
     }
+    else if( 'device' == $db_question->type )
+    {
+      $db_answer_device = $this->get_answer_device();
+      return !is_null( $db_answer_device ) && 'completed' == $db_answer_device->status;
+    }
 
     return true;
   }
