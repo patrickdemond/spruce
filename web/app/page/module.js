@@ -680,16 +680,21 @@ cenozoApp.defineModule({
                       }).get();
 
                       const newValue = angular.fromJson( response.data.value );
+                      let changeObj = {
+                        device_status: response.data.status,
+                        device_uuid: response.data.uuid,
+                      };
                       if( newValue != question.value ) {
-                        question.value = angular.fromJson(response.data.value);
-                        question.files_received = response.data.files_received;
-                        var complete = this.questionIsComplete(question);
-                        question.incomplete = false === complete ? true : true === complete ? false : complete;
-                        question.backupValue = angular.copy(response.data.value);
+                        angular.extend( changeObj, {
+                          value: angular.fromJson(response.data.value),
+                          files_received: response.data.files_received,
+                          backupValue: angular.copy(response.data.value),
+                        });
                       }
-                      question.device_status = response.data.status;
-                      question.device_uuid = response.data.uuid;
 
+                      angular.extend( question, changeObj );
+                      var complete = this.questionIsComplete(question);
+                      question.incomplete = false === complete ? true : true === complete ? false : complete;
                       this.evaluateAllDescriptions();
 
                       if( 'in progress' != question.device_status ) $interval.cancel(promise);
@@ -2596,8 +2601,7 @@ cenozoApp.defineModule({
 
                     if (!noCompleteCheck) {
                       var complete = this.questionIsComplete(question);
-                      question.incomplete = false === complete ?  true :
-                        true === complete ?  false : complete;
+                      question.incomplete = false === complete ? true : true === complete ? false : complete;
                     }
                   } finally {
                     this.working = false;
@@ -3088,12 +3092,7 @@ cenozoApp.defineModule({
                   var mayProceed = true;
                   this.questionList.some((question) => {
                     var complete = this.questionIsComplete(question);
-                    question.incomplete =
-                      false === complete
-                        ? true
-                        : true === complete
-                        ? false
-                        : complete;
+                    question.incomplete = false === complete ? true : true === complete ? false : complete;
                     if (question.incomplete) {
                       mayProceed = false;
                       return true;
