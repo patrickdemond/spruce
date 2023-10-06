@@ -692,7 +692,7 @@ cenozoApp.defineModule({
                         });
                       }
 
-                      angular.extend( question, changeObject );
+                      angular.extend( question, changeObj );
                       var complete = this.questionIsComplete(question);
                       question.incomplete = false === complete ? true : true === complete ? false : complete;
                       this.evaluateAllDescriptions();
