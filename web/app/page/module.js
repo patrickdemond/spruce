@@ -446,7 +446,7 @@ cenozoApp.defineModule({
 
           function getTime(time,tz) {
             // if there isn't a date then add one so that moment will read it correctly
-            const match = null == time ? null : time.match(/^([0-9]+):([0-9]+)$/);
+            const match = null == time || isDknaOrRefuse(time) ? null : time.match(/^([0-9]+):([0-9]+)$/);
             if( null != match ) {
               m = angular.isDefined(tz) ? moment().tz(tz) : moment();
               m.hour(parseInt(match[1]));
