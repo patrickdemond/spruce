@@ -12,6 +12,7 @@ global $SETTINGS;
 // tagged version
 $SETTINGS['general']['application_name'] = 'pine';
 $SETTINGS['general']['instance_name'] = $SETTINGS['general']['application_name'];
+$SETTINGS['general']['version'] = '2.9';
 $SETTINGS['general']['build'] = '7428412';
 
 // the default maximum number of seconds that a page should take to complete
