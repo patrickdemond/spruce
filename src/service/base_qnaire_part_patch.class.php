@@ -38,7 +38,7 @@ abstract class base_qnaire_part_patch extends \cenozo\service\patch
         $this->status->set_code( 306 );
       }
     }
-    
+
     if( array_key_exists( 'precondition', $data ) )
     {
       // validate the precondition
