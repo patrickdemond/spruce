@@ -26,6 +26,19 @@ abstract class base_qnaire_part_patch extends \cenozo\service\patch
     );
 
     $data = $this->get_file_as_array();
+
+    if( array_key_exists( 'default_answer', $data ) )
+    {
+      // validate the default_answer
+      $expression_manager = lib::create( 'business\expression_manager', $db_qnaire );
+      $error = $expression_manager->validate( $data['default_answer'] );
+      if( !is_null( $error ) )
+      {
+        $this->set_data( $error );
+        $this->status->set_code( 306 );
+      }
+    }
+    
     if( array_key_exists( 'precondition', $data ) )
     {
       // validate the precondition
