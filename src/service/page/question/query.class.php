@@ -78,7 +78,20 @@ class query extends \cenozo\service\query
         // default answers enclosed in single or double quotes must be compiled as strings (descriptions)
         if( !is_null( $record['default_answer'] ) )
         {
-          $record['default_answer'] = $db_response->compile_default_answer( $record['default_answer'] );
+          try
+          {
+            $record['default_answer'] = $db_response->compile_default_answer( $record['default_answer'] );
+          }
+          catch( \cenozo\exception\runtime $e )
+          {
+            $message = sprintf( 'The default answer for question "%s" is invalid.', $record['name'] );
+            log::warning( $message );
+
+            if( $db_qnaire->debug )
+            {
+              throw lib::create( 'exception\notice', sprintf( 'Warning! %s', $message ), __METHOD__, $e );
+            }
+          }
         }
 
         if( 'device' == $record['type'] && $record['device_id'] )

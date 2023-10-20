@@ -79,6 +79,7 @@ class get extends \cenozo\service\get
       // create answers for all questions on this page if they don't already exist
       $question_sel = lib::create( 'database\select' );
       $question_sel->add_column( 'id' );
+      $question_sel->add_column( 'name' );
       $question_sel->add_column( 'type' );
       $question_sel->add_column( 'precondition' );
       $question_sel->add_column( 'default_answer' );
@@ -102,8 +103,23 @@ class get extends \cenozo\service\get
             $expression_manager->validate( $question['precondition'] )
           )
           {
+            $value = '';
+            try
+            {
+              $value = $this->db_response->compile_default_answer( $question['default_answer'] );
+            }
+            catch( \cenozo\exception\runtime $e )
+            {
+              $message = sprintf( 'The default answer for question "%s" is invalid.', $question['name'] );
+              log::warning( $message );
+
+              if( $db_qnaire->debug )
+              {
+                throw lib::create( 'exception\notice', sprintf( 'Warning! %s', $message ), __METHOD__, $e );
+              }
+            }
+
             // default answers enclosed in single or double quotes must be compiled as strings (descriptions)
-            $value = $this->db_response->compile_default_answer( $question['default_answer'] );
             if( 'null' != $value )
             {
               // only apply the value if the question's precondition is true

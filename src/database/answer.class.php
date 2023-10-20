@@ -91,6 +91,7 @@ class answer extends \cenozo\database\record
       // 1) the answer refers to a question which should no longer be asked due to this answer's value or selected option
       $question_sel = lib::create( 'database\select' );
       $question_sel->add_column( 'id' );
+      $question_sel->add_column( 'name' );
       $question_sel->add_column( 'default_answer' );
       $question_sel->add_column( 'precondition' );
       $question_mod = lib::create( 'database\modifier' );
@@ -108,10 +109,23 @@ class answer extends \cenozo\database\record
             // apply default answers, if there is one
             if( !is_null( $question['default_answer'] ) && 'null' == $db_answer->value )
             {
-              $db_answer->value = util::json_encode(
-                $db_response->compile_default_answer( $question['default_answer'] )
-              );
-              $db_answer->save();
+              try
+              {
+                $db_answer->value = util::json_encode(
+                  $db_response->compile_default_answer( $question['default_answer'] )
+                );
+                $db_answer->save();
+              }
+              catch( \cenozo\exception\runtime $e )
+              {
+                $message = sprintf( 'The default answer for question "%s" is invalid.', $question['name'] );
+                log::warning( $message );
+
+                if( $db_qnaire->debug )
+                {
+                  throw lib::create( 'exception\notice', sprintf( 'Warning! %s', $message ), __METHOD__, $e );
+                }
+              }
             }
           }
           else
