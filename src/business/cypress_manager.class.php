@@ -66,7 +66,8 @@ class cypress_manager extends \cenozo\base_object
       if( 400 == $this->last_code )
       {
         throw lib::create( 'exception\notice',
-          'The device has not been setup properly (input data is missing), please contact support.',
+          'The device has not been setup properly (input data is missing), please contact support.'."\n\n".
+          $e->get_raw_message(),
           __METHOD__,
           $e
         );
@@ -175,13 +176,15 @@ class cypress_manager extends \cenozo\base_object
     $this->last_code = (int) curl_getinfo( $curl, CURLINFO_HTTP_CODE );
     if( 204 == $this->last_code || 300 <= $this->last_code )
     {
-      throw lib::create( 'exception\runtime',
+      $message = 400 == $this->last_code ?
+        sprintf( 'Invalid column value "%s".', $response ) :
         sprintf( 'Got response code %s "%s" when trying %s request to %s.',
-                 $this->last_code,
-                 $response,
-                 $method,
-                 $this->db_device->name ),
-        __METHOD__ );
+          $this->last_code,
+          $response,
+          $method,
+          $this->db_device->name
+        );
+      throw lib::create( 'exception\runtime', $message, __METHOD__ );
     }
 
     return util::json_decode( $response );

@@ -1076,8 +1076,17 @@ class response extends \cenozo\database\has_rank
     );
     if( $match )
     {
+      $compiled = NULL;
       $object_path = $device_matches[1];
-      $compiled = (new JSONPath( $value ))->find( sprintf( '$.%s', $object_path ) )->data()[0];
+      $data = (new JSONPath( $value ))->find( sprintf( '$.%s', $object_path ) )->data();
+      if( !is_array( $data ) || 0 == count( $data ) )
+      {
+        log::error( sprintf( 'Tried to get device data using invalid path "%s".', $object_path ) );
+      }
+      else
+      {
+        $compiled = (new JSONPath( $value ))->find( sprintf( '$.%s', $object_path ) )->data()[0];
+      }
     }
 
     return $compiled;

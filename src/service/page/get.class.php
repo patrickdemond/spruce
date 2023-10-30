@@ -100,7 +100,7 @@ class get extends \cenozo\service\get
           // check if the question has a default answer, and if the question is visible then apply it
           if(
             !is_null( $question['default_answer'] ) &&
-            $expression_manager->validate( $question['precondition'] )
+            $expression_manager->evaluate( $question['precondition'] )
           )
           {
             $value = '';
