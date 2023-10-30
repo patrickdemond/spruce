@@ -9,6 +9,8 @@ INSERT IGNORE INTO service ( subject, method, resource, restricted ) VALUES
 ( 'equipment', 'GET', 0, 0 ),
 ( 'equipment_type', 'GET', 0, 0 ),
 ( 'equipment_type', 'GET', 1, 0 ),
+( 'log_entry', 'GET', 0, 1 ),
+( 'log_entry', 'GET', 1, 1 ),
 ( 'qnaire_document', 'DELETE', 1, 1 ),
 ( 'qnaire_document', 'GET', 0, 0 ),
 ( 'qnaire_document', 'GET', 1, 0 ),
