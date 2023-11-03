@@ -106,7 +106,7 @@ class get extends \cenozo\service\get
             $value = '';
             try
             {
-              $value = $this->db_response->compile_default_answer( $question['default_answer'] );
+              $value = $this->db_response->compile_expression( $question['default_answer'] );
             }
             catch( \cenozo\exception\runtime $e )
             {

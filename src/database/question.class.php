@@ -22,6 +22,11 @@ class question extends base_qnaire_part
   protected static $rank_parent = 'page';
 
   /**
+   * Allow backticks in the default_answer column since they are used in expressions
+   */
+  protected static $allow_backtick_column_list = ['default_answer'];
+
+  /**
    * Overview parent method
    */
   public function save()

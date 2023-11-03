@@ -112,7 +112,7 @@ class answer extends \cenozo\database\record
               try
               {
                 $db_answer->value = util::json_encode(
-                  $db_response->compile_default_answer( $question['default_answer'] )
+                  $db_response->compile_expression( $question['default_answer'] )
                 );
                 $db_answer->save();
               }

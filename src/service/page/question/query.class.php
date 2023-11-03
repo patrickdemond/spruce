@@ -80,7 +80,7 @@ class query extends \cenozo\service\query
         {
           try
           {
-            $record['default_answer'] = $db_response->compile_default_answer( $record['default_answer'] );
+            $record['default_answer'] = $db_response->compile_expression( $record['default_answer'] );
           }
           catch( \cenozo\exception\runtime $e )
           {

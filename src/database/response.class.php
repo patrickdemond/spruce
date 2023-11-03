@@ -673,7 +673,8 @@ class response extends \cenozo\database\has_rank
     $data_sel->add_column( 'code' );
     foreach( $db_qnaire_report->get_qnaire_report_data_list( $data_sel ) as $report_data )
     {
-      $data[$report_data['name']] = $this->compile_description( $report_data['code'], true );
+      // compile variables as if they were default answers (forced in case the question is on the same page)
+      $data[$report_data['name']] = strtoupper( $this->compile_expression( $report_data['code'], true ) );
     }
 
     // write the PDF template to disk (it's the only way for the pdf_writer class to read it)
@@ -702,21 +703,29 @@ class response extends \cenozo\database\has_rank
   /**
    * Compiles a default answer
    * @param string $default_answer
+   * @param boolean $force Whether to force compile values even if the are on the current page
    * @return string
    */
-  public function compile_default_answer( $default )
+  public function compile_expression( $default, $force = false )
   {
     $expression_manager = lib::create( 'business\expression_manager', $this );
 
-    // default answers enclosed in single or double quotes must be compiled as strings (descriptions)
+    // first, compile anything enclosed by backticks
     $matches = [];
-    if( preg_match( '/^(\'(.*)\')|("(.*)")$/', $default, $matches ) )
+    if( preg_match_all( '/`([^`]*)`/', $default, $matches ) )
     {
-      // the expression inside the quotes will either be in index 2 or 4 (for single or double quotes)
-      return $this->compile_description( $matches[2] ? $matches[2] : $matches[4] );
+      foreach( $matches[0] as $index => $expression )
+      {
+        $default = str_replace(
+          $expression,
+          $this->compile_description( $matches[1][$index], $force ),
+          $default
+        );
+      }
     }
 
-    return $expression_manager->compile( $default );
+    // now evaluate the expression
+    return $expression_manager->evaluate( $default );
   }
 
   /**

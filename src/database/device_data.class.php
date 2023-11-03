@@ -14,6 +14,11 @@ use cenozo\lib, cenozo\log, pine\util;
 class device_data extends \cenozo\database\record
 {
   /**
+   * Allow backticks in the code column since they are used in expressions
+   */
+  protected static $allow_backtick_column_list = ['code'];
+
+  /**
    * Returns the compiled data value based on the answer provided
    * 
    * Descriptions can have any of the participant.* values provided by the business\data_manager class,
@@ -23,8 +28,8 @@ class device_data extends \cenozo\database\record
    */
   public function get_compiled_value( $db_answer )
   {
-    // compile variables as if they were in a description (forced in case the question is on the same page)
-    $value = $db_answer->get_response()->compile_description( $this->code, true );
+    // compile variables as if they were default answers (forced in case the question is on the same page)
+    $value = $db_answer->get_response()->compile_expression( $this->code, true );
 
     // convert string representation of boolean values to boolean values
     if( 'false' == $value ) $value = false;
