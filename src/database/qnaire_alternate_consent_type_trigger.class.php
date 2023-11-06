@@ -22,7 +22,7 @@ class qnaire_alternate_consent_type_trigger extends qnaire_trigger
     $answer_class_name = lib::get_class_name( 'database\answer' );
 
     // some triggers may be skipped
-    if( !$this->check_trigger( $this ) ) return;
+    if( !$this->check_trigger( $db_response ) ) return;
 
     $db_qnaire = $this->get_qnaire();
     $db_question = $this->get_question();

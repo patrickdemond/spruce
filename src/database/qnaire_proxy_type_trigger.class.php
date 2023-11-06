@@ -20,7 +20,7 @@ class qnaire_proxy_type_trigger extends qnaire_trigger
   public function execute( $db_response )
   {
     // some triggers may be skipped
-    if( !$this->check_trigger( $this ) ) return;
+    if( !$this->check_trigger( $db_response ) ) return;
 
     $session = lib::create( 'business\session' );
     $db_participant = $db_response->get_respondent()->get_participant();
