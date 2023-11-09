@@ -5,7 +5,7 @@
  * @author Patrick Emond <emondpd@mcmaster.ca>
  */
 
-namespace pine\service\qnaire\embedded_file;
+namespace pine\service\embedded_file;
 use cenozo\lib, cenozo\log, pine\util;
 
 class patch extends \cenozo\service\patch
@@ -13,7 +13,7 @@ class patch extends \cenozo\service\patch
   /**
    * Extend parent property
    */
-  protected static $base64_column_list = ['data' => 'application/octet-stream'];
+  protected static $base64_column_list = ['data' => 'application/octet-stream']; // allow any file type
 
   /**
    * Extend parent method
@@ -26,8 +26,7 @@ class patch extends \cenozo\service\patch
     $file = $this->get_argument( 'file', NULL );
     if( !is_null( $file ) )
     {
-      $mime_type = static::$base64_column_list[$file];
-      if( in_array( $content_type, [$mime_type, 'application/octet-stream'] ) )
+      if( 'application/octet-stream' == util::get_header( 'Content-Type' ) )
       {
         $filename = sprintf( '%s/%s', TEMP_PATH, bin2hex( openssl_random_pseudo_bytes( 8 ) ) );
         $file = $this->get_file_as_raw();

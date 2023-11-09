@@ -35,24 +35,9 @@ cenozoApp.defineModule({
       data: {
         title: "PDF Template",
         type: "base64",
+        mimeType: "application/pdf",
       },
     });
-
-    /* ############################################################################################## */
-    cenozo.providers.factory("CnQnaireReportAddFactory", [
-      "CnBaseAddFactory",
-      function (CnBaseAddFactory) {
-        var object = function (parentModel) {
-          CnBaseAddFactory.construct(this, parentModel);
-          this.configureFileInput("data");
-        };
-        return {
-          instance: function (parentModel) {
-            return new object(parentModel);
-          },
-        };
-      },  
-    ]); 
 
     /* ############################################################################################## */
     cenozo.providers.factory("CnQnaireReportModelFactory", [

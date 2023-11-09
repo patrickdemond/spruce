@@ -11,7 +11,7 @@ use cenozo\lib, cenozo\log, pine\util;
 /**
  * qnaire_document: record
  */
-class qnaire_document extends \cenozo\database\has_data
+class qnaire_document extends \cenozo\database\record
 {
   /**
    * 

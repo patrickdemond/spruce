@@ -12,7 +12,7 @@ use cenozo\lib, cenozo\log, pine\util;
 /**
  * embedded_file: record
  */
-class embedded_file extends \cenozo\database\has_data
+class embedded_file extends \cenozo\database\record
 {
   /**
    * Returns the HTML-ready <img> tag

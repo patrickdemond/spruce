@@ -9,15 +9,7 @@ use cenozo\lib, cenozo\log, pine\util;
 class get extends \cenozo\service\get
 {
   /**
-   * Extends parent method
+   * Extend parent property
    */
-  protected function execute()
-  {
-    $leaf_record = $this->get_leaf_record();
-    $data = is_null( $leaf_record ) ? NULL : $leaf_record->get_column_values( $this->select, $this->modifier );
-
-    // convert base64 data to include mime type
-    if( !is_null( $data ) ) $data['data'] = array( 'mime_type' => $data['mime_type'], 'data' => $data['data'] );
-    $this->set_data( $data );
-  }
+  protected static $base64_column_list = ['data' => 'application/octet-stream']; // allow any file type
 }

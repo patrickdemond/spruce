@@ -53,24 +53,15 @@ cenozoApp.defineModule({
       data: {
         title: "Content",
         type: "base64",
-        isConstant: true,
+        getFilename: function ($state, model) {
+          let name = model.viewModel.record.name;
+          if (model.viewModel.record.mime_type) {
+            let extension = model.viewModel.record.mime_type.match( /[a-zA-Z0-9]+$/ );
+            if (angular.isArray(extension)) name += ("." + extension[0]);
+          }
+          return name;
+        }
       },
     });
-
-    /* ############################################################################################## */
-    cenozo.providers.factory("CnEmbeddedFileAddFactory", [
-      "CnBaseAddFactory",
-      function (CnBaseAddFactory) {
-        var object = function (parentModel) {
-          CnBaseAddFactory.construct(this, parentModel);
-          this.configureFileInput("data");
-        };
-        return {
-          instance: function (parentModel) {
-            return new object(parentModel);
-          },
-        };
-      },
-    ]);
   },
 });
