@@ -1,6 +1,6 @@
-DROP PROCEDURE IF EXISTS patch_question;
+DROP PROCEDURE IF EXISTS patch_qnaire_equipment_type_trigger;
 DELIMITER //
-CREATE PROCEDURE patch_question()
+CREATE PROCEDURE patch_qnaire_equipment_type_trigger()
   BEGIN
 
     SELECT "Creating new qnaire_equipment_type_trigger table" AS "";
@@ -51,5 +51,5 @@ CREATE PROCEDURE patch_question()
   END //
 DELIMITER ;
 
-CALL patch_question();
-DROP PROCEDURE IF EXISTS patch_question;
+CALL patch_qnaire_equipment_type_trigger();
+DROP PROCEDURE IF EXISTS patch_qnaire_equipment_type_trigger;
