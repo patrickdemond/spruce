@@ -230,7 +230,11 @@ cenozoApp.defineModule({
         model.getRespondents();
       },
       isIncluded: function ($state, model) {
-        return "today" != model.subList && model.isDetached();
+        if ("qnaire" == model.getSubjectFromState()) {
+        }
+        return "today" != model.subList && model.isDetached() && (
+          "qnaire" != model.getSubjectFromState() || model.usesBeartooth
+        );
       },
       isDisabled: function ($state, model) {
         return model.workInProgress;
@@ -243,7 +247,9 @@ cenozoApp.defineModule({
         await model.export();
       },
       isIncluded: function ($state, model) {
-        return "today" != model.subList && model.isDetached();
+        return "today" != model.subList && model.isDetached() && (
+          "qnaire" != model.getSubjectFromState() || model.usesBeartooth
+        );
       },
       isDisabled: function ($state, model) {
         return model.workInProgress;
@@ -400,6 +406,29 @@ cenozoApp.defineModule({
           this.transitionOnSave = function (record) {
             parentModel.transitionToViewState(record);
           };
+        };
+        return {
+          instance: function (parentModel) {
+            return new object(parentModel);
+          },
+        };
+      },
+    ]);
+
+    /* ############################################################################################## */
+    cenozo.providers.factory("CnRespondentListFactory", [
+      "CnBaseListFactory",
+      "CnHttpFactory",
+      function (CnBaseListFactory, CnHttpFactory) {
+        var object = function (parentModel) {
+          CnBaseListFactory.construct(this, parentModel);
+
+          angular.extend(this, {
+            onList: async function (replace) {
+              await this.$$onList(replace);
+              await this.parentModel.updateUsesBeartooth();
+            },
+          });
         };
         return {
           instance: function (parentModel) {
@@ -622,8 +651,6 @@ cenozoApp.defineModule({
               }
             },
           });
-
-          this.updateUsesBeartooth();
         };
 
         return {
