@@ -2330,6 +2330,7 @@ class qnaire extends \cenozo\database\record
       $db_respondent->delete();
 
     // now load all data provided by the response from beartooth
+    $data = ['success' => [], 'fail' => []];
     foreach( util::json_decode( $response ) as $participant )
     {
       // update the participant record
@@ -2530,10 +2531,21 @@ class qnaire extends \cenozo\database\record
         $db_respondent->save();
       }
 
-      // Since some attributes may require access to a remote server we must immediately
-      // create the response record to make sure attributes are available
-      $db_respondent->get_current_response( true );
+      try
+      {
+        // Since some attributes may require access to a remote server we must immediately
+        // create the response record to make sure attributes are available
+        $db_respondent->get_current_response( true );
+        $data['success'][] = $participant->uid;
+      }
+      catch( \cenozo\exception\base_exception $e )
+      {
+        $db_respondent->delete();
+        $data['fail'][] = $participant->uid;
+      }
     }
+
+    return $data;
   }
 
   /**
@@ -2548,6 +2560,7 @@ class qnaire extends \cenozo\database\record
     $participant_class_name = lib::get_class_name( 'database\participant' );
     $participant_identifier_class_name = lib::get_class_name( 'database\participant_identifier' );
 
+    $data = ['success' => [], 'fail' => []];
     foreach( $identifier_list as $identifier )
     {
       $db_participant = is_null( $db_identifier )
@@ -2561,9 +2574,20 @@ class qnaire extends \cenozo\database\record
       $db_respondent->participant_id = $db_participant->id;
       $db_respondent->save();
 
-      // now make sure the respondent has a response (so response attribute values are cached)
-      $db_respondent->get_current_response( true );
+      try
+      {
+        // now make sure the respondent has a response (so response attribute values are cached)
+        $db_respondent->get_current_response( true );
+        $data['success'][] = $identifier;
+      }
+      catch( \cenozo\exception\base_exception $e )
+      {
+        $db_respondent->delete();
+        $data['fail'][] = $identifier;
+      }
     }
+
+    return $data;
   }
 
   /**
@@ -4822,6 +4846,7 @@ class qnaire extends \cenozo\database\record
       'readonly' => $this->readonly,
       'allow_in_hold' => $this->allow_in_hold,
       'problem_report' => $this->problem_report,
+      'attributes_mandatory' => $this->attributes_mandatory,
       'stages' => $this->stages,
       'repeated' => $this->repeated,
       'repeat_offset' => $this->repeat_offset,
@@ -5497,6 +5522,7 @@ class qnaire extends \cenozo\database\record
     $db_qnaire->debug = $qnaire_object->debug;
     $db_qnaire->allow_in_hold = $qnaire_object->allow_in_hold;
     $db_qnaire->problem_report = $qnaire_object->problem_report;
+    $db_qnaire->attributes_mandatory = $qnaire_object->attributes_mandatory;
     $db_qnaire->stages = $qnaire_object->stages;
     $db_qnaire->repeated = $qnaire_object->repeated;
     $db_qnaire->repeat_offset = $qnaire_object->repeat_offset;

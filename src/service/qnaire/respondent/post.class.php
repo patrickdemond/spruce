@@ -122,19 +122,21 @@ class post extends \cenozo\service\post
 
       $db_qnaire = $this->get_parent_record();
       $db_qnaire->sync_with_parent();
-      $db_qnaire->get_respondents_from_beartooth();
+      $result = $db_qnaire->get_respondents_from_beartooth();
+      $result['qnaire'] = $db_qnaire->name;
+      $this->set_data( [$result] );
     }
     else if( 'import' == $action )
     {
       $db_qnaire = $this->get_parent_record();
       $data = $this->get_file_as_object();
-      $db_qnaire->import_response_data( $data->respondents, $data->files );
+      $this->set_data( $db_qnaire->import_response_data( $data->respondents, $data->files ) );
     }
     else if( 'export' == $action )
     {
       $db_qnaire = $this->get_parent_record();
       $db_qnaire->sync_with_parent();
-      $this->set_data( $db_qnaire->export_respondent_data() ); // set the list of exported UIDs as the returned data
+      $this->set_data( $db_qnaire->export_respondent_data() );
     }
     else
     {

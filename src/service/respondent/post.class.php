@@ -121,13 +121,17 @@ class post extends \cenozo\service\post
       $equipment_type_class_name::sync_with_parent();
 
       // now update all qnaires
+      $data = [];
       $modifier = lib::create( 'database\modifier' );
       $modifier->where( 'beartooth', '=', true );
       foreach( $qnaire_class_name::select_objects( $modifier ) as $db_qnaire )
       {
         $db_qnaire->sync_with_parent();
-        $db_qnaire->get_respondents_from_beartooth();
+        $result = $db_qnaire->get_respondents_from_beartooth();
+        $result['qnaire'] = $db_qnaire->name;
+        $data[] = $result;
       }
+      $this->set_data( $data );
     }
     else if( 'export' == $action )
     {

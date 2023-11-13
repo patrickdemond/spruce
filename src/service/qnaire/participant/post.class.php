@@ -87,7 +87,10 @@ class post extends \cenozo\service\write
     {
       if( 'add_mail' == $file->mode ) $db_qnaire->mass_send_all_mail( $db_identifier, $identifier_list );
       else if( 'remove_mail' == $file->mode ) $db_qnaire->mass_remove_unsent_mail( $db_identifier, $identifier_list );
-      else if( 'create' == $file->mode ) $db_qnaire->mass_respondent( $db_identifier, $identifier_list );
+      else if( 'create' == $file->mode )
+      {
+        $this->set_data( $db_qnaire->mass_respondent( $db_identifier, $identifier_list ) );
+      }
     }
   }
 

@@ -164,6 +164,12 @@ cenozoApp.defineModule({
         isExcluded: function ($state, model) { return model.isRole("interviewer"); },
         help: "Whether to enable the \"Report Problem\" button when running a questionnaire.",
       },
+      attributes_mandatory: {
+        title: "Attributes Mandatory",
+        type: "boolean",
+        isExcluded: function ($state, model) { return model.isRole("interviewer"); },
+        help: "Whether to not allow a response to proceed if the attributes failed to load.",
+      },
       stages: {
         title: "Stages",
         type: "boolean",
@@ -1020,14 +1026,20 @@ cenozoApp.defineModule({
                     },
                   }).post();
 
+                  let message = 
+                    "You have successfully created " + response.data.success.length + " out of " +
+                    this.participantSelection.confirmedCount + ' new recipients for the "' +
+                    this.qnaireName + '" questionnaire.';
+
+                  if (0 < response.data.fail.length) {
+                    message +=
+                      "\n\nNote that the following recipients were not created due to errors:\n" +
+                      response.data.fail.join(", ");
+                  }
+
                   await CnModalMessageFactory.instance({
                     title: "Respondents Created",
-                    message:
-                      "You have successfully created " +
-                      this.participantSelection.confirmedCount +
-                      ' new recipients for the "' +
-                      this.qnaireName +
-                      '" questionnaire.',
+                    message: message,
                   }).show();
                   await this.onLoad();
                 } finally {

@@ -75,6 +75,18 @@ CREATE PROCEDURE patch_qnaire()
       ALTER TABLE qnaire ADD COLUMN appointment_type VARCHAR(45) NULL DEFAULT NULL AFTER beartooth;
     END IF;
 
+    SELECT "Adding attributes_mandatory column to qnaire table" AS "";
+
+    SELECT COUNT(*) INTO @test
+    FROM information_schema.COLUMNS
+    WHERE table_schema = DATABASE()
+    AND table_name = "qnaire"
+    AND column_name = "attributes_mandatory";
+
+    IF @test = 0 THEN
+      ALTER TABLE qnaire ADD COLUMN attributes_mandatory TINYINT(1) NOT NULL DEFAULT 0 AFTER problem_report;
+    END IF;
+
   END //
 DELIMITER ;
 

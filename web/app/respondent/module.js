@@ -590,16 +590,32 @@ cenozoApp.defineModule({
               });
               modal.show();
 
+              let errorList = [];
               try {
                 this.workInProgress = true;
                 const httpData = { path: "respondent?action=get_respondents" };
                 if ("qnaire" == this.getSubjectFromState())
                   httpData.path = "qnaire/" + $state.params.identifier + "/" + httpData.path;
 
-                await CnHttpFactory.instance(httpData).post();
+                const response = await CnHttpFactory.instance(httpData).post();
+
+                // display errors if there are any
+                errorList = response.data
+                  .filter(result => 0 < result.fail.length)
+                  .map(result => result.qnaire + ": " + result.fail.join(", "));
               } finally {
                 modal.close();
                 this.workInProgress = false;
+              }
+
+              if (0 < errorList.length) {
+                await CnModalMessageFactory.instance({
+                  title: "Problem Importing Respondents",
+                  message:
+                    "The following respondents could not be imported because there was a problem retrieving " +
+                    "the mandatory attributes:\n\n" + errorList.join("\n"),
+                  error: true,
+                }).show();
               }
 
               await this.listModel.onList(true);

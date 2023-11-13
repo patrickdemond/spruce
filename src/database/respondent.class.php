@@ -137,9 +137,18 @@ class respondent extends \cenozo\database\record
       $semaphore = lib::create( 'business\semaphore', $this->id );
       $semaphore->acquire();
 
-      $db_response = lib::create( 'database\response' );
-      $db_response->respondent_id = $this->id;
-      $db_response->save();
+      try
+      {
+        $db_response = lib::create( 'database\response' );
+        $db_response->respondent_id = $this->id;
+        $db_response->save();
+      }
+      catch( \cenozo\exception\base_exception $e )
+      {
+        // release the semaphore before re-throwing the exception
+        $semaphore->release();
+        throw $e;
+      }
 
       $semaphore->release();
     }

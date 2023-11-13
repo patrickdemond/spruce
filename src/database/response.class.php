@@ -112,7 +112,21 @@ class response extends \cenozo\database\has_rank
     parent::save();
 
     // create the response's attributes
-    if( $new ) $this->create_attributes();
+    if( $new )
+    {
+      if( !$this->create_attributes() )
+      {
+        if( $db_qnaire->attributes_mandatory && 0 < count( $session->attribute_error_list ) )
+        {
+          // delete the response and throw a notice exception since we cannot proceed without attributes
+          $this->delete();
+
+          $message = 'Unable to proceed as the server was unable to load the required attributes.';
+          if( $db_qnaire->debug ) $message .= "\n".implode( "\n", $session->attribute_error_list );
+          throw lib::create( 'exception\notice', $message, __METHOD__ );
+        }
+      }
+    }
 
     if( is_null( $db_respondent ) ) $db_respondent = $this->get_respondent();
 
@@ -601,7 +615,7 @@ class response extends \cenozo\database\has_rank
   /**
    * Creates all attributes for the response
    */
-  public function create_attributes()
+  protected function create_attributes()
   {
     $response_attribute_class_name = lib::get_class_name( 'database\response_attribute' );
 
