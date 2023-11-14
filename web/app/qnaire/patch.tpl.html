@@ -37,7 +37,8 @@
           <div ng-if="![
               'stage_list', 'module_list', 'attribute_list', 'embedded_file_list', 'lookup_list', 'device_list',
               'qnaire_report_list', 'deviation_type_list', 'reminder_list', 'qnaire_consent_type_confirm_list',
-              'qnaire_document_list', 'qnaire_participant_trigger_list', 'qnaire_consent_type_trigger_list',
+              'qnaire_document_list', 'qnaire_participant_trigger_list', 'qnaire_collection_trigger_list',
+              'qnaire_consent_type_trigger_list', 'qnaire_event_type_trigger_list', 
               'qnaire_alternate_consent_type_trigger_list', 'qnaire_proxy_type_trigger_list'
             ].includes( property )">
             <label class="col-sm-2 control-label">{{
@@ -124,10 +125,22 @@
               <cn-qnaire-part-patch subject="qnaire_participant_trigger" model="child"></cn-qnaire-part-patch>
             </div>
           </div>
+          <div ng-if="'qnaire_collection_trigger_list' == property">
+            <label class="container-fluid">Consent Type Trigger List</label>
+            <div class="container-fluid">
+              <cn-qnaire-part-patch subject="qnaire_collection_trigger" model="child"></cn-qnaire-part-patch>
+            </div>
+          </div>
           <div ng-if="'qnaire_consent_type_trigger_list' == property">
             <label class="container-fluid">Consent Type Trigger List</label>
             <div class="container-fluid">
               <cn-qnaire-part-patch subject="qnaire_consent_type_trigger" model="child"></cn-qnaire-part-patch>
+            </div>
+          </div>
+          <div ng-if="'qnaire_event_type_trigger_list' == property">
+            <label class="container-fluid">Consent Type Trigger List</label>
+            <div class="container-fluid">
+              <cn-qnaire-part-patch subject="qnaire_event_type_trigger" model="child"></cn-qnaire-part-patch>
             </div>
           </div>
           <div ng-if="'qnaire_alternate_consent_type_trigger_list' == property">

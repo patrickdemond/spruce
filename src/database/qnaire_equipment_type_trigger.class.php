@@ -42,10 +42,11 @@ class qnaire_equipment_type_trigger extends qnaire_trigger
     if( $db_qnaire->debug )
     {
       log::info( sprintf(
-        'Creating %s "%s" equipment %s due to question "%s" (questionnaire "%s")',
+        'Creating %s "%s" equipment %s %s due to question "%s" (questionnaire "%s")',
         $this->get_equipment_type()->name,
         $serial_number,
-        $this->loaned ? 'loaned' : 'returned',
+        $this->loaned ? 'loaned to' : 'returned from',
+        $db_participant->uid,
         $db_question->name,
         $db_qnaire->name
       ) );

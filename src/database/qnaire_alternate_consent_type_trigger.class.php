@@ -24,6 +24,7 @@ class qnaire_alternate_consent_type_trigger extends qnaire_trigger
     // some triggers may be skipped
     if( !$this->check_trigger( $db_response ) ) return;
 
+    $db_participant = $db_response->get_respondent()->get_participant();
     $db_qnaire = $this->get_qnaire();
     $db_question = $this->get_question();
     $db_answer = $answer_class_name::get_unique_record(
@@ -34,10 +35,11 @@ class qnaire_alternate_consent_type_trigger extends qnaire_trigger
     if( $db_qnaire->debug )
     {
       log::info( sprintf(
-        'Creating new %s "%s" alternate consent due to question "%s" '.
+        'Creating new %s "%s" alternate consent to %s due to question "%s" '.
         'having the value "%s" (questionnaire "%s")',
         $this->accept ? 'accept' : 'deny',
         $this->get_alternate_consent_type()->name,
+        $db_participant->uid,
         $db_question->name,
         $this->answer_value,
         $db_qnaire->name

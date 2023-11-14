@@ -104,7 +104,9 @@ class ui extends \cenozo\ui\ui
       $module->add_child( 'attribute' );
       $module->add_child( 'qnaire_consent_type_confirm' );
       $module->add_child( 'qnaire_participant_trigger' );
+      $module->add_child( 'qnaire_collection_trigger' );
       $module->add_child( 'qnaire_consent_type_trigger' );
+      $module->add_child( 'qnaire_event_type_trigger' );
       $module->add_child( 'qnaire_alternate_consent_type_trigger' );
       $module->add_child( 'qnaire_proxy_type_trigger' );
       $module->add_child( 'qnaire_equipment_type_trigger' );
@@ -121,6 +123,39 @@ class ui extends \cenozo\ui\ui
       $module->add_action( 'mass_respondent', '/{identifier}' );
       $module->add_action( 'import' );
       $module->add_action( 'patch', '/{identifier}' );
+    }
+
+    // remove unneeded choose/child relationships
+    $module = $this->get_module( 'collection' );
+    if( !is_null( $module ) )
+    {
+      $module->remove_choose( 'application' );
+      $module->remove_choose( 'participant' );
+      $module->remove_choose( 'user' );
+    }
+
+    // remove unneeded choose/child relationships
+    $module = $this->get_module( 'consent_type' );
+    if( !is_null( $module ) )
+    {
+      $module->remove_child( 'participant' );
+      $module->remove_child( 'role' );
+    }
+
+    // remove unneeded choose/child relationships
+    $module = $this->get_module( 'event_type' );
+    if( !is_null( $module ) )
+    {
+      $module->remove_child( 'participant' );
+      $module->remove_child( 'role' );
+    }
+
+    // remove unneeded choose/child relationships
+    $module = $this->get_module( 'proxy_type' );
+    if( !is_null( $module ) )
+    {
+      $module->remove_child( 'participant' );
+      $module->remove_child( 'role' );
     }
 
     $module = $this->get_module( 'lookup' );
@@ -201,7 +236,9 @@ class ui extends \cenozo\ui\ui
       $module->add_child( 'question_description' );
       $module->add_child( 'question_option' );
       $module->add_child( 'qnaire_participant_trigger' );
+      $module->add_child( 'qnaire_collection_trigger' );
       $module->add_child( 'qnaire_consent_type_trigger' );
+      $module->add_child( 'qnaire_event_type_trigger' );
       $module->add_child( 'qnaire_alternate_consent_type_trigger' );
       $module->add_child( 'qnaire_proxy_type_trigger' );
       $module->add_child( 'qnaire_equipment_type_trigger' );
@@ -229,13 +266,16 @@ class ui extends \cenozo\ui\ui
     $this->add_listitem( 'Problem Reports', 'problem_report' );
     $this->add_listitem( 'Questionnaires', 'qnaire' );
     if( 'readonly' == $db_role->name ) $this->add_listitem( 'Overviews', 'overview' );
-    $this->remove_listitem( 'Collections' );
     $this->remove_listitem( 'Identifiers' );
     $this->remove_listitem( 'Participants' );
 
     if( 'interviewer' == $db_role->name )
     {
+      $this->remove_listitem( 'Alternate Consent Types' );
       $this->remove_listitem( 'Consent Types' );
+      $this->remove_listitem( 'Equipment Types' );
+      $this->remove_listitem( 'Event Types' );
+      $this->remove_listitem( 'Proxy Types' );
       $this->add_listitem( 'Problem Reports', 'problem_report' );
       $this->remove_listitem( 'Users' );
     }

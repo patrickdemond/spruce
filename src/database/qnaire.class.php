@@ -496,6 +496,19 @@ class qnaire extends \cenozo\database\record
       $db_qnaire_participant_trigger->save();
     }
 
+    // copy all collection triggers
+    foreach( $db_source_qnaire->get_qnaire_collection_trigger_object_list() as $db_source_collection )
+    {
+      $db_question = $this->get_question( $db_source_collection->get_question()->name );
+      $db_qnaire_collection_trigger = lib::create( 'database\qnaire_collection_trigger' );
+      $db_qnaire_collection_trigger->qnaire_id = $this->id;
+      $db_qnaire_collection_trigger->collection_id = $db_source_collection->collection_id;
+      $db_qnaire_collection_trigger->question_id = $db_question->id;
+      $db_qnaire_collection_trigger->answer_value = $db_source_collection->answer_value;
+      $db_qnaire_collection_trigger->add_to = $db_source_collection->add_to;
+      $db_qnaire_collection_trigger->save();
+    }
+
     // copy all consent triggers
     foreach( $db_source_qnaire->get_qnaire_consent_type_trigger_object_list() as $db_source_consent_type )
     {
@@ -507,6 +520,18 @@ class qnaire extends \cenozo\database\record
       $db_qnaire_consent_type_trigger->answer_value = $db_source_consent_type->answer_value;
       $db_qnaire_consent_type_trigger->accept = $db_source_consent_type->accept;
       $db_qnaire_consent_type_trigger->save();
+    }
+
+    // copy all event triggers
+    foreach( $db_source_qnaire->get_qnaire_event_type_trigger_object_list() as $db_source_event_type )
+    {
+      $db_question = $this->get_question( $db_source_event_type->get_question()->name );
+      $db_qnaire_event_type_trigger = lib::create( 'database\qnaire_event_type_trigger' );
+      $db_qnaire_event_type_trigger->qnaire_id = $this->id;
+      $db_qnaire_event_type_trigger->event_type_id = $db_source_event_type->event_type_id;
+      $db_qnaire_event_type_trigger->question_id = $db_question->id;
+      $db_qnaire_event_type_trigger->answer_value = $db_source_event_type->answer_value;
+      $db_qnaire_event_type_trigger->save();
     }
 
     // copy all alternate consent triggers
@@ -2255,7 +2280,9 @@ class qnaire extends \cenozo\database\record
     $region_class_name = lib::get_class_name( 'database\region' );
     $study_class_name = lib::get_class_name( 'database\study' );
     $identifier_class_name = lib::get_class_name( 'database\identifier' );
+    $collection_class_name = lib::get_class_name( 'database\collection' );
     $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
+    $event_type_class_name = lib::get_class_name( 'database\event_type' );
 
     $setting_manager = lib::create( 'business\setting_manager' );
     if( !$setting_manager->get_setting( 'general', 'detached' ) || is_null( PARENT_INSTANCE_URL ) ) return;
@@ -2378,11 +2405,8 @@ class qnaire extends \cenozo\database\record
       $db_address->postcode = $participant->postcode;
       $db_address->save();
 
-      // replace all eligibility with the provided list
-      // NOTE: due to a bug in Beartooth we have to seperate study names by , instead of ;
-      // This can't be fixed in Beartooth because it would require updating all Onyx instances,
-      // so as a TODO, this should be replaced with a ; once Onyx is retired
-      $study_name_list = explode( ',', $participant->study_list );
+      // replace all eligible studies with the provided list
+      $study_name_list = explode( ';', $participant->study_list );
 
       if( 0 == count( $study_name_list ) )
       {
@@ -2418,6 +2442,49 @@ class qnaire extends \cenozo\database\record
         static::db()->execute( sprintf(
           'DELETE FROM study_has_participant %s',
           $study_mod->get_sql()
+        ) );
+      }
+
+      // replace all collections with the provided list
+      $collection_name_list = explode( ';', $participant->collection_list );
+
+      if( 0 == count( $collection_name_list ) )
+      {
+        $collection_mod = lib::create( 'database\modifier' );
+        $collection_mod->where( 'participant_id', '=', $db_participant->id );
+        static::db()->execute( sprintf(
+          'DELETE FROM collection_has_participant %s',
+          $collection_mod->get_sql()
+        ) );
+      }
+      else
+      {
+        $collection_sel = lib::create( 'database\select' );
+        $collection_sel->from( 'collection' );
+        $collection_sel->add_column( 'collection.id', 'collection_id', false );
+        $collection_sel->add_constant( $db_participant->id, 'participant_id' );
+
+        $collection_mod = lib::create( 'database\modifier' );
+        $collection_mod->where( 'collection.name', 'IN', $collection_name_list );
+
+        static::db()->execute( sprintf(
+          'INSERT IGNORE INTO collection_has_participant( collection_id, participant_id ) '.
+          '%s %s',
+          $collection_sel->get_sql(),
+          $collection_mod->get_sql()
+        ) );
+
+        // Get a list of all selected collection IDs
+        $collection_id_list = [];
+        foreach( $collection_class_name::select( $collection_sel, $collection_mod ) as $row )
+          $collection_id_list[] = $row['collection_id'];
+
+        $collection_mod = lib::create( 'database\modifier' );
+        $collection_mod->where( 'collection_id', 'NOT IN', $collection_id_list );
+        $collection_mod->where( 'participant_id', '=', $db_participant->id );
+        static::db()->execute( sprintf(
+          'DELETE FROM collection_has_participant %s',
+          $collection_mod->get_sql()
         ) );
       }
 
@@ -2513,6 +2580,33 @@ class qnaire extends \cenozo\database\record
             $db_consent->datetime = $consent['datetime'];
             $db_consent->save();
           }
+        }
+      }
+
+      // create event records
+      foreach( explode( ';', $participant->event_list ) as $event_entry )
+      {
+        // entries have the format: event_type_name$datetime, convert to an associative array
+        $event_data = explode( '$', $event_entry );
+        $event = ['event_type' => $event_data[0]];
+        if( array_key_exists( 1, $event_data ) ) $event['datetime'] = $event_data[2];
+
+        $db_event_type = $event_type_class_name::get_unique_record( 'name', $event['event_type'] );
+
+        $event_mod = lib::create( 'database\modifier' );
+        $event_mod->where( 'event_type_id', '=', $db_event_type->id );
+        $event_mod->where( 'datetime', '=', $event['datetime'] );
+
+        $event_list = $db_participant->get_event_object_list( $event_mod );
+
+        if( 0 == count( $event_list ) )
+        {
+          // there is no event record for that datetime, so create one
+          $db_event = lib::create( 'database\event' );
+          $db_event->participant_id = $db_participant->id;
+          $db_event->event_type_id = $db_event_type->id;
+          $db_event->datetime = $event['datetime'];
+          $db_event->save();
         }
       }
 
@@ -3163,13 +3257,17 @@ class qnaire extends \cenozo\database\record
     $deviation_type_class_name = lib::get_class_name( 'database\deviation_type' );
     $reminder_class_name = lib::get_class_name( 'database\reminder' );
     $reminder_description_class_name = lib::get_class_name( 'database\reminder_description' );
+    $collection_class_name = lib::get_class_name( 'database\collection' );
     $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
+    $event_type_class_name = lib::get_class_name( 'database\event_type' );
     $alternate_consent_type_class_name = lib::get_class_name( 'database\alternate_consent_type' );
     $proxy_type_class_name = lib::get_class_name( 'database\proxy_type' );
     $equipment_type_class_name = lib::get_class_name( 'database\equipment_type' );
     $qnaire_consent_type_confirm_class_name = lib::get_class_name( 'database\qnaire_consent_type_confirm' );
     $qnaire_participant_trigger_class_name = lib::get_class_name( 'database\qnaire_participant_trigger' );
+    $qnaire_collection_trigger_class_name = lib::get_class_name( 'database\qnaire_collection_trigger' );
     $qnaire_consent_type_trigger_class_name = lib::get_class_name( 'database\qnaire_consent_type_trigger' );
+    $qnaire_event_type_trigger_class_name = lib::get_class_name( 'database\qnaire_event_type_trigger' );
     $qnaire_aconsent_type_trigger_class_name =
       lib::get_class_name( 'database\qnaire_alternate_consent_type_trigger' );
     $qnaire_proxy_type_trigger_class_name = lib::get_class_name( 'database\qnaire_proxy_type_trigger' );
@@ -4156,6 +4254,149 @@ class qnaire extends \cenozo\database\record
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
         if( 0 < count( $diff_list ) ) $difference_list['qnaire_participant_trigger_list'] = $diff_list;
       }
+      else if( 'qnaire_collection_trigger_list' == $property )
+      {
+        // check every item in the patch object for additions and changes
+        $add_list = [];
+        $change_list = [];
+        foreach( $patch_object->qnaire_collection_trigger_list as $qnaire_collection_trigger )
+        {
+          $db_collection = $collection_class_name::get_unique_record(
+            'name',
+            $qnaire_collection_trigger->collection_name
+          );
+
+          if( is_null( $db_collection ) )
+          {
+            if( !$apply )
+            {
+              $error = new \stdClass();
+              $error->WARNING = sprintf(
+                'Consent trigger for "%s" will be ignore since the collection does not exist.',
+                $qnaire_collection_trigger->collection_name
+              );
+              $add_list[] = $error;
+            }
+          }
+          else
+          {
+            $db_question = $this->get_question(
+              array_key_exists( $qnaire_collection_trigger->question_name, $change_question_name_list ) ?
+              $change_question_name_list[$qnaire_collection_trigger->question_name] :
+              $qnaire_collection_trigger->question_name
+            );
+
+            // check to see if the question has been renamed as part of the applied patch
+            if( $apply && is_null( $db_question ) )
+            {
+              $db_question = $this->get_question(
+                sprintf(
+                  '%s_%s',
+                  $qnaire_collection_trigger->question_name,
+                  $name_suffix
+                )
+              );
+            }
+
+            $db_qnaire_collection_trigger = $qnaire_collection_trigger_class_name::get_unique_record(
+              ['qnaire_id', 'collection_id', 'question_id', 'answer_value'],
+              [
+                $this->id,
+                $db_collection->id,
+                $db_question->id,
+                $qnaire_collection_trigger->answer_value
+              ]
+            );
+
+            if( is_null( $db_qnaire_collection_trigger ) )
+            {
+              if( $apply )
+              {
+                $qnaire_collection_trigger_class_name::create_from_object(
+                  $qnaire_collection_trigger,
+                  $db_question
+                );
+              }
+              else $add_list[] = $qnaire_collection_trigger;
+            }
+            else
+            {
+              // find and add all differences
+              $diff = [];
+              foreach( $qnaire_collection_trigger as $property => $value )
+                if( !in_array( $property, [ 'collection_name', 'question_name' ] ) &&
+                    $db_qnaire_collection_trigger->$property != $qnaire_collection_trigger->$property )
+                  $diff[$property] = $qnaire_collection_trigger->$property;
+
+              if( 0 < count( $diff ) )
+              {
+                if( $apply )
+                {
+                  $db_qnaire_collection_trigger->answer_value = $qnaire_collection_trigger->answer_value;
+                  $db_qnaire_collection_trigger->save();
+                }
+                else
+                {
+                  $index = sprintf(
+                    '%s %s [%s]',
+                    $qnaire_collection_trigger->collection_name,
+                    $qnaire_collection_trigger->add_to ? 'add' : 'remove',
+                    $qnaire_collection_trigger->question_name
+                  );
+                  $change_list[$index] = $diff;
+                }
+              }
+            }
+          }
+        }
+
+        // check every item in this object for removals
+        $remove_list = [];
+        foreach( $this->get_qnaire_collection_trigger_object_list() as $db_qnaire_collection_trigger )
+        {
+          $collection_name = $db_qnaire_collection_trigger->get_collection()->name;
+          $changed_name = array_search(
+            $db_qnaire_collection_trigger->get_question()->name,
+            $change_question_name_list
+          );
+          $question_name = $changed_name ? $changed_name : $db_qnaire_collection_trigger->get_question()->name;
+          if( $apply ) $question_name = preg_replace( sprintf( '/_%s$/', $name_suffix ), '', $question_name );
+
+          $found = false;
+          foreach( $patch_object->qnaire_collection_trigger_list as $qnaire_collection_trigger )
+          {
+            // see if the qnaire_collection_trigger exists
+            if( ( $collection_name == $qnaire_collection_trigger->collection_name &&
+                  $question_name == $qnaire_collection_trigger->question_name &&
+                  $db_qnaire_collection_trigger->add_to == $qnaire_collection_trigger->add_to ) )
+            {
+              $found = true;
+              break;
+            }
+          }
+
+          if( !$found )
+          {
+            if( $apply ) $db_qnaire_collection_trigger->delete();
+            else
+            {
+              $index = sprintf(
+                '%s %s [%s]',
+                $collection_name,
+                $db_qnaire_collection_trigger->add_to ? 'add' : 'remove',
+                $question_name
+              );
+              $remove_list[] = $index;
+            }
+          }
+        }
+
+        $diff_list = [];
+        if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
+        if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
+        if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
+        if( 0 < count( $diff_list ) ) $difference_list['qnaire_collection_trigger_list'] = $diff_list;
+      }
       else if( 'qnaire_consent_type_trigger_list' == $property )
       {
         // check every item in the patch object for additions and changes
@@ -4298,6 +4539,146 @@ class qnaire extends \cenozo\database\record
         if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
         if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
         if( 0 < count( $diff_list ) ) $difference_list['qnaire_consent_type_trigger_list'] = $diff_list;
+      }
+      else if( 'qnaire_event_type_trigger_list' == $property )
+      {
+        // check every item in the patch object for additions and changes
+        $add_list = [];
+        $change_list = [];
+        foreach( $patch_object->qnaire_event_type_trigger_list as $qnaire_event_type_trigger )
+        {
+          $db_event_type = $event_type_class_name::get_unique_record(
+            'name',
+            $qnaire_event_type_trigger->event_type_name
+          );
+
+          if( is_null( $db_event_type ) )
+          {
+            if( !$apply )
+            {
+              $error = new \stdClass();
+              $error->WARNING = sprintf(
+                'Consent trigger for "%s" will be ignore since the event type does not exist.',
+                $qnaire_event_type_trigger->event_type_name
+              );
+              $add_list[] = $error;
+            }
+          }
+          else
+          {
+            $db_question = $this->get_question(
+              array_key_exists( $qnaire_event_type_trigger->question_name, $change_question_name_list ) ?
+              $change_question_name_list[$qnaire_event_type_trigger->question_name] :
+              $qnaire_event_type_trigger->question_name
+            );
+
+            // check to see if the question has been renamed as part of the applied patch
+            if( $apply && is_null( $db_question ) )
+            {
+              $db_question = $this->get_question(
+                sprintf(
+                  '%s_%s',
+                  $qnaire_event_type_trigger->question_name,
+                  $name_suffix
+                )
+              );
+            }
+
+            $db_qnaire_event_type_trigger = $qnaire_event_type_trigger_class_name::get_unique_record(
+              ['qnaire_id', 'event_type_id', 'question_id', 'answer_value'],
+              [
+                $this->id,
+                $db_event_type->id,
+                $db_question->id,
+                $qnaire_event_type_trigger->answer_value
+              ]
+            );
+
+            if( is_null( $db_qnaire_event_type_trigger ) )
+            {
+              if( $apply )
+              {
+                $qnaire_event_type_trigger_class_name::create_from_object(
+                  $qnaire_event_type_trigger,
+                  $db_question
+                );
+              }
+              else $add_list[] = $qnaire_event_type_trigger;
+            }
+            else
+            {
+              // find and add all differences
+              $diff = [];
+              foreach( $qnaire_event_type_trigger as $property => $value )
+                if( !in_array( $property, [ 'event_type_name', 'question_name' ] ) &&
+                    $db_qnaire_event_type_trigger->$property != $qnaire_event_type_trigger->$property )
+                  $diff[$property] = $qnaire_event_type_trigger->$property;
+
+              if( 0 < count( $diff ) )
+              {
+                if( $apply )
+                {
+                  $db_qnaire_event_type_trigger->answer_value = $qnaire_event_type_trigger->answer_value;
+                  $db_qnaire_event_type_trigger->save();
+                }
+                else
+                {
+                  $index = sprintf(
+                    '%s [%s]',
+                    $qnaire_event_type_trigger->event_type_name,
+                    $qnaire_event_type_trigger->question_name
+                  );
+                  $change_list[$index] = $diff;
+                }
+              }
+            }
+          }
+        }
+
+        // check every item in this object for removals
+        $remove_list = [];
+        foreach( $this->get_qnaire_event_type_trigger_object_list() as $db_qnaire_event_type_trigger )
+        {
+          $event_type_name = $db_qnaire_event_type_trigger->get_event_type()->name;
+          $changed_name = array_search(
+            $db_qnaire_event_type_trigger->get_question()->name,
+            $change_question_name_list
+          );
+          $question_name = $changed_name ? $changed_name : $db_qnaire_event_type_trigger->get_question()->name;
+          if( $apply ) $question_name = preg_replace( sprintf( '/_%s$/', $name_suffix ), '', $question_name );
+
+          $found = false;
+          foreach( $patch_object->qnaire_event_type_trigger_list as $qnaire_event_type_trigger )
+          {
+            // see if the qnaire_event_type_trigger exists
+            if( ( $event_type_name == $qnaire_event_type_trigger->event_type_name &&
+                  $question_name == $qnaire_event_type_trigger->question_name ) )
+            {
+              $found = true;
+              break;
+            }
+          }
+
+          if( !$found )
+          {
+            if( $apply ) $db_qnaire_event_type_trigger->delete();
+            else
+            {
+              $index = sprintf(
+                '%s [%s]',
+                $event_type_name,
+                $question_name
+              );
+              $remove_list[] = $index;
+            }
+          }
+        }
+
+        $diff_list = [];
+        if( 0 < count( $add_list ) ) $diff_list['add'] = $add_list;
+        if( 0 < count( $change_list ) ) $diff_list['change'] = $change_list;
+        if( 0 < count( $remove_list ) ) $diff_list['remove'] = $remove_list;
+        if( 0 < count( $diff_list ) ) $difference_list['qnaire_event_type_trigger_list'] = $diff_list;
       }
       else if( 'qnaire_alternate_consent_type_trigger_list' == $property )
       {
@@ -4879,7 +5260,9 @@ class qnaire extends \cenozo\database\record
     $qnaire_data['module_list'] = [];
     $qnaire_data['qnaire_participant_trigger_list'] = [];
     $qnaire_data['qnaire_consent_type_confirm_list'] = [];
+    $qnaire_data['qnaire_collection_trigger_list'] = [];
     $qnaire_data['qnaire_consent_type_trigger_list'] = [];
+    $qnaire_data['qnaire_event_type_trigger_list'] = [];
     $qnaire_data['qnaire_alternate_consent_type_trigger_list'] = [];
     $qnaire_data['qnaire_proxy_type_trigger_list'] = [];
     $qnaire_data['qnaire_equipment_type_trigger_list'] = [];
@@ -5213,82 +5596,111 @@ class qnaire extends \cenozo\database\record
       foreach( $this->get_stage_list( $stage_sel, $stage_mod ) as $item ) $qnaire_data['stage_list'][] = $item;
     }
 
-    $qc_confirm_sel = lib::create( 'database\select' );
-    $qc_confirm_sel->add_table_column( 'consent_type', 'name', 'consent_type_name' );
-    $qc_confirm_mod = lib::create( 'database\modifier' );
-    $qc_confirm_mod->join(
+    $confirm_sel = lib::create( 'database\select' );
+    $confirm_sel->add_table_column( 'consent_type', 'name', 'consent_type_name' );
+    $confirm_mod = lib::create( 'database\modifier' );
+    $confirm_mod->join(
       'consent_type',
       'qnaire_consent_type_confirm.consent_type_id',
       'consent_type.id'
     );
-    foreach( $this->get_qnaire_consent_type_confirm_list( $qc_confirm_sel, $qc_confirm_mod ) as $item )
+    foreach( $this->get_qnaire_consent_type_confirm_list( $confirm_sel, $confirm_mod ) as $item )
       $qnaire_data['qnaire_consent_type_confirm_list'][] = $item;
 
-    $qp_trigger_sel = lib::create( 'database\select' );
-    $qp_trigger_sel->add_table_column( 'question', 'name', 'question_name' );
-    $qp_trigger_sel->add_column( 'answer_value' );
-    $qp_trigger_sel->add_column( 'column_name' );
-    $qp_trigger_sel->add_column( 'value' );
-    $qp_trigger_mod = lib::create( 'database\modifier' );
-    $qp_trigger_mod->join( 'question', 'qnaire_participant_trigger.question_id', 'question.id' );
-    foreach( $this->get_qnaire_participant_trigger_list( $qp_trigger_sel, $qp_trigger_mod ) as $item )
+    $trigger_sel = lib::create( 'database\select' );
+    $trigger_sel->add_table_column( 'question', 'name', 'question_name' );
+    $trigger_sel->add_column( 'answer_value' );
+    $trigger_sel->add_column( 'column_name' );
+    $trigger_sel->add_column( 'value' );
+    $trigger_mod = lib::create( 'database\modifier' );
+    $trigger_mod->join( 'question', 'qnaire_participant_trigger.question_id', 'question.id' );
+    foreach( $this->get_qnaire_participant_trigger_list( $trigger_sel, $trigger_mod ) as $item )
       $qnaire_data['qnaire_participant_trigger_list'][] = $item;
 
-    $qc_trigger_sel = lib::create( 'database\select' );
-    $qc_trigger_sel->add_table_column( 'consent_type', 'name', 'consent_type_name' );
-    $qc_trigger_sel->add_table_column( 'question', 'name', 'question_name' );
-    $qc_trigger_sel->add_column( 'answer_value' );
-    $qc_trigger_sel->add_column( 'accept' );
-    $qc_trigger_mod = lib::create( 'database\modifier' );
-    $qc_trigger_mod->join(
+    $trigger_sel = lib::create( 'database\select' );
+    $trigger_sel->add_table_column( 'collection', 'name', 'collection_name' );
+    $trigger_sel->add_table_column( 'question', 'name', 'question_name' );
+    $trigger_sel->add_column( 'answer_value' );
+    $trigger_sel->add_column( 'add_to' );
+    $trigger_mod = lib::create( 'database\modifier' );
+    $trigger_mod->join(
+      'collection',
+      'qnaire_collection_trigger.collection_id',
+      'collection.id'
+    );
+    $trigger_mod->join( 'question', 'qnaire_collection_trigger.question_id', 'question.id' );
+    foreach( $this->get_qnaire_collection_trigger_list( $trigger_sel, $trigger_mod ) as $item )
+      $qnaire_data['qnaire_collection_trigger_list'][] = $item;
+
+    $trigger_sel = lib::create( 'database\select' );
+    $trigger_sel->add_table_column( 'consent_type', 'name', 'consent_type_name' );
+    $trigger_sel->add_table_column( 'question', 'name', 'question_name' );
+    $trigger_sel->add_column( 'answer_value' );
+    $trigger_sel->add_column( 'accept' );
+    $trigger_mod = lib::create( 'database\modifier' );
+    $trigger_mod->join(
       'consent_type',
       'qnaire_consent_type_trigger.consent_type_id',
       'consent_type.id'
     );
-    $qc_trigger_mod->join( 'question', 'qnaire_consent_type_trigger.question_id', 'question.id' );
-    foreach( $this->get_qnaire_consent_type_trigger_list( $qc_trigger_sel, $qc_trigger_mod ) as $item )
+    $trigger_mod->join( 'question', 'qnaire_consent_type_trigger.question_id', 'question.id' );
+    foreach( $this->get_qnaire_consent_type_trigger_list( $trigger_sel, $trigger_mod ) as $item )
       $qnaire_data['qnaire_consent_type_trigger_list'][] = $item;
 
-    $qc_trigger_sel = lib::create( 'database\select' );
-    $qc_trigger_sel->add_table_column( 'alternate_consent_type', 'name', 'alternate_consent_type_name' );
-    $qc_trigger_sel->add_table_column( 'question', 'name', 'question_name' );
-    $qc_trigger_sel->add_column( 'answer_value' );
-    $qc_trigger_sel->add_column( 'accept' );
-    $qc_trigger_mod = lib::create( 'database\modifier' );
-    $qc_trigger_mod->join(
+    $trigger_sel = lib::create( 'database\select' );
+    $trigger_sel->add_table_column( 'event_type', 'name', 'event_type_name' );
+    $trigger_sel->add_table_column( 'question', 'name', 'question_name' );
+    $trigger_sel->add_column( 'answer_value' );
+    $trigger_mod = lib::create( 'database\modifier' );
+    $trigger_mod->join(
+      'event_type',
+      'qnaire_event_type_trigger.event_type_id',
+      'event_type.id'
+    );
+    $trigger_mod->join( 'question', 'qnaire_event_type_trigger.question_id', 'question.id' );
+    foreach( $this->get_qnaire_event_type_trigger_list( $trigger_sel, $trigger_mod ) as $item )
+      $qnaire_data['qnaire_event_type_trigger_list'][] = $item;
+
+    $trigger_sel = lib::create( 'database\select' );
+    $trigger_sel->add_table_column( 'alternate_consent_type', 'name', 'alternate_consent_type_name' );
+    $trigger_sel->add_table_column( 'question', 'name', 'question_name' );
+    $trigger_sel->add_column( 'answer_value' );
+    $trigger_sel->add_column( 'accept' );
+    $trigger_mod = lib::create( 'database\modifier' );
+    $trigger_mod->join(
       'alternate_consent_type',
       'qnaire_alternate_consent_type_trigger.alternate_consent_type_id',
       'alternate_consent_type.id'
     );
-    $qc_trigger_mod->join( 'question', 'qnaire_alternate_consent_type_trigger.question_id', 'question.id' );
-    foreach( $this->get_qnaire_alternate_consent_type_trigger_list( $qc_trigger_sel, $qc_trigger_mod )
+    $trigger_mod->join( 'question', 'qnaire_alternate_consent_type_trigger.question_id', 'question.id' );
+    foreach( $this->get_qnaire_alternate_consent_type_trigger_list( $trigger_sel, $trigger_mod )
       as $item )
     {
       $qnaire_data['qnaire_alternate_consent_type_trigger_list'][] = $item;
     }
 
-    $qp_trigger_sel = lib::create( 'database\select' );
-    $qp_trigger_sel->add_column( 'IFNULL( proxy_type.name, "" )', 'proxy_type_name', false );
-    $qp_trigger_sel->add_table_column( 'question', 'name', 'question_name' );
-    $qp_trigger_sel->add_column( 'answer_value' );
-    $qp_trigger_mod = lib::create( 'database\modifier' );
-    $qp_trigger_mod->left_join( 'proxy_type', 'qnaire_proxy_type_trigger.proxy_type_id', 'proxy_type.id' );
-    $qp_trigger_mod->join( 'question', 'qnaire_proxy_type_trigger.question_id', 'question.id' );
-    foreach( $this->get_qnaire_proxy_type_trigger_list( $qp_trigger_sel, $qp_trigger_mod ) as $item )
+    $trigger_sel = lib::create( 'database\select' );
+    $trigger_sel->add_column( 'IFNULL( proxy_type.name, "" )', 'proxy_type_name', false );
+    $trigger_sel->add_table_column( 'question', 'name', 'question_name' );
+    $trigger_sel->add_column( 'answer_value' );
+    $trigger_mod = lib::create( 'database\modifier' );
+    $trigger_mod->left_join( 'proxy_type', 'qnaire_proxy_type_trigger.proxy_type_id', 'proxy_type.id' );
+    $trigger_mod->join( 'question', 'qnaire_proxy_type_trigger.question_id', 'question.id' );
+    foreach( $this->get_qnaire_proxy_type_trigger_list( $trigger_sel, $trigger_mod ) as $item )
       $qnaire_data['qnaire_proxy_type_trigger_list'][] = $item;
 
-    $qe_trigger_sel = lib::create( 'database\select' );
-    $qe_trigger_sel->add_column( 'IFNULL( equipment_type.name, "" )', 'equipment_type_name', false );
-    $qe_trigger_sel->add_table_column( 'question', 'name', 'question_name' );
-    $qe_trigger_sel->add_column( 'loaned' );
-    $qe_trigger_mod = lib::create( 'database\modifier' );
-    $qe_trigger_mod->left_join(
+    $trigger_sel = lib::create( 'database\select' );
+    $trigger_sel->add_column( 'IFNULL( equipment_type.name, "" )', 'equipment_type_name', false );
+    $trigger_sel->add_table_column( 'question', 'name', 'question_name' );
+    $trigger_sel->add_column( 'loaned' );
+    $trigger_mod = lib::create( 'database\modifier' );
+    $trigger_mod->left_join(
       'equipment_type',
       'qnaire_equipment_type_trigger.equipment_type_id',
       'equipment_type.id'
     );
-    $qe_trigger_mod->join( 'question', 'qnaire_equipment_type_trigger.question_id', 'question.id' );
-    foreach( $this->get_qnaire_equipment_type_trigger_list( $qe_trigger_sel, $qe_trigger_mod ) as $item )
+    $trigger_mod->join( 'question', 'qnaire_equipment_type_trigger.question_id', 'question.id' );
+    foreach( $this->get_qnaire_equipment_type_trigger_list( $trigger_sel, $trigger_mod ) as $item )
       $qnaire_data['qnaire_equipment_type_trigger_list'][] = $item;
 
     if( 'export' == $type )
@@ -5476,7 +5888,9 @@ class qnaire extends \cenozo\database\record
     $attribute_class_name = lib::get_class_name( 'database\attribute' );
     $qnaire_document_class_name = lib::get_class_name( 'database\qnaire_document' );
     $embedded_file_class_name = lib::get_class_name( 'database\embedded_file' );
+    $collection_class_name = lib::get_class_name( 'database\collection' );
     $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
+    $event_type_class_name = lib::get_class_name( 'database\event_type' );
     $alternate_consent_type_class_name = lib::get_class_name( 'database\alternate_consent_type' );
     $proxy_type_class_name = lib::get_class_name( 'database\proxy_type' );
     $equipment_type_class_name = lib::get_class_name( 'database\equipment_type' );
@@ -5489,7 +5903,9 @@ class qnaire extends \cenozo\database\record
     $indicator_class_name = lib::get_class_name( 'database\indicator' );
     $qnaire_consent_type_confirm_class_name = lib::get_class_name( 'database\qnaire_consent_type_confirm' );
     $qnaire_participant_trigger_class_name = lib::get_class_name( 'database\qnaire_participant_trigger' );
+    $qnaire_collection_trigger_class_name = lib::get_class_name( 'database\qnaire_collection_trigger' );
     $qnaire_consent_type_trigger_class_name = lib::get_class_name( 'database\qnaire_consent_type_trigger' );
+    $qnaire_event_type_trigger_class_name = lib::get_class_name( 'database\qnaire_event_type_trigger' );
     $qnaire_aconsent_type_trigger_class_name =
       lib::get_class_name( 'database\qnaire_alternate_consent_type_trigger' );
     $qnaire_proxy_type_trigger_class_name = lib::get_class_name( 'database\qnaire_proxy_type_trigger' );
@@ -5803,6 +6219,28 @@ class qnaire extends \cenozo\database\record
       $qnaire_participant_trigger_class_name::create_from_object( $qnaire_participant_trigger, $db_question );
     }
 
+    foreach( $qnaire_object->qnaire_collection_trigger_list as $qnaire_collection_trigger )
+    {
+      $db_collection = $collection_class_name::get_unique_record(
+        'name',
+        $qnaire_collection_trigger->collection_name
+      );
+      if( is_null( $db_collection ) )
+      {
+        throw lib::create( 'exception\notice',
+          sprintf(
+            'Unable to import questionnaire since it has a collection trigger '.
+            'for collection type "%s" which does not exist.',
+            $qnaire_collection_trigger->collection_name
+          ),
+          __METHOD__
+        );
+      }
+
+      $db_question = $db_qnaire->get_question( $qnaire_collection_trigger->question_name );
+      $qnaire_collection_trigger_class_name::create_from_object( $qnaire_collection_trigger, $db_question );
+    }
+
     foreach( $qnaire_object->qnaire_consent_type_trigger_list as $qnaire_consent_type_trigger )
     {
       $db_consent_type = $consent_type_class_name::get_unique_record(
@@ -5823,6 +6261,28 @@ class qnaire extends \cenozo\database\record
 
       $db_question = $db_qnaire->get_question( $qnaire_consent_type_trigger->question_name );
       $qnaire_consent_type_trigger_class_name::create_from_object( $qnaire_consent_type_trigger, $db_question );
+    }
+
+    foreach( $qnaire_object->qnaire_event_type_trigger_list as $qnaire_event_type_trigger )
+    {
+      $db_event_type = $event_type_class_name::get_unique_record(
+        'name',
+        $qnaire_event_type_trigger->event_type_name
+      );
+      if( is_null( $db_event_type ) )
+      {
+        throw lib::create( 'exception\notice',
+          sprintf(
+            'Unable to import questionnaire since it has a event trigger '.
+            'for event type "%s" which does not exist.',
+            $qnaire_event_type_trigger->event_type_name
+          ),
+          __METHOD__
+        );
+      }
+
+      $db_question = $db_qnaire->get_question( $qnaire_event_type_trigger->question_name );
+      $qnaire_event_type_trigger_class_name::create_from_object( $qnaire_event_type_trigger, $db_question );
     }
 
     foreach( $qnaire_object->qnaire_alternate_consent_type_trigger_list

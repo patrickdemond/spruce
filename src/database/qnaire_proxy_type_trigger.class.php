@@ -33,8 +33,9 @@ class qnaire_proxy_type_trigger extends qnaire_trigger
     {
       $db_proxy_type = $this->get_proxy_type();
       log::info( sprintf(
-        'Creating new "%s" proxy due to question "%s" having the value "%s" (questionnaire "%s")',
+        'Adding new "%s" proxy to %s due to question "%s" having the value "%s" (questionnaire "%s")',
         is_null( $db_proxy_type ) ? 'empty' : $db_proxy_type->name,
+        $db_participant->uid,
         $db_question->name,
         $this->answer_value,
         $db_qnaire->name

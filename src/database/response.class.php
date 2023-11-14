@@ -186,7 +186,11 @@ class response extends \cenozo\database\has_rank
       // execute all qnaire triggers
       foreach( $db_qnaire->get_qnaire_participant_trigger_object_list() as $db_trigger )
         $db_trigger->execute( $this );
+      foreach( $db_qnaire->get_qnaire_collection_trigger_object_list() as $db_trigger )
+        $db_trigger->execute( $this );
       foreach( $db_qnaire->get_qnaire_consent_type_trigger_object_list() as $db_trigger )
+        $db_trigger->execute( $this );
+      foreach( $db_qnaire->get_qnaire_event_type_trigger_object_list() as $db_trigger )
         $db_trigger->execute( $this );
       foreach( $db_qnaire->get_qnaire_alternate_consent_type_trigger_object_list() as $db_trigger )
         $db_trigger->execute( $this );

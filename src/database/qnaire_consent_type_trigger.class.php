@@ -34,9 +34,10 @@ class qnaire_consent_type_trigger extends qnaire_trigger
     if( $db_qnaire->debug )
     {
       log::info( sprintf(
-        'Creating new %s "%s" consent due to question "%s" having the value "%s" (questionnaire "%s")',
+        'Creating new %s "%s" consent to %s due to question "%s" having the value "%s" (questionnaire "%s")',
         $this->accept ? 'accept' : 'deny',
         $this->get_consent_type()->name,
+        $db_participant->uid,
         $db_question->name,
         $this->answer_value,
         $db_qnaire->name

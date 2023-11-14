@@ -20,7 +20,9 @@ SOURCE role_has_service.sql
 SOURCE reminder.sql
 SOURCE device_data.sql
 SOURCE qnaire_participant_trigger.sql
+SOURCE qnaire_collection_trigger.sql
 SOURCE qnaire_equipment_type_trigger.sql
+SOURCE qnaire_event_type_trigger.sql
 
 SOURCE update_version_number.sql
 
