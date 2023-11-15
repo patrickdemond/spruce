@@ -2406,7 +2406,7 @@ class qnaire extends \cenozo\database\record
       $db_address->save();
 
       // replace all eligible studies with the provided list
-      $study_name_list = explode( ';', $participant->study_list );
+      $study_name_list = $participant->study_list ? explode( ';', $participant->study_list ) : [];
 
       if( 0 == count( $study_name_list ) )
       {
@@ -2446,7 +2446,7 @@ class qnaire extends \cenozo\database\record
       }
 
       // replace all collections with the provided list
-      $collection_name_list = explode( ';', $participant->collection_list );
+      $collection_name_list = $participant->collection_list ? explode( ';', $participant->collection_list ) : [];
 
       if( 0 == count( $collection_name_list ) )
       {
@@ -2489,10 +2489,15 @@ class qnaire extends \cenozo\database\record
       }
 
       // create participant_identifier records
-      foreach( explode( ';', $participant->participant_identifier_list ) as $participant_identifier_entry )
+      $participant_identifier_list = $participant->participant_identifier_list
+                                   ? explode( ';', $participant->participant_identifier_list )
+                                   : [];
+      foreach( $participant_identifier_list as $participant_identifier_entry )
       {
         // entries have the format: identifier_name$value, convert to an associative array
         $participant_identifier_data = explode( '$', $participant_identifier_entry );
+        if( 2 != count( $participant_identifier_data ) ) continue;
+
         $participant_identifier = [
           'name' => $participant_identifier_data[0],
           'value' => $participant_identifier_data[1]
@@ -2536,8 +2541,12 @@ class qnaire extends \cenozo\database\record
       // create consent records (NOTE: importing alternate consent is not yet implemented)
       foreach( explode( ';', $participant->consent_list ) as $consent_entry )
       {
+        if( 0 == strlen( $consent_entry ) ) continue;
+
         // entries have the format: consent_type_name$accept$datetime, convert to an associative array
         $consent_data = explode( '$', $consent_entry );
+        if( 2 != count( $consent_data ) ) continue;
+
         $consent = ['consent_type' => $consent_data[0]];
         if( array_key_exists( 1, $consent_data ) ) $consent['accept'] = $consent_data[1];
         if( array_key_exists( 2, $consent_data ) ) $consent['datetime'] = $consent_data[2];
@@ -2586,8 +2595,12 @@ class qnaire extends \cenozo\database\record
       // create event records
       foreach( explode( ';', $participant->event_list ) as $event_entry )
       {
+        if( 0 == strlen( $event_entry ) ) continue;
+
         // entries have the format: event_type_name$datetime, convert to an associative array
         $event_data = explode( '$', $event_entry );
+        if( 2 != count( $event_data ) ) continue;
+
         $event = ['event_type' => $event_data[0]];
         if( array_key_exists( 1, $event_data ) ) $event['datetime'] = $event_data[2];
 
