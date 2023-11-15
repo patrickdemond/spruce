@@ -50,3 +50,6 @@ INSERT IGNORE INTO service ( subject, method, resource, restricted ) VALUES
 ( 'qnaire_event_type_trigger', 'PATCH', 1, 1 ),
 ( 'qnaire_event_type_trigger', 'POST', 0, 1 ),
 ( 'response', 'POST', 0, 1 );
+
+-- make sure collection GET methods are unrestricted
+UPDATE service SET restricted = 0 WHERE subject = "collection" AND method = "GET";
