@@ -2408,13 +2408,11 @@ class qnaire extends \cenozo\database\record
       // replace all eligible studies with the provided list
       $study_name_list = $participant->study_list ? explode( ';', $participant->study_list ) : [];
 
-      if( 0 == count( $study_name_list ) )
-      {
-        $study_mod = lib::create( 'database\modifier' );
-        $study_mod->where( 'participant_id', '=', $db_participant->id );
-        static::db()->execute( sprintf( 'DELETE FROM study_has_participant %s', $study_mod->get_sql() ) );
-      }
-      else
+      $study_mod = lib::create( 'database\modifier' );
+      $study_mod->where( 'participant_id', '=', $db_participant->id );
+      static::db()->execute( sprintf( 'DELETE FROM study_has_participant %s', $study_mod->get_sql() ) );
+
+      if( 0 < count( $study_name_list ) )
       {
         $study_sel = lib::create( 'database\select' );
         $study_sel->from( 'study' );
@@ -2430,34 +2428,19 @@ class qnaire extends \cenozo\database\record
           $study_sel->get_sql(),
           $study_mod->get_sql()
         ) );
-
-        // Get a list of all selected study IDs
-        $study_id_list = [];
-        foreach( $study_class_name::select( $study_sel, $study_mod ) as $row )
-          $study_id_list[] = $row['study_id'];
-
-        $study_mod = lib::create( 'database\modifier' );
-        $study_mod->where( 'study_id', 'NOT IN', $study_id_list );
-        $study_mod->where( 'participant_id', '=', $db_participant->id );
-        static::db()->execute( sprintf(
-          'DELETE FROM study_has_participant %s',
-          $study_mod->get_sql()
-        ) );
       }
 
       // replace all collections with the provided list
       $collection_name_list = $participant->collection_list ? explode( ';', $participant->collection_list ) : [];
 
-      if( 0 == count( $collection_name_list ) )
-      {
-        $collection_mod = lib::create( 'database\modifier' );
-        $collection_mod->where( 'participant_id', '=', $db_participant->id );
-        static::db()->execute( sprintf(
-          'DELETE FROM collection_has_participant %s',
-          $collection_mod->get_sql()
-        ) );
-      }
-      else
+      $collection_mod = lib::create( 'database\modifier' );
+      $collection_mod->where( 'participant_id', '=', $db_participant->id );
+      static::db()->execute( sprintf(
+        'DELETE FROM collection_has_participant %s',
+        $collection_mod->get_sql()
+      ) );
+
+      if( 0 < count( $collection_name_list ) )
       {
         $collection_sel = lib::create( 'database\select' );
         $collection_sel->from( 'collection' );
@@ -2473,148 +2456,142 @@ class qnaire extends \cenozo\database\record
           $collection_sel->get_sql(),
           $collection_mod->get_sql()
         ) );
-
-        // Get a list of all selected collection IDs
-        $collection_id_list = [];
-        foreach( $collection_class_name::select( $collection_sel, $collection_mod ) as $row )
-          $collection_id_list[] = $row['collection_id'];
-
-        $collection_mod = lib::create( 'database\modifier' );
-        $collection_mod->where( 'collection_id', 'NOT IN', $collection_id_list );
-        $collection_mod->where( 'participant_id', '=', $db_participant->id );
-        static::db()->execute( sprintf(
-          'DELETE FROM collection_has_participant %s',
-          $collection_mod->get_sql()
-        ) );
       }
 
       // create participant_identifier records
       $participant_identifier_list = $participant->participant_identifier_list
                                    ? explode( ';', $participant->participant_identifier_list )
                                    : [];
+
+      $identifier_mod = lib::create( 'database\modifier' );
+      $identifier_mod->where( 'participant_id', '=', $db_participant->id );
+      static::db()->execute( sprintf(
+        'DELETE FROM participant_identifier %s',
+        $identifier_mod->get_sql()
+      ) );
+
       foreach( $participant_identifier_list as $participant_identifier_entry )
       {
         // entries have the format: identifier_name$value, convert to an associative array
         $participant_identifier_data = explode( '$', $participant_identifier_entry );
         if( 2 != count( $participant_identifier_data ) ) continue;
 
-        $participant_identifier = [
+        $identifier = [
           'name' => $participant_identifier_data[0],
           'value' => $participant_identifier_data[1]
         ];
-        $db_identifier = $identifier_class_name::get_unique_record( 'name', $participant_identifier['name'] );
+        $db_identifier = $identifier_class_name::get_unique_record( 'name', $identifier['name'] );
 
-        // create any missing identifiers
-        if( is_null( $db_identifier ) )
-        {
-          $db_identifier = lib::create( 'database\identifier' );
-          $db_identifier->name = $participant_identifier['name'];
-          $db_identifier->locked = 1;
-          $db_identifier->save();
-        }
-
-        $participant_identifier_mod = lib::create( 'database\modifier' );
-        $participant_identifier_mod->where( 'identifier_id', '=', $db_identifier->id );
-        $list = $db_participant->get_participant_identifier_object_list( $participant_identifier_mod );
-
-        if( 0 < count( $list ) )
-        { // the participant_identifier record already exists, make sure the value is correct
-          foreach( $list as $db_participant_identifier )
-          {
-            if( $participant_identifier['value'] != $db_participant_identifier->value )
-            {
-              $db_participant_identifier->value = $participant_identifier['value'];
-              $db_participant_identifier->save();
-            }
-          }
-        }
-        else // there is no participant_identifier record for that datetime, so create one
-        {
-          $db_participant_identifier = lib::create( 'database\participant_identifier' );
-          $db_participant_identifier->participant_id = $db_participant->id;
-          $db_participant_identifier->identifier_id = $db_identifier->id;
-          $db_participant_identifier->value = $participant_identifier['value'];
-          $db_participant_identifier->save();
-        }
+        $db_participant_identifier = lib::create( 'database\participant_identifier' );
+        $db_participant_identifier->participant_id = $db_participant->id;
+        $db_participant_identifier->identifier_id = $db_identifier->id;
+        $db_participant_identifier->value = $identifier['value'];
+        $db_participant_identifier->save();
       }
 
-      // create consent records (NOTE: importing alternate consent is not yet implemented)
+      // create consent records (NOTE: importing alternate consent has not been implemented)
+      // NOTE: We can't delete and re-create them all because of database triggers!
+      $new_consent_list = [];
       foreach( explode( ';', $participant->consent_list ) as $consent_entry )
       {
         if( 0 == strlen( $consent_entry ) ) continue;
 
         // entries have the format: consent_type_name$accept$datetime, convert to an associative array
         $consent_data = explode( '$', $consent_entry );
-        if( 2 != count( $consent_data ) ) continue;
+        if( 3 != count( $consent_data ) ) continue;
 
-        $consent = ['consent_type' => $consent_data[0]];
-        if( array_key_exists( 1, $consent_data ) ) $consent['accept'] = $consent_data[1];
-        if( array_key_exists( 2, $consent_data ) ) $consent['datetime'] = $consent_data[2];
+        $new_consent_list[] = [
+          'consent_type' => $consent_type_class_name::get_unique_record( 'name', $consent['consent_type'] ),
+          'accept' => $consent_data[1],
+          'datetime' => $consent_data[2],
+          'record' => NULL
+        ];
+      }
 
-        $db_consent_type = $consent_type_class_name::get_unique_record( 'name', $consent['consent_type'] );
-
-        if( !array_key_exists( 'accept', $consent ) )
+      // delete all consent records that aren't in the list
+      foreach( $db_participant->get_consent_object_list() as $db_consent )
+      {
+        $found = false;
+        foreach( $new_consent_list as $consent )
         {
-          // no additional data means no consent record (remove any which may exist)
-          $consent_mod = lib::create( 'database\modifier' );
-          $consent_mod->where( 'participant_id', '=', $db_participant->id );
-          $consent_mod->where( 'consent_type_id', '=', $db_consent_type->id );
-          static::db()->execute( sprintf( 'DELETE FROM consent %s', $consent_mod->get_sql() ) );
-        }
-        else
-        {
-          $consent_mod = lib::create( 'database\modifier' );
-          $consent_mod->where( 'consent_type_id', '=', $db_consent_type->id );
-          $consent_mod->where( 'datetime', '=', $consent['datetime'] );
-
-          $consent_list = $db_participant->get_consent_object_list( $consent_mod );
-
-          if( 0 < count( $consent_list ) )
-          { // the consent record already exists, just make sure its accept value is correct
-            foreach( $consent_list as $db_consent )
-            {
-              if( $consent['accept'] != $db_consent->accept )
-              {
-                $db_consent->accept = $consent['accept'];
-                $db_consent->save();
-              }
-            }
-          }
-          else // there is no consent record for that datetime, so create one
+          if(
+            $consent['consent_type']->id == $db_consent->get_consent_type()->name &&
+            $consent['datetime'] = $db_consent->datetime
+          )
           {
-            $db_consent = lib::create( 'database\consent' );
-            $db_consent->participant_id = $db_participant->id;
-            $db_consent->consent_type_id = $db_consent_type->id;
-            $db_consent->accept = $consent['accept'];
-            $db_consent->datetime = $consent['datetime'];
-            $db_consent->save();
+            $consent['record'] = $db_consent;
+            $found = true;
+            break;
           }
+        }
+
+        if( !$found ) $db_consent->delete();
+      }
+
+      // now add all new consent records
+      foreach( $new_consent_list as $consent )
+      {
+        if( !is_null( $consent['record'] ) )
+        { // the consent record already exists, just make sure its accept value is correct
+          $consent['record']->accept = $consent['accept'];
+          $consent['record']->save();
+        }
+        else // there is no consent record for that datetime, so create one
+        {
+          $db_consent = lib::create( 'database\consent' );
+          $db_consent->participant_id = $db_participant->id;
+          $db_consent->consent_type_id = $db_consent_type->id;
+          $db_consent->accept = $consent['accept'];
+          $db_consent->datetime = $consent['datetime'];
+          $db_consent->save();
         }
       }
 
-      // create event records
+      // create event records (NOTE: importing alternate event has not been implemented)
+      // NOTE: We can't delete and re-create them all because of database triggers!
+      $new_event_list = [];
       foreach( explode( ';', $participant->event_list ) as $event_entry )
       {
         if( 0 == strlen( $event_entry ) ) continue;
 
-        // entries have the format: event_type_name$datetime, convert to an associative array
+        // entries have the format: event_type_name$accept$datetime, convert to an associative array
         $event_data = explode( '$', $event_entry );
-        if( 2 != count( $event_data ) ) continue;
+        if( 3 != count( $event_data ) ) continue;
 
-        $event = ['event_type' => $event_data[0]];
-        if( array_key_exists( 1, $event_data ) ) $event['datetime'] = $event_data[2];
+        $new_event_list[] = [
+          'event_type' => $event_type_class_name::get_unique_record( 'name', $event['event_type'] ),
+          'accept' => $event_data[1],
+          'datetime' => $event_data[2],
+          'record' => NULL
+        ];
+      }
 
-        $db_event_type = $event_type_class_name::get_unique_record( 'name', $event['event_type'] );
-
-        $event_mod = lib::create( 'database\modifier' );
-        $event_mod->where( 'event_type_id', '=', $db_event_type->id );
-        $event_mod->where( 'datetime', '=', $event['datetime'] );
-
-        $event_list = $db_participant->get_event_object_list( $event_mod );
-
-        if( 0 == count( $event_list ) )
+      // delete all event records that aren't in the list
+      foreach( $db_participant->get_event_object_list() as $db_event )
+      {
+        $found = false;
+        foreach( $new_event_list as $event )
         {
-          // there is no event record for that datetime, so create one
+          if(
+            $event['event_type']->id == $db_event->get_event_type()->name &&
+            $event['datetime'] = $db_event->datetime
+          )
+          {
+            $event['record'] = $db_event;
+            $found = true;
+            break;
+          }
+        }
+
+        if( !$found ) $db_event->delete();
+      }
+
+      // now add all new event records
+      foreach( $new_event_list as $event )
+      {
+        // add the event record if it doesn't already exist
+        if( is_null( $event['record'] ) )
+        {
           $db_event = lib::create( 'database\event' );
           $db_event->participant_id = $db_participant->id;
           $db_event->event_type_id = $db_event_type->id;

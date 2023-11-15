@@ -81,6 +81,7 @@ class post extends \cenozo\service\post
   protected function execute()
   {
     $study_class_name = lib::get_class_name( 'database\study' );
+    $identifier_class_name = lib::get_class_name( 'database\identifier' );
     $collection_class_name = lib::get_class_name( 'database\collection' );
     $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
     $event_type_class_name = lib::get_class_name( 'database\event_type' );
@@ -116,6 +117,7 @@ class post extends \cenozo\service\post
     {
       // first update table data
       $study_class_name::sync_with_parent();
+      $identifier_class_name::sync_with_parent();
       $collection_class_name::sync_with_parent();
       $consent_type_class_name::sync_with_parent();
       $event_type_class_name::sync_with_parent();

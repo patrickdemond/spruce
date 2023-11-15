@@ -107,6 +107,7 @@ class post extends \cenozo\service\post
     if( 'get_respondents' == $action )
     {
       $study_class_name = lib::get_class_name( 'database\study' );
+      $identifier_class_name = lib::get_class_name( 'database\study' );
       $collection_class_name = lib::get_class_name( 'database\collection' );
       $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
       $event_type_class_name = lib::get_class_name( 'database\event_type' );
@@ -116,6 +117,7 @@ class post extends \cenozo\service\post
       $equipment_type_class_name = lib::get_class_name( 'database\equipment_type' );
 
       $study_class_name::sync_with_parent();
+      $identifier_class_name::sync_with_parent();
       $collection_class_name::sync_with_parent();
       $consent_type_class_name::sync_with_parent();
       $event_type_class_name::sync_with_parent();
