@@ -2559,7 +2559,7 @@ class qnaire extends \cenozo\database\record
         if( 2 != count( $event_data ) ) continue;
 
         $new_event_list[] = [
-          'event_type' => $event_type_class_name::get_unique_record( 'name', $event[0] ),
+          'event_type' => $event_type_class_name::get_unique_record( 'name', $event_data[0] ),
           'datetime' => $event_data[1],
           'record' => NULL
         ];
