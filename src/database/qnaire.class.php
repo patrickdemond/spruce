@@ -2512,14 +2512,14 @@ class qnaire extends \cenozo\database\record
       foreach( $db_participant->get_consent_object_list() as $db_consent )
       {
         $found = false;
-        foreach( $new_consent_list as $consent )
+        foreach( $new_consent_list as $index => $consent )
         {
           if(
             $consent['consent_type']->id == $db_consent->consent_type_id &&
-            $consent['datetime'] = $db_consent->datetime
+            $consent['datetime'] == $db_consent->datetime->format( 'Y-m-d H:i:s' )
           )
           {
-            $consent['record'] = $db_consent;
+            $new_consent_list[$index]['record'] = $db_consent;
             $found = true;
             break;
           }
@@ -2569,14 +2569,14 @@ class qnaire extends \cenozo\database\record
       foreach( $db_participant->get_event_object_list() as $db_event )
       {
         $found = false;
-        foreach( $new_event_list as $event )
+        foreach( $new_event_list as $index => $event )
         {
           if(
             $event['event_type']->id == $db_event->event_type_id &&
-            $event['datetime'] = $db_event->datetime
+            $event['datetime'] == $db_event->datetime->format( 'Y-m-d H:i:s' )
           )
           {
-            $event['record'] = $db_event;
+            $new_event_list[$index]['record'] = $db_event;
             $found = true;
             break;
           }
