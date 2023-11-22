@@ -2501,7 +2501,7 @@ class qnaire extends \cenozo\database\record
         if( 3 != count( $consent_data ) ) continue;
 
         $new_consent_list[] = [
-          'consent_type' => $consent_type_class_name::get_unique_record( 'name', $consent['consent_type'] ),
+          'consent_type' => $consent_type_class_name::get_unique_record( 'name', $consent_data[0] ),
           'accept' => $consent_data[1],
           'datetime' => $consent_data[2],
           'record' => NULL
@@ -2515,7 +2515,7 @@ class qnaire extends \cenozo\database\record
         foreach( $new_consent_list as $consent )
         {
           if(
-            $consent['consent_type']->id == $db_consent->get_consent_type()->name &&
+            $consent['consent_type']->id == $db_consent->consent_type_id &&
             $consent['datetime'] = $db_consent->datetime
           )
           {
@@ -2540,7 +2540,7 @@ class qnaire extends \cenozo\database\record
         {
           $db_consent = lib::create( 'database\consent' );
           $db_consent->participant_id = $db_participant->id;
-          $db_consent->consent_type_id = $db_consent_type->id;
+          $db_consent->consent_type_id = $consent['consent_type']->id;
           $db_consent->accept = $consent['accept'];
           $db_consent->datetime = $consent['datetime'];
           $db_consent->save();
@@ -2554,14 +2554,13 @@ class qnaire extends \cenozo\database\record
       {
         if( 0 == strlen( $event_entry ) ) continue;
 
-        // entries have the format: event_type_name$accept$datetime, convert to an associative array
+        // entries have the format: event_type_name$datetime, convert to an associative array
         $event_data = explode( '$', $event_entry );
-        if( 3 != count( $event_data ) ) continue;
+        if( 2 != count( $event_data ) ) continue;
 
         $new_event_list[] = [
-          'event_type' => $event_type_class_name::get_unique_record( 'name', $event['event_type'] ),
-          'accept' => $event_data[1],
-          'datetime' => $event_data[2],
+          'event_type' => $event_type_class_name::get_unique_record( 'name', $event[0] ),
+          'datetime' => $event_data[1],
           'record' => NULL
         ];
       }
@@ -2573,7 +2572,7 @@ class qnaire extends \cenozo\database\record
         foreach( $new_event_list as $event )
         {
           if(
-            $event['event_type']->id == $db_event->get_event_type()->name &&
+            $event['event_type']->id == $db_event->event_type_id &&
             $event['datetime'] = $db_event->datetime
           )
           {
@@ -2594,7 +2593,7 @@ class qnaire extends \cenozo\database\record
         {
           $db_event = lib::create( 'database\event' );
           $db_event->participant_id = $db_participant->id;
-          $db_event->event_type_id = $db_event_type->id;
+          $db_event->event_type_id = $event['event_type']->id;
           $db_event->datetime = $event['datetime'];
           $db_event->save();
         }
