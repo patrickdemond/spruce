@@ -1510,6 +1510,13 @@ class qnaire extends \cenozo\database\record
       foreach( $metadata_columns as $metadata_column_name => $metadata_column_index )
         $metadata[$metadata_column_name] = $row[$metadata_column_index];
 
+      // rectify the start/last datetimes
+      if( !array_key_exists( 'start_datetime', $metadata ) || !$metadata['start_datetime'] )
+      {
+        if( array_key_exists( 'last_datetime', $metadata ) && $metadata['last_datetime'] )
+          $metadata['start_datetime'] = $metadata['last_datetime'];
+      }
+
       $existing = false;
       if( !$identifier )
       {
@@ -1558,6 +1565,21 @@ class qnaire extends \cenozo\database\record
             );
 
             if( !is_null( $db_response ) ) $existing = true;
+          }
+
+          // make sure the start/end dates are valid
+          if( array_key_exists( 'start_datetime', $metadata ) && array_key_exists( 'last_datetime', $metadata ) )
+          {
+            if( $metadata['start_datetime'] > $metadata['last_datetime'] )
+            {
+              $row_errors[] = sprintf(
+                'Line %d: start/last datetime mismatch: start "%s" > end "%s"',
+                $row_index+1,
+                $metadata['start_datetime'],
+                $metadata['last_datetime']
+              );
+              continue;
+            }
           }
         }
       }
