@@ -483,6 +483,24 @@ cenozoApp.defineModule({
               );
             },
 
+            onPatch: async function (data) {
+              // when patching response data make sure to send to the response service, not the respondent
+              if (angular.isDefined(data.comments) || angular.isDefined(data.language_id)) {
+                if (!this.parentModel.getEditEnabled())
+                  throw new Error("Calling onPatch() but edit is not enabled.");
+
+                var self = this;
+                await CnHttpFactory.instance({
+                  path: "response/" + this.record.current_response_id,
+                  data: data,
+                  onError: function (error) { self.onPatchError(error); },
+                }).patch();
+                this.afterPatchFunctions.forEach((fn) => fn());
+              } else {
+                await this.$$onPatch(data);
+              }
+            },
+
             reopen: async function () {
               await CnHttpFactory.instance({
                 path:
