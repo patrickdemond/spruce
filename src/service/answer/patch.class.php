@@ -13,34 +13,34 @@ class patch extends \cenozo\service\patch
   /**
    * Override parent method
    */
-  public function get_file_as_array()
+  public function get_file_as_object()
   {
     $user_class_name = lib::get_class_name( 'database\user' );
     $language_class_name = lib::get_class_name( 'database\language' );
 
     // replace username with a user_id (if the user exists)
-    $patch_array = parent::get_file_as_array();
+    $patch_object = parent::get_file_as_object();
 
     $username = $this->get_argument( 'username', NULL );
     if( !is_null( $username ) )
     {
       $db_user = $user_class_name::get_unique_record( 'name', $username );
-      if( !is_null( $db_user ) ) $patch_array['user_id'] = $db_user->id;
+      if( !is_null( $db_user ) ) $patch_object->user_id = $db_user->id;
     }
 
-    if( array_key_exists( 'language', $patch_array ) )
+    if( property_exists( $patch_object, 'language' ) )
     {
-      $db_language = $language_class_name::get_unique_record( 'code', $patch_array['language'] );
-      unset( $patch_array['language'] );
-      if( !is_null( $db_language ) ) $patch_array['language_id'] = $db_language->id;
+      $db_language = $language_class_name::get_unique_record( 'code', $patch_object->language );
+      unset( $patch_object->language );
+      if( !is_null( $db_language ) ) $patch_object->language_id = $db_language->id;
     }
 
-    if( array_key_exists( 'value', $patch_array ) && is_object( $patch_array['value'] ) )
+    if( property_exists( $patch_object, 'value' ) && is_object( $patch_object->value ) )
     {
-      $patch_array['value'] = util::json_encode( $patch_array['value'] );
+      $patch_object->value = util::json_encode( $patch_object->value );
     }
 
-    return $patch_array;
+    return $patch_object;
   }
 
   /**
