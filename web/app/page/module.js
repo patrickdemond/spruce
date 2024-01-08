@@ -1076,6 +1076,10 @@ cenozoApp.defineModule({
                     select: { column: "serial_number" },
                     modifier: {
                       where: [{
+                        column: "equipment.active",
+                        operator: "=",
+                        value: true,
+                      },{
                         column: "equipment.site_id",
                         operator: "=",
                         value: CnSession.site.id,
