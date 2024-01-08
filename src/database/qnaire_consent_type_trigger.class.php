@@ -64,8 +64,8 @@ class qnaire_consent_type_trigger extends qnaire_trigger
     );
     $db_consent->save();
 
-    // if this is a participation consent then set the new hold record's user and site
-    if( 'participation' == $db_consent->get_consent_type()->name )
+    // if the trigger is removing participation consent then set the new hold record's user and site
+    if( false == $this->accept && 'participation' == $db_consent->get_consent_type()->name )
     {
       $db_hold = $hold_class_name::get_unique_record(
         ['participant_id', 'datetime'],
