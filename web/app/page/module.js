@@ -32,52 +32,31 @@ cenozoApp.defineModule({
     });
     module.addInput("", "note", { title: "Note", type: "text" });
     module.addInput("", "qnaire_id", { column: "qnaire.id", isExcluded: true });
-    module.addInput("", "qnaire_name", {
-      column: "qnaire.name",
-      isExcluded: true,
-    });
-    module.addInput("", "total_pages", {
-      column: "qnaire.total_pages",
-      isExcluded: true,
-    });
-    module.addInput("", "variable_suffix", {
-      column: "qnaire.variable_suffix",
-      isExcluded: true,
-    });
+    module.addInput("", "qnaire_name", { column: "qnaire.name", isExcluded: true });
+    module.addInput("", "total_pages", { column: "qnaire.total_pages", isExcluded: true });
+    module.addInput("", "variable_suffix", { column: "qnaire.variable_suffix", isExcluded: true });
     module.addInput("", "debug", { column: "qnaire.debug", isExcluded: true });
     module.addInput("", "problem_report", { column: "qnaire.problem_report", isExcluded: true });
-    module.addInput("", "base_language", {
-      column: "base_language.code",
-      isExcluded: true,
-    });
+    module.addInput("", "base_language", { column: "base_language.code", isExcluded: true });
     module.addInput("", "prompts", { isExcluded: true });
     module.addInput("", "module_prompts", { isExcluded: true });
     module.addInput("", "popups", { isExcluded: true });
     module.addInput("", "module_popups", { isExcluded: true });
     module.addInput("", "module_id", { isExcluded: true });
-    module.addInput("", "parent_name", {
-      column: "module.name",
-      isExcluded: true,
-    });
+    module.addInput("", "parent_name", { column: "module.name", isExcluded: true });
 
     cenozo.insertPropertyAfter(
       module.columnList,
       "name",
       "tabulate",
-      {
-        title: "Tabulate",
-        type: "boolean",
-      }
+      { title: "Tabulate", type: "boolean" }
     );
 
     cenozo.insertPropertyAfter(
       module.columnList,
       "question_count",
       "average_time",
-      {
-        title: "Average Time",
-        type: "seconds",
-      }
+      { title: "Average Time", type: "seconds" }
     );
 
     module.addExtraOperation("view", {
@@ -112,10 +91,7 @@ cenozoApp.defineModule({
       "$state",
       function (CnQnairePartCloneFactory, CnPageModelFactory, CnSession, $state) {
         return {
-          templateUrl: cenozoApp.getFileUrl(
-            "pine",
-            "qnaire_part_clone.tpl.html"
-          ),
+          templateUrl: cenozoApp.getFileUrl("pine", "qnaire_part_clone.tpl.html"),
           restrict: "E",
           scope: { model: "=?" },
           controller: async function ($scope) {
@@ -129,16 +105,12 @@ cenozoApp.defineModule({
             CnSession.setBreadcrumbTrail([
               {
                 title: "Module",
-                go: async function () {
-                  await $state.go("module.list");
-                },
+                go: async function () { await $state.go("module.list"); },
               },
               {
                 title: $scope.model.parentSourceName,
                 go: async function () {
-                  await $state.go("module.view", {
-                    identifier: $scope.model.sourceParentId,
-                  });
+                  await $state.go("module.view", { identifier: $scope.model.sourceParentId, });
                 },
               },
               {
@@ -147,9 +119,7 @@ cenozoApp.defineModule({
               {
                 title: $scope.model.sourceName,
                 go: async function () {
-                  await $state.go("page.view", {
-                    identifier: $scope.model.sourceId,
-                  });
+                  await $state.go("page.view", { identifier: $scope.model.sourceId, });
                 },
               },
               {
@@ -173,9 +143,7 @@ cenozoApp.defineModule({
             placement: "@",
           },
           controller: function ($scope) {
-            $scope.text = function (address) {
-              return $scope.model.renderModel.text(address);
-            };
+            $scope.text = function (address) { return $scope.model.renderModel.text(address); };
           },
         };
       },
@@ -215,22 +183,13 @@ cenozoApp.defineModule({
                 return $scope.model.renderModel.text(address);
               },
               patch: async function (property) {
-                var model = [
-                  "address1",
-                  "address2",
-                  "city",
-                  "region_id",
-                  "postcode",
-                ].includes(property)
+                var model = ["address1", "address2", "city", "region_id", "postcode"].includes(property)
                   ? $scope.model.renderModel.addressModel
                   : $scope.model.renderModel.participantModel;
 
                 if (model.getEditEnabled()) {
                   var element = cenozo.getFormElement(property);
-                  var valid = model.testFormat(
-                    property,
-                    model.viewModel.record[property]
-                  );
+                  var valid = model.testFormat(property, model.viewModel.record[property]);
 
                   if (element) {
                     element.$error.format = !valid;
@@ -253,8 +212,7 @@ cenozoApp.defineModule({
               if (
                 !$scope.model.renderModel.showHidden ||
                 ["number", "text", "textarea"].includes(event.target.type)
-              )
-                return;
+              ) return;
 
               var action = null;
               if (
@@ -276,8 +234,7 @@ cenozoApp.defineModule({
               if (
                 !$scope.model.renderModel.showHidden ||
                 ["number", "text", "textarea"].includes(event.target.type)
-              )
-                return;
+              ) return;
 
               var action = null;
               if (
@@ -291,20 +248,13 @@ cenozoApp.defineModule({
                 } else {
                   if ("Minus" == event.code || "NumpadSubtract" == event.code) {
                     // proceed to the previous page when the minus key is pushed (keyboard or numpad)
-                    if (null != $scope.model.viewModel.record.previous_id)
-                      action = "prevPage";
-                  } else if (
-                    "Equal" == event.code ||
-                    "NumpadAdd" == event.code
-                  ) {
+                    if (null != $scope.model.viewModel.record.previous_id) action = "prevPage";
+                  } else if ("Equal" == event.code || "NumpadAdd" == event.code) {
                     // proceed to the next page when the plus key is pushed (keyboard "=" key or numpad)
                     if (
-                      angular.isUndefined(
-                        $scope.model.viewModel.record.next_id
-                      ) ||
+                      angular.isUndefined($scope.model.viewModel.record.next_id) ||
                       null != $scope.model.viewModel.record.next_id
-                    )
-                      action = "nextPage";
+                    ) action = "nextPage";
                   } else if ("BracketLeft" == event.code) {
                     // focus on the previous question when the open square bracket key is pushed (keyboard "[")
                     action = "prevQuestion";
@@ -324,20 +274,16 @@ cenozoApp.defineModule({
                     event.stopPropagation();
                     if (["prevPage", "nextPage"].includes(action)) {
                       // move to the prev or next page
-                      await Promise.all(
-                        $scope.model.renderModel.writePromiseList
-                      );
-                      (await "prevPage") == action
-                        ? $scope.model.renderModel.backup()
-                        : $scope.model.renderModel.proceed();
+                      await Promise.all($scope.model.renderModel.writePromiseList);
+                      if ("prevPage" == action) {
+                        await $scope.model.renderModel.backup();
+                      } else {
+                        await $scope.model.renderModel.proceed();
+                      }
                       $scope.$apply();
-                    } else if (
-                      ["prevQuestion", "nextQuestion"].includes(action)
-                    ) {
+                    } else if (["prevQuestion", "nextQuestion"].includes(action)) {
                       // move to the prev or next question
-                      $scope.model.renderModel.focusQuestion(
-                        "prevQuestion" == action
-                      );
+                      $scope.model.renderModel.focusQuestion("prevQuestion" == action);
                       $scope.$apply();
                     } else if (null != action) {
                       await $scope.model.renderModel.onDigitHotKey(action);
@@ -355,9 +301,7 @@ cenozoApp.defineModule({
                 {
                   title: $scope.model.renderModel.data.qnaire_name,
                   go: async function () {
-                    await $state.go("qnaire.view", {
-                      identifier: $scope.model.renderModel.data.qnaire_id,
-                    });
+                    await $state.go("qnaire.view", { identifier: $scope.model.renderModel.data.qnaire_id });
                   },
                 },
                 {
@@ -431,17 +375,12 @@ cenozoApp.defineModule({
           }
 
           function isDknaOrRefuse(value) {
-            return (
-              angular.isObject(value) &&
-              (true === value.dkna || true === value.refuse)
-            );
+            return (angular.isObject(value) && (true === value.dkna || true === value.refuse));
           }
 
           function getDate(date) {
             if ("now" == date) date = moment().format("YYYY-MM-DD");
-            return date && !angular.isObject(date)
-              ? moment(new Date(date))
-              : null;
+            return date && !angular.isObject(date) ? moment(new Date(date)) : null;
           }
 
           function getTime(time,tz) {
@@ -458,9 +397,7 @@ cenozoApp.defineModule({
               time = time.format();
             }
 
-            return time && !angular.isObject(time)
-              ? moment(new Date(time))
-              : null;
+            return time && !angular.isObject(time) ? moment(new Date(time)) : null;
           }
 
           function getAttributeNames(precondition) {
@@ -468,8 +405,7 @@ cenozoApp.defineModule({
             var list = [];
             if (angular.isString(precondition)) {
               var matches = precondition.match(/@[^@ ]+@|\bshowhidden\b/g);
-              if (null != matches && 0 < matches.length)
-                list = matches.map((m) => m.replace(/@/g, ""));
+              if (null != matches && 0 < matches.length) list = matches.map((m) => m.replace(/@/g, ""));
             }
             return list;
           }
@@ -816,22 +752,15 @@ cenozoApp.defineModule({
             },
 
             text: function (address) {
-              return CnTranslationHelper.translate(
-                address,
-                this.currentLanguage
-              );
+              return CnTranslationHelper.translate(address, this.currentLanguage);
             },
 
             checkForIncompleteQuestions: function () {
-              return this.getVisibleQuestionList().some(
-                (question) => question.incomplete
-              );
+              return this.getVisibleQuestionList().some((question) => question.incomplete);
             },
 
             getVisibleQuestionList: function () {
-              return this.questionList.filter((question) =>
-                this.evaluate(question.precondition)
-              );
+              return this.questionList.filter((question) => this.evaluate(question.precondition));
             },
 
             getVisibleOptionList: function (question) {
@@ -840,9 +769,7 @@ cenozoApp.defineModule({
             },
 
             getFocusableQuestionList: function () {
-              return this.getVisibleQuestionList().filter(
-                (question) => "comment" != question.type
-              );
+              return this.getVisibleQuestionList().filter((question) => "comment" != question.type);
             },
 
             getHotKey: function (question, item) {
@@ -863,8 +790,7 @@ cenozoApp.defineModule({
                   if ("dkna" == item) {
                     key = optionList.length + 1;
                   } else if ("refuse" == item) {
-                    key =
-                      optionList.length + (question.dkna_allowed ? 1 : 0) + 1;
+                    key = optionList.length + (question.dkna_allowed ? 1 : 0) + 1;
                   } else {
                     var optionId = item;
                     var index = optionList.findIndexByProperty("id", optionId);
@@ -892,8 +818,10 @@ cenozoApp.defineModule({
             },
 
             isReportAvailable: function () {
-              return null != this.qnaireReportList &&
-                     this.qnaireReportList.includes(this.currentLanguage);
+              return (
+                null != this.qnaireReportList &&
+                this.qnaireReportList.includes(this.currentLanguage)
+              );
             },
 
             reportProblem: async function () {
@@ -1158,18 +1086,18 @@ cenozoApp.defineModule({
                         { table: "qnaire", column: "problem_report" },
                         { table: "qnaire", column: "stages" },
                         { table: "qnaire", column: "closed" },
-                        { table: "qnaire", column: "name", alias: "qnaire_name", },
-                        { table: "qnaire", column: "token_regex", },
-                        { table: "qnaire", column: "token_check", },
-                        { table: "response", column: "id", alias: "response_id", },
+                        { table: "qnaire", column: "name", alias: "qnaire_name" },
+                        { table: "qnaire", column: "token_regex" },
+                        { table: "qnaire", column: "token_check" },
+                        { table: "response", column: "id", alias: "response_id" },
                         { table: "response", column: "checked_in" },
                         { table: "response", column: "page_id" },
                         { table: "response", column: "stage_selection" },
                         { table: "response", column: "submitted" },
                         { table: "response", column: "comments" },
-                        { table: "response_stage", column: "id", alias: "response_stage_id", },
+                        { table: "response_stage", column: "id", alias: "response_stage_id" },
                         { table: "response_stage", column: "stage_id" },
-                        { table: "language", column: "code", alias: "base_language", },
+                        { table: "language", column: "code", alias: "base_language" },
                       ],
                     },
                   },
@@ -1182,12 +1110,8 @@ cenozoApp.defineModule({
 
                 // set the scanned token only if the token is non-generic
                 this.data.scanned_token =
-                  null ==
-                  this.data.token.match(
-                    /^[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}$/
-                  )
-                    ? this.data.token
-                    : null;
+                  null == this.data.token.match(/^[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}$/) ?
+                  this.data.token : null;
 
                 // get the stage list if there is one:
                 //   not ready or not applicable: nothing
@@ -1269,44 +1193,40 @@ cenozoApp.defineModule({
 
                     CnHttpFactory.instance({
                       path: ["qnaire", this.data.qnaire_id, "qnaire_report"].join("/"),
-                      data: { select: { column: [{ table: 'language', column: 'code', alias: 'lang' }], }, },
+                      data: { select: { column: [{ table: 'language', column: 'code', alias: 'lang' }] } },
                     }).query(),
 
                     this.participantModel.viewModel.onView(true),
-
                     this.addressModel.viewModel.onView(true),
                   ]);
 
                   this.responseStageList = responseStageResponse.data;
-                  if (0 == this.responseStageList.length)
-                    throw new Error(
-                      "Questionnaire has not stages, unable to proceed."
-                    );
+                  if (0 == this.responseStageList.length) {
+                    throw new Error("Questionnaire has not stages, unable to proceed.");
+                  }
 
                   // set each response stage's possible operations
                   this.responseStageList.forEach((responseStage) => {
                     responseStage.operations = [];
 
-                    if ( !["not ready", "not applicable", "parent skipped", "skipped"]
-                            .includes(responseStage.status)) {
+                    if (
+                      !["not ready", "not applicable", "parent skipped", "skipped"]
+                        .includes(responseStage.status)
+                    ) {
                       var self = this;
                       responseStage.operations.push({
                         name: "launch",
                         title:
-                          "completed" == responseStage.status
-                            ? "Re-Open"
-                            : "paused" == responseStage.status
-                            ? "Resume"
+                          "completed" == responseStage.status ? "Re-Open"
+                            : "paused" == responseStage.status ? "Resume"
                             : "Launch",
-                        // the launch operation may be an order deviation if another stage before this one is ready or paused
+                        // The launch operation may be an order deviation if another stage
+                        // before this one is ready or paused
                         getDeviation: function () {
                           return self.responseStageList
                             .filter((rs) => rs.rank < responseStage.rank)
-                            .some((rs) =>
-                              ["ready", "paused"].includes(rs.status)
-                            )
-                            ? "order"
-                            : null;
+                            .some((rs) => ["ready", "paused"].includes(rs.status)) ?
+                            "order" : null;
                         },
                       });
                     }
@@ -1319,9 +1239,7 @@ cenozoApp.defineModule({
                         name: "skip",
                         title: "Skip",
                         // the skip operation is always a deviation
-                        getDeviation: function () {
-                          return "skip";
-                        },
+                        getDeviation: function () { return "skip"; },
                       });
                     }
 
@@ -1334,9 +1252,7 @@ cenozoApp.defineModule({
                         name: "reset",
                         title: "Reset",
                         // the reset operation is never a deviation
-                        getDeviation: function () {
-                          return null;
-                        },
+                        getDeviation: function () { return null; },
                       });
                     }
                   });
@@ -1344,18 +1260,12 @@ cenozoApp.defineModule({
                   this.consentList = consentResponse.data;
 
                   // convert the access column (it will be null if the role doesn't have access)
-                  this.consentList.forEach(
-                    (consent) => (consent.access = null != consent.access)
-                  );
-
+                  this.consentList.forEach((consent) => (consent.access = null != consent.access));
                   this.deviationTypeList = deviationTypeResponse.data;
-
                   this.qnaireReportList = qnaireReportResponse.data.map(qnaireReport => qnaireReport.lang);
 
                   // enum lists use value, so set the value to the deviation type's ID
-                  this.deviationTypeList.forEach((deviationType) => {
-                    deviationType.value = deviationType.id;
-                  });
+                  this.deviationTypeList.forEach((deviationType) => { deviationType.value = deviationType.id; });
 
                   // setup the participant and address input lists
                   this.participantInputList = [
@@ -1394,16 +1304,13 @@ cenozoApp.defineModule({
                       title: "Sex at Birth",
                       type: "enum",
                       isConstant: true,
-                      enumList:
-                        this.participantModel.metadata.columnList.sex.enumList,
+                      enumList: this.participantModel.metadata.columnList.sex.enumList,
                     },
                     {
                       key: "current_sex",
                       title: "Current Sex",
                       type: "enum",
-                      enumList:
-                        this.participantModel.metadata.columnList.current_sex
-                          .enumList,
+                      enumList: this.participantModel.metadata.columnList.current_sex.enumList,
                     },
                     {
                       key: "email",
@@ -1438,10 +1345,10 @@ cenozoApp.defineModule({
                       title: "Region",
                       type: "enum",
                       isConstant: true,
-                      enumList:
-                        this.addressModel.metadata.columnList.region_id
-                          .enumList,
-                      help: "The region cannot be changed directly, instead it is automatically updated based on the postcode.",
+                      enumList: this.addressModel.metadata.columnList.region_id.enumList,
+                      help:
+                        "The region cannot be changed directly, instead it is automatically " + 
+                        "updated based on the postcode.",
                     },
                     {
                       key: "postcode",
@@ -1498,28 +1405,26 @@ cenozoApp.defineModule({
               if (this.previewMode || null != this.data.page_id) {
                 this.reset();
 
-                // We must view the page before getting the questions since viewing a new page will also create the answers
-                // to all questions on that page (which the question list needs)
+                // We must view the page before getting the questions since viewing a new page will also
+                // create the answers to all questions on that page (which the question list needs)
                 await this.parentModel.viewModel.onView(true);
 
                 angular.extend(this.data, {
                   page_id: this.parentModel.viewModel.record.id,
                   qnaire_id: this.parentModel.viewModel.record.qnaire_id,
                   qnaire_name: this.parentModel.viewModel.record.qnaire_name,
-                  base_language:
-                    this.parentModel.viewModel.record.base_language,
+                  base_language: this.parentModel.viewModel.record.base_language,
                   respondent_name: this.parentModel.viewModel.record.respondent_name,
                 });
 
                 this.progress = Math.round(
-                  100 *
-                    (angular.isDefined(
-                      this.parentModel.viewModel.record.stage_pages
-                    )
+                  100 * (
+                    angular.isDefined(this.parentModel.viewModel.record.stage_pages)
                       ? this.parentModel.viewModel.record.stage_page /
                         this.parentModel.viewModel.record.stage_pages
                       : this.parentModel.viewModel.record.qnaire_page /
-                        this.parentModel.viewModel.record.total_pages)
+                        this.parentModel.viewModel.record.total_pages
+                  )
                 );
 
                 const [questionResponse, languageResponse] = await Promise.all([
@@ -1560,17 +1465,13 @@ cenozoApp.defineModule({
                   }).query(),
                 ]);
 
-                if (null == this.currentLanguage)
-                  this.currentLanguage = this.data.base_language;
+                if (null == this.currentLanguage) this.currentLanguage = this.data.base_language;
 
                 this.languageList = languageResponse.data;
                 this.questionList = questionResponse.data;
 
                 // set the current language to the first (visible) question's language
-                if (
-                  0 < this.questionList.length &&
-                  angular.isDefined(this.questionList[0].language)
-                ) {
+                if (0 < this.questionList.length && angular.isDefined(this.questionList[0].language)) {
                   this.questionList.some((question) => {
                     // questions which aren't visible will have a null language
                     if (null != question.language) {
@@ -1602,10 +1503,7 @@ cenozoApp.defineModule({
 
                   var foundCurrentModule = false;
                   response.data.forEach((module) => {
-                    if (
-                      !foundCurrentModule &&
-                      module.id == this.parentModel.viewModel.record.module_id
-                    ) {
+                    if (!foundCurrentModule && module.id == this.parentModel.viewModel.record.module_id) {
                       foundCurrentModule = true;
                     } else {
                       if (foundCurrentModule) this.nextModuleList.push(module);
@@ -1659,15 +1557,13 @@ cenozoApp.defineModule({
                               getAttributeNames(option.precondition)
                             );
                             option.rawPrompts = option.prompts;
-                            option.prompts =
-                              CnTranslationHelper.parseDescriptions(
-                                this.evaluateDescription(option.rawPrompts)
-                              );
+                            option.prompts = CnTranslationHelper.parseDescriptions(
+                              this.evaluateDescription(option.rawPrompts)
+                            );
                             option.rawPopups = option.popups;
-                            option.popups =
-                              CnTranslationHelper.parseDescriptions(
-                                this.evaluateDescription(option.rawPopups)
-                              );
+                            option.popups = CnTranslationHelper.parseDescriptions(
+                              this.evaluateDescription(option.rawPopups)
+                            );
                             this.optionListById[option.id] = option;
 
                             if ("number with unit" == option.extra) {
@@ -1749,9 +1645,10 @@ cenozoApp.defineModule({
 
                   // convert audio maximum times
                   if ('audio' == question.type) {
-                    question.maximumAsTime = question.maximum
-                                           ? moment.utc(question.maximum*1000).format("mm:ss")
-                                           : null;
+                    question.maximumAsTime =
+                      question.maximum ?
+                      moment.utc(question.maximum*1000).format("mm:ss") :
+                      null;
                   }
 
                   // start listening for changes to device status (only applies to in progress devices)
@@ -1759,16 +1656,11 @@ cenozoApp.defineModule({
                 });
 
                 // sort active attribute and make a unique list
-                this.activeAttributeList = activeAttributeList
-                  .sort()
-                  .filter(
-                    (attribute, index, array) =>
-                      index === array.indexOf(attribute)
-                  )
-                  .map((attribute) => ({ name: attribute, value: null }));
+                this.activeAttributeList = activeAttributeList.sort().filter(
+                  (attribute, index, array) => index === array.indexOf(attribute)
+                ).map((attribute) => ({ name: attribute, value: null }));
               } else {
-                if (!this.data.stage_selection && null == this.data.page_id)
-                  await this.reset();
+                if (!this.data.stage_selection && null == this.data.page_id) await this.reset();
 
                 var response = await CnHttpFactory.instance({
                   path: ["qnaire", this.data.qnaire_id, "language"].join("/"),
@@ -1776,25 +1668,23 @@ cenozoApp.defineModule({
                 }).query();
                 this.languageList = response.data;
 
-                if (null == this.currentLanguage)
-                  this.currentLanguage = this.data.base_language;
+                if (null == this.currentLanguage) this.currentLanguage = this.data.base_language;
               }
 
               // finally, now that we know the language set the title
-              this.data.title = this.data.submitted
-                ? "Conclusion"
-                : null != this.data.page_id
-                ? ""
-                : this.data.stage_selection
-                ? [
-                    "Interview",
-                    $state.params.token,
-                    this.data.checked_in ? "Stage Selection" : "Check-In",
-                  ].join(" ")
+              this.data.title =
+                this.data.submitted ? "Conclusion"
+                : null != this.data.page_id ? ""
+                : this.data.stage_selection ? [
+                  "Interview",
+                  $state.params.token,
+                  this.data.checked_in ? "Stage Selection" : "Check-In",
+                ].join(" ")
                 : "Introduction";
             },
 
-            // Used to maintain a semaphore of queries so that they are all executed in sequence without any bumping the queue
+            // Used to maintain a semaphore of queries so that they are all executed in
+            // sequence without any bumping the queue
             runQuery: async (fn) => {
               await Promise.all(this.writePromiseList);
 
@@ -1805,10 +1695,7 @@ cenozoApp.defineModule({
                 response.index = newIndex;
               } finally {
                 // remove the promise from the write promise list
-                var index = this.writePromiseList.findIndexByProperty(
-                  "index",
-                  newIndex
-                );
+                var index = this.writePromiseList.findIndexByProperty("index", newIndex);
                 if (null != index) this.writePromiseList.splice(index, 1);
               }
 
@@ -1818,10 +1705,11 @@ cenozoApp.defineModule({
             convertValueToModel: function (question) {
               // get the full variable name
               question.variable_name =
-                question.name +
-                (this.parentModel.viewModel.record.variable_suffix
-                  ? "_" + this.parentModel.viewModel.record.variable_suffix
-                  : "");
+                question.name + (
+                  this.parentModel.viewModel.record.variable_suffix ?
+                  "_" + this.parentModel.viewModel.record.variable_suffix
+                  : ""
+                );
 
               if ("boolean" == question.type) {
                 question.answer = {
@@ -1829,15 +1717,10 @@ cenozoApp.defineModule({
                   no: false === question.value,
                 };
               } else if ("list" == question.type) {
-                var selectedOptions = angular.isArray(question.value)
-                  ? question.value
-                  : [];
+                var selectedOptions = angular.isArray(question.value) ? question.value : [];
                 question.answer = {
                   optionList: question.optionList.reduce((list, option) => {
-                    var optionIndex = searchOptionList(
-                      selectedOptions,
-                      option.id
-                    );
+                    var optionIndex = searchOptionList(selectedOptions, option.id);
                     list[option.id] = option.multiple_answers
                       ? { valueList: [], formattedValueList: [] }
                       : { selected: null != optionIndex };
@@ -1862,11 +1745,8 @@ cenozoApp.defineModule({
                             : [formatTime(selectedOptions[optionIndex].value)];
                         }
                       } else {
-                        list[option.id].valueList = option.multiple_answers
-                          ? []
-                          : [null];
-                        list[option.id].formattedValueList =
-                          option.multiple_answers ? [] : [null];
+                        list[option.id].valueList = option.multiple_answers ? [] : [null];
+                        list[option.id].formattedValueList = option.multiple_answers ? [] : [null];
                       }
                     }
 
@@ -1874,9 +1754,10 @@ cenozoApp.defineModule({
                   }, {}),
                 };
               } else if ("number with unit" == question.type) {
-                question.answer = angular.isObject( question.value )
-                                ? question.value
-                                : { value: null, unit: null };
+                question.answer =
+                  angular.isObject( question.value ) ?
+                  question.value :
+                  { value: null, unit: null };
               } else if ("equipment" == question.type) {
                 if( angular.isObject( question.value ) ) {
                   question.answer = { value: question.value.serial_number };
@@ -1920,11 +1801,8 @@ cenozoApp.defineModule({
                 question.answer.backupFormattedValue = question.answer.formattedValue;
               } else {
                 question.answer = {
-                  value:
-                    angular.isString(question.value) ||
-                    angular.isNumber(question.value)
-                      ? question.value
-                      : null,
+                  value: angular.isString(question.value) || angular.isNumber(question.value) ?
+                    question.value : null,
                   formattedValue: null
                 };
                 if( "date" == question.type ) {
@@ -1973,29 +1851,28 @@ cenozoApp.defineModule({
                 // make sure that any selected item with extra data has provided that data
                 for (var index = 0; index < question.value.length; index++) {
                   var selectedOption = question.value[index];
-                  var selectedOptionId = angular.isObject(selectedOption)
-                    ? selectedOption.id
-                    : selectedOption;
+                  var selectedOptionId =
+                    angular.isObject(selectedOption) ?
+                    selectedOption.id :
+                    selectedOption;
 
                   if (angular.isObject(selectedOption)) {
                     const extra = question.optionList.findByProperty( 'id', selectedOptionId ).extra;
                     if ("number with unit" == extra) {
                       // for number with unit both the value and unit need to be filled out
-                      if (!angular.isObject(selectedOption.value) ||
-                          angular.isUndefined(selectedOption.value.value) ||
-                          null == selectedOption.value.value ||
-                          angular.isUndefined(selectedOption.value.unit) ||
-                          null == selectedOption.value.unit) {
-                        return selectedOption.id;
-                      }
+                      if (
+                        !angular.isObject(selectedOption.value) ||
+                        angular.isUndefined(selectedOption.value.value) ||
+                        null == selectedOption.value.value ||
+                        angular.isUndefined(selectedOption.value.unit) ||
+                        null == selectedOption.value.unit
+                      ) return selectedOption.id;
                     } else if( null == selectedOption.value ) {
                       // if the value is null then the extra value is missing
                       return selectedOption.id;
                     } else if( angular.isArray(selectedOption.value) ) {
                       // if the value is an empty array (after removing null values)
-                      if( 0 == selectedOption.value.filter(v => null != v).length ) {
-                        return false;
-                      }
+                      if( 0 == selectedOption.value.filter(v => null != v).length ) return false;
                     }
                   }
                 }
@@ -2003,21 +1880,17 @@ cenozoApp.defineModule({
                 // make sure there is at least one selected option
                 for (var index = 0; index < question.value.length; index++) {
                   var selectedOption = question.value[index];
-                  var selectedOptionId = angular.isObject(selectedOption)
-                    ? selectedOption.id
-                    : selectedOption;
+                  var selectedOptionId = angular.isObject(selectedOption) ? selectedOption.id : selectedOption;
 
                   if (this.evaluate(preconditionListById[selectedOptionId])) {
                     if (angular.isObject(selectedOption)) {
                       if (angular.isArray(selectedOption.value)) {
                         // make sure there is at least one option value
-                        for (
-                          var valueIndex = 0;
-                          valueIndex < selectedOption.value.length;
-                          valueIndex++
-                        )
-                          if (null != selectedOption.value[valueIndex])
+                        for (var valueIndex = 0; valueIndex < selectedOption.value.length; valueIndex++) {
+                          if (null != selectedOption.value[valueIndex]) {
                             return true;
+                          }
+                        }
                       } else if (null != selectedOption.value) return true;
                     } else if (null != selectedOption) return true;
                   }
@@ -2074,33 +1947,16 @@ cenozoApp.defineModule({
 
               // handle empty expressions
               if (null == expression)
-                return "precondition" == type
-                  ? true
-                  : "limit" == type
-                  ? null
-                  : "";
+                return "precondition" == type ? true : "limit" == type ? null : "";
 
               if ("limit" == type) {
-                expression = expression.replace(
-                  /\bcurrent_year\b/,
-                  moment().format("YYYY")
-                );
-                expression = expression.replace(
-                  /\bcurrent_month\b/,
-                  moment().format("MM")
-                );
-                expression = expression.replace(
-                  /\bcurrent_day\b/,
-                  moment().format("DD")
-                );
+                expression = expression.replace(/\bcurrent_year\b/, moment().format("YYYY"));
+                expression = expression.replace(/\bcurrent_month\b/, moment().format("MM"));
+                expression = expression.replace(/\bcurrent_day\b/, moment().format("DD"));
               }
 
               // preconditions which are boolean expressions are already evaluated
-              if (
-                ("precondition" == type && true == expression) ||
-                false == expression
-              )
-                return expression;
+              if (("precondition" == type && true == expression) || false == expression) return expression;
 
               // replace any attributes
               if (this.previewMode) {
@@ -2179,13 +2035,11 @@ cenozoApp.defineModule({
                       compiled = isRefuse(matchedQuestion.value) ? "true" : "false";
                     } else if ("dkna_refuse()" == fnName) {
                       compiled =
-                        isDkna(matchedQuestion.value) ||
-                        isRefuse(matchedQuestion.value) ?
+                        isDkna(matchedQuestion.value) || isRefuse(matchedQuestion.value) ?
                         "true" : "false";
                     } else if ("not_dkna_refuse()" == fnName) {
                       compiled =
-                        isDkna(matchedQuestion.value) ||
-                        isRefuse(matchedQuestion.value) ?
+                        isDkna(matchedQuestion.value) || isRefuse(matchedQuestion.value) ?
                         "false" : "true";
                     } else if ("dkna_refuse_empty()" == fnName) {
                       compiled =
@@ -2222,27 +2076,21 @@ cenozoApp.defineModule({
                         // print the description of all selected options
                         compiled =
                           angular.isObject(matchedQuestion.value) &&
-                          angular.isDefined(matchedQuestion.value.refuse)
-                            ? this.text("misc.refuse")
-                            : angular.isObject(matchedQuestion.value) &&
-                              angular.isDefined(matchedQuestion.value.dkna)
-                            ? this.text("misc.dkna")
-                            : angular.isArray(matchedQuestion.value)
-                            ? matchedQuestion.value
-                                .map(
-                                  (option) =>
-                                    matchedQuestion.optionList.findByProperty(
-                                      "id",
-                                      angular.isObject(option)
-                                        ? option.id
-                                        : option
-                                    ).prompts[this.currentLanguage] +
-                                    (angular.isObject(option)
-                                      ? " " + option.value
-                                      : "")
-                                )
-                                .join(", ")
-                            : "";
+                          angular.isDefined(matchedQuestion.value.refuse) ?
+                          this.text("misc.refuse") :
+                          angular.isObject(matchedQuestion.value) &&
+                          angular.isDefined(matchedQuestion.value.dkna) ?
+                          this.text("misc.dkna") :
+                          angular.isArray(matchedQuestion.value) ?
+                          matchedQuestion.value.map(
+                            (option) =>
+                              matchedQuestion.optionList.findByProperty(
+                                "id",
+                                angular.isObject(option) ? option.id : option
+                              ).prompts[this.currentLanguage] +
+                              (angular.isObject(option) ? " " + option.value : "")
+                          ).join(", ") :
+                          "";
                       } else {
                         // find the referenced option
                         var matchedOption = null;
@@ -2255,50 +2103,34 @@ cenozoApp.defineModule({
                           });
                         }
 
-                        if (
-                          null != matchedOption &&
-                          angular.isArray(matchedQuestion.value)
-                        ) {
+                        if (null != matchedOption && angular.isArray(matchedQuestion.value)) {
                           if (null == matchedOption.extra) {
-                            compiled = matchedQuestion.value.includes(
-                              matchedOption.id
-                            )
-                              ? "true"
-                              : "false";
+                            compiled = matchedQuestion.value.includes(matchedOption.id) ? "true" : "false";
                           } else {
-                            var answer = matchedQuestion.value.findByProperty(
-                              "id",
-                              matchedOption.id
-                            );
+                            var answer = matchedQuestion.value.findByProperty("id", matchedOption.id);
                             if (!angular.isObject(answer)) {
                               compiled = "extra()" == fnName ? "null" : "false";
                             } else {
                               if ("extra()" == fnName) {
                                 // if the answer is an array join all non-null values together into a comma-separated list
-                                var value = angular.isArray(answer.value)
-                                  ? answer.value
-                                      .filter((a) => null != a)
-                                      .join(", ")
-                                  : answer.value;
+                                var value =
+                                  angular.isArray(answer.value) ?
+                                  answer.value.filter((a) => null != a).join(", ") :
+                                  answer.value;
                                 compiled =
-                                  "number" == matchedOption.extra
-                                    ? value
-                                    : '"' + value.replace('"', '"') + '"';
+                                  "number" == matchedOption.extra ?
+                                  value :
+                                  '"' + value.replace('"', '"') + '"';
                               } else if (matchedOption.multiple_answers) {
                                 // make sure at least one of the answers isn't null
-                                compiled = answer.value.some((v) => v != null)
-                                  ? "true"
-                                  : "false";
+                                compiled = answer.value.some((v) => v != null) ? "true" : "false";
                               } else if ("extra()" == fnName) {
                                 compiled =
-                                  "number" == matchedOption.extra
-                                    ? answer.value
-                                    : '"' +
-                                      answer.value.replace('"', '"') +
-                                      '"';
+                                  "number" == matchedOption.extra ?
+                                  answer.value :
+                                  '"' + answer.value.replace('"', '"') + '"';
                               } else {
-                                compiled =
-                                  null != answer.value ? "true" : "false";
+                                compiled = null != answer.value ? "true" : "false";
                               }
                             }
                           }
@@ -2324,7 +2156,8 @@ cenozoApp.defineModule({
               if (!this.previewMode && null != this.currentLanguage) {
                 await this.runQuery(async () => {
                   await CnHttpFactory.instance({
-                    path: this.parentModel.getServiceResourceBasePath().replace("page/", "respondent/") +
+                    path:
+                      this.parentModel.getServiceResourceBasePath().replace("page/", "respondent/") +
                       "?action=set_language&code=" + this.currentLanguage,
                   }).patch();
                 });
@@ -2341,14 +2174,10 @@ cenozoApp.defineModule({
                 proceed = response;
               }
 
-              if (proceed) {
-                await question.audio.start();
-              }
+              if (proceed) await question.audio.start();
             },
 
-            stopRecording: async function (question) {
-              question.audio.stop();
-            },
+            stopRecording: async function (question) { question.audio.stop(); },
 
             getDevicePrompt: function (question) {
               let prompt = this.text( 'misc.launch' ) + " " + question.device;
@@ -2364,16 +2193,16 @@ cenozoApp.defineModule({
                 const filesReceived = angular.isDefined( question.files_received ) ? question.files_received : 0
                 if(dataReceived && 0 < filesReceived) {
                   prompt +=
-                    this.text( 'misc.dataAndFileReceived' ).
-                      replaceAll( '<FILES>', filesReceived ).
-                      replaceAll( '<PLURAL>', 1 == filesReceived ? "" : "s" );
+                    this.text('misc.dataAndFileReceived')
+                        .replaceAll('<FILES>', filesReceived)
+                        .replaceAll('<PLURAL>', 1 == filesReceived ? "" : "s");
                 } else if (dataReceived && 0 == filesReceived) {
                   prompt += this.text( 'misc.dataReceived' );
                 } else if (!dataReceived && 0 < filesReceived) {
                   prompt +=
-                    this.text( 'misc.fileReceived' ).
-                      replaceAll( '<FILES>', filesReceived ).
-                      replaceAll( '<PLURAL>', 1 == filesReceived ? "" : "s" );
+                    this.text('misc.fileReceived')
+                        .replaceAll('<FILES>', filesReceived)
+                        .replaceAll('<PLURAL>', 1 == filesReceived ? "" : "s");
                 } else {
                   prompt += this.text( 'misc.noDataReceived' );
                 }
@@ -2575,17 +2404,10 @@ cenozoApp.defineModule({
                         }
 
                         // q is visible, now check its options (assuming we haven't selected dkna/refused)
-                        if (
-                          "list" == q.type &&
-                          !isDknaOrRefuse(q.value)
-                        ) {
-                          var visibleOptionList =
-                            this.getVisibleOptionList(q);
+                        if ("list" == q.type && !isDknaOrRefuse(q.value)) {
+                          var visibleOptionList = this.getVisibleOptionList(q);
                           q.optionList.forEach((o) => {
-                            if (
-                              null ==
-                              visibleOptionList.findByProperty("id", o.id)
-                            ) {
+                            if (null == visibleOptionList.findByProperty("id", o.id)) {
                               // o isn't visible so make sure it isn't selected
                               if (angular.isArray(q.value)) {
                                 var i = searchOptionList(q.value, o.id);
@@ -2616,22 +2438,17 @@ cenozoApp.defineModule({
             },
 
             getValueForNewOption: function (question, option) {
-              var data = option.extra
-                ? { id: option.id, value: option.multiple_answers ? [] : null }
-                : option.id;
+              var data = option.extra ?
+                { id: option.id, value: option.multiple_answers ? [] : null } :
+                option.id;
               var value = [];
               if (option.exclusive) {
                 value.push(data);
               } else {
                 // get the current value array, remove exclusive options, add the new option and sort
                 if (angular.isArray(question.value)) value = question.value;
-                value = value.filter(
-                  (o) =>
-                    !this.optionListById[angular.isObject(o) ? o.id : o]
-                      .exclusive
-                );
-                if (null == searchOptionList(value, option.id))
-                  value.push(data);
+                value = value.filter((o) => !this.optionListById[angular.isObject(o) ? o.id : o].exclusive);
+                if (null == searchOptionList(value, option.id)) value.push(data);
                 value.sort(function (a, b) {
                   return (
                     (angular.isObject(a) ? a.id : a) -
@@ -2644,15 +2461,10 @@ cenozoApp.defineModule({
             },
 
             addOption: async function (question, option) {
-              await this.setAnswer(
-                question,
-                this.getValueForNewOption(question, option)
-              );
+              await this.setAnswer(question, this.getValueForNewOption(question, option));
 
               // if the option has extra data then focus its associated input
-              if (null != option.extra) {
-                await focusElement("option" + option.id + "value0");
-              }
+              if (null != option.extra) await focusElement("option" + option.id + "value0");
             },
 
             removeOption: async function (question, option) {
@@ -2661,7 +2473,6 @@ cenozoApp.defineModule({
               var optionIndex = searchOptionList(value, option.id);
               if (null != optionIndex) value.splice(optionIndex, 1);
               if (0 == value.length) value = null;
-
               await this.setAnswer(question, value);
             },
 
@@ -2674,8 +2485,7 @@ cenozoApp.defineModule({
               }
 
               var valueIndex = value[optionIndex].value.indexOf(null);
-              if (-1 == valueIndex)
-                valueIndex = value[optionIndex].value.push(null) - 1;
+              if (-1 == valueIndex) valueIndex = value[optionIndex].value.push(null) - 1;
               await this.setAnswer(question, value, true);
               await focusElement("option" + option.id + "value" + valueIndex);
             },
@@ -2684,10 +2494,8 @@ cenozoApp.defineModule({
               var value = question.value;
               var optionIndex = searchOptionList(value, option.id);
               value[optionIndex].value.splice(valueIndex, 1);
-              if (0 == value[optionIndex].value.length)
-                value.splice(optionIndex, 1);
+              if (0 == value[optionIndex].value.length) value.splice(optionIndex, 1);
               if (0 == value.length) value = null;
-
               await this.setAnswer(question, value);
             },
 
@@ -2703,7 +2511,8 @@ cenozoApp.defineModule({
                   title: null,
                   locale: this.currentLanguage,
                   // return the date, or time in the user's timezone
-                  date: "date" == type ?
+                  date:
+                    "date" == type ?
                     value :
                     // assume a default of 12:00
                     getTime(null == value ? "12:00" : value, CnSession.user.timezone),
@@ -2761,12 +2570,7 @@ cenozoApp.defineModule({
               this.selectDateOrTimeForQuestionOrOption(question, null, null, value, "time");
             },
 
-            setAnswerValue: async function (
-              question,
-              option,
-              valueIndex,
-              answerValue
-            ) {
+            setAnswerValue: async function (question, option, valueIndex, answerValue) {
               // if the question option's extra type is a number then make sure it falls within the min/max values
               const minimum = this.evaluateLimit(option.minimum);
               const maximum = this.evaluateLimit(option.maximum);
@@ -2776,30 +2580,19 @@ cenozoApp.defineModule({
               if (tooSmall || tooLarge) {
                 await this.runQuery(async () => {
                   await CnModalMessageFactory.instance({
-                    title: this.text(
-                      tooSmall ? "misc.minimumTitle" : "misc.maximumTitle"
-                    ),
+                    title: this.text(tooSmall ? "misc.minimumTitle" : "misc.maximumTitle"),
                     message:
                       this.text("misc.limitMessage") +
-                      " " +
-                      (null == maximum
-                        ? this.text("misc.equalOrGreater") + " " + minimum + "."
-                        : null == minimum
-                        ? this.text("misc.equalOrLess") + " " + maximum + "."
-                        : [
-                            this.text("misc.between"),
-                            minimum,
-                            this.text("misc.and"),
-                            maximum + ".",
-                          ].join(" ")),
+                      " " + (
+                        null == maximum ?  this.text("misc.equalOrGreater") + " " + minimum + "." :
+                        null == minimum ?  this.text("misc.equalOrLess") + " " + maximum + "." :
+                        [this.text("misc.between"), minimum, this.text("misc.and"), maximum + "."].join(" ")
+                      ),
                   }).show();
 
                   // put the old value back
-                  var element = document.getElementById(
-                    "option" + option.id + "value" + valueIndex
-                  );
-                  element.value =
-                    question.answer.optionList[option.id].valueList[valueIndex];
+                  var element = document.getElementById("option" + option.id + "value" + valueIndex);
+                  element.value = question.answer.optionList[option.id].valueList[valueIndex];
                 });
               } else {
                 var value = question.value;
@@ -2817,9 +2610,7 @@ cenozoApp.defineModule({
                       var existingValueIndex = value[optionIndex].value.indexOf(answerValue);
                       if (0 <= existingValueIndex) {
                         // don't add the answer, instead focus on the existing one and highlight it
-                        document.getElementById(
-                          "option" + option.id + "value" + valueIndex
-                        ).value = null;
+                        document.getElementById("option" + option.id + "value" + valueIndex).value = null;
                         var element = document.getElementById(
                           "option" + option.id + "value" + existingValueIndex
                         );
@@ -2855,9 +2646,7 @@ cenozoApp.defineModule({
             viewPage: async function () {
               await $state.go(
                 "page.view",
-                {
-                  identifier: this.parentModel.viewModel.record.getIdentifier(),
-                },
+                { identifier: this.parentModel.viewModel.record.getIdentifier() },
                 { reload: true }
               );
             },
@@ -2867,10 +2656,7 @@ cenozoApp.defineModule({
             },
 
             transitionToDisplayResponse: function () {
-              $state.go(
-                "response.display",
-                { identifier: this.data.response_id },
-              );
+              $state.go("response.display", { identifier: this.data.response_id });
             },
 
             setResponseComments: async function () {
@@ -2889,16 +2675,11 @@ cenozoApp.defineModule({
 
             showStageComments: async function (responseStageId) {
               // if no ID is provided then assume the currently active one
-              if (!responseStageId)
-                responseStageId = this.data.response_stage_id;
-              var responseStage = this.responseStageList.findByProperty(
-                "id",
-                responseStageId
-              );
+              if (!responseStageId) responseStageId = this.data.response_stage_id;
+              var responseStage = this.responseStageList.findByProperty("id", responseStageId);
               var response = await CnModalTextFactory.instance({
                 title: responseStage.name + " Comments",
-                message:
-                  "Please provide any relevant comments about this stage:",
+                message: "Please provide any relevant comments about this stage:",
                 text: responseStage.comments,
                 size: "lg",
               }).show();
@@ -2929,21 +2710,15 @@ cenozoApp.defineModule({
                   .getDeviation();
                 enabled =
                   null == deviation ||
-                  0 <
-                    this.deviationTypeList.filter((dt) => deviation == dt.type)
-                      .length;
+                  0 < this.deviationTypeList.filter((dt) => deviation == dt.type).length;
               }
               return enabled;
             },
 
             runStageOperation: async function (responseStageId, operationName) {
               // if no ID is provided then assume the currently active one
-              if (!responseStageId)
-                responseStageId = this.data.response_stage_id;
-              var responseStage = this.responseStageList.findByProperty(
-                "id",
-                responseStageId
-              );
+              if (!responseStageId) responseStageId = this.data.response_stage_id;
+              var responseStage = this.responseStageList.findByProperty("id", responseStageId);
 
               if (!["launch", "pause", "skip", "reset"].includes(operationName)) {
                 throw new Error('Tried to run invalid stage operation "' + operationName + '"');
@@ -2985,26 +2760,21 @@ cenozoApp.defineModule({
                 return;
               } else if ("active" == data.status) {
                 warning =
-                  "<b>WARNING</b>: This stage is already active " +
-                  (data.user_id != CnSession.user.id
-                    ? "by another user (" +
-                      data.first_name +
-                      " " +
-                      data.last_name +
-                      ")"
-                    : "under your account.");
+                  "<b>WARNING</b>: This stage is already active " + (
+                    data.user_id != CnSession.user.id ?
+                    "by another user (" + data.first_name + " " + data.last_name + ")" :
+                    "under your account."
+                  );
               } else if (
                 "paused" == data.status ||
                 ("completed" == data.status && "launch" == operationName)
               ) {
                 // warn if this is a new user
-                if (data.user_id != CnSession.user.id)
+                if (data.user_id != CnSession.user.id) {
                   warning =
                     "<b>WARNING</b>: This stage was paused by another user (" +
-                    data.first_name +
-                    " " +
-                    data.last_name +
-                    ")";
+                    data.first_name + " " + data.last_name + ")";
+                }
               }
 
               var patchData = null;
@@ -3013,9 +2783,9 @@ cenozoApp.defineModule({
                 var response = await CnModalConfirmFactory.instance({
                   message:
                     "Are you sure you wish to reset this stage?<br><br>" +
-                    '<b class="text-danger">Note that by proceeding all data collected during the stage will be deleted.' +
-                    (warning ? "<br><br>" + warning : "") +
-                    "</b>",
+                    '<b class="text-danger">Note that by proceeding all data ' +
+                    "collected during the stage will be deleted." +
+                    (warning ? "<br><br>" + warning : "") + "</b>",
                   html: true,
                 }).show();
                 proceed = response;
@@ -3023,9 +2793,7 @@ cenozoApp.defineModule({
                 proceed = true;
 
                 // check if we have to ask for the reason for deviation
-                var deviation = responseStage.operations
-                  .findByProperty("name", operationName)
-                  .getDeviation();
+                var deviation = responseStage.operations.findByProperty("name", operationName).getDeviation();
 
                 // only run the pre-stage check if there is a deviation we we have to check the token
                 if(deviation || this.data.token_check) {
@@ -3034,9 +2802,10 @@ cenozoApp.defineModule({
                   var response = await CnModalPreStageFactory.instance({
                     title: responseStage.name + ": " + operationName.ucWords(),
                     warning: warning,
-                    deviationTypeList: deviation
-                      ? this.deviationTypeList.filter((dt) => deviation == dt.type)
-                      : null,
+                    deviationTypeList:
+                      deviation ?
+                      this.deviationTypeList.filter((dt) => deviation == dt.type) :
+                      null,
                     validToken: $state.params.token,
                     // if we're not checking the token then set it now so the user doesn't have to
                     token: this.data.token_check ? null : $state.params.token,
@@ -3057,7 +2826,7 @@ cenozoApp.defineModule({
                 try {
                   this.working = true;
                   await this.runQuery(async () => {
-                    var httpObj = { path: "response_stage/" + responseStageId + "?action=" + operationName, };
+                    var httpObj = { path: "response_stage/" + responseStageId + "?action=" + operationName };
                     if (null != patchData) {
                       httpObj.data = patchData;
                       // update the client with any changes
@@ -3077,11 +2846,7 @@ cenozoApp.defineModule({
             proceed: async function () {
               const record = this.parentModel.viewModel.record;
               if (this.previewMode) {
-                await $state.go(
-                  "page.render",
-                  { identifier: record.next_id },
-                  { reload: true }
-                );
+                await $state.go("page.render", { identifier: record.next_id }, { reload: true });
               } else {
                 var modal = CnModalMessageFactory.instance({
                   title: this.text("misc.submitWaitTitle"),
@@ -3107,7 +2872,6 @@ cenozoApp.defineModule({
                     // proceed to the respondent's next valid page
                     await this.runQuery(async () => {
                       if (null === record.next_id) modal.show(); // show a wait dialog when submitting the qnaire
-
                       let path = "respondent/token=" + $state.params.token + "?action=proceed";
                       if( this.site ) path += "&site=" + encodeURIComponent(this.site);
                       if( this.username ) path += "&username=" + encodeURIComponent(this.username);
@@ -3191,10 +2955,7 @@ cenozoApp.defineModule({
             },
 
             onDigitHotKey: async function (digit) {
-              var question = this.questionList.findByProperty(
-                "id",
-                this.focusQuestionId
-              );
+              var question = this.questionList.findByProperty("id", this.focusQuestionId);
               if (null == question) return;
 
               var value = undefined;
@@ -3259,20 +3020,16 @@ cenozoApp.defineModule({
                   if (match) {
                     if (1 == match[1]) {
                       // the first dkna/refuse option
-                      if (question.dkna_allowed)
-                        setAnswerTo = question.answer.dkna
-                          ? null
-                          : { dkna: true };
-                      else if (question.refuse_allowed)
-                        setAnswerTo = question.answer.refuse
-                          ? null
-                          : { refuse: true };
+                      if (question.dkna_allowed) {
+                        setAnswerTo = question.answer.dkna ? null : { dkna: true };
+                      } else if (question.refuse_allowed) {
+                        setAnswerTo = question.answer.refuse ? null : { refuse: true };
+                      }
                     } else if (2 == match[1]) {
                       // the second dkna/refuse option
-                      if (question.dkna_allowed && question.refuse_allowed)
-                        setAnswerTo = question.answer.refuse
-                          ? null
-                          : { refuse: true };
+                      if (question.dkna_allowed && question.refuse_allowed) {
+                        setAnswerTo = question.answer.refuse ? null : { refuse: true };
+                      }
                     }
                   }
                 } else {
@@ -3280,8 +3037,7 @@ cenozoApp.defineModule({
                   setAnswerTo = value;
                 }
 
-                if (angular.isDefined(setAnswerTo))
-                  await this.setAnswer(question, setAnswerTo);
+                if (angular.isDefined(setAnswerTo)) await this.setAnswer(question, setAnswerTo);
               }
             },
 
@@ -3293,14 +3049,10 @@ cenozoApp.defineModule({
               var questionList = this.getFocusableQuestionList();
               if (null == this.focusQuestionId) {
                 // focus on the last/first question if no question is currently selected
-                if (0 < questionList.length)
-                  requestedIndex = prev ? questionList.length - 1 : 0;
+                if (0 < questionList.length) requestedIndex = prev ? questionList.length - 1 : 0;
               } else {
                 // try to focus on the prev/next question, if there is one
-                var index = questionList.findIndexByProperty(
-                  "id",
-                  this.focusQuestionId
-                );
+                var index = questionList.findIndexByProperty("id", this.focusQuestionId);
                 var requestedIndex = prev ? index - 1 : index + 1;
               }
 
@@ -3309,9 +3061,7 @@ cenozoApp.defineModule({
                 this.focusQuestionId = question.id;
 
                 // scroll so that the bottom of the div is visible
-                var element = document.getElementById(
-                  "baseQuestion" + question.id
-                );
+                var element = document.getElementById("baseQuestion" + question.id);
                 if (null != element) {
                   element.scrollTop += 100;
                   element.scrollIntoView(false);
@@ -3344,8 +3094,7 @@ cenozoApp.defineModule({
               await this.baseOnNewFn(record);
 
               // set the default page max time
-              if (angular.isUndefined(record.max_time))
-                record.max_time = CnSession.setting.defaultPageMaxTime;
+              if (angular.isUndefined(record.max_time)) record.max_time = CnSession.setting.defaultPageMaxTime;
             },
           });
 
@@ -3370,22 +3119,11 @@ cenozoApp.defineModule({
           angular.extend(object, {
             onView: async function (force) {
               await this.$$onView(force);
-              this.record.average_time = $filter("cnSeconds")(
-                Math.round(this.record.average_time)
-              );
-              this.record.prompts = CnTranslationHelper.parseDescriptions(
-                this.record.prompts
-              );
-              this.record.popups = CnTranslationHelper.parseDescriptions(
-                this.record.popups
-              );
-              this.record.module_prompts =
-                CnTranslationHelper.parseDescriptions(
-                  this.record.module_prompts
-                );
-              this.record.module_popups = CnTranslationHelper.parseDescriptions(
-                this.record.module_popups
-              );
+              this.record.average_time = $filter("cnSeconds")(Math.round(this.record.average_time));
+              this.record.prompts = CnTranslationHelper.parseDescriptions(this.record.prompts);
+              this.record.popups = CnTranslationHelper.parseDescriptions(this.record.popups);
+              this.record.module_prompts = CnTranslationHelper.parseDescriptions(this.record.module_prompts);
+              this.record.module_popups = CnTranslationHelper.parseDescriptions(this.record.module_popups);
             },
           });
 
@@ -3408,9 +3146,11 @@ cenozoApp.defineModule({
 
             getServiceResourceBasePath: function (resource) {
               // when we're looking at a respondent use its token to figure out which page to load
-              return "respondent" == this.getSubjectFromState()
-                ? "page/token=" + $state.params.token
-                : this.$$getServiceResourcePath(resource);
+              return (
+                "respondent" == this.getSubjectFromState() ?
+                "page/token=" + $state.params.token :
+                this.$$getServiceResourcePath(resource)
+              );
             },
 
             getServiceResourcePath: function (resource) {
