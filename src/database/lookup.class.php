@@ -171,30 +171,15 @@ class lookup extends \cenozo\database\record
 
   /**
    * Synchronizes all records with a parent instance
-   * @param database\qnaire Restrict lookups used by a particular qnaire
    */
-  public static function sync_with_parent( $db_qnaire = NULL )
+  public static function sync_with_parent()
   {
     if( is_null( PARENT_INSTANCE_URL ) ) return;
 
-    $qnaire_class_name = lib::get_class_name( 'database\qnaire' );
     $indicator_class_name = lib::get_class_name( 'database\indicator' );
 
-    $qnaire_name_list = [];
-    if( is_null( $db_qnaire ) )
-    {
-      $qnaire_sel = lib::create( 'database\select' );
-      $qnaire_sel->add_column( 'name' );
-      foreach( $qnaire_class_name::select( $qnaire_sel ) as $qnaire )
-        $qnaire_name_list[] = util::full_urlencode( $qnaire['name'] );
-    }
-    else
-    {
-      $qnaire_name_list[] = util::full_urlencode( $db_qnaire->name );
-    }
-
-    // update the lookup list (restricting to a lookup used by the given, or all qnaires)
-    $url_postfix = sprintf(
+    // get a list of all lookups on the remote server
+    $url_postfix =
       '?select={'.
         '"column":['.
           '{"table":"lookup","column":"name"},'.
@@ -203,33 +188,7 @@ class lookup extends \cenozo\database\record
         '],'.
         '"distinct":true'.
       '}'.
-      '&modifier={'.
-        '"join":[{'.
-          '"table":"question",'.
-          '"onleft":"lookup.id",'.
-          '"onright":"question.lookup_id"'.
-        '},{'.
-          '"table":"page",'.
-          '"onleft":"question.page_id",'.
-          '"onright":"page.id"'.
-        '},{'.
-          '"table":"module",'.
-          '"onleft":"page.module_id",'.
-          '"onright":"module.id"'.
-        '},{'.
-          '"table":"qnaire",'.
-          '"onleft":"module.qnaire_id",'.
-          '"onright":"qnaire.id"'.
-        '}],'.
-        '"where":[{'.
-          '"column":"qnaire.name",'.
-          '"operator":"IN",'.
-          '"value":["%s"]'.
-        '}],'.
-        '"limit":1000000'.
-      '}',
-      implode( '","', $qnaire_name_list )
-    );
+      '&modifier={"limit":1000000}';
 
     foreach( util::get_data_from_parent( 'lookup', $url_postfix ) as $lookup )
     {
