@@ -111,6 +111,7 @@ class stage extends \cenozo\database\has_rank
     $page_mod->join( 'question', 'answer.question_id', 'question.id' );
     $page_mod->join( 'page', 'question.page_id', 'page.id' );
     $page_mod->join( 'module', 'page.module_id', 'module.id' );
+    $page_mod->where( 'answer.value', '!=', 'null' );
     $page_mod->where( 'response_id', '=', $db_response->id );
     $page_mod->where( 'module.rank', '>=', $db_first_module->rank );
     $page_mod->where( 'module.rank', '<=', $db_last_module->rank );

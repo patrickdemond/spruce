@@ -588,6 +588,17 @@ cenozoApp.defineModule({
               });
             },
 
+            outOfSync: async function (description) {
+              await CnModalMessageFactory.instance({
+                title: "Out of Sync",
+                message:
+                  (this.parentModel.isRole( "respondent" ) ? "" : description + "\n\n") +
+                  CnTranslationHelper.translate("misc.outOfSync", this.currentLanguage),
+                error: true,
+              }).show();
+              await this.parentModel.reloadState(true);
+            },
+
             cancelDevicePromises: function() {
               if( angular.isDefined( this.devicePromiseList ) ) {
                 this.devicePromiseList.forEach( promise => $interval.cancel(promise.promise) );
@@ -698,8 +709,13 @@ cenozoApp.defineModule({
             },
 
             reopen: async function () {
+              const self = this;
               await CnHttpFactory.instance({
                 path: "respondent/token=" + $state.params.token + "?action=reopen",
+                onError: function (error) {
+                  if (409 == error.status) self.outOfSync(JSON.parse(error.data));
+                  else CnModalMessageFactory.httpError(error);
+                },
               }).patch();
               await this.parentModel.reloadState(true);
             },
@@ -708,21 +724,23 @@ cenozoApp.defineModule({
               // update the token if we've changed it
               var updatedToken = null;
               if (this.data.token_check && checkedIn && this.data.token != this.data.scanned_token) {
-                var self = this;
+                const self = this;
                 await CnHttpFactory.instance({
                   path: "respondent/token=" + $state.params.token,
                   data: { token: this.data.scanned_token },
                   onError: function (error) {
                     if (409 == error.status) {
-                      CnModalMessageFactory.instance({
-                        title: "Interview ID already exists",
-                        message:
-                          'You cannot use the Interview ID "' +
-                          self.data.scanned_token +
-                          '" since it already exists.  ' +
-                          "Please double check that you have entered it correctly or try a different ID.",
-                        error: true,
-                      }).show();
+                      if (angular.isDefined(self.data.scanned_token)) {
+                        CnModalMessageFactory.instance({
+                          title: "Interview ID already exists",
+                          message:
+                            'You cannot use the Interview ID "' +
+                            self.data.scanned_token +
+                            '" since it already exists.  ' +
+                            "Please double check that you have entered it correctly or try a different ID.",
+                          error: true,
+                        }).show();
+                      }
                     } else CnModalMessageFactory.httpError(error);
                   },
                 }).patch();
@@ -730,9 +748,14 @@ cenozoApp.defineModule({
               }
 
               // mark the response as checked in
+              const self = this;
               await CnHttpFactory.instance({
                 path: "response/" + this.data.response_id,
                 data: { checked_in: checkedIn },
+                onError: function (error) {
+                  if (409 == error.status) self.outOfSync(JSON.parse(error.data));
+                  else CnModalMessageFactory.httpError(error);
+                },
               }).patch();
 
               if (null == updatedToken) {
@@ -1209,11 +1232,8 @@ cenozoApp.defineModule({
                   this.responseStageList.forEach((responseStage) => {
                     responseStage.operations = [];
 
-                    if (
-                      !["not ready", "not applicable", "parent skipped", "skipped"]
-                        .includes(responseStage.status)
-                    ) {
-                      var self = this;
+                    if (this.isStageOperationAllowed("launch", responseStage.status)) {
+                      const self = this;
                       responseStage.operations.push({
                         name: "launch",
                         title:
@@ -1232,7 +1252,7 @@ cenozoApp.defineModule({
                     }
 
                     if (
-                      ["paused", "ready"].includes(responseStage.status) &&
+                      this.isStageOperationAllowed("skip", responseStage.status) &&
                       responseStage.rank != this.responseStageList.length
                     ) {
                       responseStage.operations.push({
@@ -1243,11 +1263,7 @@ cenozoApp.defineModule({
                       });
                     }
 
-                    if (
-                      !["not ready", "not applicable", "parent skipped", "ready"].includes(
-                        responseStage.status
-                      )
-                    ) {
+                    if (this.isStageOperationAllowed("reset", responseStage.status)) {
                       responseStage.operations.push({
                         name: "reset",
                         title: "Reset",
@@ -2224,8 +2240,13 @@ cenozoApp.defineModule({
 
                 // Launch the device and set the status and uuid, set the answer value to null
                 // and watch for updates from the device
+                const self = this;
                 var response = await CnHttpFactory.instance({
                   path: "answer/" + question.answer_id + "?action=launch_device",
+                  onError: function (error) {
+                    if (409 == error.status) self.outOfSync(JSON.parse(error.data));
+                    else CnModalMessageFactory.httpError(error);
+                  },
                 }).patch();
                 question.device_status = response.data.status;
                 question.device_uuid = response.data.uuid;
@@ -2242,9 +2263,14 @@ cenozoApp.defineModule({
             abortDevice: async function (question) {
               try {
                 this.working = true;
+                const self = this;
                 var response = await CnHttpFactory.instance({
                   path: "answer_device/uuid=" + question.device_uuid,
                   data: { "status": "cancelled" },
+                  onError: function (error) {
+                    if (409 == error.status) self.outOfSync(JSON.parse(error.data));
+                    else CnModalMessageFactory.httpError(error);
+                  },
                 }).patch();
                 question.device_status = null;
                 question.device_uuid = null;
@@ -2301,139 +2327,148 @@ cenozoApp.defineModule({
                   question.value = angular.copy(question.backupValue);
                   this.convertValueToModel(question);
                 });
-              } else {
-                // No out of bounds detected, so proceed with setting the value
-                await this.runQuery( async () => {
-                  // Note that we need to treat entering text values a bit differently than other question types.
-                  // Some participants may wish to fill in a value after they have already selected dkna or refuse.
-                  // When entering their text they may then immediatly click the selected dkna/refuse button to
-                  // cancel its selection.  To prevent this button press from immediately clearing their text anwer
-                  // we must briefly ignore the answer for this question being set to null.
-                  if ("text" == question.type) {
-                    if (angular.isString(value)) {
-                      var ignore = null;
-                      if (isDkna(question.value)) ignore = "ignoreDkna";
-                      else if (isRefuse(question.value)) ignore = "ignoreRefuse";
 
-                      if (null != ignore) question[ignore] = true;
-                      $timeout(() => { if (null != ignore) delete question[ignore]; }, 500);
-                    } else if (
-                      ( question.ignoreDkna && (null === value || isDkna(value)) ) ||
-                      ( question.ignoreRefuse && (null === value || isRefuse(value)) )
-                    ) {
-                      // we may have tried setting dkna or refuse when it should be ignored, so change it in the model
-                      this.convertValueToModel(question);
-                      return;
-                    }
+                this.setAnswerInProgress = false;
+                return;
+              }
+
+              // No out of bounds detected, so proceed with setting the value
+              await this.runQuery( async () => {
+                // Note that we need to treat entering text values a bit differently than other question types.
+                // Some participants may wish to fill in a value after they have already selected dkna or refuse.
+                // When entering their text they may then immediatly click the selected dkna/refuse button to
+                // cancel its selection.  To prevent this button press from immediately clearing their text anwer
+                // we must briefly ignore the answer for this question being set to null.
+                if ("text" == question.type) {
+                  if (angular.isString(value)) {
+                    var ignore = null;
+                    if (isDkna(question.value)) ignore = "ignoreDkna";
+                    else if (isRefuse(question.value)) ignore = "ignoreRefuse";
+
+                    if (null != ignore) question[ignore] = true;
+                    $timeout(() => { if (null != ignore) delete question[ignore]; }, 500);
+                  } else if (
+                    ( question.ignoreDkna && (null === value || isDkna(value)) ) ||
+                    ( question.ignoreRefuse && (null === value || isRefuse(value)) )
+                  ) {
+                    // we may have tried setting dkna or refuse when it should be ignored, so update the model
+                    this.convertValueToModel(question);
+                    return;
                   }
+                }
 
-                  try {
-                    this.working = true;
-                    if ("" === value) value = null;
+                try {
+                  this.working = true;
+                  if ("" === value) value = null;
 
-                    if (!this.previewMode) {
-                      // communicate with the server (if we're working with a respondent)
-                      var self = this;
+                  if (!this.previewMode) {
+                    // communicate with the server (if we're working with a respondent)
+                    const self = this;
 
-                      if ("audio" == question.type) {
-                        if (!angular.isObject(value) || !angular.isDefined(value.filesize)) {
-                          // if the audio file's size isn't provided then delete the file
-                          question.file = '';
-                          question.objectURL = null;
-                        }
-
-                        await CnHttpFactory.instance({
-                          path: "answer/" + question.answer_id + "?filename=audio.wav",
-                          data: question.file,
-                          format: "wav",
-                          onError: function (error) {
-                            question.value = angular.copy(question.backupValue);
-                            self.convertValueToModel(question);
-                          },
-                        }).patch();
+                    if ("audio" == question.type) {
+                      if (!angular.isObject(value) || !angular.isDefined(value.filesize)) {
+                        // if the audio file's size isn't provided then delete the file
+                        question.file = '';
+                        question.objectURL = null;
                       }
 
-                      let path = "answer/" + question.answer_id;
-
-                      // add the site and username parameters, if they exist
-                      let queryArray = [];
-                      if( this.site ) queryArray.push("site=" + encodeURIComponent(this.site));
-                      if( this.username ) queryArray.push("username=" + encodeURIComponent(this.username));
-                      if( 0 < queryArray.length ) path += "?" + queryArray.join("&");
-
-                      let data = {
-                        value: angular.toJson(
-                          // lookups store the selected item's identifier as the answer
-                          "lookup" == question.type &&
-                          null != value &&
-                          angular.isObject( value ) &&
-                          angular.isDefined( value.identifier ) ? value.identifier : value
-                        )
-                      };
-
-                      if( null != this.alternateId ) data.alternate_id = this.alternateId;
-
-                      // set the answer's value on the server
                       await CnHttpFactory.instance({
-                        path: path,
-                        data: data,
+                        path: "answer/" + question.answer_id + "?filename=audio.wav",
+                        data: question.file,
+                        format: "wav",
                         onError: function (error) {
-                          question.value = angular.copy(question.backupValue);
-                          self.convertValueToModel(question);
+                          if (409 == error.status) self.outOfSync(JSON.parse(error.data));
+                          else {
+                            question.value = angular.copy(question.backupValue);
+                            self.convertValueToModel(question);
+                          }
                         },
                       }).patch();
                     }
 
-                    question.value = value;
-                    question.backupValue = angular.copy(question.value);
-                    this.convertValueToModel(question);
+                    let path = "answer/" + question.answer_id;
 
-                    // now blank out answers to questions which are no longer visible
-                    // (this is done automatically on the server side)
-                    this.questionList.forEach((q) => {
-                      if (!this.evaluate(q.precondition)) {
-                        if (null != q.value) {
-                          q.value = null;
-                          this.convertValueToModel(q);
-                        }
-                      } else {
-                        // re-apply default answers if the answer is currently null
-                        if (null != q.default_answer && null == q.value) {
-                          q.value = q.default_answer;
-                          this.convertValueToModel(q);
-                        }
+                    // add the site and username parameters, if they exist
+                    let queryArray = [];
+                    if( this.site ) queryArray.push("site=" + encodeURIComponent(this.site));
+                    if( this.username ) queryArray.push("username=" + encodeURIComponent(this.username));
+                    if( 0 < queryArray.length ) path += "?" + queryArray.join("&");
 
-                        // q is visible, now check its options (assuming we haven't selected dkna/refused)
-                        if ("list" == q.type && !isDknaOrRefuse(q.value)) {
-                          var visibleOptionList = this.getVisibleOptionList(q);
-                          q.optionList.forEach((o) => {
-                            if (null == visibleOptionList.findByProperty("id", o.id)) {
-                              // o isn't visible so make sure it isn't selected
-                              if (angular.isArray(q.value)) {
-                                var i = searchOptionList(q.value, o.id);
-                                if (null != i) {
-                                  q.value.splice(i, 1);
-                                  if (0 == q.value.length) q.value = null;
-                                  this.convertValueToModel(q);
-                                }
+                    let data = {
+                      value: angular.toJson(
+                        // lookups store the selected item's identifier as the answer
+                        "lookup" == question.type &&
+                        null != value &&
+                        angular.isObject( value ) &&
+                        angular.isDefined( value.identifier ) ? value.identifier : value
+                      )
+                    };
+
+                    if( null != this.alternateId ) data.alternate_id = this.alternateId;
+
+                    // set the answer's value on the server
+                    await CnHttpFactory.instance({
+                      path: path,
+                      data: data,
+                      onError: function (error) {
+                        if (409 == error.status) self.outOfSync(JSON.parse(error.data));
+                        else {
+                          question.value = angular.copy(question.backupValue);
+                          self.convertValueToModel(question);
+                        }
+                      },
+                    }).patch();
+                  }
+
+                  question.value = value;
+                  question.backupValue = angular.copy(question.value);
+                  this.convertValueToModel(question);
+
+                  // now blank out answers to questions which are no longer visible
+                  // (this is done automatically on the server side)
+                  this.questionList.forEach((q) => {
+                    if (!this.evaluate(q.precondition)) {
+                      if (null != q.value) {
+                        q.value = null;
+                        this.convertValueToModel(q);
+                      }
+                    } else {
+                      // re-apply default answers if the answer is currently null
+                      if (null != q.default_answer && null == q.value) {
+                        q.value = q.default_answer;
+                        this.convertValueToModel(q);
+                      }
+
+                      // q is visible, now check its options (assuming we haven't selected dkna/refused)
+                      if ("list" == q.type && !isDknaOrRefuse(q.value)) {
+                        var visibleOptionList = this.getVisibleOptionList(q);
+                        q.optionList.forEach((o) => {
+                          if (null == visibleOptionList.findByProperty("id", o.id)) {
+                            // o isn't visible so make sure it isn't selected
+                            if (angular.isArray(q.value)) {
+                              var i = searchOptionList(q.value, o.id);
+                              if (null != i) {
+                                q.value.splice(i, 1);
+                                if (0 == q.value.length) q.value = null;
+                                this.convertValueToModel(q);
                               }
                             }
-                          });
-                        }
+                          }
+                        });
                       }
-                    });
-
-                    this.evaluateAllDescriptions();
-
-                    if (!noCompleteCheck) {
-                      var complete = this.questionIsComplete(question);
-                      question.incomplete = false === complete ? true : true === complete ? false : complete;
                     }
-                  } finally {
-                    this.working = false;
+                  });
+
+                  this.evaluateAllDescriptions();
+
+                  if (!noCompleteCheck) {
+                    var complete = this.questionIsComplete(question);
+                    question.incomplete = false === complete ? true : true === complete ? false : complete;
                   }
-                });
-              }
+                } finally {
+                  this.working = false;
+                }
+              });
               this.setAnswerInProgress = false;
             },
 
@@ -2663,6 +2698,7 @@ cenozoApp.defineModule({
               try {
                 this.working = true;
                 await this.runQuery(async () => {
+                  const self = this;
                   await CnHttpFactory.instance({
                     path: "response/" + this.data.response_id,
                     data: { comments: this.data.comments },
@@ -2700,13 +2736,28 @@ cenozoApp.defineModule({
               }
             },
 
-            isStageOperationEnabled: function (responseStageId, operationName) {
+            isStageOperationAllowed: function (operation, status) {
+              let validStatusList = [];
+              if ("launch" == operation) {
+                validStatusList = ["ready", "paused", "completed", null];
+              } else if ("pause" == operation) {
+                validStatusList = ["active"];
+              } else if ("reset" == operation) {
+                validStatusList = ["paused", "skipped", "completed"];
+              } else if ("skip" == operation) {
+                validStatusList = ["paused", "ready"];
+              }
+
+              return validStatusList.includes(status);
+            },
+
+            isStageOperationEnabled: function (responseStageId, operation) {
               var enabled = true;
-              if (["skip", "launch"].includes(operationName)) {
+              if (["skip", "launch"].includes(operation)) {
                 // if there are no deviation types for the skip or launch operation then disable that operation
                 var deviation = this.responseStageList
                   .findByProperty("id", responseStageId)
-                  .operations.findByProperty("name", operationName)
+                  .operations.findByProperty("name", operation)
                   .getDeviation();
                 enabled =
                   null == deviation ||
@@ -2715,71 +2766,76 @@ cenozoApp.defineModule({
               return enabled;
             },
 
-            runStageOperation: async function (responseStageId, operationName) {
-              // if no ID is provided then assume the currently active one
-              if (!responseStageId) responseStageId = this.data.response_stage_id;
-              var responseStage = this.responseStageList.findByProperty("id", responseStageId);
-
-              if (!["launch", "pause", "skip", "reset"].includes(operationName)) {
-                throw new Error('Tried to run invalid stage operation "' + operationName + '"');
+            runStageOperation: async function (responseStageId, operation) {
+              if (!["launch", "pause", "skip", "reset"].includes(operation)) {
+                throw new Error('Tried to run invalid stage operation "' + operation + '"');
               }
 
-              // determine if the stage is already open and which user it is associated with
-              var responseStageResponse = await CnHttpFactory.instance({
-                path: "response_stage/" + responseStageId,
+              // if the client and server disagree on which stage the response is in, we're out of sync
+              var response = await CnHttpFactory.instance({
+                path: "respondent/token=" + this.data.token,
                 data: {
                   select: {
                     column: [
-                      "status",
-                      "user_id",
+                      { table: "response_stage", column: "id", alias: "response_stage_id" },
+                      { table: "response_stage", column: "status" },
+                      { table: "response_stage", column: "user_id" },
                       { table: "user", column: "first_name" },
                       { table: "user", column: "last_name" },
                     ],
                   },
                 },
               }).get();
+              const currentStage = response.data;
 
-              var data = responseStageResponse.data;
-              var warning = null;
-
-              if (
-                ["not ready", "not applicable", "parent skipped"].includes(data.status) ||
-                ("skipped" == data.status && "reset" != operationName) ||
-                ("ready" == data.status && "reset" == operationName) ||
-                ("completed" == data.status && "skip" == operationName)
-              ) {
-                // the stage's current status and requested operation don't make sense, reload the page
-                await CnModalMessageFactory.instance({
-                  title: "Please Note",
-                  message:
-                    "The interview has changed and must be reloaded before you can proceed. " +
-                    "Once you close this message the interview data will automatically be refreshed.",
-                  error: true,
-                }).show();
-                await this.onReady();
+              if (currentStage.response_stage_id != this.data.response_stage_id) {
+                await this.outOfSync(
+                  "Cannot " + operation + " the stage since the response has been changed by " + (
+                    currentStage.user_id != CnSession.user.id ?
+                    currentStage.first_name + " " + currentStage.last_name :
+                    "your account"
+                  ) + " in a different browser."
+                );
                 return;
-              } else if ("active" == data.status) {
-                warning =
-                  "<b>WARNING</b>: This stage is already active " + (
-                    data.user_id != CnSession.user.id ?
-                    "by another user (" + data.first_name + " " + data.last_name + ")" :
-                    "under your account."
-                  );
+              }
+
+              // if no ID is provided then assume the currently active one
+              if (null == responseStageId) responseStageId = this.data.response_stage_id;
+              var responseStage = this.responseStageList.findByProperty("id", responseStageId);
+
+              var warning = null;
+              if (["not ready", "not applicable", "parent skipped"].includes(currentStage.status)) {
+                await this.outOfSync(
+                  "Cannot " + operation + " the stage since " + (
+                    currentStage.status == "parent skipped" ?
+                    "its parent was skipped" :
+                    "it is " + currentStage.status
+                  ) + "."
+                );
+                return;
+              } else if (!this.isStageOperationAllowed(operation, currentStage.status)) {
+                await this.outOfSync(
+                  "Cannot " + operation + " the stage since the response has been changed by " + (
+                    currentStage.user_id != CnSession.user.id ?
+                    currentStage.first_name + " " + currentStage.last_name :
+                    "your account"
+                  ) + " in a different browser."
+                );
+                return;
               } else if (
-                "paused" == data.status ||
-                ("completed" == data.status && "launch" == operationName)
+                "paused" == currentStage.status ||
+                ("completed" == currentStage.status && "launch" == operation)
               ) {
                 // warn if this is a new user
-                if (data.user_id != CnSession.user.id) {
+                if (currentStage.user_id != CnSession.user.id) {
                   warning =
-                    "<b>WARNING</b>: This stage was paused by another user (" +
-                    data.first_name + " " + data.last_name + ")";
+                    "<b>WARNING</b>: This stage was " + currentStage.status +
+                    " paused by another user (" + currentStage.first_name + " " + currentStage.last_name + ")";
                 }
               }
 
               var patchData = null;
-              var proceed = true;
-              if ("reset" == operationName) {
+              if ("reset" == operation) {
                 var response = await CnModalConfirmFactory.instance({
                   message:
                     "Are you sure you wish to reset this stage?<br><br>" +
@@ -2788,19 +2844,17 @@ cenozoApp.defineModule({
                     (warning ? "<br><br>" + warning : "") + "</b>",
                   html: true,
                 }).show();
-                proceed = response;
-              } else if (["skip", "launch"].includes(operationName)) {
-                proceed = true;
 
+                if( !response ) return;
+              } else if (["skip", "launch"].includes(operation)) {
                 // check if we have to ask for the reason for deviation
-                var deviation = responseStage.operations.findByProperty("name", operationName).getDeviation();
+                var deviation = responseStage.operations.findByProperty("name", operation).getDeviation();
 
                 // only run the pre-stage check if there is a deviation we we have to check the token
-                if(deviation || this.data.token_check) {
-                  proceed = false;
+                if (deviation || this.data.token_check) {
                   // now show the pre-stage dialog
                   var response = await CnModalPreStageFactory.instance({
-                    title: responseStage.name + ": " + operationName.ucWords(),
+                    title: responseStage.name + ": " + operation.ucWords(),
                     warning: warning,
                     deviationTypeList:
                       deviation ?
@@ -2815,31 +2869,34 @@ cenozoApp.defineModule({
                     comments: responseStage.comments,
                   }).show();
 
-                  if (null != response) {
-                    patchData = response;
-                    proceed = true;
-                  }
+                  if (null == response) return;
+                  patchData = response;
                 }
               }
 
-              if (proceed) {
-                try {
-                  this.working = true;
-                  await this.runQuery(async () => {
-                    var httpObj = { path: "response_stage/" + responseStageId + "?action=" + operationName };
-                    if (null != patchData) {
-                      httpObj.data = patchData;
-                      // update the client with any changes
-                      angular.extend(responseStage, patchData);
-                    }
+              try {
+                this.working = true;
+                await this.runQuery(async () => {
+                  const self = this;
+                  var httpObj = {
+                    path: "response_stage/" + responseStageId + "?action=" + operation,
+                    onError: function (error) {
+                      if (409 == error.status) self.outOfSync(JSON.parse(error.data));
+                      else CnModalMessageFactory.httpError(error);
+                    },
+                  };
+                  if (null != patchData) {
+                    httpObj.data = patchData;
+                    // update the client with any changes
+                    angular.extend(responseStage, patchData);
+                  }
 
-                    // update the server with any changes
-                    await CnHttpFactory.instance(httpObj).patch();
-                    await this.parentModel.reloadState(true);
-                  });
-                } finally {
-                  this.working = false;
-                }
+                  // update the server with any changes
+                  await CnHttpFactory.instance(httpObj).patch();
+                  await this.parentModel.reloadState(true);
+                });
+              } finally {
+                this.working = false;
               }
             },
 
@@ -2847,42 +2904,49 @@ cenozoApp.defineModule({
               const record = this.parentModel.viewModel.record;
               if (this.previewMode) {
                 await $state.go("page.render", { identifier: record.next_id }, { reload: true });
-              } else {
-                var modal = CnModalMessageFactory.instance({
-                  title: this.text("misc.submitWaitTitle"),
-                  message: this.text("misc.submitWaitMessage"),
-                  block: true,
+                return;
+              }
+
+              var modal = CnModalMessageFactory.instance({
+                title: this.text("misc.submitWaitTitle"),
+                message: this.text("misc.submitWaitMessage"),
+                block: true,
+              });
+
+              try {
+                this.working = true;
+
+                // check to make sure that all questions are complete, and highlight any which aren't
+                var mayProceed = true;
+                this.questionList.forEach((question) => {
+                  var complete = this.questionIsComplete(question);
+                  question.incomplete = false === complete ? true : true === complete ? false : complete;
+                  if (question.incomplete) mayProceed = false;
                 });
 
-                try {
-                  this.working = true;
-
-                  // check to make sure that all questions are complete, and highlight any which aren't
-                  var mayProceed = true;
-                  this.questionList.some((question) => {
-                    var complete = this.questionIsComplete(question);
-                    question.incomplete = false === complete ? true : true === complete ? false : complete;
-                    if (question.incomplete) {
-                      mayProceed = false;
-                      return true;
-                    }
+                if (mayProceed) {
+                  // proceed to the respondent's next valid page
+                  await this.runQuery(async () => {
+                    if (null === record.next_id) modal.show(); // show a wait dialog when submitting the qnaire
+                    let path =
+                      "respondent/token=" + $state.params.token +
+                      "?action=proceed&page_id=" + this.data.page_id;
+                    if( this.site ) path += "&site=" + encodeURIComponent(this.site);
+                    if( this.username ) path += "&username=" + encodeURIComponent(this.username);
+                    const self = this;
+                    await CnHttpFactory.instance({
+                      path: path,
+                      onError: function (error) {
+                        if (409 == error.status) self.outOfSync(JSON.parse(error.data));
+                        else CnModalMessageFactory.httpError(error);
+                      },
+                    }).patch();
+                    await this.parentModel.reloadState(true);
                   });
-
-                  if (mayProceed) {
-                    // proceed to the respondent's next valid page
-                    await this.runQuery(async () => {
-                      if (null === record.next_id) modal.show(); // show a wait dialog when submitting the qnaire
-                      let path = "respondent/token=" + $state.params.token + "?action=proceed";
-                      if( this.site ) path += "&site=" + encodeURIComponent(this.site);
-                      if( this.username ) path += "&username=" + encodeURIComponent(this.username);
-                      await CnHttpFactory.instance({ path: path }).patch();
-                      await this.parentModel.reloadState(true);
-                    });
-                  }
-                } finally {
-                  if (null === record.next_id) modal.close(); // close the wait dialog when submitted the qnaire
-                  this.working = false;
                 }
+              } finally {
+                if (null === record.next_id) modal.close(); // close the wait dialog when submitted the qnaire
+                this.working = false;
               }
             },
 
@@ -2899,7 +2963,13 @@ cenozoApp.defineModule({
                   this.working = true;
                   await this.runQuery(async () => {
                     await CnHttpFactory.instance({
-                      path: "respondent/token=" + $state.params.token + "?action=backup",
+                      path:
+                        "respondent/token=" + $state.params.token +
+                        "?action=backup&page_id=" + this.data.page_id,
+                      onError: function (error) {
+                        if (409 == error.status) self.outOfSync(JSON.parse(error.data));
+                        else CnModalMessageFactory.httpError(error);
+                      },
                     }).patch();
                     await this.parentModel.reloadState(true);
                   });
@@ -2916,6 +2986,10 @@ cenozoApp.defineModule({
                 await this.runQuery(async () => {
                   await CnHttpFactory.instance({
                     path: "respondent/token=" + $state.params.token + "?action=jump&module_id=" + moduleId,
+                    onError: function (error) {
+                      if (409 == error.status) self.outOfSync(JSON.parse(error.data));
+                      else CnModalMessageFactory.httpError(error);
+                    },
                   }).patch();
                   await this.parentModel.reloadState(true);
                 });
@@ -2926,11 +3000,15 @@ cenozoApp.defineModule({
 
             fastForwardStage: async function() {
               try {
-                // jump to the first page in the stage
+                // jump to the last answered page in the stage
                 this.working = true;
                 await this.runQuery(async () => {
                   await CnHttpFactory.instance({
                     path: "respondent/token=" + $state.params.token + "?action=fast_forward_stage",
+                    onError: function (error) {
+                      if (409 == error.status) self.outOfSync(JSON.parse(error.data));
+                      else CnModalMessageFactory.httpError(error);
+                    },
                   }).patch();
                   await this.parentModel.reloadState(true);
                 });
@@ -2941,11 +3019,15 @@ cenozoApp.defineModule({
 
             rewindStage: async function() {
               try {
-                // jump to the last answered page in the stage
+                // jump to the first page in the stage
                 this.working = true;
                 await this.runQuery(async () => {
                   await CnHttpFactory.instance({
                     path: "respondent/token=" + $state.params.token + "?action=rewind_stage",
+                    onError: function (error) {
+                      if (409 == error.status) self.outOfSync(JSON.parse(error.data));
+                      else CnModalMessageFactory.httpError(error);
+                    },
                   }).patch();
                   await this.parentModel.reloadState(true);
                 });

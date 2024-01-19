@@ -880,6 +880,10 @@ cenozo.service("CnTranslationHelper", [
             en: "no data received",
             fr: "aucune donnée reçue",
           },
+          outOfSync: {
+            en: "Your browser appears to be out of sync.  This means that changes have been made to the interview since the last time your web page was loaded.  After you close this message your web page will reload in order to bring your browser up to date.",
+            fr: "TODO: TRANSLATE",
+          },
           reportProblem: {
             promptTitle: {
               en: "Report Problem",

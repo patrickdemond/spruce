@@ -52,19 +52,39 @@ class patch extends \cenozo\service\patch
 
     if( $this->may_continue() )
     {
+      $db_answer = $this->get_leaf_record();
       if( 'launch_device' ==  $this->get_argument( 'action', NULL ) )
       {
-        // make sure a device exists and is online
-        $db_device = $this->get_leaf_record()->get_question()->get_device();
+        $db_device = $db_answer->get_question()->get_device();
+
         if( is_null( $db_device ) )
         {
           $this->set_data( 'Cannot launch since the question has not been associated with any device.' );
           $this->get_status()->set_code( 306 );
         }
-        else if( !$db_device->get_status() )
+        else
         {
-          $this->set_data( 'Cannot launch since the device service is not responding.' );
-          $this->get_status()->set_code( 306 );
+          $out_of_sync = $db_answer->get_response()->get_out_of_sync( 'launch device', $db_answer );
+          if( !is_null( $out_of_sync ) )
+          {
+            $this->set_data( $out_of_sync );
+            $this->get_status()->set_code( 409 );
+          }
+          // make sure a device exists and is online
+          else if( !$db_device->get_status() )
+          {
+            $this->set_data( 'Cannot launch since the device service is not responding.' );
+            $this->get_status()->set_code( 306 );
+          }
+        }
+      }
+      else
+      {
+        $out_of_sync = $db_answer->get_response()->get_out_of_sync( 'set answer', $db_answer );
+        if( !is_null( $out_of_sync ) )
+        {
+          $this->set_data( $out_of_sync );
+          $this->get_status()->set_code( 409 );
         }
       }
     }

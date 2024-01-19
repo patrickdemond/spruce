@@ -19,9 +19,42 @@ class patch extends \cenozo\service\patch
 
     if( $this->may_continue() )
     {
-      // only jump when in debug mode
-      if( 'jump' == $this->get_argument( 'action', false ) && !$this->get_leaf_record()->get_qnaire()->debug )
-        $this->get_status()->set_code( 403 );
+      $action = $this->get_argument( 'action', false );
+      $db_respondent = $this->get_leaf_record();
+      $db_response = $db_respondent->get_current_response();
+
+      if( in_array( $action, ['proceed', 'backup'] ) )
+      {
+        // the proceed and backup actions always send what page the UI is currently on as an argument
+        $out_of_sync = $db_response->get_out_of_sync(
+          sprintf( '%s response', $action ),
+          lib::create( 'database\page', $this->get_argument( 'page_id' ) )
+        );
+        if( !is_null( $out_of_sync ) )
+        {
+          $this->set_data( $out_of_sync );
+          $this->get_status()->set_code( 409 );
+        }
+      }
+      else if( in_array( $action, ['reopen', 'jump', 'fast_forward_stage', 'rewind_stage'] ) )
+      {
+        // only jump when in debug mode
+        if( 'jump' == $action && !$db_respondent->get_qnaire()->debug ) $this->get_status()->set_code( 403 );
+
+        // convert the action for the get_out_of_sync() method
+        if( 'fast_forward_stage' == $action ) $action = 'fast forward stage';
+        else if ( 'rewind_stage' == $action ) $action = 'rewind stage';
+        else $action = sprintf( '%s response', $action );
+
+        $out_of_sync = $db_response->get_out_of_sync(
+          sprintf( '%s response', str_replace( '_', ' ', $action ) )
+        );
+        if( !is_null( $out_of_sync ) )
+        {
+          $this->set_data( $out_of_sync );
+          $this->get_status()->set_code( 409 );
+        }
+      }
     }
   }
 
@@ -39,7 +72,10 @@ class patch extends \cenozo\service\patch
 
       if( 'reopen' == $action )
       {
-        try { $db_respondent->reopen(); }
+        try
+        {
+          $db_respondent->reopen();
+        }
         catch( \cenozo\exception\runtime $e )
         {
           throw lib::create( 'exception\notice', $e->get_raw_message(), __METHOD__, $e );
@@ -134,7 +170,7 @@ class patch extends \cenozo\service\patch
           if( !$db_qnaire->stages )
           {
             log::warning( sprintf(
-              'Tried to fast forward a non-stage based qnaire on %s for qnaire "%s".',
+              'Tried to rewind a non-stage based qnaire on %s for qnaire "%s".',
               is_null( $db_participant ) ?
                 sprintf( 'anonymous respondent %d', $db_respondent->id ) :
                 sprintf( 'participant %s', $db_participant->uid ),
@@ -164,7 +200,7 @@ class patch extends \cenozo\service\patch
           if( !$db_qnaire->stages )
           {
             log::warning( sprintf(
-              'Tried to rewind a non-stage based qnaire on %s for qnaire "%s".',
+              'Tried to fast-forward a non-stage based qnaire on %s for qnaire "%s".',
               is_null( $db_participant ) ?
                 sprintf( 'anonymous respondent %d', $db_respondent->id ) :
                 sprintf( 'participant %s', $db_participant->uid ),

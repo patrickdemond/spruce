@@ -719,6 +719,106 @@ class response extends \cenozo\database\has_rank
   }
 
   /**
+   * Gets the reason a response is out of sync (not in the expected state), returning NULL if there is none
+   * 
+   * The following operations can be tested:
+   *   "set answer": check if the answer can be changed
+   *   "set response comments": check if we can change the response's comments
+   *   "reopen response": check if a stage-based response can be reopened
+   *   "check in response": check if the response can be checked in
+   *   "check out response": check if the response can be checked out (returned to check-in)
+   *   "proceed response": check if the response can proceed to the next page (or finish the questionnaire)
+   *   "backup response": check if the response can backup to the previous page
+   *   "jump response": check if the response can jump to a different module
+   *   "fast forward stage": check if the response can fast forward to the end of the stage
+   *   "rewind stage": check if the response can rewind to the beginning of the stage
+   *   "launch device": check if the device associated with the provided answer record can be launched
+   *   "abort device": check if the device associated with the provided answer record can be launched
+   * 
+   * @param string $operation The operation to check for
+   * @param database\record $db_object The relevant database object
+   * @return string
+   */
+  public function get_out_of_sync( $operation, $db_object = NULL )
+  {
+    $db_qnaire = $this->get_qnaire();
+    if( 'reopen response' == $operation )
+    {
+      if( !$this->submitted ) return 'The response as is already open.';
+    }
+    // only the reopen operation can be done once the response is completed
+    else if( $this->submitted )
+    {
+      return 'The response has been completed.';
+    }
+    else if( 'check in response' == $operation )
+    {
+      if( $this->checked_in ) return 'The response is already checked in.';
+    }
+    // when using stages, only the check in response operation can be done when not checked in
+    else if( $db_qnaire->stages && !$this->checked_in )
+    {
+      return 'The response is not checked in.';
+    }
+    else if( 'check out response' == $operation )
+    {
+      $db_current_response_stage = $this->get_current_response_stage();
+      if( !is_null( $db_current_response_stage ) )
+      {
+        return sprintf(
+          'The response is in the %s stage.',
+          $db_current_response_stage->get_stage()->name
+        );
+      }
+    }
+    else if( in_array( $operation, ['set answer', 'abort device', 'launch device'] ) )
+    {
+      if( !is_a( $db_object, lib::get_class_name( 'database\answer' ) ) )
+        throw lib::create( 'exception\argument', 'db_object', $db_object, __METHOD__ );
+
+      $db_answer = $db_object;
+      $db_question = $db_answer->get_question();
+
+      if( $db_qnaire->stages )
+      {
+        $db_current_response_stage = $this->get_current_response_stage();
+        if( is_null( $db_current_response_stage ) ) return 'The response is on the stage-selection page.';
+        return (
+          $db_current_response_stage->stage_id != $db_question->get_page()->get_module()->get_stage()->id ?
+          sprintf(
+            'The response is in another stage (%s).',
+            $db_current_response_stage->get_stage()->name
+          ) :
+          'The response is no longer on this page.'
+        );
+      }
+      else
+      {
+        if( $db_question->page_id != $this->page_id ) return 'The response is not on the correct page.';
+      }
+    }
+    else if( in_array( $operation, ['proceed response', 'backup response'] ) )
+    {
+      if( !is_a( $db_object, lib::get_class_name( 'database\page' ) ) )
+        throw lib::create( 'exception\argument', 'db_object', $db_object, __METHOD__ );
+
+      $db_page = $db_object;
+      $db_current_page = $this->get_page();
+      if( is_null( $db_current_page ) || $db_page->id != $db_current_page->id )
+      {
+        return 'The response is no longer on this page.';
+      }
+    }
+    else if( in_array( $operation, ['jump response', 'fast forward stage', 'rewind stage'] ) )
+    {
+      $db_current_response_stage = $this->get_current_response_stage();
+      if( is_null( $db_current_response_stage ) ) return 'The response is on the stage-selection page.';
+    }
+
+    return NULL;
+  }
+
+  /**
    * Compiles a default answer
    * @param string $default_answer
    * @param boolean $force Whether to force compile values even if the are on the current page
