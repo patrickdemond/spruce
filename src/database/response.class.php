@@ -783,14 +783,14 @@ class response extends \cenozo\database\has_rank
       {
         $db_current_response_stage = $this->get_current_response_stage();
         if( is_null( $db_current_response_stage ) ) return 'The response is on the stage-selection page.';
-        return (
-          $db_current_response_stage->stage_id != $db_question->get_page()->get_module()->get_stage()->id ?
-          sprintf(
+        if( $db_current_response_stage->stage_id != $db_question->get_page()->get_module()->get_stage()->id )
+        {
+          return sprintf(
             'The response is in another stage (%s).',
             $db_current_response_stage->get_stage()->name
-          ) :
-          'The response is no longer on this page.'
-        );
+          );
+        }
+        if( $this->page_id != $db_question->page_id ) return 'The response is no longer on this page.';
       }
       else
       {
