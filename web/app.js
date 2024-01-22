@@ -881,8 +881,14 @@ cenozo.service("CnTranslationHelper", [
             fr: "aucune donnée reçue",
           },
           outOfSync: {
-            en: "Your browser appears to be out of sync.  This means that changes have been made to the interview since the last time your web page was loaded.  After you close this message your web page will reload in order to bring your browser up to date.",
-            fr: "Your browser appears to be out of sync.  This means that changes have been made to the interview since the last time your web page was loaded.  After you close this message your web page will reload in order to bring your browser up to date.", // TODO: TRANSLATE
+            title: {
+              en: "Out of Sync",
+              fr: "Désynchronisation",
+            },
+            description: {
+              en: "Your browser appears to be out of sync.  This means that changes have been made to the interview since the last time your web page was loaded.  After you close this message your web page will reload in order to bring your browser up to date.",
+              fr: "Votre navigateur semble être désynchronisé. Des modifications ont été apportées à l’entrevue depuis la dernière fois que vous avez ouvert cette page. Quand vous fermerez ce message, la page s’actualisera pour mettre le navigateur à jour.",
+            },
           },
           reportProblem: {
             promptTitle: {

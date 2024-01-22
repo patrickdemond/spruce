@@ -590,10 +590,10 @@ cenozoApp.defineModule({
 
             outOfSync: async function (description) {
               await CnModalMessageFactory.instance({
-                title: "Out of Sync",
+                title: CnTranslationHelper.translate("misc.outOfSync.title", this.currentLanguage),
                 message:
                   (this.parentModel.isRole( "respondent" ) ? "" : description + "\n\n") +
-                  CnTranslationHelper.translate("misc.outOfSync", this.currentLanguage),
+                  CnTranslationHelper.translate("misc.outOfSync.description", this.currentLanguage),
                 error: true,
               }).show();
               await this.parentModel.reloadState(true);
