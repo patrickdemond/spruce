@@ -2739,7 +2739,7 @@ cenozoApp.defineModule({
             isStageOperationAllowed: function (operation, status) {
               let validStatusList = [];
               if ("launch" == operation) {
-                validStatusList = ["ready", "paused", "completed", null];
+                validStatusList = ["ready", "paused", "completed"];
               } else if ("pause" == operation) {
                 validStatusList = ["active"];
               } else if ("reset" == operation) {
@@ -2813,7 +2813,10 @@ cenozoApp.defineModule({
                   ) + "."
                 );
                 return;
-              } else if (!this.isStageOperationAllowed(operation, currentStage.status)) {
+              } else if (
+                null != currentStage.status &&
+                !this.isStageOperationAllowed(operation, currentStage.status)
+              ) {
                 await this.outOfSync(
                   "Cannot " + operation + " the stage since the response has been changed by " + (
                     currentStage.user_id != CnSession.user.id ?
