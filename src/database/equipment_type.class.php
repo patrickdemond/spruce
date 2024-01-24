@@ -106,7 +106,7 @@ class equipment_type extends \cenozo\database\equipment_type
       $equipment_list = util::get_data_from_parent( 'equipment_type', $url_postfix );
 
       // convert the items into a CSV list so we can import them using the above ::import_from_array() method
-      $data = ['active', 'serial_number', 'site', 'note'];
+      $data = [['active', 'serial_number', 'site', 'note']];
       foreach( $equipment_list as $equipment )
       {
         $data[] = [
