@@ -95,6 +95,7 @@ class equipment_type extends \cenozo\database\equipment_type
         '/name=%s/equipment'.
         '?select={'.
           '"column":['.
+            '{"table":"equipment","column":"active"},'.
             '{"table":"equipment","column":"serial_number"},'.
             '{"table":"equipment","column":"note"}'.
           ']'.
@@ -105,10 +106,11 @@ class equipment_type extends \cenozo\database\equipment_type
       $equipment_list = util::get_data_from_parent( 'equipment_type', $url_postfix );
 
       // convert the items into a CSV list so we can import them using the above ::import_from_array() method
-      $data = [];
+      $data = ['active', 'serial_number', 'site', 'note'];
       foreach( $equipment_list as $equipment )
       {
         $data[] = [
+          $equipment->active,
           $equipment->serial_number,
           $db_site->name,
           $equipment->note
