@@ -24,6 +24,9 @@ cenozoApp.defineModule({
         qnaire_version: {
           title: "Version",
         },
+        interview_type: {
+          title: "Type",
+        },
         language: {
           column: "language.code",
           title: "Language",
@@ -82,6 +85,14 @@ cenozoApp.defineModule({
         title: "Questionnaire Version",
         type: "string",
         isConstant: true,
+      },
+      interview_type: {
+        title: "Interview Type",
+        type: "string",
+        isConstant: true,
+        isExcluded: function ($state, model) {
+          return "view" != model.getActionFromState() || !model.viewModel.record.stages;
+        },
       },
       language_id: {
         column: "response.language_id",

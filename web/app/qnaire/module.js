@@ -1124,24 +1124,14 @@ cenozoApp.defineModule({
               // make some columns dependent on the parent qnaire
               var self = this;
               var respondentModule = cenozoApp.module("respondent");
-              respondentModule.columnList.language.isIncluded = function (
-                $state,
-                model
-              ) {
-                return !self.record.repeated;
-              };
-              respondentModule.columnList.response_count.isIncluded = function (
-                $state,
-                model
-              ) {
-                return self.record.repeated;
-              };
-              respondentModule.columnList.page_progress.isIncluded = function (
-                $state,
-                model
-              ) {
-                return !self.record.repeated;
-              };
+              respondentModule.columnList.interview_type.isIncluded =
+                function ($state, model) { return self.record.stages && !self.record.repeated; };
+              respondentModule.columnList.language.isIncluded =
+                function ($state, model) { return !self.record.repeated; };
+              respondentModule.columnList.response_count.isIncluded =
+                function ($state, model) { return self.record.repeated; };
+              respondentModule.columnList.page_progress.isIncluded =
+                function ($state, model) { return !self.record.repeated; };
             },
 
             onPatch: async function (data) {

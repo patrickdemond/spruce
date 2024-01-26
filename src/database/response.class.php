@@ -76,7 +76,9 @@ class response extends \cenozo\database\has_rank
       $db_qnaire = $db_respondent->get_qnaire();
       $db_current_response = $db_respondent->get_current_response();
 
-      if( is_null( $this->qnaire_version ) && !is_null( $db_qnaire->version ) ) $this->qnaire_version = $db_qnaire->version;
+      if( is_null( $this->qnaire_version ) && !is_null( $db_qnaire->version ) )
+        $this->qnaire_version = $db_qnaire->version;
+
       if( is_null( $db_qnaire->repeated ) && !is_null( $db_current_response ) )
       {
         throw lib::create( 'exception\runtime', sprintf(

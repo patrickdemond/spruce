@@ -20,6 +20,11 @@ class util extends \cenozo\util
    */
   public static function prepare_respondent_read_objects( $select, $modifier )
   {
+    if( $select->has_column( 'interview_type' ) )
+    {
+      $select->add_column( 'IFNULL( response.interview_type, "Default" )', 'interview_type', false );
+    }
+
     if( $select->has_column( 'page_progress' ) )
     {
       $select->add_column(
