@@ -24,6 +24,14 @@ cenozoApp.defineModule({
           column: "participant.uid",
           title: "Participant",
         },
+        first_name: {
+          column: "participant.first_name",
+          title: "First Name",
+        },
+        last_name: {
+          column: "participant.last_name",
+          title: "First Name",
+        },
         token: {
           title: "Token",
         },
@@ -81,6 +89,20 @@ cenozoApp.defineModule({
         },
         isConstant: "view",
         help: "For anonymous respondents this value should be left blank.",
+      },
+      first_name: {
+        column: "participant.first_name",
+        title: "First Name",
+        type: "string",
+        isConstant: true,
+        isExcluded: "add",
+      },
+      last_name: {
+        column: "participant.last_name",
+        title: "Last Name",
+        type: "string",
+        isConstant: true,
+        isExcluded: "add",
       },
       token: {
         title: "Token (Interview ID)",
