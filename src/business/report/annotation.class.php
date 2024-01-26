@@ -75,6 +75,10 @@ class annotation extends \cenozo\business\report\base_report
     $rank_column = $meta_column_template;
     $rank_column['name'] = 'rank';
     $rank_column['valueType'] = 'integer';
+    $interview_type_column = $meta_column_template;
+    $interview_type_column['name'] = 'interview_type';
+    $interview_type_column['valueType'] = 'text';
+    $interview_type_column['required'] = 0;
     $qnaire_version_column = $meta_column_template;
     $qnaire_version_column['name'] = 'qnaire_version';
     $qnaire_version_column['valueType'] = 'text';
@@ -97,17 +101,30 @@ class annotation extends \cenozo\business\report\base_report
     $last_datetime_column['valueType'] = 'datetime';
 
     // Get all questions from the qnaire (including descriptions, exported questions only) and build the
-    // table data from there.  Start with the qnaire metadata.
-    $variables_data = [
-      $token_column,
-      $rank_column,
-      $qnaire_version_column,
-      $language_column,
-      $site_column,
-      $submitted_column,
-      $start_datetime_column,
-      $last_datetime_column
-    ];
+    // table data from there.  Start with the qnaire metadata (different depending on whether the qnaire
+    // uses stages).
+    $variables_data = $db_qnaire->stages ?
+      [
+        $token_column,
+        $rank_column,
+        $interview_type_column,
+        $qnaire_version_column,
+        $language_column,
+        $site_column,
+        $submitted_column,
+        $start_datetime_column,
+        $last_datetime_column
+      ] : [
+        $token_column,
+        $rank_column,
+        $interview_type_column,
+        $qnaire_version_column,
+        $language_column,
+        $site_column,
+        $submitted_column,
+        $start_datetime_column,
+        $last_datetime_column
+      ];
 
     $categories_data = [];
 

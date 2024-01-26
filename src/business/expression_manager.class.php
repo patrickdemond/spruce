@@ -146,6 +146,7 @@ class expression_manager extends \cenozo\singleton
    *   $NAME.status()$ (gets a stage's current status)
    *   $NAME.value("PATH")$ (a particular property of an object-based answer)
    *   $respondent.token$ (gets the respondent's token)
+   *   $respondent.interview_type$ (will be empty if there is no special interview_type)
    *   $respondent.language$ (gets the current language code)
    *   $respondent.start_date$ (gets the date the response was launched in YYYY-MM-DD format)
    *   showhidden true if showing hidden elements (launched by phone) false if not (launched by web)
@@ -642,7 +643,7 @@ class expression_manager extends \cenozo\singleton
 
   /**
    * Processes the current term as a respondent variable
-   * @param string $variable The selected respondent variable (either 'token', or 'language')
+   * @param string $variable The selected respondent variable (token, interview_type, language, start_date)
    * @return string
    */
   private function process_response_value( $variable )
@@ -650,6 +651,11 @@ class expression_manager extends \cenozo\singleton
     if( 'token' == $variable )
     {
       $compiled = is_null( $this->db_response ) ? '' : $this->db_response->get_respondent()->token;
+    }
+    else if( 'interview_type' == $variable )
+    {
+      $compiled = is_null( $this->db_response ) || is_null( $this->db_response->interview_type ) ?
+        '' : $this->db_response->interview_type;
     }
     else if( 'language' == $variable )
     {

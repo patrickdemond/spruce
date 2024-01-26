@@ -27,6 +27,12 @@ cenozoApp.defineModule({
         token: {
           title: "Token",
         },
+        interview_type: {
+          title: "Type",
+          isIncluded: function ($state, model) {
+            return false;
+          }, // this is changed by the qnaire module
+        },
         language: {
           column: "language.name",
           title: "Language",
@@ -139,6 +145,19 @@ cenozoApp.defineModule({
           isExcluded: function ($state, model) {
             return (
               "view" != model.getActionFromState() ||
+              null != model.viewModel.record.repeated ||
+              null == model.viewModel.record.current_response_id
+            );
+          },
+        },
+        interview_type: {
+          title: "Interview Type",
+          type: "string",
+          isConstant: true,
+          isExcluded: function ($state, model) {
+            return (
+              "view" != model.getActionFromState() ||
+              !model.viewModel.record.stages ||
               null != model.viewModel.record.repeated ||
               null == model.viewModel.record.current_response_id
             );

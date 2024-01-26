@@ -81,6 +81,18 @@ CREATE PROCEDURE patch_response()
       DEALLOCATE PREPARE statement;
     END IF;
 
+    SELECT "Adding interview_type column to response table" AS "";
+
+    SELECT COUNT(*) INTO @test
+    FROM information_schema.COLUMNS
+    WHERE table_schema = DATABASE()
+    AND table_name = "response"
+    AND column_name = "interview_type";
+
+    IF @test = 0 THEN
+      ALTER TABLE response ADD COLUMN interview_type VARCHAR(45) NULL DEFAULT NULL AFTER rank;
+    END IF;
+
   END //
 DELIMITER ;
 

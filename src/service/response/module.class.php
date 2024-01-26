@@ -36,6 +36,10 @@ class module extends \cenozo\service\module
 
     util::prepare_respondent_read_objects( $select, $modifier );
 
+    // set interview type to Default if empty
+    if( $select->has_column( 'interview_type' ) )
+      $select->add_column( 'IFNULL( response.interview_type, "Default" )', 'interview_type', false );
+
     $db_response = $this->get_resource();
     if( !is_null( $db_response ) )
     {

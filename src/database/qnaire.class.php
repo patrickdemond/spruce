@@ -1054,6 +1054,7 @@ class qnaire extends \cenozo\database\record
 
     foreach( $respondent_list as $db_respondent )
     {
+      $db_qnaire = $db_respondent->get_qnaire();
       $db_participant = $db_respondent->get_participant();
 
       // do not export anonymous respondents
@@ -1116,6 +1117,8 @@ class qnaire extends \cenozo\database\record
           'page_time_list' => [],
           'answer_list' => []
         ];
+
+        if( $db_qnaire->stages ) $response['interview_type'] = $db_response->interview_type;
 
         $page_time_sel = lib::create( 'database\select' );
         $page_time_sel->add_table_column( 'module', 'name', 'module' );
@@ -1474,6 +1477,11 @@ class qnaire extends \cenozo\database\record
         foreach( $row as $index => $column_name )
         {
           if( 'rank' == $column_name ) $metadata_columns['rank'] = $index;
+          else if( 'interview_type' == $column_name )
+          {
+            // note that the interview_type column is only used by qnaires with stages
+            if( $this->stages ) $metadata_columns['interview_type'] = $index;
+          }
           else if( 'qnaire_version' == $column_name ) $metadata_columns['qnaire_version'] = $index;
           else if( 'submitted' == $column_name ) $metadata_columns['submitted'] = $index;
           else if( 'language' == $column_name ) $metadata_columns['language'] = $index;
@@ -1617,6 +1625,8 @@ class qnaire extends \cenozo\database\record
           $db_response = lib::create( 'database\response' );
           $db_response->respondent_id = $db_respondent->id;
           $db_response->rank = $metadata['rank'];
+          if( $this->stages && array_key_exists( 'interview_type', $metadata ) )
+            $db_response->interview_type = $metadata['interview_type'];
           $db_response->qnaire_version = $this->version;
         }
 
@@ -2035,6 +2045,7 @@ class qnaire extends \cenozo\database\record
             $db_response = lib::create( 'database\response' );
             $db_response->respondent_id = $db_respondent->id;
             $db_response->rank = $response->rank;
+            if( $this->stages ) $db_response->interview_type = $response->interview_type;
             $db_response->qnaire_version = $response->qnaire_version;
           }
 
@@ -2640,7 +2651,8 @@ class qnaire extends \cenozo\database\record
       {
         // Since some attributes may require access to a remote server we must immediately
         // create the response record to make sure attributes are available
-        $db_respondent->get_current_response( true );
+        $db_response = $db_respondent->get_current_response( true );
+        $db_response->interview_type = $participant->appointment_type;
         $data['success'][] = $participant->uid;
       }
       catch( \cenozo\exception\base_exception $e )
@@ -2853,6 +2865,7 @@ class qnaire extends \cenozo\database\record
     $response_sel->add_column( 'id' );
     $response_sel->add_table_column( 'respondent', 'token' );
     $response_sel->add_column( 'rank' );
+    if( $this->stages ) $response_sel->add_column( 'interview_type' );
     $response_sel->add_column( 'qnaire_version' );
     $response_sel->add_table_column( 'language', 'code', 'language' );
     $response_sel->add_table_column( 'site', 'name', 'site' );
@@ -2884,6 +2897,7 @@ class qnaire extends \cenozo\database\record
         'start_datetime' => $response['start_datetime'],
         'last_datetime' => $response['last_datetime']
       ];
+      if( $this->stages ) $data[$response['id']]['interview_type'] = $response['interview_type'];
     }
 
     // now get a list of all response stage details for all selected response IDs
@@ -2939,9 +2953,11 @@ class qnaire extends \cenozo\database\record
     }
 
     $header = $column_list;
+    array_unshift( $header, 'uid', 'token', 'rank' );
+    if( $this->stages ) array_unshift( $header, 'interview_type' );
     array_unshift(
       $header,
-      'uid', 'token', 'rank', 'qnaire_version', 'language', 'site', 'submitted', 'start_datetime', 'last_datetime'
+      'qnaire_version', 'language', 'site', 'submitted', 'start_datetime', 'last_datetime'
     );
     return ['header' => $header, 'data' => array_values( $data )];
   }
@@ -2987,6 +3003,7 @@ class qnaire extends \cenozo\database\record
     $response_sel->add_column( 'id' );
     $response_sel->add_table_column( 'respondent', 'token' );
     $response_sel->add_column( 'rank' );
+    if( $this->stages ) $response_sel->add_column( 'interview_type' );
     $response_sel->add_column( 'qnaire_version' );
     $response_sel->add_table_column( 'language', 'code', 'language' );
     $response_sel->add_table_column( 'site', 'name', 'site' );
@@ -3066,17 +3083,16 @@ class qnaire extends \cenozo\database\record
       // if requested, don't add responses with no answers
       if( $answers_only && is_null( $answer_list ) ) continue;
 
-      $data_row = [
-        $response['uid'],
-        $response['token'],
-        $response['rank'],
+      $data_row = [$response['uid'], $response['token'], $response['rank']];
+      if( $this->stages ) $data_row[] = $response['interview_type'];
+      $data_row = array_merge( $data_row, [
         $response['qnaire_version'],
         $response['language'],
         $response['site'],
         $response['submitted'] ? 1 : 0,
         $response['start_datetime'],
         $response['last_datetime']
-      ];
+      ] );
 
       foreach( $column_list as $column_name => $column )
       {
@@ -3213,9 +3229,11 @@ class qnaire extends \cenozo\database\record
     }
 
     $header = array_keys( $column_list );
+    array_unshift( $header, 'uid', 'token', 'rank' );
+    if( $this->stages ) array_unshift( $header, 'interview_type' );
     array_unshift(
       $header,
-      'uid', 'token', 'rank', 'qnaire_version', 'language', 'site', 'submitted', 'start_datetime', 'last_datetime'
+      'qnaire_version', 'language', 'site', 'submitted', 'start_datetime', 'last_datetime'
     );
     if( $attributes ) foreach( $attribute_list as $attribute ) $header[] = sprintf( 'attribute:%s', $attribute );
     return ['header' => $header, 'data' => $data];
