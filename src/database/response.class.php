@@ -801,6 +801,11 @@ class response extends \cenozo\database\has_rank
     }
     else if( in_array( $operation, ['proceed response', 'backup response'] ) )
     {
+      if( is_null( $db_object ) )
+      {
+        return is_null( $this->get_page() ) ? NULL : 'The response is no longer on the introduction page.';
+      }
+
       if( !is_a( $db_object, lib::get_class_name( 'database\page' ) ) )
         throw lib::create( 'exception\argument', 'db_object', $db_object, __METHOD__ );
 

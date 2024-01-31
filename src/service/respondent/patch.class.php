@@ -25,11 +25,13 @@ class patch extends \cenozo\service\patch
 
       if( in_array( $action, ['proceed', 'backup'] ) )
       {
+        // the page argument might be the string "null"
+        $db_page = NULL;
+        $page_id = $this->get_argument( 'page_id' );
+        if( util::string_matches_int( $page_id ) && 0 < $page_id ) $db_page = lib::create( 'database\page', $page_id );
+
         // the proceed and backup actions always send what page the UI is currently on as an argument
-        $out_of_sync = $db_response->get_out_of_sync(
-          sprintf( '%s response', $action ),
-          lib::create( 'database\page', $this->get_argument( 'page_id' ) )
-        );
+        $out_of_sync = $db_response->get_out_of_sync( sprintf( '%s response', $action ), $db_page );
         if( !is_null( $out_of_sync ) )
         {
           $this->set_data( $out_of_sync );
