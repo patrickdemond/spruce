@@ -335,8 +335,8 @@
                 <div ng-if="'comment' != question.type && ( model.viewModel.record.debug || model.renderModel.showHidden )"
                      class="spacer small text-muted"
                      ng-class="{ 'float-left': model.viewModel.record.tabulate }"
-                     style="line-height: 26px"">[{{ question.variable_name }}]</div>
-                <div class="vertical-spacer larger"
+                     style="line-height: 26px">[{{ question.variable_name }}]</div>
+                <div class="vertical-spacer larger allow-select"
                      ng-class="{
                        'text-info': 'comment' == question.type,
                        'text-danger': true === question.incomplete,
