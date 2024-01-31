@@ -2653,6 +2653,7 @@ class qnaire extends \cenozo\database\record
         // create the response record to make sure attributes are available
         $db_response = $db_respondent->get_current_response( true );
         $db_response->interview_type = $participant->appointment_type;
+        $db_response->save();
         $data['success'][] = $participant->uid;
       }
       catch( \cenozo\exception\base_exception $e )
