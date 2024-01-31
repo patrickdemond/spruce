@@ -289,7 +289,7 @@ class expression_manager extends \cenozo\singleton
             // determine if this is a respondent, stage or question variable
             if( preg_match( '/^respondent\.(.+)$/', $this->term, $matches ) )
             {
-              $compiled .= $this->process_response_value( $matches[1] );
+              $compiled .= $this->process_respondent_value( $matches[1] );
               $question = false;
             }
             else
@@ -646,7 +646,7 @@ class expression_manager extends \cenozo\singleton
    * @param string $variable The selected respondent variable (token, interview_type, language, start_date)
    * @return string
    */
-  private function process_response_value( $variable )
+  private function process_respondent_value( $variable )
   {
     if( 'token' == $variable )
     {
@@ -679,6 +679,7 @@ class expression_manager extends \cenozo\singleton
 
     // if the last term was an operator then assume we now represent a boolean expression
     $this->last_term = 'operator' == $this->last_term ? 'boolean' : $this->active_term;
+    $this->active_term = NULL;
 
     return $compiled;
   }

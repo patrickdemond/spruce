@@ -1144,6 +1144,10 @@ class response extends \cenozo\database\has_rank
         {
           $compiled = $this->get_respondent()->token;
         }
+        else if( 'interview_type' == $respondent_property )
+        {
+          $compiled = is_null( $this->interview_type ) ? '' : $this->interview_type;
+        }
         else if( 'language' == $respondent_property )
         {
           $compiled = $this->get_language()->code;
