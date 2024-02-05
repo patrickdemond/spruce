@@ -37,6 +37,7 @@ cenozoApp.defineModule({
       name: {
         title: "Name",
         type: "string",
+        format: "alpha_num",
       },
       mime_type: {
         title: "Mime Type",

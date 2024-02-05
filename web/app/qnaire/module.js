@@ -81,6 +81,7 @@ cenozoApp.defineModule({
       name: {
         title: "Name",
         type: "string",
+        format: "identifier",
         isConstant: function ($state, model) {
           return model.viewModel.record.readonly;
         },

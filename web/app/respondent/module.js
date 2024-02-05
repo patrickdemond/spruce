@@ -113,6 +113,7 @@ cenozoApp.defineModule({
       token: {
         title: "Token (Interview ID)",
         type: "string",
+        format: "identifier",
         isExcluded: "add",
       },
       status: {
