@@ -53,6 +53,7 @@ cenozoApp.defineModule({
       name: {
         title: "Name",
         type: "string",
+        format: "identifier",
       },
       precondition: {
         title: "Precondition",

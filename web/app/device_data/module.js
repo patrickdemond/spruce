@@ -34,6 +34,7 @@ cenozoApp.defineModule({
       name: {
         title: "Name",
         type: "string",
+        format: "alpha_num",
       },
       code: {
         title: "Code",
