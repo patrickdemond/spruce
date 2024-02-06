@@ -681,7 +681,8 @@ class expression_manager extends \cenozo\singleton
     $this->last_term = 'operator' == $this->last_term ? 'boolean' : $this->active_term;
     $this->active_term = NULL;
 
-    return $compiled;
+    // always wrap the response in quotes since all possible values are string-based
+    return sprintf( '"%s"', $compiled );
   }
 
   /**
