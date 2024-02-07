@@ -2812,7 +2812,7 @@ class qnaire extends \cenozo\database\record
       foreach( $db_module->get_page_object_list( $page_mod ) as $db_page )
       {
         $question_mod = lib::create( 'database\modifier' );
-        $question_mod->where( 'type', 'NOT IN', ['comment', 'device'] );
+        $question_mod->where( 'type', '!=', 'comment' );
         if( $export_only ) $question_mod->where( 'export', '=', true );
         $question_mod->order( 'question.rank' );
         foreach( $db_page->get_question_object_list( $question_mod ) as $db_question )
