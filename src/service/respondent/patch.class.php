@@ -20,18 +20,20 @@ class patch extends \cenozo\service\patch
     if( $this->may_continue() )
     {
       $action = $this->get_argument( 'action', false );
+      $oos_operation = sprintf( '%s response', str_replace( '_', ' ', $action ) );
       $db_respondent = $this->get_leaf_record();
       $db_response = $db_respondent->get_current_response();
 
       if( in_array( $action, ['proceed', 'backup'] ) )
       {
         // the page argument might be the string "null"
-        $db_page = NULL;
         $page_id = $this->get_argument( 'page_id' );
-        if( util::string_matches_int( $page_id ) && 0 < $page_id ) $db_page = lib::create( 'database\page', $page_id );
+        $db_page = util::string_matches_int( $page_id ) && 0 < $page_id
+                 ? lib::create( 'database\page', $page_id )
+                 : NULL;
 
         // the proceed and backup actions always send what page the UI is currently on as an argument
-        $out_of_sync = $db_response->get_out_of_sync( sprintf( '%s response', $action ), $db_page );
+        $out_of_sync = $db_response->get_out_of_sync( $oos_operation, $db_page );
         if( !is_null( $out_of_sync ) )
         {
           $this->set_data( $out_of_sync );
@@ -43,14 +45,7 @@ class patch extends \cenozo\service\patch
         // only jump when in debug mode
         if( 'jump' == $action && !$db_respondent->get_qnaire()->debug ) $this->get_status()->set_code( 403 );
 
-        // convert the action for the get_out_of_sync() method
-        if( 'fast_forward_stage' == $action ) $action = 'fast forward stage';
-        else if ( 'rewind_stage' == $action ) $action = 'rewind stage';
-        else $action = sprintf( '%s response', $action );
-
-        $out_of_sync = $db_response->get_out_of_sync(
-          sprintf( '%s response', str_replace( '_', ' ', $action ) )
-        );
+        $out_of_sync = $db_response->get_out_of_sync( $oos_operation );
         if( !is_null( $out_of_sync ) )
         {
           $this->set_data( $out_of_sync );

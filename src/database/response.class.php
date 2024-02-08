@@ -747,33 +747,32 @@ class response extends \cenozo\database\has_rank
     if( 'reopen response' == $operation )
     {
       if( !$this->submitted ) return 'The response as is already open.';
+      return NULL;
     }
+
     // only the reopen operation can be done once the response is completed
-    else if( $this->submitted )
-    {
-      return 'The response has been completed.';
-    }
-    else if( 'check in response' == $operation )
+    if( $this->submitted ) return 'The response has been completed.';
+
+    if( 'check in response' == $operation )
     {
       if( $this->checked_in ) return 'The response is already checked in.';
+      return NULL;
     }
+
     // when using stages, only the check in response operation can be done when not checked in
-    else if( $db_qnaire->stages && !$this->checked_in )
-    {
-      return 'The response is not checked in.';
-    }
-    else if( 'check out response' == $operation )
+    if( $db_qnaire->stages && !$this->checked_in ) return 'The response is not checked in.';
+
+    if( 'check out response' == $operation )
     {
       $db_current_response_stage = $this->get_current_response_stage();
-      if( !is_null( $db_current_response_stage ) )
-      {
-        return sprintf(
-          'The response is in the %s stage.',
-          $db_current_response_stage->get_stage()->name
-        );
-      }
+      return (
+        !is_null( $db_current_response_stage ) ?
+        sprintf( 'The response is in the %s stage.', $db_current_response_stage->get_stage()->name ) :
+        NULL
+      );
     }
-    else if( in_array( $operation, ['set answer', 'abort device', 'launch device'] ) )
+
+    if( in_array( $operation, ['set answer', 'abort device', 'launch device'] ) )
     {
       if( !is_a( $db_object, lib::get_class_name( 'database\answer' ) ) )
         throw lib::create( 'exception\argument', 'db_object', $db_object, __METHOD__ );
@@ -792,14 +791,22 @@ class response extends \cenozo\database\has_rank
             $db_current_response_stage->get_stage()->name
           );
         }
-        if( $this->page_id != $db_question->page_id ) return 'The response is no longer on this page.';
+
+        return (
+          $this->page_id != $db_question->page_id ?
+          'The response is no longer on this page.' :
+          NULL
+        );
       }
-      else
-      {
-        if( $db_question->page_id != $this->page_id ) return 'The response is not on the correct page.';
-      }
+
+      return (
+        $db_question->page_id != $this->page_id ?
+        'The response is not on the correct page.' :
+        NULL
+      );
     }
-    else if( in_array( $operation, ['proceed response', 'backup response'] ) )
+
+    if( in_array( $operation, ['proceed response', 'backup response'] ) )
     {
       if( is_null( $db_object ) )
       {
@@ -811,15 +818,21 @@ class response extends \cenozo\database\has_rank
 
       $db_page = $db_object;
       $db_current_page = $this->get_page();
-      if( is_null( $db_current_page ) || $db_page->id != $db_current_page->id )
-      {
-        return 'The response is no longer on this page.';
-      }
+      return (
+        is_null( $db_current_page ) || $db_page->id != $db_current_page->id ?
+        'The response is no longer on this page.' :
+        NULL
+      );
     }
-    else if( in_array( $operation, ['jump response', 'fast forward stage', 'rewind stage'] ) )
+
+    if( in_array( $operation, ['jump response', 'fast forward stage', 'rewind stage'] ) )
     {
       $db_current_response_stage = $this->get_current_response_stage();
-      if( is_null( $db_current_response_stage ) ) return 'The response is on the stage-selection page.';
+      return (
+        is_null( $db_current_response_stage ) ?
+        'The response is on the stage-selection page.' :
+        NULL
+      );
     }
 
     return NULL;
