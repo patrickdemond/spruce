@@ -351,7 +351,11 @@ class expression_manager extends \cenozo\singleton
     catch( \cenozo\exception\runtime $e )
     {
       throw lib::create( 'exception\runtime',
-        sprintf( 'Error while evaluating expression:%s', "\n".$precondition ),
+        sprintf(
+          "Error while evaluating expression:%s\n\n%s",
+          $precondition,
+          $e->get_raw_message()
+        ),
         __METHOD__,
         $e
       );
@@ -1040,7 +1044,7 @@ class expression_manager extends \cenozo\singleton
           {
             throw lib::create( 'exception\runtime',
               sprintf(
-                'JSON Path "%s" for question "%s" not found in answer "%s"',
+                "JSON Path \"%s\" for question \"%s\" not found in answer data:\n%s",
                 $object_path,
                 $db_question->name,
                 $db_answer->value
