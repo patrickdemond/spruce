@@ -25,6 +25,7 @@ cenozoApp.defineModule({
           column: "stage.name",
         },
         precondition: {
+          column: "stage.precondition",
           title: "Precondition",
         },
         first_module: {
