@@ -19,7 +19,7 @@ class patch extends \cenozo\service\patch
 
     if( $this->may_continue() )
     {
-      $data = $this->get_file_as_object();
+      $data = $this->get_file_as_array();
       if( array_key_exists( 'status', $data ) )
       {
         $db_answer = $this->get_leaf_record()->get_answer();

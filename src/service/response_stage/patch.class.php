@@ -19,7 +19,6 @@ class patch extends \cenozo\service\patch
 
     if( $this->may_continue() )
     {
-      $data = $this->get_file_as_object();
       $action = $this->get_argument( 'action', false );
       if( false !== $action )
       {
