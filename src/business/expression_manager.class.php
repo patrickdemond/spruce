@@ -1043,7 +1043,7 @@ class expression_manager extends \cenozo\singleton
                 'JSON Path "%s" for question "%s" not found in answer "%s"',
                 $object_path,
                 $db_question->name,
-                $value
+                $db_answer->value
               ),
               __METHOD__
             );
