@@ -1035,7 +1035,21 @@ class expression_manager extends \cenozo\singleton
         }
         else if( 'value' == $special_function )
         {
-          $compiled = (new JSONPath( $value ))->find( sprintf( '$.%s', $object_path ) )->data()[0];
+          $sub_path = (new JSONPath( $value ))->find( sprintf( '$.%s', $object_path ) );
+          if( !$sub_path->valid() )
+          {
+            throw lib::create( 'exception\runtime',
+              sprintf(
+                'JSON Path "%s" for question "%s" not found in answer "%s"',
+                $object_path,
+                $db_question->name,
+                $value
+              ),
+              __METHOD__
+            );
+          }
+
+          $compiled = $sub_path->data()[0];
           if( is_null( $value ) ) $compiled = 'NULL';
           else if( is_bool( $value ) ) $compiled = $value ? 'true' : 'false';
           else if( is_string( $value ) )
