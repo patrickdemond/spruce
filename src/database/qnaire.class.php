@@ -3229,13 +3229,13 @@ class qnaire extends \cenozo\database\record
       $data[] = $data_row;
     }
 
-    $header = array_keys( $column_list );
-    array_unshift( $header, 'uid', 'token', 'rank' );
-    if( $this->stages ) array_unshift( $header, 'interview_type' );
-    array_unshift(
+    $header = ['uid', 'token', 'rank'];
+    if( $this->stages ) $header[] = 'interview_type';
+    $header = array_merge(
       $header,
-      'qnaire_version', 'language', 'site', 'submitted', 'start_datetime', 'last_datetime'
+      ['qnaire_version', 'language', 'site', 'submitted', 'start_datetime', 'last_datetime']
     );
+    $header = array_merge( $header, array_keys( $column_list ) );
     if( $attributes ) foreach( $attribute_list as $attribute ) $header[] = sprintf( 'attribute:%s', $attribute );
     return ['header' => $header, 'data' => $data];
   }
