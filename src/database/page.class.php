@@ -224,13 +224,7 @@ class page extends base_qnaire_part
         $db_module = $db_next_page->get_module();
         if( !$expression_manager->evaluate( $db_module->precondition ) )
         {
-          do
-          {
-            // delete any answer associated with the skipped module
-            $db_response->delete_answers_in_module( $db_module );
-            $db_module = $db_module->get_next();
-          }
-          while( !is_null( $db_module ) && !$expression_manager->evaluate( $db_module->precondition ) );
+          $db_module = $db_module->get_next_for_response( $db_response );
           $db_next_page = is_null( $db_module ) ? NULL : $db_module->get_first_page_for_response( $db_response );
         }
 
