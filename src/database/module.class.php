@@ -215,6 +215,16 @@ class module extends base_qnaire_part
     // start by getting the module one rank higher than the current
     $db_next_module = $include_current ? $this : $this->get_next();
 
+    // when using stages don't cross over into the next stage
+    if( $db_response->get_qnaire()->stages )
+    {
+      $db_current_response_stage = $db_response->get_current_response_stage();
+      if( $db_current_response_stage->stage_id != $db_next_module->get_stage()->id )
+      {
+        $db_next_module = NULL;
+      }
+    }
+
     // if there is a next module then make sure to test its precondition if a response is included in the request
     if( !is_null( $db_next_module ) && !is_null( $db_next_module->precondition ) )
     {
