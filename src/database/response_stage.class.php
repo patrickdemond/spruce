@@ -126,7 +126,7 @@ class response_stage extends \cenozo\database\record
     $db_response->page_id = $this->page_id;
     $db_response->save();
 
-    $this->user_id = lib::create( 'business\session' )->get_effective_user()->id;
+    $this->username = lib::create( 'business\session' )->get_effective_user()->name;
     $this->status = 'active';
     if( !is_null( $this->deviation_type_id ) )
     {
@@ -158,7 +158,7 @@ class response_stage extends \cenozo\database\record
 
     $db_response_stage_pause = lib::create( 'database\response_stage_pause' );
     $db_response_stage_pause->response_stage_id = $this->id;
-    $db_response_stage_pause->user_id = lib::create( 'business\session' )->get_effective_user()->id;
+    $db_response_stage_pause->username = lib::create( 'business\session' )->get_effective_user()->name;
     $db_response_stage_pause->save();
   }
 
@@ -168,7 +168,7 @@ class response_stage extends \cenozo\database\record
   public function skip()
   {
     $this->delete_answers();
-    $this->user_id = lib::create( 'business\session' )->get_effective_user()->id;
+    $this->username = lib::create( 'business\session' )->get_effective_user()->name;
     $this->status = 'skipped';
     $this->page_id = NULL;
     $this->start_datetime = NULL;
@@ -189,7 +189,7 @@ class response_stage extends \cenozo\database\record
   {
     // update the status (which will only work if it is already "not ready" or "ready"
     $this->delete_answers();
-    $this->user_id = NULL;
+    $this->username = NULL;
     $this->status = 'not ready';
     $this->deviation_type_id = NULL;
     $this->deviation_comments = NULL;

@@ -2779,9 +2779,7 @@ cenozoApp.defineModule({
                     column: [
                       { table: "response_stage", column: "id", alias: "response_stage_id" },
                       { table: "response_stage", column: "status" },
-                      { table: "response_stage", column: "user_id" },
-                      { table: "user", column: "first_name" },
-                      { table: "user", column: "last_name" },
+                      { table: "response_stage", column: "username" },
                     ],
                   },
                 },
@@ -2791,9 +2789,7 @@ cenozoApp.defineModule({
               if (currentStage.response_stage_id != this.data.response_stage_id) {
                 await this.outOfSync(
                   "Cannot " + operation + " the stage since the response has been changed by " + (
-                    currentStage.user_id != CnSession.user.id ?
-                    currentStage.first_name + " " + currentStage.last_name :
-                    "your account"
+                    currentStage.username != CnSession.user.name ? currentStage.username : "your account"
                   ) + " in a different browser."
                 );
                 return;
@@ -2819,9 +2815,7 @@ cenozoApp.defineModule({
               ) {
                 await this.outOfSync(
                   "Cannot " + operation + " the stage since the response has been changed by " + (
-                    currentStage.user_id != CnSession.user.id ?
-                    currentStage.first_name + " " + currentStage.last_name :
-                    "your account"
+                    currentStage.username != CnSession.user.name ?  currentStage.username : "your account"
                   ) + " in a different browser."
                 );
                 return;
@@ -2830,10 +2824,10 @@ cenozoApp.defineModule({
                 ("completed" == currentStage.status && "launch" == operation)
               ) {
                 // warn if this is a new user
-                if (currentStage.user_id != CnSession.user.id) {
+                if (currentStage.username != CnSession.user.name) {
                   warning =
                     "<b>WARNING</b>: This stage was " + currentStage.status +
-                    " paused by another user (" + currentStage.first_name + " " + currentStage.last_name + ")";
+                    " paused by another user (" + currentStage.username + ")";
                 }
               }
 

@@ -1017,6 +1017,7 @@ class qnaire extends \cenozo\database\record
     $setting_manager = lib::create( 'business\setting_manager' );
     if( !$setting_manager->get_setting( 'general', 'detached' ) || is_null( PARENT_INSTANCE_URL ) ) return;
 
+    $generic_username = $setting_manager->get_setting( 'general', 'generic_username' );
     $machine_username = $setting_manager->get_setting( 'general', 'machine_username' );
     $machine_password = $setting_manager->get_setting( 'general', 'machine_password' );
 
@@ -1189,7 +1190,11 @@ class qnaire extends \cenozo\database\record
           $response_stage_sel = lib::create( 'database\select' );
           $response_stage_sel->add_column( 'id' );
           $response_stage_sel->add_table_column( 'stage', 'rank', 'stage' );
-          $response_stage_sel->add_table_column( 'user', 'name', 'user' );
+
+          // when using a generic username set the response's username to the machine's username instead
+          if( !$generic_username ) $response_stage_sel->add_column( 'username' );
+          else $response_stage_sel->add_constant( sprintf( '"%s"', $machine_username ), 'username' );
+
           $response_stage_sel->add_table_column( 'deviation_type', 'type', 'deviation_type' );
           $response_stage_sel->add_table_column( 'deviation_type', 'name', 'deviation_name' );
           $response_stage_sel->add_column( 'status' );
@@ -1199,7 +1204,6 @@ class qnaire extends \cenozo\database\record
           $response_stage_sel->add_column( 'comments' );
           $response_stage_mod = lib::create( 'database\modifier' );
           $response_stage_mod->join( 'stage', 'response_stage.stage_id', 'stage.id' );
-          $response_stage_mod->join( 'user', 'response_stage.user_id', 'user.id' );
           $response_stage_mod->left_join(
             'deviation_type',
             'response_stage.deviation_type_id',
@@ -1213,12 +1217,15 @@ class qnaire extends \cenozo\database\record
           foreach( $response_stage_list as $index => $response_stage )
           {
             $pause_sel = lib::create( 'database\select' );
-            $pause_sel->add_table_column( 'user', 'name', 'user' );
+
+            // when using a generic username set the pause's username to the machine's username instead
+            if( !$generic_username ) $pause_sel->add_column( 'username' );
+            else $pause_sel->add_constant( sprintf( '"%s"', $machine_username ), 'username' );
+
             $pause_sel->add_column( 'start_datetime' );
             $pause_sel->add_column( 'end_datetime' );
-            
+
             $pause_mod = lib::create( 'database\modifier' );
-            $pause_mod->join( 'user', 'response_stage_pause.user_id', 'user.id' );
             $pause_mod->where( 'response_stage_id', '=', $response_stage['id'] );
             $pause_mod->order( 'start_datetime' );
 
@@ -1996,7 +2003,6 @@ class qnaire extends \cenozo\database\record
     $answer_class_name = lib::get_class_name( 'database\answer' );
     $question_option_class_name = lib::get_class_name( 'database\question_option' );
     $stage_class_name = lib::get_class_name( 'database\stage' );
-    $user_class_name = lib::get_class_name( 'database\user' );
     $response_stage_class_name = lib::get_class_name( 'database\response_stage' );
     $deviation_type_class_name = lib::get_class_name( 'database\deviation_type' );
     $db_current_user = lib::create( 'business\session' )->get_user();
@@ -2061,7 +2067,7 @@ class qnaire extends \cenozo\database\record
                      );
 
           $db_response->language_id = $language_class_name::get_unique_record( 'code', $response->language )->id;
-          
+
           // the site may be NULL, so ignore it if it is
           if( !is_null( $response->site ) )
           {
@@ -2190,9 +2196,6 @@ class qnaire extends \cenozo\database\record
                 [$db_response->id, $db_stage->id]
               );
 
-              $db_user = $user_class_name::get_unique_record( 'name', $stage->user );
-              if( is_null( $db_user ) ) $db_user = $db_current_user;
-
               $db_deviation_type = NULL;
               if( !is_null( $stage->deviation_type ) )
               {
@@ -2202,7 +2205,7 @@ class qnaire extends \cenozo\database\record
                 );
               }
 
-              $db_response_stage->user_id = $db_user->id;
+              $db_response_stage->username = $stage->username;
               $db_response_stage->status = $stage->status;
               $db_response_stage->deviation_type_id = is_null( $db_deviation_type )
                                                     ? NULL
@@ -2217,12 +2220,9 @@ class qnaire extends \cenozo\database\record
               $db_response_stage->remove_response_stage_pause( NULL );
               foreach( $stage->pause_list as $pause )
               {
-                $db_user = $user_class_name::get_unique_record( 'name', $pause->user );
-                if( is_null( $db_user ) ) $db_user = $db_current_user;
-
                 $db_response_stage_pause = lib::create( 'database\response_stage_pause' );
                 $db_response_stage_pause->response_stage_id = $db_response_stage->id;
-                $db_response_stage_pause->user_id = $db_user->id;
+                $db_response_stage_pause->username = $pause->username;
                 $db_response_stage_pause->start_datetime = $pause->start_datetime;
                 $db_response_stage_pause->end_datetime = $pause->end_datetime;
                 $db_response_stage_pause->save();
@@ -2850,7 +2850,7 @@ class qnaire extends \cenozo\database\record
     $response_mod->join( 'language', 'response.language_id', 'language.id' );
     $response_mod->left_join( 'site', 'response.site_id', 'site.id' );
     $response_mod->where( 'respondent.qnaire_id', '=', $this->id );
-    // make sure the response has stages, 
+    // make sure the response has stages
     $response_mod->join( 'response_stage', 'response.id', 'response_stage.response_id' );
     $response_mod->group( 'response.id' );
     $response_mod->order( 'respondent.end_datetime' );
@@ -2906,7 +2906,7 @@ class qnaire extends \cenozo\database\record
     $stage_sel->add_column( 'response_id' );
     $stage_sel->add_table_column( 'stage', 'rank', 'stage_rank' );
     $stage_sel->add_table_column( 'stage', 'name', 'stage_name' );
-    $stage_sel->add_table_column( 'user', 'name', 'stage_user' );
+    $stage_sel->add_column( 'username' );
     $stage_sel->add_column( 'start_datetime', 'stage_start_datetime' );
     $stage_sel->add_column( 'end_datetime', 'stage_end_datetime' );
     $stage_sel->add_column(
@@ -2919,11 +2919,10 @@ class qnaire extends \cenozo\database\record
     $stage_sel->add_table_column( 'deviation_type', 'name', 'stage_deviation_name' );
     $stage_sel->add_column( 'deviation_comments', 'stage_deviation_comments' );
     $stage_sel->add_column( 'comments', 'stage_comments' );
-    
+
     $stage_mod = lib::create( 'database\modifier' );
     $stage_mod->where( 'response_id', 'IN', array_keys( $data ) );
     $stage_mod->join( 'stage', 'response_stage.stage_id', 'stage.id' );
-    $stage_mod->left_join( 'user', 'response_stage.user_id', 'user.id' );
     $stage_mod->left_join( 'deviation_type', 'response_stage.deviation_type_id', 'deviation_type.id' );
     $join_mod = lib::create( 'database\modifier' );
     $join_mod->where( 'response_stage.id', '=', 'response_stage_pause.response_stage_id', false );

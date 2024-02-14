@@ -13,7 +13,7 @@ global $SETTINGS;
 $SETTINGS['general']['application_name'] = 'pine';
 $SETTINGS['general']['instance_name'] = $SETTINGS['general']['application_name'];
 $SETTINGS['general']['version'] = '2.9';
-$SETTINGS['general']['build'] = '08e877f';
+$SETTINGS['general']['build'] = '8e80972';
 
 // the default maximum number of seconds that a page should take to complete
 $SETTINGS['general']['default_page_max_time'] = 60;
@@ -23,6 +23,9 @@ $SETTINGS['general']['respondent_access_id'] = NULL;
 
 // whether this instance gets its respondents from a detached beartooth instance
 $SETTINGS['general']['detached'] = false;
+
+// used to change response_stage username to the machine_username (for detached instances with generic users)
+$SETTINGS['general']['generic_username'] = false;
 
 // the parent instance of pine that this instance will sync its qnaires with (for detached only)
 $SETTINGS['url']['PARENT_INSTANCE'] = NULL;

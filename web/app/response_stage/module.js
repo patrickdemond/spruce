@@ -28,9 +28,8 @@ cenozoApp.defineModule({
           column: "response_stage.status",
           highlight: "active",
         },
-        user: {
-          title: "User",
-          column: "user.name",
+        username: {
+          title: "Username",
         },
         deviation_type: {
           title: "Deviation",
