@@ -8,6 +8,7 @@ SOURCE embedded_file.sql
 SOURCE qnaire_report.sql
 SOURCE qnaire_document.sql
 SOURCE response.sql
+SOURCE response_stage.sql
 SOURCE response_stage_pause.sql
 SOURCE qnaire.sql
 SOURCE respondent.sql

@@ -62,9 +62,6 @@ class module extends \cenozo\service\module
       $join_mod->where( 'response.id', '=', 'response_stage.response_id', false );
       $join_mod->where( 'response_stage.status', '=', 'active' );
       $modifier->join_modifier( 'response_stage', $join_mod, 'left' );
-
-      if( $select->has_table_columns( 'user' ) )
-        $modifier->left_join( 'user', 'response_stage.user_id', 'user.id' );
     }
 
     $db_respondent = $this->get_resource();
