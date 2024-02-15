@@ -79,6 +79,7 @@ class lookup extends \cenozo\database\record
         $indicator_id_list = array();
         foreach( explode( ';', $indicators ) as $indicator )
         {
+          $indicator = trim( $indicator );
           if( !array_key_exists( $indicator, $result_data['indicator_list'] ) )
           {
             $result_data['indicator_list'][$indicator] = array(
