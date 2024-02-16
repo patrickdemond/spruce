@@ -2906,7 +2906,7 @@ class qnaire extends \cenozo\database\record
     $stage_sel->add_column( 'response_id' );
     $stage_sel->add_table_column( 'stage', 'rank', 'stage_rank' );
     $stage_sel->add_table_column( 'stage', 'name', 'stage_name' );
-    $stage_sel->add_column( 'username' );
+    $stage_sel->add_column( 'username', 'stage_user' );
     $stage_sel->add_column( 'start_datetime', 'stage_start_datetime' );
     $stage_sel->add_column( 'end_datetime', 'stage_end_datetime' );
     $stage_sel->add_column(
