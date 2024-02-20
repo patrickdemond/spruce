@@ -26,6 +26,7 @@ class patch extends \cenozo\service\patch
     $file = $this->get_argument( 'file', NULL );
     if( !is_null( $file ) )
     {
+      $content_type = util::get_header( 'Content-Type' );
       $mime_type = static::$base64_column_list[$file];
       if( in_array( $content_type, [$mime_type, 'application/octet-stream'] ) )
       {
