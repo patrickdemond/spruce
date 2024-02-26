@@ -620,9 +620,13 @@ class response extends \cenozo\database\has_rank
 
   /**
    * Creates all attributes for the response
+   * 
+   * @param boolean $replace Replace any existing attribute values
    */
-  protected function create_attributes()
+  public function create_attributes( $replace = false )
   {
+    $success = true;
+
     $response_attribute_class_name = lib::get_class_name( 'database\response_attribute' );
 
     $session = lib::create( 'business\session' );
@@ -636,7 +640,7 @@ class response extends \cenozo\database\has_rank
         array( $this->id, $db_attribute->id )
       );
 
-      if( is_null( $db_response_attribute ) )
+      if( $replace || is_null( $db_response_attribute ) )
       {
         // collect errors found while trying to get the participant's attribute value
         $value = NULL;
@@ -658,15 +662,26 @@ class response extends \cenozo\database\has_rank
             $e->get_raw_message()
           ) );
           $session->attribute_error_list[$db_attribute->name] = $e->get_raw_message();
+          $success = false;
         }
 
-        $db_response_attribute = lib::create( 'database\response_attribute' );
-        $db_response_attribute->response_id = $this->id;
-        $db_response_attribute->attribute_id = $db_attribute->id;
-        $db_response_attribute->value = $value;
-        $db_response_attribute->save();
+        if( is_null( $db_response_attribute ) )
+        {
+          $db_response_attribute = lib::create( 'database\response_attribute' );
+          $db_response_attribute->response_id = $this->id;
+          $db_response_attribute->attribute_id = $db_attribute->id;
+          $db_response_attribute->value = $value;
+          $db_response_attribute->save();
+        }
+        else if( $success ) // only change an existing attribute if successful
+        {
+          $db_response_attribute->value = $value;
+          $db_response_attribute->save();
+        }
       }
     }
+
+    return $success;
   }
 
   /**
