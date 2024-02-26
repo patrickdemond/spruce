@@ -138,6 +138,10 @@ cenozoApp.defineModule({
         type: "boolean",
         isExcluded: true,
       },
+      has_attributes: {
+        type: "boolean",
+        isExcluded: true,
+      },
       repeated: {
         column: "qnaire.repeated",
         type: "string",
@@ -380,10 +384,17 @@ cenozoApp.defineModule({
         await model.viewModel.reopen();
       },
       isIncluded: function ($state, model) {
-        return (
-          !model.viewModel.record.stages &&
-          null != model.viewModel.record.end_datetime
-        );
+        return !model.viewModel.record.stages && null != model.viewModel.record.end_datetime;
+      },
+    });
+
+    module.addExtraOperation("view", {
+      title: "Update Attributes",
+      operation: async function ($state, model) {
+        await model.viewModel.updateAttributes();
+      },
+      isIncluded: function ($state, model) {
+        return model.viewModel.record.has_attributes && null == model.viewModel.record.end_datetime;
       },
     });
 
@@ -396,10 +407,7 @@ cenozoApp.defineModule({
         });
       },
       isIncluded: function ($state, model) {
-        return (
-          model.viewModel.record.stages ||
-          null == model.viewModel.record.end_datetime
-        );
+        return model.viewModel.record.stages || null == model.viewModel.record.end_datetime;
       },
     });
 
@@ -484,7 +492,8 @@ cenozoApp.defineModule({
     cenozo.providers.factory("CnRespondentViewFactory", [
       "CnBaseViewFactory",
       "CnHttpFactory",
-      function (CnBaseViewFactory, CnHttpFactory) {
+      "CnModalConfirmFactory",
+      function (CnBaseViewFactory, CnHttpFactory, CnModalConfirmFactory) {
         var object = function (parentModel, root) {
           CnBaseViewFactory.construct(this, parentModel, root);
 
@@ -548,15 +557,30 @@ cenozoApp.defineModule({
                 path:
                   this.parentModel.getServiceResourcePath() + "?action=reopen",
               }).patch();
-              this.parentModel.reloadState(true);
+              await this.parentModel.reloadState(true);
             },
 
             resendMail: async function () {
               await CnHttpFactory.instance({
-                path:
-                  this.parentModel.getServiceResourcePath() +
-                  "?action=resend_mail",
+                path: this.parentModel.getServiceResourcePath() + "?action=resend_mail",
               }).patch();
+            },
+
+            updateAttributes: async function () {
+              const response = await CnModalConfirmFactory.instance({
+                title: "Update Attributes",
+                message:
+                  "Are you sure you wish to replace all existing attributes? " +
+                  "This should only be done if there is a problem with the existing " +
+                  "attributes that needs to be corrected.",
+              }).show();
+
+              if (response) {
+                await CnHttpFactory.instance({
+                  path: this.parentModel.getServiceResourcePath() + "?action=update_attributes",
+                }).patch();
+                await this.parentModel.reloadState(true);
+              }
             },
           });
         };

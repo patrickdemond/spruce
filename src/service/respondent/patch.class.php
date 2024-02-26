@@ -86,6 +86,15 @@ class patch extends \cenozo\service\patch
       {
         $db_respondent->remove_unsent_mail();
       }
+      else if( 'update_attributes' == $action )
+      {
+        $db_response = $db_respondent->get_current_response();
+
+        // if the response doesn't exist then create it now (this will create the attributes
+        if( is_null( $db_response ) ) $db_respondent->get_current_response( true );
+        // if the response exists then update the attributes
+        else $db_response->create_attributes( true );
+      }
       else
       {
         // the following actions require the current response, but that record isn't guaranteed to exist

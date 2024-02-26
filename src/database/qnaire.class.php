@@ -796,10 +796,19 @@ class qnaire extends \cenozo\database\record
    * Determines whether mail is sent by the qnaire
    * @return boolean
    */
-   public function sends_mail()
-   {
-     return $this->email_invitation || 0 < $this->get_reminder_count();
-   }
+  public function sends_mail()
+  {
+    return $this->email_invitation || 0 < $this->get_reminder_count();
+  }
+
+  /**
+   * Determines whether the qnaire has any attributes
+   * @return boolean
+   */
+  public function has_attributes()
+  {
+    return 0 < $this->get_attribute_count();
+  }
 
   /**
    * Sends all qnaire mail for the given identifier list
