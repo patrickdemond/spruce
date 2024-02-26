@@ -2326,9 +2326,7 @@ class qnaire extends \cenozo\database\record
     $cohort_class_name = lib::get_class_name( 'database\cohort' );
     $language_class_name = lib::get_class_name( 'database\language' );
     $region_class_name = lib::get_class_name( 'database\region' );
-    $study_class_name = lib::get_class_name( 'database\study' );
     $identifier_class_name = lib::get_class_name( 'database\identifier' );
-    $collection_class_name = lib::get_class_name( 'database\collection' );
     $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
     $event_type_class_name = lib::get_class_name( 'database\event_type' );
 
@@ -2479,6 +2477,42 @@ class qnaire extends \cenozo\database\record
           $study_sel->get_sql(),
           $study_mod->get_sql()
         ) );
+      }
+
+      // replace all eligible strata with the provided list
+      $stratum_name_list = $participant->stratum_list ? explode( ';', $participant->stratum_list ) : [];
+
+      $stratum_mod = lib::create( 'database\modifier' );
+      $stratum_mod->where( 'participant_id', '=', $db_participant->id );
+      static::db()->execute( sprintf( 'DELETE FROM stratum_has_participant %s', $stratum_mod->get_sql() ) );
+
+      if( 0 < count( $stratum_name_list ) )
+      {
+        // the stratum list contains study||stratum pairs
+        $stratum_list = [];
+        foreach( $stratum_name_list as $stratum )
+        {
+          $parts = explode( '||', $stratum );
+          $study_name = $parts[0];
+          $stratum_name = $parts[1];
+
+          $stratum_sel = lib::create( 'database\select' );
+          $stratum_sel->from( 'stratum' );
+          $stratum_sel->add_column( 'stratum.id', 'stratum_id', false );
+          $stratum_sel->add_constant( $db_participant->id, 'participant_id' );
+
+          $stratum_mod = lib::create( 'database\modifier' );
+          $stratum_mod->join( 'study', 'stratum.study_id', 'study.id' );
+          $stratum_mod->where( 'study.name', '=', $study_name );
+          $stratum_mod->where( 'stratum.name', '=', $stratum_name );
+
+          static::db()->execute( sprintf(
+            'INSERT IGNORE INTO stratum_has_participant( stratum_id, participant_id ) '.
+            '%s %s',
+            $stratum_sel->get_sql(),
+            $stratum_mod->get_sql()
+          ) );
+        }
       }
 
       // replace all collections with the provided list
