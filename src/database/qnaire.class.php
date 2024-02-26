@@ -885,7 +885,7 @@ class qnaire extends \cenozo\database\record
     );
     $curl = util::get_detached_curl_object( $url );
 
-    $response = curl_exec( $curl );
+    $curl_response = curl_exec( $curl );
     if( curl_errno( $curl ) )
     {
       return sprintf(
@@ -902,7 +902,10 @@ class qnaire extends \cenozo\database\record
     }
     else if( 306 == $code )
     {
-      return sprintf( "Beartooth responded with the following notice\n\n\"%s\"", util::json_decode($response ) );
+      return sprintf(
+        "Beartooth responded with the following notice\n\n\"%s\"",
+        util::json_decode( $curl_response )
+      );
     }
     else if( 204 == $code || 300 <= $code )
     {
@@ -917,7 +920,7 @@ class qnaire extends \cenozo\database\record
     );
     $curl = util::get_detached_curl_object( $url );;
 
-    $response = curl_exec( $curl );
+    $curl_response = curl_exec( $curl );
     if( curl_errno( $curl ) )
     {
       return sprintf(
@@ -940,7 +943,7 @@ class qnaire extends \cenozo\database\record
     {
       return sprintf(
         "Parent Pine instance responded with the following notice\n\n\"%s\"",
-        util::json_decode( $response )
+        util::json_decode( $curl_response )
       );
     }
     else if( 204 == $code || 300 <= $code )
@@ -1287,7 +1290,7 @@ class qnaire extends \cenozo\database\record
         ] )
       );
 
-      $response = curl_exec( $curl );
+      $curl_response = curl_exec( $curl );
       if( curl_errno( $curl ) )
       {
         throw lib::create( 'exception\runtime',
@@ -1321,7 +1324,7 @@ class qnaire extends \cenozo\database\record
         throw lib::create( 'exception\notice',
           sprintf(
             "Parent Pine instance responded with the following notice\n\n\"%s\"",
-            util::json_decode( $response )
+            util::json_decode( $curl_response )
           ),
           __METHOD__
         );
@@ -1353,7 +1356,7 @@ class qnaire extends \cenozo\database\record
       curl_setopt( $curl, CURLOPT_POST, true );
       curl_setopt( $curl, CURLOPT_POSTFIELDS, util::json_encode( $participant_data ) );
 
-      $response = curl_exec( $curl );
+      $curl_response = curl_exec( $curl );
       if( curl_errno( $curl ) )
       {
         throw lib::create( 'exception\runtime',
@@ -1375,7 +1378,10 @@ class qnaire extends \cenozo\database\record
       else if( 306 == $code )
       {
         throw lib::create( 'exception\notice',
-          sprintf( "Beartooth responded with the following notice\n\n\"%s\"", util::json_decode($response ) ),
+          sprintf(
+            "Beartooth responded with the following notice\n\n\"%s\"",
+            util::json_decode( $curl_response )
+          ),
           __METHOD__
         );
       }
@@ -2338,7 +2344,7 @@ class qnaire extends \cenozo\database\record
     );
     $curl = util::get_detached_curl_object( $url );;
 
-    $response = curl_exec( $curl );
+    $curl_response = curl_exec( $curl );
     if( curl_errno( $curl ) )
     {
       throw lib::create( 'exception\runtime',
@@ -2360,7 +2366,10 @@ class qnaire extends \cenozo\database\record
     else if( 306 == $code )
     {
       throw lib::create( 'exception\notice',
-        sprintf( "Beartooth responded with the following notice\n\n\"%s\"", util::json_decode($response ) ),
+        sprintf(
+          "Beartooth responded with the following notice\n\n\"%s\"",
+          util::json_decode( $curl_response )
+        ),
         __METHOD__
       );
     }
@@ -2391,7 +2400,7 @@ class qnaire extends \cenozo\database\record
 
     // now load all data provided by the response from beartooth
     $data = ['success' => [], 'fail' => []];
-    foreach( util::json_decode( $response ) as $participant )
+    foreach( util::json_decode( $curl_response ) as $participant )
     {
       // update the participant record
       $db_participant = $participant_class_name::get_unique_record( 'uid', $participant->uid );
@@ -2647,11 +2656,43 @@ class qnaire extends \cenozo\database\record
         $db_respondent->save();
       }
 
+      // Now prepare the response and attribute records
       try
       {
-        // Since some attributes may require access to a remote server we must immediately
-        // create the response record to make sure attributes are available
-        $db_response = $db_respondent->get_current_response( true );
+        // First check to see if this participant's response already exists
+        $db_response = $db_respondent->get_current_response();
+        if( is_null( $db_response ) )
+        {
+          // If it doesn't exist then create it now, this will immediately load the attributes from
+          // the remote server since that connection may not be available when the response is launched.
+
+          // If there is an error while pulling the attributes then one of the following will happen:
+          // 1) The questionnaire's attributes_mandatory setting is true
+          //   A notice exception will be thrown alerting the user to the problem
+          //   The respondent record will be deleted (in the catch block below)
+          // 2) The questionnaires' attributes_mandatory setting is false
+          //   The response record is created anyway with missing data
+          //   The user will not be alerted
+          $db_response = $db_respondent->get_current_response( true );
+        }
+        else
+        {
+          // Reload attributes for stage-based qnaires in the check-in stage, or non-stage based qnaires
+          // that haven't been started yet (are not on a page)
+          if(
+            ( $this->stages && !$db_response->checked_in ) ||
+            ( !$this->stages && is_null( $db_response->page_id ) )
+          ) {
+            // If there is an error while pulling the attributes then the following will happen whether
+            // the questionnaire's attributes_mandatory setting is true or false:
+            //   Any attribute that loaded successfully will be replaced
+            //   Any attribute that failed to load will remain unchanged
+            //   The user will not be alerted to any failures
+            $db_response->create_attributes( true );
+          }
+        }
+
+        // Always set the interview type based on the appointment type variable
         $db_response->interview_type = $participant->appointment_type;
         $db_response->save();
         $data['success'][] = $participant->uid;
