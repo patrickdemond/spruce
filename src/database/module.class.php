@@ -218,9 +218,12 @@ class module extends base_qnaire_part
     // when using stages don't cross over into the next stage
     if( $db_response->get_qnaire()->stages )
     {
+      // only check if the response is already in a stage
       $db_current_response_stage = $db_response->get_current_response_stage();
-      if( $db_current_response_stage->stage_id != $db_next_module->get_stage()->id )
-      {
+      if(
+        !is_null( $db_current_response_stage ) &&
+        $db_current_response_stage->stage_id != $db_next_module->get_stage()->id
+      ) {
         $db_next_module = NULL;
       }
     }
