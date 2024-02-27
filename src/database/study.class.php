@@ -39,7 +39,7 @@ class study extends \cenozo\database\study
 
       // create any missing stratum
       $stratum_list = [];
-      if( !is_null( $study->stratum_data ) )
+      if( $study->stratum_data )
       {
         foreach( explode( '&&', $study->stratum_data ) as $stratum )
         {
