@@ -24,7 +24,7 @@ class module extends \cenozo\service\study\module
     if( $select->has_column( 'stratum_data' ) )
     {
       $this->add_list_column(
-        'stratum_list',
+        'stratum_data',
         'stratum',
         'CONCAT_WS( "$$", stratum.name, IFNULL( stratum.description, "" ) )',
         $select,
