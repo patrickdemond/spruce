@@ -63,7 +63,14 @@ class qnaire_proxy_type_trigger extends qnaire_trigger
       $this->answer_value
     );
 
-    // save the proxy file ignoring runtime errors (that denotes a duplicate which we can ignore)
-    try { $db_proxy->save(); } catch( \cenozo\exception\runtime $e ) {}
+    try 
+    {
+      $db_proxy->save();
+    }
+    catch( \cenozo\exception\database $e )
+    {
+      // ignore duplicate entries
+      if( !$e->is_duplicate_entry() ) throw $e;
+    }
   }
 }

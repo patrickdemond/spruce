@@ -169,6 +169,7 @@ class response extends \cenozo\database\has_rank
           $db_script = $script_class_name::get_unique_record( 'pine_qnaire_id', $db_respondent->qnaire_id );
           if( !is_null( $db_script ) )
           {
+            // TODO: don't do this after re-opening and re-submitting qnaire
             $db_script->add_finished_event(
               $db_participant,
               $this->last_datetime,
@@ -186,6 +187,7 @@ class response extends \cenozo\database\has_rank
       $db_respondent->remove_unsent_mail();
 
       // execute all qnaire triggers
+      // TODO: don't do this after re-opening and re-submitting qnaire
       foreach( $db_qnaire->get_qnaire_participant_trigger_object_list() as $db_trigger )
         $db_trigger->execute( $this );
       foreach( $db_qnaire->get_qnaire_collection_trigger_object_list() as $db_trigger )

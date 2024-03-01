@@ -79,7 +79,16 @@ class qnaire_alternate_consent_type_trigger extends qnaire_trigger
         $db_question->name,
         $this->answer_value
       );
-      $db_alternate_consent->save();
+
+      try 
+      {
+        $db_alternate_consent->save();
+      }
+      catch( \cenozo\exception\database $e )
+      {
+        // ignore duplicate entries
+        if( !$e->is_duplicate_entry() ) throw $e;
+      }
     }
   }
 }

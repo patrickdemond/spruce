@@ -62,22 +62,31 @@ class qnaire_consent_type_trigger extends qnaire_trigger
       $db_question->name,
       $this->answer_value
     );
-    $db_consent->save();
 
-    // if the trigger is removing participation consent then set the new hold record's user and site
-    if( false == $this->accept && 'participation' == $db_consent->get_consent_type()->name )
+    try 
     {
-      $db_hold = $hold_class_name::get_unique_record(
-        ['participant_id', 'datetime'],
-        [$db_participant->id, $db_consent->datetime]
-      );
-      $db_hold_type = $db_hold->get_hold_type();
-      if( 'final' == $db_hold_type->type && 'Withdrawn' == $db_hold_type->name )
+      $db_consent->save();
+
+      // if the trigger is removing participation consent then set the new hold record's user and site
+      if( false == $this->accept && 'participation' == $db_consent->get_consent_type()->name )
       {
-        $db_hold->site_id = $db_effective_site->id;
-        $db_hold->user_id = $db_effective_user->id;
-        $db_hold->save();
+        $db_hold = $hold_class_name::get_unique_record(
+          ['participant_id', 'datetime'],
+          [$db_participant->id, $db_consent->datetime]
+        );
+        $db_hold_type = $db_hold->get_hold_type();
+        if( 'final' == $db_hold_type->type && 'Withdrawn' == $db_hold_type->name )
+        {
+          $db_hold->site_id = $db_effective_site->id;
+          $db_hold->user_id = $db_effective_user->id;
+          $db_hold->save();
+        }
       }
+    }
+    catch( \cenozo\exception\database $e )
+    {
+      // ignore duplicate entries
+      if( !$e->is_duplicate_entry() ) throw $e;
     }
   }
 }

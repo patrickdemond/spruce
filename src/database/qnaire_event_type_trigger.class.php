@@ -19,8 +19,6 @@ class qnaire_event_type_trigger extends qnaire_trigger
    */
   public function execute( $db_response )
   {
-    $hold_class_name = lib::get_class_name( 'database\hold' );
-
     // some triggers may be skipped
     if( !$this->check_trigger( $db_response ) ) return;
 
@@ -49,6 +47,15 @@ class qnaire_event_type_trigger extends qnaire_trigger
     $db_event->site_id = $db_effective_site->id;
     $db_event->user_id = $db_effective_user->id;
     $db_event->datetime = util::get_datetime_object( $db_response->last_datetime );
-    $db_event->save();
+
+    try 
+    {
+      $db_event->save();
+    }
+    catch( \cenozo\exception\database $e )
+    {
+      // ignore duplicate entries
+      if( !$e->is_duplicate_entry() ) throw $e;
+    }
   }
 }
