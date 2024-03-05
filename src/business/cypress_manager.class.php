@@ -131,7 +131,15 @@ class cypress_manager extends \cenozo\base_object
     $setting_manager = lib::create( 'business\setting_manager' );
     $user = $setting_manager->get_setting( 'utility', 'username' );
     $pass = $setting_manager->get_setting( 'utility', 'password' );
-    $header_list = array( sprintf( 'Authorization: Basic %s', base64_encode( sprintf( '%s:%s', $user, $pass ) ) ) );
+
+    $host = NULL;
+    if( array_key_exists( 'HTTP_X_FORWARDED_HOST', $_SERVER ) ) $host = $_SERVER['HTTP_X_FORWARDED_HOST'];
+    else if( array_key_exists( 'HTTP_HOST', $_SERVER ) ) $host = $_SERVER['HTTP_HOST'];
+    if( !is_null( $host ) ) $host = sprintf( 'https://%s', $host );
+    $header_list = array(
+      sprintf( 'Authorization: Basic %s', base64_encode( sprintf( '%s:%s', $user, $pass ) ) ),
+      sprintf( 'Origin: %s%s', is_null( $host ) ? '' : $host, ROOT_URL )
+    );
 
     $this->last_code = 0;
 
