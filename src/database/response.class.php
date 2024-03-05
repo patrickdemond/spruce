@@ -62,18 +62,25 @@ class response extends \cenozo\database\has_rank
 
     $session = lib::create( 'business\session' );
 
-    $new = is_null( $this->id );
-    $submitted = $this->has_column_changed( 'submitted' ) && $this->submitted;
+    $is_new = is_null( $this->id );
+    $is_checking_in = $this->has_column_changed( 'checked_in' ) && $this->checked_in;
+    $is_submitting = $this->has_column_changed( 'submitted' ) && $this->submitted;
     $db_respondent = NULL;
     $db_participant = NULL;
     $db_qnaire = NULL;
 
     // setup new responses
-    if( $new )
+    if( !$is_new )
+    {
+      $db_qnaire = $this->get_qnaire();
+      $db_respondent = $this->get_respondent();
+      $db_participant = $db_respondent->get_participant();
+    }
+    else
     {
       $db_respondent = lib::create( 'database\respondent', $this->respondent_id );
-      $db_participant = $db_respondent->get_participant();
       $db_qnaire = $db_respondent->get_qnaire();
+      $db_participant = $db_respondent->get_participant();
       $db_current_response = $db_respondent->get_current_response();
 
       if( is_null( $this->qnaire_version ) && !is_null( $db_qnaire->version ) )
@@ -114,7 +121,7 @@ class response extends \cenozo\database\has_rank
     parent::save();
 
     // create the response's attributes
-    if( $new )
+    if( $is_new )
     {
       if( !$this->create_attributes() )
       {
@@ -130,34 +137,33 @@ class response extends \cenozo\database\has_rank
       }
     }
 
-    if( is_null( $db_respondent ) ) $db_respondent = $this->get_respondent();
-
     $db_effective_site = $session->get_effective_site();
     $db_effective_user = $session->get_effective_user();
 
-    // see if the qnaire exists as a script and apply the started/finished events if it does
-    if( $new && 1 == $this->rank )
+    // if this is a stage-based qnaire and we've just checked in, check for started events
+    if( 1 == $this->rank && $db_qnaire->stages && $is_checking_in )
     {
-      if( is_null( $db_participant ) ) $db_participant = $db_respondent->get_participant();
-      if( !is_null( $db_participant ) )
+      // only add events if no stages have been opened (to make sure we're not re-checking-in)
+      $modifier = lib::create( 'database\modifier' );
+      $modifier->where( 'start_datetime', '!=', NULL );
+      if( 0 == $this->get_response_stage_count( $modifier ) )
       {
-        $db_script = $script_class_name::get_unique_record( 'pine_qnaire_id', $db_respondent->qnaire_id );
-        if( !is_null( $db_script ) )
+        // see if the qnaire exists as a script and apply the started events if it does
+        $db_script = $script_class_name::get_unique_record( 'pine_qnaire_id', $db_qnaire->id );
+        if( !is_null( $db_script ) && !is_null( $db_participant ) )
         {
           $db_script->add_started_event(
             $db_participant,
             $this->last_datetime,
-            $db_effective_site,
-            $db_effective_user
+            $session->get_effective_site(),
+            $session->get_effective_user()
           );
         }
       }
     }
-    else if( $submitted )
-    {
-      if( is_null( $db_participant ) ) $db_participant = $db_respondent->get_participant();
-      if( is_null( $db_qnaire ) ) $db_qnaire = $db_respondent->get_qnaire();
 
+    if( $is_submitting )
+    {
       if( is_null( $db_qnaire->max_responses ) || $this->rank == $db_qnaire->max_responses )
       {
         // set the respondent's end datetime and add finished events (but only if the respondent is still open)
@@ -172,7 +178,6 @@ class response extends \cenozo\database\has_rank
             $db_script = $script_class_name::get_unique_record( 'pine_qnaire_id', $db_respondent->qnaire_id );
             if( !is_null( $db_script ) )
             {
-              // TODO: don't do this after re-opening and re-submitting qnaire
               $db_script->add_finished_event(
                 $db_participant,
                 $this->last_datetime,
@@ -184,34 +189,46 @@ class response extends \cenozo\database\has_rank
         }
       }
 
-      // nothing left to do for anonymous respondents
-      if( is_null( $db_participant ) ) return;
+      if( !is_null( $db_participant ) )
+      {
+        // when submitting the response check if the respondent is done and remove any unsent mail
+        $db_respondent->remove_unsent_mail();
 
-      // when submitting the response check if the respondent is done and remove any unsent mail
-      $db_respondent->remove_unsent_mail();
-
-      // execute all qnaire triggers
-      // TODO: don't do this after re-opening and re-submitting qnaire
-      foreach( $db_qnaire->get_qnaire_participant_trigger_object_list() as $db_trigger )
-        $db_trigger->execute( $this );
-      foreach( $db_qnaire->get_qnaire_collection_trigger_object_list() as $db_trigger )
-        $db_trigger->execute( $this );
-      foreach( $db_qnaire->get_qnaire_consent_type_trigger_object_list() as $db_trigger )
-        $db_trigger->execute( $this );
-      foreach( $db_qnaire->get_qnaire_event_type_trigger_object_list() as $db_trigger )
-        $db_trigger->execute( $this );
-      foreach( $db_qnaire->get_qnaire_alternate_consent_type_trigger_object_list() as $db_trigger )
-        $db_trigger->execute( $this );
-      foreach( $db_qnaire->get_qnaire_proxy_type_trigger_object_list() as $db_trigger )
-        $db_trigger->execute( $this );
-      foreach( $db_qnaire->get_qnaire_equipment_type_trigger_object_list() as $db_trigger )
-        $db_trigger->execute( $this );
+        // execute all qnaire triggers
+        // TODO: don't do this after re-opening and re-submitting qnaire
+        foreach( $db_qnaire->get_qnaire_participant_trigger_object_list() as $db_trigger )
+          $db_trigger->execute( $this );
+        foreach( $db_qnaire->get_qnaire_collection_trigger_object_list() as $db_trigger )
+          $db_trigger->execute( $this );
+        foreach( $db_qnaire->get_qnaire_consent_type_trigger_object_list() as $db_trigger )
+          $db_trigger->execute( $this );
+        foreach( $db_qnaire->get_qnaire_event_type_trigger_object_list() as $db_trigger )
+          $db_trigger->execute( $this );
+        foreach( $db_qnaire->get_qnaire_alternate_consent_type_trigger_object_list() as $db_trigger )
+          $db_trigger->execute( $this );
+        foreach( $db_qnaire->get_qnaire_proxy_type_trigger_object_list() as $db_trigger )
+          $db_trigger->execute( $this );
+        foreach( $db_qnaire->get_qnaire_equipment_type_trigger_object_list() as $db_trigger )
+          $db_trigger->execute( $this );
+      }
     }
 
-    // The respondent may have a date in the future, so make sure to back it up to the response's start
-    // if it comes after it
-    if( !is_null( $this->start_datetime ) && $db_respondent->start_datetime > $this->start_datetime )
-    {
+    // If the respondent's start date comes after the first response's start date then we have to back
+    // it up and warn in the log that there's a datetime mismatch
+    if(
+      1 == $this->rank &&
+      !is_null( $this->start_datetime ) &&
+      $db_respondent->start_datetime > $this->start_datetime
+    ) {
+      log::warning( sprintf(
+        'Respondent record (id:%d) has start datetime "%s" which comes after the first response (id:%d) '.
+        'record\'s start datetime "%s".  Setting the respondent record\'s start datetime to match the '.
+        'response record\'s start datetime.',
+        $db_respondent->id,
+        $db_respondent->start_datetime->format( 'Y-m-d H:i:s' ),
+        $db_response->id,
+        $db_response->start_datetime->format( 'Y-m-d H:i:s' )
+      ) );
       $db_respondent->start_datetime = $this->start_datetime;
       $db_respondent->save();
     }
@@ -311,6 +328,7 @@ class response extends \cenozo\database\has_rank
    */
   public function move_forward()
   {
+    $script_class_name = lib::get_class_name( 'database\script' );
     $answer_class_name = lib::get_class_name( 'database\answer' );
     $page_time_class_name = lib::get_class_name( 'database\page_time' );
 
@@ -320,6 +338,7 @@ class response extends \cenozo\database\has_rank
       return;
     }
 
+    $session = lib::create( 'business\session' );
     $db_page = $this->get_page();
     $db_next_page = NULL;
 
@@ -345,6 +364,22 @@ class response extends \cenozo\database\has_rank
 
         $this->page_id = $db_next_page->id;
         $this->start_datetime = util::get_datetime_object();
+
+        // see if the qnaire exists as a script and apply the started events if it does
+        if( 1 == $this->rank )
+        {
+          $db_script = $script_class_name::get_unique_record( 'pine_qnaire_id', $this->get_qnaire()->id );
+          $db_participant = $this->get_participant();
+          if( !is_null( $db_script ) && !is_null( $db_participant ) )
+          {
+            $db_script->add_started_event(
+              $db_participant,
+              $this->last_datetime,
+              $session->get_effective_site(),
+              $session->get_effective_user()
+            );
+          }
+        }
       }
 
       $this->save();
@@ -376,7 +411,7 @@ class response extends \cenozo\database\has_rank
               is_null( $db_answer ) ? 'but the answer doesn\'t exist.' : 'but the answer is incomplete.'
             ),
             is_null( $db_participant ) ?
-              sprintf( 'anonymous respondent %d', $db_respondent->id ) :
+              sprintf( 'anonymous respondent %d', $this->respondent_id ) :
               sprintf( 'participant %s', $db_participant->uid ),
             $question['name'],
             $db_page->name
@@ -848,12 +883,15 @@ class response extends \cenozo\database\has_rank
 
     if( in_array( $operation, ['jump response', 'fast forward stage', 'rewind stage'] ) )
     {
-      $db_current_response_stage = $this->get_current_response_stage();
-      return (
-        is_null( $db_current_response_stage ) ?
-        'The response is on the stage-selection page.' :
-        NULL
-      );
+      if( $db_qnaire->stages )
+      {
+        $db_current_response_stage = $this->get_current_response_stage();
+        return (
+          is_null( $db_current_response_stage ) ?
+          'The response is on the stage-selection page.' :
+          NULL
+        );
+      }
     }
 
     return NULL;

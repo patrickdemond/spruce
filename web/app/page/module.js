@@ -2959,6 +2959,7 @@ cenozoApp.defineModule({
                   // back up to the respondent's previous page
                   this.working = true;
                   await this.runQuery(async () => {
+                    const self = this;
                     await CnHttpFactory.instance({
                       path:
                         "respondent/token=" + $state.params.token +
@@ -2981,6 +2982,7 @@ cenozoApp.defineModule({
                 // jump to the first page in the provided module
                 this.working = true;
                 await this.runQuery(async () => {
+                  const self = this;
                   await CnHttpFactory.instance({
                     path: "respondent/token=" + $state.params.token + "?action=jump&module_id=" + moduleId,
                     onError: function (error) {
@@ -3000,6 +3002,7 @@ cenozoApp.defineModule({
                 // jump to the last answered page in the stage
                 this.working = true;
                 await this.runQuery(async () => {
+                  const self = this;
                   await CnHttpFactory.instance({
                     path: "respondent/token=" + $state.params.token + "?action=fast_forward_stage",
                     onError: function (error) {
@@ -3019,6 +3022,7 @@ cenozoApp.defineModule({
                 // jump to the first page in the stage
                 this.working = true;
                 await this.runQuery(async () => {
+                  const self = this;
                   await CnHttpFactory.instance({
                     path: "respondent/token=" + $state.params.token + "?action=rewind_stage",
                     onError: function (error) {

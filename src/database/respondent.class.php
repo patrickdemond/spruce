@@ -70,7 +70,6 @@ class respondent extends \cenozo\database\record
     }
   }
 
-
   /**
    * Determines whether the respondent has completed all required responses
    * 
