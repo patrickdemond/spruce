@@ -113,6 +113,316 @@ abstract class base_qnaire_part extends \cenozo\database\has_rank
   }
 
   /**
+   * Gets a list of all dependent qnaire records based on this object's name
+   * 
+   * @param string $regex The search regular expression to use when matching qnaire records
+   * @return associative array
+   */
+  protected function get_qnaire_dependent_records( $regex )
+  {
+    $dependencies = [];
+
+    // Stages
+    $join_mod = lib::create( 'database\modifier' );
+    $join_mod->join( 'qnaire', 'stage.qnaire_id', 'qnaire.id' );
+    $deps = $this->get_table_dependencies( 'stage', $regex, $join_mod );
+    if( 0 < count( $deps ) )
+    {
+      if( !array_key_exists( 'stage', $dependencies ) ) $dependencies['stage'] = [];
+      $dependencies['stage'] = array_merge( $dependencies['stage'], $deps );
+    }
+
+    // Modules
+    $join_mod = lib::create( 'database\modifier' );
+    $join_mod->join( 'qnaire', 'module.qnaire_id', 'qnaire.id' );
+    $deps = $this->get_table_dependencies( 'module', $regex, $join_mod );
+    if( 0 < count( $deps ) )
+    {
+      if( !array_key_exists( 'module', $dependencies ) ) $dependencies['module'] = [];
+      $dependencies['module'] = array_merge( $dependencies['module'], $deps );
+    }
+    $deps = $this->get_table_dependencies( 'module_description', $regex, $join_mod );
+    if( 0 < count( $deps ) )
+    {
+      if( !array_key_exists( 'module', $dependencies ) ) $dependencies['module'] = [];
+      $dependencies['module'] = array_merge( $dependencies['module'], $deps );
+    }
+
+    // Pages
+    $join_mod = lib::create( 'database\modifier' );
+    $join_mod->join( 'module', 'page.module_id', 'module.id' );
+    $join_mod->join( 'qnaire', 'module.qnaire_id', 'qnaire.id' );
+    $deps = $this->get_table_dependencies( 'page', $regex, $join_mod );
+    if( 0 < count( $deps ) )
+    {
+      if( !array_key_exists( 'page', $dependencies ) ) $dependencies['page'] = [];
+      $dependencies['page'] = array_merge( $dependencies['page'], $deps );
+    }
+    $deps = $this->get_table_dependencies( 'page_description', $regex, $join_mod );
+    if( 0 < count( $deps ) )
+    {
+      if( !array_key_exists( 'page', $dependencies ) ) $dependencies['page'] = [];
+      $dependencies['page'] = array_merge( $dependencies['page'], $deps );
+    }
+
+    // Questions
+    $join_mod = lib::create( 'database\modifier' );
+    $join_mod->join( 'page', 'question.page_id', 'page.id' );
+    $join_mod->join( 'module', 'page.module_id', 'module.id' );
+    $join_mod->join( 'qnaire', 'module.qnaire_id', 'qnaire.id' );
+    $deps = $this->get_table_dependencies( 'question', $regex, $join_mod );
+    if( 0 < count( $deps ) )
+    {
+      if( !array_key_exists( 'question', $dependencies ) ) $dependencies['question'] = [];
+      $dependencies['question'] = array_merge( $dependencies['question'], $deps );
+    }
+    $deps = $this->get_table_dependencies( 'question_description', $regex, $join_mod );
+    if( 0 < count( $deps ) )
+    {
+      if( !array_key_exists( 'question', $dependencies ) ) $dependencies['question'] = [];
+      $dependencies['question'] = array_merge( $dependencies['question'], $deps );
+    }
+    
+    // Questions options
+    $join_mod = lib::create( 'database\modifier' );
+    $join_mod->join( 'question', 'question_option.question_id', 'question.id' );
+    $join_mod->join( 'page', 'question.page_id', 'page.id' );
+    $join_mod->join( 'module', 'page.module_id', 'module.id' );
+    $join_mod->join( 'qnaire', 'module.qnaire_id', 'qnaire.id' );
+    $deps = $this->get_table_dependencies( 'question_option', $regex, $join_mod );
+    if( 0 < count( $deps ) )
+    {
+      if( !array_key_exists( 'question_option', $dependencies ) ) $dependencies['question_option'] = [];
+      $dependencies['question_option'] = array_merge( $dependencies['question_option'], $deps );
+    }
+    $deps = $this->get_table_dependencies( 'question_option_description', $regex, $join_mod );
+    if( 0 < count( $deps ) )
+    {
+      if( !array_key_exists( 'question_option', $dependencies ) ) $dependencies['question_option'] = [];
+      $dependencies['question_option'] = array_merge( $dependencies['question_option'], $deps );
+    }
+
+    // Report data
+    $join_mod = lib::create( 'database\modifier' );
+    $join_mod->join( 'qnaire_report', 'qnaire_report_data.qnaire_report_id', 'qnaire_report.id' );
+    $join_mod->join( 'qnaire', 'qnaire_report.qnaire_id', 'qnaire.id' );
+    $deps = $this->get_table_dependencies( 'qnaire_report_data', $regex, $join_mod );
+    if( 0 < count( $deps ) )
+    {
+      if( !array_key_exists( 'report_data', $dependencies ) ) $dependencies['report_data'] = [];
+      $dependencies['report_data'] = array_merge( $dependencies['report_data'], $deps );
+    }
+
+    // Device data
+    $join_mod = lib::create( 'database\modifier' );
+    $join_mod->join( 'device', 'device_data.device_id', 'device.id' );
+    $join_mod->join( 'qnaire', 'device.qnaire_id', 'qnaire.id' );
+    $deps = $this->get_table_dependencies( 'device_data', $regex, $join_mod );
+    if( 0 < count( $deps ) )
+    {
+      if( !array_key_exists( 'device_data', $dependencies ) ) $dependencies['device_data'] = [];
+      $dependencies['device_data'] = array_merge( $dependencies['device_data'], $deps );
+    }
+
+    return $dependencies;
+  }
+
+  /**
+   * Gets a list of records (by table) dependent on this qnaire-part's name
+   * 
+   * @param string $table_name The table to update
+   * @param string $regex The regex to match required changes
+   * @param database\modifier $join_mod Any joins needed to refer back to the qnaire table
+   * @return associative array
+   */
+  private function get_table_dependencies( $table_name, $regex, $join_mod )
+  {
+    $dependencies = [];
+    $qnaire_id = $this->get_qnaire()->id;
+
+    $matches = [];
+    $column_name_list = [];
+    $parent_table_name = $table_name;
+    if( preg_match( '/_data$/', $table_name ) ) $column_name_list[] = 'code';
+    else if( preg_match( '/(.+)_description$/', $table_name, $matches ) )
+    {
+      $column_name_list[] = 'value';
+
+      // also join to the description table's parent table
+      $parent_table_name = $matches[1];
+      $join_mod->join(
+        $parent_table_name,
+        sprintf( '%s.%s_id', $table_name, $parent_table_name ),
+        sprintf( '%s.id', $parent_table_name ),
+        '', // straight join
+        NULL, // no alias
+        true // prepend so that any joins to the parent table will work
+      );
+    }
+    else $column_name_list[] = 'precondition';
+
+    // make sure to add the default_answer column when updating the question table
+    if( 'question' == $table_name ) $column_name_list[] = 'default_answer';
+
+    foreach( $column_name_list as $column_name )
+    {
+      $full_column_name = sprintf( '%s.%s', $table_name, $column_name );
+      $dependency_name = 'value' == $column_name ? 'description' : $column_name;
+      $select = lib::create( 'database\select' );
+      $select->from( $table_name );
+      $select->set_distinct( true );
+      $select->add_table_column( $parent_table_name, 'name' );
+      $modifier = lib::create( 'database\modifier' );
+      $modifier->merge( $join_mod );
+      $modifier->where( $full_column_name, 'RLIKE', $regex );
+      $modifier->where( 'qnaire.id', '=', $qnaire_id );
+      $sql = sprintf( '%s %s', $select->get_sql(), $modifier->get_sql() );
+      foreach( static::db()->get_col( $sql ) as $name )
+      {
+        if( !array_key_exists( $dependency_name, $dependencies ) ) $dependencies[$dependency_name] = [];
+        $dependencies[$dependency_name][] = $name;
+      }
+    }
+
+    return $dependencies;
+  }
+
+  /**
+   * Updates all variable references to a question to a new name
+   * 
+   * @param string $regex The search regular expression to use when matching qnaire records
+   * @param array $replace_list A list of replacements to make
+   * @param string $old_name The old name to change from
+   * @param string $new_name The new name to change to
+   */
+  protected function replace_in_qnaire( $regex, $replace_list, $old_name, $new_name )
+  {
+    // sanity checking
+    if( !is_string( $regex ) || 0 == strlen( $regex ) )
+      throw lib::create( 'exception\argument', 'regex', $regex, __METHOD__ );
+    if( !is_array( $replace_list ) || 0 == count( $replace_list ) )
+      throw lib::create( 'exception\argument', 'replace_list', $replace_list, __METHOD__ );
+    if( !is_string( $old_name ) || 0 == strlen( $regex ) )
+      throw lib::create( 'exception\argument', 'old_name', $regex, __METHOD__ );
+    if( !is_string( $new_name ) || 0 == strlen( $regex ) )
+      throw lib::create( 'exception\argument', 'new_name', $regex, __METHOD__ );
+
+    $qnaire_id = $this->get_qnaire()->id;
+
+    // descriptions
+    $replace_sql = '<COLUMN>';
+    foreach( $replace_list as $replace )
+    {
+      $replace_sql = sprintf(
+        'REPLACE( %s, "%s", "%s" )',
+        $replace_sql,
+        sprintf( $replace, $old_name ),
+        sprintf( $replace, $new_name )
+      );
+    }
+
+    // Stages
+    $join_mod = lib::create( 'database\modifier' );
+    $join_mod->join( 'qnaire', 'stage.qnaire_id', 'qnaire.id' );
+    $this->update_table( 'stage', $regex, $replace_sql, $join_mod );
+
+    // Modules
+    $join_mod = lib::create( 'database\modifier' );
+    $join_mod->join( 'qnaire', 'module.qnaire_id', 'qnaire.id' );
+    $this->update_table( 'module', $regex, $replace_sql, $join_mod );
+    $this->update_table( 'module_description', $regex, $replace_sql, $join_mod );
+
+    // Pages
+    $join_mod = lib::create( 'database\modifier' );
+    $join_mod->join( 'module', 'page.module_id', 'module.id' );
+    $join_mod->join( 'qnaire', 'module.qnaire_id', 'qnaire.id' );
+    $this->update_table( 'page', $regex, $replace_sql, $join_mod );
+    $this->update_table( 'page_description', $regex, $replace_sql, $join_mod );
+
+    // Questions
+    $join_mod = lib::create( 'database\modifier' );
+    $join_mod->join( 'page', 'question.page_id', 'page.id' );
+    $join_mod->join( 'module', 'page.module_id', 'module.id' );
+    $join_mod->join( 'qnaire', 'module.qnaire_id', 'qnaire.id' );
+    $this->update_table( 'question', $regex, $replace_sql, $join_mod );
+    $this->update_table( 'question_description', $regex, $replace_sql, $join_mod );
+    
+    // Questions options
+    $join_mod = lib::create( 'database\modifier' );
+    $join_mod->join( 'question', 'question_option.question_id', 'question.id' );
+    $join_mod->join( 'page', 'question.page_id', 'page.id' );
+    $join_mod->join( 'module', 'page.module_id', 'module.id' );
+    $join_mod->join( 'qnaire', 'module.qnaire_id', 'qnaire.id' );
+    $this->update_table( 'question_option', $regex, $replace_sql, $join_mod );
+    $this->update_table( 'question_option_description', $regex, $replace_sql, $join_mod );
+
+    // Report data
+    $join_mod = lib::create( 'database\modifier' );
+    $join_mod->join( 'qnaire_report', 'qnaire_report_data.qnaire_report_id', 'qnaire_report.id' );
+    $join_mod->join( 'qnaire', 'qnaire_report.qnaire_id', 'qnaire.id' );
+    $this->update_table( 'qnaire_report_data', $regex, $replace_sql, $join_mod );
+
+    // Device data
+    $join_mod = lib::create( 'database\modifier' );
+    $join_mod->join( 'device', 'device_data.device_id', 'device.id' );
+    $join_mod->join( 'qnaire', 'device.qnaire_id', 'qnaire.id' );
+    $this->update_table( 'device_data', $regex, $replace_sql, $join_mod );
+  }
+
+  /**
+   * Updates table values based on changing a qnaire-part's name
+   * 
+   * @param string $table_name The table to update
+   * @param string $regex The regex to match required changes
+   * @param string $replace_sql The REPLACE sql used to replace column values
+   * @param database\modifier $join_mod Any joins needed to refer back to the qnaire table
+   */
+  private function update_table( $table_name, $regex, $replace_sql, $join_mod )
+  {
+    $qnaire_id = $this->get_qnaire()->id;
+
+    $matches = [];
+    $column_name_list = [];
+    if( preg_match( '/_data$/', $table_name ) ) $column_name_list[] = 'code';
+    else if( preg_match( '/(.+)_description$/', $table_name, $matches ) )
+    {
+      $column_name_list[] = 'value';
+
+      // also join to the description table's parent table
+      $parent_table_name = $matches[1];
+      $join_mod->join(
+        $parent_table_name,
+        sprintf( '%s.%s_id', $table_name, $parent_table_name ),
+        sprintf( '%s.id', $parent_table_name ),
+        '', // straight join
+        NULL, // no alias
+        true // prepend so that any joins to the parent table will work
+      );
+    }
+    else $column_name_list[] = 'precondition';
+
+    // make sure to add the default_answer column when updating the question table
+    if( 'question' == $table_name ) $column_name_list[] = 'default_answer';
+
+    foreach( $column_name_list as $column_name )
+    {
+      $full_column_name = sprintf( '%s.%s', $table_name, $column_name );
+      $where_mod = lib::create( 'database\modifier' );
+      $where_mod->where( $full_column_name, 'RLIKE', $regex );
+      $where_mod->where( 'qnaire.id', '=', $qnaire_id );
+      $sql = sprintf(
+        'UPDATE %s %s SET %s = %s %s',
+        $table_name,
+        $join_mod->get_sql(),
+        $full_column_name,
+        str_replace( '<COLUMN>', $full_column_name, $replace_sql ),
+        $where_mod->get_sql()
+      );
+      static::db()->execute( $sql );
+    }
+  }
+
+  /**
    * Clones another qnaire-part
    * @param database\qnaire_part $db_source
    */

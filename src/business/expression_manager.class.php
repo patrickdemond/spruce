@@ -134,7 +134,7 @@ class expression_manager extends \cenozo\singleton
    * 
    * values:
    *   @NAME@ (response attribute)
-   *   $NAME$ (question value or stage: true if the stage is either skipped or complete)
+   *   $NAME$ (question value)
    *   $NAME.empty()$ (true if question hasn't been answered, false if it has)
    *   $NAME.not_empty()$ (true if question has been answered, false if it hasn't)
    *   $NAME.dkna()$ (true if a question's answer is "Don't Know / No Answer")
@@ -143,7 +143,6 @@ class expression_manager extends \cenozo\singleton
    *   $NAME.dkna_refuse_empty()$ (true if a question's answer is "DK/NA" or "Refused" or not answered)
    *   $NAME.not_dkna_refuse()$ (true if a question's answer is not "DK/NA" and not "Refused")
    *   $NAME.not_dkna_refuse_empty()$ (true if a question's answer is not "DK/NA" and not "Refused" and must be answered)
-   *   $NAME.status()$ (gets a stage's current status)
    *   $NAME.value("PATH")$ (a particular property of an object-based answer)
    *   $respondent.token$ (gets the respondent's token)
    *   $respondent.interview_type$ (will be empty if there is no special interview_type)
@@ -200,8 +199,6 @@ class expression_manager extends \cenozo\singleton
    */
   public function compile( $precondition, $override_question_object = NULL )
   {
-    $stage_class_name = lib::get_class_name( 'database\stage' );
-
     // if an override object is proided then make sure it's either a question or question_option
     if( !is_null( $override_question_object ) &&
         !is_a( $override_question_object, lib::get_class_name( 'database\question' ) ) &&
@@ -284,40 +281,12 @@ class expression_manager extends \cenozo\singleton
           if( '$' != $char ) $this->term .= $char;
           else
           {
-            $question = true;
-
-            // determine if this is a respondent, stage or question variable
-            if( preg_match( '/^respondent\.(.+)$/', $this->term, $matches ) )
-            {
-              $compiled .= $this->process_respondent_value( $matches[1] );
-              $question = false;
-            }
-            else
-            {
-              if( $this->db_qnaire->stages && preg_match( '/^([^.]+)(\.([^.]+))?$/', $this->term, $matches ) )
-              {
-                // see if the first part of the argument is a stage name
-                $stage_name = $matches[1];
-
-                $db_stage = $stage_class_name::get_unique_record(
-                  array( 'qnaire_id', 'name' ),
-                  array( $this->db_qnaire->id, $matches[1] )
-                );
-                if( !is_null( $db_stage ) )
-                {
-                  $compiled .= $this->process_stage(
-                    $db_stage,
-                    array_key_exists( 3, $matches ) ? $matches[3] : NULL
-                  );
-                  $question = false;
-                }
-              }
-
-              if( $question )
-              {
-                $compiled .= $this->process_question( $override_question_object );
-              }
-            }
+            // determine if this is a respondent or question variable
+            $compiled .= (
+              preg_match( '/^respondent\.(.+)$/', $this->term, $matches ) ?
+                $this->process_respondent_value( $matches[1] ) :
+                $this->process_question( $override_question_object )
+            );
           }
           $process_char = false;
         }
@@ -1083,49 +1052,6 @@ class expression_manager extends \cenozo\singleton
     return 1 < count( $compiled_list ) ?
       sprintf( '(%s)', implode( ' || ', $compiled_list ) ) :
       current( $compiled_list );
-  }
-
-  /**
-   * Processes the current term as a stage
-   * @param database\stage $db_stage The selected stage
-   * @param string $special_function The stage function (can either be NULL or 'status()')
-   * @return string
-   */
-  private function process_stage( $db_stage, $special_function = NULL )
-  {
-    $response_stage_class_name = lib::get_class_name( 'database\response_stage' );
-
-    if( !$this->db_qnaire->stages )
-    {
-      throw lib::create( 'exception\runtime',
-        sprintf( 'Expression references stage "%s" in qnaire without stages.', $this->term ),
-        __METHOD__
-      );
-    }
-
-    // test that the working item is an operator
-    if( !is_null( $this->last_term ) && 'operator' != $this->last_term )
-      throw lib::create( 'exception\runtime', 'Stage found but expecting an operator', __METHOD__ );
-
-    // determine the last term
-    $this->last_term = is_null( $special_function ) ? 'boolean' : 'string';
-
-    $compiled = sprintf( '$%s$', $this->term );
-    if( !is_null( $this->db_response ) )
-    {
-      $db_response_stage = $response_stage_class_name::get_unique_record(
-        array( 'response_id', 'stage_id' ),
-        array( $this->db_response->id, $db_stage->id )
-      );
-
-      $compiled = 'status()' == $special_function
-                ? sprintf( "'%s'", $db_response_stage->status )
-                : ( in_array( $db_response_stage->status, ['skipped', 'completed'] ) ? 'true' : 'false' );
-    }
-
-    $this->active_term = NULL;
-
-    return $compiled;
   }
 
   /**

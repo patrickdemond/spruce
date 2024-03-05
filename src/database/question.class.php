@@ -42,8 +42,16 @@ class question extends base_qnaire_part
 
     if( $changing_name )
     {
-      // update all preconditions if the question's name is changing
-      $this->get_qnaire()->update_name_in_preconditions( $this, $old_name );
+      // Questions will all start with a $ and end with either:
+      //   "$" (for direct references),
+      //   ":" (for options)
+      //   "." (for functions)
+      $this->replace_in_qnaire(
+        sprintf( '\\$%s[$:.]', $old_name ),
+        ['$%s$', '$%s:', '$%s.'],
+        $old_name,
+        $this->name
+      );
 
       // rename response data directories, if necessary
       if( file_exists( $old_data_directory ) ) rename( $old_data_directory, $this->get_data_directory() );
@@ -128,6 +136,19 @@ class question extends base_qnaire_part
       $db_question_option->name = $db_source_question_option->name;
       $db_question_option->clone_from( $db_source_question_option );
     }
+  }
+
+  /**
+   * Returns a list of all qnaire records dependent on this question's name
+   * @return associative array
+   */
+  public function get_dependent_records()
+  {
+    // Questions will all start with a $ and end with either:
+    //   "$" (for direct references),
+    //   ":" (for options)
+    //   "." (for functions)
+    return parent::get_qnaire_dependent_records( sprintf( '\\$%s[$:.]', $this->name ) );
   }
 
   /**

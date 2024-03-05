@@ -137,47 +137,22 @@ cenozoApp.defineModule({
               if (angular.isDefined(data.name)) {
                 var response = await CnHttpFactory.instance({
                   path: object.parentModel.getServiceResourcePath(),
-                  data: {
-                    select: {
-                      column: [
-                        "module_precondition_dependencies",
-                        "page_precondition_dependencies",
-                        "question_precondition_dependencies",
-                        "question_option_precondition_dependencies",
-                      ],
-                    },
-                  },
+                  data: { select: { column: "qnaire_dependencies" } },
                 }).query();
 
-                if (
-                  null != response.data.module_precondition_dependencies ||
-                  null != response.data.page_precondition_dependencies ||
-                  null != response.data.question_precondition_dependencies ||
-                  null !=
-                    response.data.question_option_precondition_dependencies
-                ) {
+                const dependencies = JSON.parse(response.data.qnaire_dependencies);
+                if (null != dependencies) {
                   var message =
-                    "The following parts of the questionnaire refer to this question-option in their precondition and will " +
-                    "automatically be updated to refer to the question option's new name:\n";
-                  if (null != response.data.module_precondition_dependencies)
-                    message +=
-                      "\nModule(s): " +
-                      response.data.module_precondition_dependencies;
-                  if (null != response.data.page_precondition_dependencies)
-                    message +=
-                      "\nPage(s): " +
-                      response.data.page_precondition_dependencies;
-                  if (null != response.data.question_precondition_dependencies)
-                    message +=
-                      "\nQuestion(s): " +
-                      response.data.question_precondition_dependencies;
-                  if (
-                    null !=
-                    response.data.question_option_precondition_dependencies
-                  )
-                    message +=
-                      "\nQuestion Option(s): " +
-                      response.data.question_option_precondition_dependencies;
+                    "The following parts of the questionnaire refer to this question-option in their " +
+                    "precondition and will automatically be updated to refer to the question option's new name:\n";
+
+                  for (const table in dependencies) {
+                    const tableName = table.replace(/_/, " ").ucWords();
+                    for (const column in dependencies[table]) {
+                      message += "\n" + tableName + " " + column + ": " + dependencies[table][column].join(", ");
+                    }
+                  }
+
                   message += "\n\nAre you sure you wish to proceed?";
 
                   var response = await CnModalConfirmFactory.instance({

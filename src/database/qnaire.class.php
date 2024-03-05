@@ -621,12 +621,12 @@ class qnaire extends \cenozo\database\record
   }
 
   /**
-   * Updates all preconditions refering to a question name to a new name
+   * Updates all variable references to a question to a new name
    * 
    * @param database\record Either a stage, question or question_option
    * @param string $old_name The record's old name
    */
-  public function update_name_in_preconditions( $db_record, $old_name )
+  public function update_question_name( $db_record, $old_name )
   {
     // make sure the record is a stage, question or question_option
     if( is_null( $db_record ) )
