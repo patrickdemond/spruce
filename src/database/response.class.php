@@ -108,7 +108,7 @@ class response extends \cenozo\database\has_rank
       $this->rank = is_null( $db_current_response ) ? 1 : $db_current_response->rank + 1;
     }
 
-    // if the cheked in then make sure the start datetime is set
+    // if checked in then make sure the start datetime is set
     if( $this->checked_in && !$this->start_datetime ) $this->start_datetime = util::get_datetime_object();
 
     parent::save();
@@ -160,22 +160,26 @@ class response extends \cenozo\database\has_rank
 
       if( is_null( $db_qnaire->max_responses ) || $this->rank == $db_qnaire->max_responses )
       {
-        $db_respondent->end_datetime = util::get_datetime_object();
-        $db_respondent->save();
-
-        // now add the finished event to non-anonymous respondents
-        if( !is_null( $db_participant ) )
+        // set the respondent's end datetime and add finished events (but only if the respondent is still open)
+        if( is_null( $db_respondent->end_datetime ) )
         {
-          $db_script = $script_class_name::get_unique_record( 'pine_qnaire_id', $db_respondent->qnaire_id );
-          if( !is_null( $db_script ) )
+          $db_respondent->end_datetime = util::get_datetime_object();
+          $db_respondent->save();
+
+          // now add the finished event to non-anonymous respondents
+          if( !is_null( $db_participant ) )
           {
-            // TODO: don't do this after re-opening and re-submitting qnaire
-            $db_script->add_finished_event(
-              $db_participant,
-              $this->last_datetime,
-              $db_effective_site,
-              $db_effective_user
-            );
+            $db_script = $script_class_name::get_unique_record( 'pine_qnaire_id', $db_respondent->qnaire_id );
+            if( !is_null( $db_script ) )
+            {
+              // TODO: don't do this after re-opening and re-submitting qnaire
+              $db_script->add_finished_event(
+                $db_participant,
+                $this->last_datetime,
+                $db_effective_site,
+                $db_effective_user
+              );
+            }
           }
         }
       }
@@ -279,7 +283,7 @@ class response extends \cenozo\database\has_rank
    */
   public function update_status()
   {
-    if( !$this->get_respondent()->get_qnaire()->stages )
+    if( !$this->get_qnaire()->stages )
     {
       log::warning( 'Tried to update the status of response whose qnaire has no stages.' );
       return false;
@@ -539,7 +543,7 @@ class response extends \cenozo\database\has_rank
    */
   public function has_unfinished_stages()
   {
-    if( !$this->get_respondent()->get_qnaire()->stages )
+    if( !$this->get_qnaire()->stages )
     {
       log::warning( 'Tried to test if response with no stages has any unfinished stages.' );
       return false;
