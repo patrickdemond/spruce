@@ -235,9 +235,12 @@ class patch extends \cenozo\service\patch
         }
         else throw lib::create( 'exception\argument', 'action', $action, __METHOD__ );
 
-        // update the last datetime anytime the response is changed
-        $db_response->last_datetime = util::get_datetime_object();
-        $db_response->save();
+        // only update the last datetime for certain actionso
+        if( !in_array( $action, ['export', 'set_language'] ) )
+        {
+          $db_response->last_datetime = util::get_datetime_object();
+          $db_response->save();
+        }
       }
     }
   }

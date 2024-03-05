@@ -76,7 +76,7 @@ class patch extends \cenozo\service\patch
           throw lib::create( 'exception\notice', $e->get_raw_message(), __METHOD__, $e );
         }
 
-        // update the last datetime anytime the response is changed
+        // update the last datetime anytime a response stage is changed
         $db_response = $db_response_stage->get_response();
         $db_response->last_datetime = util::get_datetime_object();
         $db_response->save();
