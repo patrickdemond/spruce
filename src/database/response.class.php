@@ -145,7 +145,7 @@ class response extends \cenozo\database\has_rank
     {
       // only add events if no stages have been opened (to make sure we're not re-checking-in)
       $modifier = lib::create( 'database\modifier' );
-      $modifier->where( 'start_datetime', '!=', NULL );
+      $modifier->where( 'response_stage.start_datetime', '!=', NULL );
       if( 0 == $this->get_response_stage_count( $modifier ) )
       {
         // see if the qnaire exists as a script and apply the started events if it does
