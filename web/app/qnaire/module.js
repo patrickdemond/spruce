@@ -1131,7 +1131,7 @@ cenozoApp.defineModule({
                 function ($state, model) { return !self.record.repeated; };
               respondentModule.columnList.response_count.isIncluded =
                 function ($state, model) { return self.record.repeated; };
-              respondentModule.columnList.page_progress.isIncluded =
+              respondentModule.columnList.qnaire_progress.isIncluded =
                 function ($state, model) { return !self.record.repeated; };
             },
 

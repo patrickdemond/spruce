@@ -59,7 +59,7 @@ cenozoApp.defineModule({
           title: "Status",
           type: "string",
         },
-        page_progress: {
+        qnaire_progress: {
           title: "Progress",
           isIncluded: function ($state, model) {
             return false;
@@ -202,8 +202,8 @@ cenozoApp.defineModule({
             );
           },
         },
-        page_progress: {
-          title: "Page Progress",
+        qnaire_progress: {
+          title: "Progress",
           type: "string",
           isConstant: true,
           isExcluded: function ($state, model) {

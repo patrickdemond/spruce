@@ -39,7 +39,7 @@ cenozoApp.defineModule({
           title: "Checked In",
           type: "boolean",
         },
-        page_progress: {
+        qnaire_progress: {
           title: "Progress",
         },
         module: {
@@ -109,8 +109,8 @@ cenozoApp.defineModule({
         type: "boolean",
         isConstant: true,
       },
-      page_progress: {
-        title: "Page Progress",
+      qnaire_progress: {
+        title: "Progress",
         type: "string",
         isConstant: true,
       },

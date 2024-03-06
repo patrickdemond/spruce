@@ -25,18 +25,47 @@ class util extends \cenozo\util
       $select->add_column( 'IFNULL( response.interview_type, "Default" )', 'interview_type', false );
     }
 
-    if( $select->has_column( 'page_progress' ) )
+    if( $select->has_column( 'qnaire_progress' ) )
     {
       $select->add_column(
         'CONCAT( '.
           'IF( '.
             'response.submitted, '.
-            'qnaire.total_pages, '.
-            'IF( response.page_id IS NULL, 0, response.current_page_rank ) '.
+            'IF( '.
+              'qnaire.stages, '.
+              '( '.
+                'SELECT COUNT(*) '.
+                'FROM response_stage '.
+                'WHERE response_id = response.id '.
+                'AND status != "not applicable" '.
+              '), '.
+              'qnaire.total_pages '.
+            '), '.
+            'IF( '.
+              'qnaire.stages, '.
+              '( '.
+                'SELECT COUNT(*) '.
+                'FROM response_stage '.
+                'WHERE response_id = response.id '.
+                'AND status IN ("skipped", "parent skipped", "completed") '.
+              '), '.
+              'IF( response.page_id IS NULL, 0, response.current_page_rank ) '.
+            ') '.
           '), '.
-          '" of ", qnaire.total_pages '.
+          '" of ", '.
+          'IF( '.
+            'qnaire.stages, '.
+            '( '.
+              'SELECT COUNT(*) '.
+              'FROM response_stage '.
+              'WHERE response_id = response.id '.
+              'AND status != "not applicable" '.
+            '), '.
+            'qnaire.total_pages '.
+          '), '.
+          'IF( qnaire.stages, " stages", " pages" ) '.
         ')',
-        'page_progress',
+        'qnaire_progress',
         false
       );
     }
