@@ -254,7 +254,7 @@ class util extends \cenozo\util
       [
         sprintf(
           'Authorization: Basic %s',
-          base64_encode( sprintf( '%s:%s', $parent_username, $parent_password ) )
+          base64_encode( sprintf( '%s:%s', $username, $password ) )
         )
       ]
     );
