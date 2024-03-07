@@ -209,11 +209,39 @@ class util extends \cenozo\util
   /**
    * Returns a curl object used by detached instances
    * @param string $url The url to connect to
+   * @param string $username The username to use when connecting to the parent server
+   * @param string $password The password to use when connecting to the parent server
    * @return cURL handle
    */
-  public static function get_detached_curl_object( $url )
+  public static function get_detached_curl_object( $url, $username = NULL, $password = NULL )
   {
     $setting_manager = lib::create( 'business\setting_manager' );
+
+    // if no user/pass is provided then grab them from any open qnaire
+    if( is_null( $username ) )
+    {
+      $qnaire_class_name = lib::get_class_name( 'database\qnaire' );
+      $select = lib::create( 'database\select' );
+      $select->add_column( 'parent_username' );
+      $select->add_column( 'parent_password' );
+      $modifier = lib::create( 'database\modifier' );
+      $modifier->where( 'parent_username', '!=', NULL );
+      $modifier->where( 'parent_password', '!=', NULL );
+      $modifier->where( 'closed', '=', false );
+      $modifier->limit( 1 );
+      $qnaire_list = $qnaire_class_name::select( $select, $modifier );
+      if( 0 == count( $qnaire_list ) )
+      {
+        throw lib::create( 'exception\notice',
+          'Unable to connect to parent servers since there are no active '.
+          'questionnaires setup to have a remote username and password.',
+          __METHOD__
+        );
+      }
+
+      $username = $qnaire_list[0]['parent_username'];
+      $password = $qnaire_list[0]['parent_password'];
+    }
 
     $curl = curl_init();
     curl_setopt( $curl, CURLOPT_URL, $url );
@@ -226,13 +254,7 @@ class util extends \cenozo\util
       [
         sprintf(
           'Authorization: Basic %s',
-          base64_encode(
-            sprintf(
-              '%s:%s',
-              $setting_manager->get_setting( 'general', 'machine_username' ),
-              $setting_manager->get_setting( 'general', 'machine_password' )
-            )
-          )
+          base64_encode( sprintf( '%s:%s', $parent_username, $parent_password ) )
         )
       ]
     );
@@ -244,9 +266,11 @@ class util extends \cenozo\util
    * Utility function used to download data from the parent instance
    * @param string $subject The subject to download (study, consent_type, etc...)
    * @param string $url_postfix A string to add to the end of the remote URL (after api/<subject>)
+   * @param string $username The username to use when connecting to the parent server
+   * @param string $password The password to use when connecting to the parent server
    * @return $object (decoded json response from remote server)
    */
-  public static function get_data_from_parent( $subject, $url_postfix = '' )
+  public static function get_data_from_parent( $subject, $url_postfix = '', $username = NULL, $password = NULL )
   {
     $setting_manager = lib::create( 'business\setting_manager' );
     if( !$setting_manager->get_setting( 'general', 'detached' ) || is_null( PARENT_INSTANCE_URL ) ) return NULL;
@@ -258,7 +282,7 @@ class util extends \cenozo\util
       $subject,
       $url_postfix
     );
-    $curl = static::get_detached_curl_object( $url );
+    $curl = static::get_detached_curl_object( $url, $username, $password );
 
     $response = curl_exec( $curl );
     if( curl_errno( $curl ) )

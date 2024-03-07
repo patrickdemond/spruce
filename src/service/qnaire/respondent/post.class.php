@@ -28,14 +28,12 @@ class post extends \cenozo\service\post
       {
         // make sure the qnaire has beartooth credentials
         $setting_manager = lib::create( 'business\setting_manager' );
-        $machine_username = $setting_manager->get_setting( 'general', 'machine_username' );
-        $machine_password = $setting_manager->get_setting( 'general', 'machine_password' );
         if(
           !$setting_manager->get_setting( 'general', 'detached' ) ||
           is_null( PARENT_INSTANCE_URL ) ||
           is_null( BEARTOOTH_INSTANCE_URL ) ||
-          is_null( $machine_username ) ||
-          is_null( $machine_password )
+          is_null( $db_qnaire->parent_username ) ||
+          is_null( $db_qnaire->parent_password )
         ) {
           $this->status->set_code( 306 );
           $this->set_data(

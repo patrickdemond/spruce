@@ -883,8 +883,8 @@ class qnaire extends \cenozo\database\record
     if( !$setting_manager->get_setting( 'general', 'detached' ) || is_null( PARENT_INSTANCE_URL ) )
       return 'This instance of Pine is not detached so there is no remote connection to test.';
 
-    $machine_username = $setting_manager->get_setting( 'general', 'machine_username' );
-    $machine_password = $setting_manager->get_setting( 'general', 'machine_password' );
+    $parent_username = $this->parent_username;
+    $parent_password = $this->parent_password;
 
     // test the beartooth connection
     $url = sprintf(
@@ -892,7 +892,7 @@ class qnaire extends \cenozo\database\record
       BEARTOOTH_INSTANCE_URL,
       is_null( $this->appointment_type ) ? '' : sprintf( '?type=%s', $this->appointment_type )
     );
-    $curl = util::get_detached_curl_object( $url );
+    $curl = util::get_detached_curl_object( $url, $parent_username, $parent_password );
 
     $curl_response = curl_exec( $curl );
     if( curl_errno( $curl ) )
@@ -927,7 +927,7 @@ class qnaire extends \cenozo\database\record
       PARENT_INSTANCE_URL,
       util::full_urlencode( $this->name )
     );
-    $curl = util::get_detached_curl_object( $url );;
+    $curl = util::get_detached_curl_object( $url, $parent_username, $parent_password );
 
     $curl_response = curl_exec( $curl );
     if( curl_errno( $curl ) )
@@ -973,11 +973,13 @@ class qnaire extends \cenozo\database\record
     if( is_null( PARENT_INSTANCE_URL ) ) return;
 
     // update the qnaire (but only if the version is different)
+    $parent_username = $this->parent_username;
+    $parent_password = $this->parent_password;
     $url_postfix = sprintf(
       '/name=%s?select={"column":["version"]}',
       util::full_urlencode( $this->name )
     );
-    $parent_qnaire = util::get_data_from_parent( 'qnaire', $url_postfix );
+    $parent_qnaire = util::get_data_from_parent( 'qnaire', $url_postfix, $parent_username, $parent_password );
 
     if( $this->version != $parent_qnaire->version )
     {
@@ -989,7 +991,7 @@ class qnaire extends \cenozo\database\record
         '/name=%s?output=export&download=true',
         util::full_urlencode( $this->name )
       );
-      $parent_qnaire = util::get_data_from_parent( 'qnaire', $url_postfix );
+      $parent_qnaire = util::get_data_from_parent( 'qnaire', $url_postfix, $parent_username, $parent_password );
       $readonly = $this->readonly;
 
       // override the readonly property while syncing with the parent instance
@@ -1030,8 +1032,8 @@ class qnaire extends \cenozo\database\record
     if( !$setting_manager->get_setting( 'general', 'detached' ) || is_null( PARENT_INSTANCE_URL ) ) return;
 
     $generic_username = $setting_manager->get_setting( 'general', 'generic_username' );
-    $machine_username = $setting_manager->get_setting( 'general', 'machine_username' );
-    $machine_password = $setting_manager->get_setting( 'general', 'machine_password' );
+    $parent_username = $this->parent_username;
+    $parent_password = $this->parent_password;
 
     // encode all respondent and response data into an array
     $participant_data = [];
@@ -1203,9 +1205,9 @@ class qnaire extends \cenozo\database\record
           $response_stage_sel->add_column( 'id' );
           $response_stage_sel->add_table_column( 'stage', 'rank', 'stage' );
 
-          // when using a generic username set the response's username to the machine's username instead
+          // when using a generic username set the response's username to the parent's username instead
           if( !$generic_username ) $response_stage_sel->add_column( 'username' );
-          else $response_stage_sel->add_constant( sprintf( '"%s"', $machine_username ), 'username' );
+          else $response_stage_sel->add_constant( sprintf( '"%s"', $parent_username ), 'username' );
 
           $response_stage_sel->add_table_column( 'deviation_type', 'type', 'deviation_type' );
           $response_stage_sel->add_table_column( 'deviation_type', 'name', 'deviation_name' );
@@ -1230,9 +1232,9 @@ class qnaire extends \cenozo\database\record
           {
             $pause_sel = lib::create( 'database\select' );
 
-            // when using a generic username set the pause's username to the machine's username instead
+            // when using a generic username set the pause's username to the parent's username instead
             if( !$generic_username ) $pause_sel->add_column( 'username' );
-            else $pause_sel->add_constant( sprintf( '"%s"', $machine_username ), 'username' );
+            else $pause_sel->add_constant( sprintf( '"%s"', $parent_username ), 'username' );
 
             $pause_sel->add_column( 'start_datetime' );
             $pause_sel->add_column( 'end_datetime' );
@@ -1288,7 +1290,7 @@ class qnaire extends \cenozo\database\record
         PARENT_INSTANCE_URL,
         util::full_urlencode( $this->name )
       );
-      $curl = util::get_detached_curl_object( $url );;
+      $curl = util::get_detached_curl_object( $url, $parent_username, $parent_password );
       curl_setopt( $curl, CURLOPT_POST, true );
       curl_setopt(
         $curl,
@@ -1361,7 +1363,7 @@ class qnaire extends \cenozo\database\record
     {
       // Now export the participant's details to beartooth
       $url = sprintf( '%s/api/pine', BEARTOOTH_INSTANCE_URL );
-      $curl = util::get_detached_curl_object( $url );;
+      $curl = util::get_detached_curl_object( $url, $parent_username, $parent_password );
       curl_setopt( $curl, CURLOPT_POST, true );
       curl_setopt( $curl, CURLOPT_POSTFIELDS, util::json_encode( $participant_data ) );
 
@@ -2333,10 +2335,10 @@ class qnaire extends \cenozo\database\record
     $setting_manager = lib::create( 'business\setting_manager' );
     if( !$setting_manager->get_setting( 'general', 'detached' ) || is_null( PARENT_INSTANCE_URL ) ) return;
 
-    $machine_username = $setting_manager->get_setting( 'general', 'machine_username' );
-    $machine_password = $setting_manager->get_setting( 'general', 'machine_password' );
+    $parent_username = $this->parent_username;
+    $parent_password = $this->parent_password;
 
-    if( is_null( BEARTOOTH_INSTANCE_URL ) || is_null( $machine_username ) || is_null( $machine_password ) )
+    if( is_null( BEARTOOTH_INSTANCE_URL ) || is_null( $parent_username ) || is_null( $parent_password ) )
     {
       throw lib::create( 'expression\runtime',
         'Tried to get respondents from Beartooth without a URL, username and password.',
@@ -2349,7 +2351,7 @@ class qnaire extends \cenozo\database\record
       BEARTOOTH_INSTANCE_URL,
       is_null( $this->appointment_type ) ? '' : sprintf( '?type=%s', $this->appointment_type )
     );
-    $curl = util::get_detached_curl_object( $url );;
+    $curl = util::get_detached_curl_object( $url, $parent_username, $parent_password );
 
     $curl_response = curl_exec( $curl );
     if( curl_errno( $curl ) )

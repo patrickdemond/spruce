@@ -158,7 +158,7 @@ cenozoApp.defineModule({
         isExcluded: true,
       },
       has_devices: { type: "hidden", },
-      beartooth: { column: "qnaire.beartooth", type: "hidden", },
+      parent_username: { column: "qnaire.parent_username", type: "hidden", },
     });
 
     module.addInputGroup(
@@ -279,7 +279,7 @@ cenozoApp.defineModule({
         if ("qnaire" == model.getSubjectFromState()) {
         }
         return "today" != model.subList && model.isDetached() && (
-          "qnaire" != model.getSubjectFromState() || model.usesBeartooth
+          "qnaire" != model.getSubjectFromState() || model.hasParentUsername
         );
       },
       isDisabled: function ($state, model) {
@@ -294,7 +294,7 @@ cenozoApp.defineModule({
       },
       isIncluded: function ($state, model) {
         return "today" != model.subList && model.isDetached() && (
-          "qnaire" != model.getSubjectFromState() || model.usesBeartooth
+          "qnaire" != model.getSubjectFromState() || model.hasParentUsername
         );
       },
       isDisabled: function ($state, model) {
@@ -336,7 +336,7 @@ cenozoApp.defineModule({
       isIncluded: function ($state, model) {
         return (
           model.isDetached() &&
-          model.viewModel.record.beartooth &&
+          model.viewModel.record.parent_username &&
           null != model.viewModel.record.end_datetime &&
           "Exported" != model.viewModel.record.status
         );
@@ -356,7 +356,7 @@ cenozoApp.defineModule({
       isIncluded: function ($state, model) {
         return (
           model.isDetached() &&
-          model.viewModel.record.beartooth &&
+          model.viewModel.record.parent_username &&
           model.isRole("administrator") &&
           "Exported" == model.viewModel.record.status
         );
@@ -476,7 +476,7 @@ cenozoApp.defineModule({
           angular.extend(this, {
             onList: async function (replace) {
               await this.$$onList(replace);
-              await this.parentModel.updateUsesBeartooth();
+              await this.parentModel.updateUsesParent();
             },
           });
         };
@@ -621,20 +621,20 @@ cenozoApp.defineModule({
             viewModel: CnRespondentViewFactory.instance(this, root),
 
             workInProgress: false,
-            usesBeartooth: null,
+            hasParentUsername: null,
 
-            updateUsesBeartooth: async function() {
+            updateUsesParent: async function() {
               if (this.isDetached() &&
                   "qnaire" == this.getSubjectFromState() &&
                   "view" == this.getActionFromState()) {
                 const response = await CnHttpFactory.instance({
                   path: 'qnaire/' + $state.params.identifier,
-                  data: { select: { column: "beartooth" } }
+                  data: { select: { column: "parent_username" } }
                 }).get();
 
-                this.usesBeartooth = response.data.beartooth;
+                this.hasParentUsername = null != response.data.parent_username;
               } else {
-                this.usesBeartooth = null;
+                this.hasParentUsername = null;
               }
             },
 

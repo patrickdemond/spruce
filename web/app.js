@@ -752,7 +752,7 @@ cenozo.service("CnTranslationHelper", [
               "<li>Holding down the SHIFT key will allow selection of items 11 through 20</li>" +
               "<li>When an input box has focus the enter key must be pressed to leave focus and re-activate hot-keys</li>" +
               "<li>All hot-keys are deactivated when no question is focused, or when focus is in an input box</li>" +
-              "<li>Hot-keys are disabled when questionnaire is launched via a web-link (directly by the participant and not through Sabretooth, Beartooth or Cedar)</li>",
+              "<li>Hot-keys are disabled when questionnaire is launched via a web-link (directly by the participant and not through Sabretooth or Beartooth)</li>",
             fr:
               "<li>Les touches de raccourci « - » et « + » (clavier ou pavé numérique) permettent de passer respectivement à la page précédente et à la page suivante.</li>" +
               "<li>Les touches de raccourci « [ » et « ] » permettent de se déplacer à la question mise en évidence précédente et suivante, respectivement. (Lorsque la page est chargée pour la première fois, aucune question n’est mise en évidence.)</li>" +
@@ -767,7 +767,7 @@ cenozo.service("CnTranslationHelper", [
               "<li>Maintenez la touche Majuscule enfoncée pour permettre la sélection des éléments 11 à 20.</li>" +
               "<li>Lorsqu’une zone de saisie est mise en évidence, vous devrez enfoncer la touche Entrée pour quitter la mise en évidence et réactiver les touches de raccourci.</li>" +
               "<li>Tous les raccourcis clavier sont désactivés lorsqu’aucune question n’est mise en évidence ou lorsqu’une zone de saisie est mise en évidence.</li>" +
-              "<li>Les raccourcis clavier sont désactivés lorsque le questionnaire est lancé via un lien Web (directement par le participant et non via Sabretooth, Beartooth ou Cedar).</li>",
+              "<li>Les raccourcis clavier sont désactivés lorsque le questionnaire est lancé via un lien Web (directement par le participant et non via Sabretooth ou Beartooth).</li>",
           },
         },
         misc: {
