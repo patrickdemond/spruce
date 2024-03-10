@@ -19,6 +19,7 @@ SOURCE question.sql
 SOURCE service.sql
 SOURCE role_has_service.sql
 SOURCE reminder.sql
+SOURCE device.sql
 SOURCE device_data.sql
 SOURCE qnaire_participant_trigger.sql
 SOURCE qnaire_collection_trigger.sql

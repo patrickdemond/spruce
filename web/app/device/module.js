@@ -28,6 +28,11 @@ cenozoApp.defineModule({
           column: "device.emulate",
           type: "boolean",
         },
+        form: {
+          title: "Is Form",
+          column: "device.form",
+          type: "boolean",
+        },
       },
       defaultOrder: {
         column: "device.name",
@@ -47,6 +52,10 @@ cenozoApp.defineModule({
       },
       emulate: {
         title: "Emulate Mode",
+        type: "boolean",
+      },
+      form: {
+        title: "Is Form",
         type: "boolean",
       },
     });

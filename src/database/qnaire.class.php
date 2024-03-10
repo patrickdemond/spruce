@@ -1028,6 +1028,8 @@ class qnaire extends \cenozo\database\record
     set_time_limit( 900 ); // 15 minutes max
 
     $response_stage_pause_class_name = lib::get_class_name( 'database\response_stage_pause' );
+    $answer_pause_class_name = lib::get_class_name( 'database\answer_pause' );
+
     $setting_manager = lib::create( 'business\setting_manager' );
     if( !$setting_manager->get_setting( 'general', 'detached' ) || is_null( PARENT_INSTANCE_URL ) ) return;
 
@@ -1039,17 +1041,31 @@ class qnaire extends \cenozo\database\record
     $participant_data = [];
     $respondent_data = [];
 
-    // get a list of all sub-directories (question names) in the qnaire's data directory
-    $file_data = array_fill_keys(
-      array_map(
-        'basename',
-        glob(
-          sprintf( '%s/*', $this->get_data_directory() ),
-          GLOB_ONLYDIR
-        )
-      ),
-      []
-    );
+    // get a list of all device questions
+    $file_data = [];
+    $form_question_list = [];
+    if( $this->stages )
+    {
+      // now define which of those are forms
+      $form_sel = lib::create( 'database\select' );
+      $form_sel->add_table_column( 'question', 'name' );
+      $form_sel->add_table_column( 'device', 'form' );
+      $form_mod = lib::create( 'database\modifier' );
+      $form_mod->join( 'page', 'module.id', 'page.module_id' );
+      $form_mod->join( 'question', 'page.id', 'question.page_id' );
+      $form_mod->join( 'device', 'question.device_id', 'device.id' );
+      foreach( $this->get_module_list( $form_sel, $form_mod ) as $row )
+      {
+        if( $row['form'] )
+        {
+          $form_question_list[] = $row['name'];
+        }
+        else
+        {
+          $file_data[$row['name']] = [];
+        }
+      }
+    }
 
     // if no respondent is provided then export all completed and un-exported respondents
     $respondent_list = [];
@@ -1104,7 +1120,7 @@ class qnaire extends \cenozo\database\record
         'token' => $db_respondent->token,
         'start_datetime' => $db_respondent->start_datetime->format( 'c' ),
         'end_datetime' => $db_respondent->end_datetime->format( 'c' ),
-        'response_list' => []
+        'response_list' => [],
       ];
 
       // add all responses belonging to the respondent
@@ -1155,6 +1171,9 @@ class qnaire extends \cenozo\database\record
           ];
         }
 
+        // collect forms from answers in a separate array
+        $form_list = [];
+
         $answer_sel = lib::create( 'database\select' );
         $answer_sel->add_table_column( 'question', 'name', 'question' );
         $answer_sel->add_table_column( 'question', 'type' );
@@ -1196,6 +1215,34 @@ class qnaire extends \cenozo\database\record
             'language' => $answer['language'],
             'value' => $value
           ];
+
+          if( in_array( $answer['question'], $form_question_list ) && 'null' != $value )
+          {
+            // store forms in the form list
+            $file_list = glob(
+              sprintf(
+                '%s/%s/%s/*',
+                $this->get_data_directory(),
+                $answer['question'],
+                $db_participant->uid
+              )
+            );
+            if( 0 < count( $file_list ) )
+            {
+              // get all files and only add to the form list if there is at least one
+              $file_data_list = [];
+              foreach( $file_list as $filename )
+                $file_data_list[basename( $filename )] = base64_encode( file_get_contents( $filename ) );
+              if( 0 < count( $file_data_list ) )
+              {
+                $form_list[] = [
+                  'name' => $answer['question'],
+                  'data' => $value,
+                  'file_list' => $file_data_list
+                ];
+              }
+            }
+          }
         }
 
         if( $this->stages )
@@ -1250,7 +1297,7 @@ class qnaire extends \cenozo\database\record
             unset( $response_stage_list[$index]['id'] );
           }
 
-          $response['stage_list'] = $response_stage_list;
+          if( 0 < count( $form_list ) ) $participant['form_list'] = $form_list;
         }
 
         $respondent['response_list'][] = $response;
@@ -1261,23 +1308,26 @@ class qnaire extends \cenozo\database\record
       $participant_data[] = $participant;
       $respondent_data[] = $respondent;
 
-      // search for data files if needed
-      foreach( $file_data as $question_name => $unused )
+      if( $this->stages )
       {
-        $file_list = glob(
-          sprintf(
-            '%s/%s/%s/*',
-            $this->get_data_directory(),
-            $question_name,
-            $db_participant->uid
-          )
-        );
-        if( 0 < count( $file_list ) )
+        // search for data files if needed
+        foreach( $file_data as $question_name => $unused )
         {
-          $file_data_list = [];
-          foreach( $file_list as $filename )
-            $file_data_list[basename( $filename )] = base64_encode( file_get_contents( $filename ) );
-          $file_data[$question_name][$db_participant->uid] = $file_data_list;
+          $file_list = glob(
+            sprintf(
+              '%s/%s/%s/*',
+              $this->get_data_directory(),
+              $question_name,
+              $db_participant->uid
+            )
+          );
+          if( 0 < count( $file_list ) )
+          {
+            $file_data_list = [];
+            foreach( $file_list as $filename )
+              $file_data_list[basename( $filename )] = base64_encode( file_get_contents( $filename ) );
+            $file_data[$question_name][$db_participant->uid] = $file_data_list;
+          }
         }
       }
     }
