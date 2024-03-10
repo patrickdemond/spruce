@@ -751,16 +751,18 @@ class response extends \cenozo\database\has_rank
     foreach( $db_qnaire_report->get_qnaire_report_data_list( $data_sel ) as $report_data )
     {
       // compile variables as if they were default answers (forced in case the question is on the same page)
+      $value = NULL;
       try
       {
-        $data[$report_data['name']] = strtoupper( $this->compile_expression( $report_data['code'], true ) );
+        $value = strtoupper( $this->compile_expression( $report_data['code'], true ) );
       }
       catch( \cenozo\exception\runtime $e )
       {
         // if the qnaire is in debug mode print the error to the log
-        if( $db_qnaire->debug ) log::error( $e->get_raw_message() );
-        $data[$report_data['name']] = 'N/A';
+        if( $db_qnaire->debug ) log::warning( $e->get_raw_message() );
       }
+
+      $data[$report_data['name']] = is_null( $value ) || 'NULL' == $value ? 'N/A' : $value;
     }
 
     // write the PDF template to disk (it's the only way for the pdf_writer class to read it)
