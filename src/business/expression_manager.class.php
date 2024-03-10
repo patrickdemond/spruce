@@ -100,15 +100,15 @@ class expression_manager extends \cenozo\singleton
   }
 
   /**
-   * Evaluates a precondition
+   * Evaluates an expression
    * 
-   * @param string $precondition The precondition string to evaluate
+   * @param string $expression The expresssion string to evaluate
    * @return string
    * @throws exception\runtime
    */
-  public function evaluate( $precondition )
+  public function evaluate( $expression )
   {
-    $compiled = $this->compile( $precondition );
+    $compiled = $this->compile( $expression );
     try
     {
       $response = is_null( $this->db_response ) ? true : eval( sprintf( 'return (%s);', $compiled ) );
@@ -117,8 +117,8 @@ class expression_manager extends \cenozo\singleton
     {
       throw lib::create( 'exception\runtime',
         sprintf(
-          "An error in a precondition has been detected:\n  Expression: %s\n  Compiled: %s\n  Error: %s",
-          $precondition,
+          "An error in an expresssion has been detected:\n  Expression: %s\n  Compiled: %s\n  Error: %s",
+          $expression,
           $compiled,
           $e->getMessage()
         ),

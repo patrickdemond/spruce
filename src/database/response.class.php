@@ -733,6 +733,7 @@ class response extends \cenozo\database\has_rank
   {
     $qnaire_report_class_name = lib::get_class_name( 'database\qnaire_report' );
 
+    $db_qnaire = $this->get_qnaire();
     $language = $this->get_language()->code;
 
     // get the qnaire report for the response's qnaire and language
@@ -750,7 +751,16 @@ class response extends \cenozo\database\has_rank
     foreach( $db_qnaire_report->get_qnaire_report_data_list( $data_sel ) as $report_data )
     {
       // compile variables as if they were default answers (forced in case the question is on the same page)
-      $data[$report_data['name']] = strtoupper( $this->compile_expression( $report_data['code'], true ) );
+      try
+      {
+        $data[$report_data['name']] = strtoupper( $this->compile_expression( $report_data['code'], true ) );
+      }
+      catch( \cenozo\exception\runtime $e )
+      {
+        // if the qnaire is in debug mode print the error to the log
+        if( $db_qnaire->debug ) log::error( $e->get_raw_message() );
+        $data[$report_data['name']] = 'N/A';
+      }
     }
 
     // write the PDF template to disk (it's the only way for the pdf_writer class to read it)
@@ -763,7 +773,7 @@ class response extends \cenozo\database\has_rank
       throw lib::create( 'exception\runtime',
         sprintf(
           'Failed to generate PDF qnaire "%s" report for %s%s',
-          $db_respondent->get_qnaire()->name,
+          $db_qnaire->name,
           is_null( $db_participant ) ?
             sprintf( 'anonymous respondent %d', $db_respondent->id ) :
             sprintf( 'participant %s', $db_participant->uid ),
