@@ -910,31 +910,33 @@ class response extends \cenozo\database\has_rank
   }
 
   /**
-   * Compiles a default answer
-   * @param string $default_answer
+   * Compiles an expression
+   * @param string $expression
    * @param boolean $force Whether to force compile values even if the are on the current page
    * @return string
    */
-  public function compile_expression( $default, $force = false )
+  public function compile_expression( $expression, $force = false )
   {
     $expression_manager = lib::create( 'business\expression_manager', $this );
 
     // first, compile anything enclosed by backticks
     $matches = [];
-    if( preg_match_all( '/`([^`]*)`/', $default, $matches ) )
+    if( preg_match_all( '/`([^`]*)`/', $expression, $matches ) )
     {
-      foreach( $matches[0] as $index => $expression )
+      foreach( $matches[0] as $index => $description )
       {
-        $default = str_replace(
-          $expression,
+        $expression = str_replace(
+          $description,
           $this->compile_description( $matches[1][$index], $force ),
-          $default
+          $expression
         );
       }
     }
 
     // now evaluate the expression
-    return $expression_manager->evaluate( $default );
+    $value = $expression_manager->evaluate( $expression );
+    if( is_numeric( $value ) ) $value = round( $value, 2 );
+    return $value;
   }
 
   /**
@@ -1211,12 +1213,16 @@ class response extends \cenozo\database\has_rank
           {
             $compiled = $this->compile_lookup( $value, $question_matches[2][$index] );
           }
-          else $compiled = $value;
+          else
+          {
+            $compiled = $value;
+          }
 
           $description = str_replace( $matched_expression, $compiled, $description );
         }
       }
 
+      if( is_numeric( $description ) ) $description = round( $description, 2 );
 
       // convert respondent data
       foreach( $respondent_matches[1] as $index => $respondent_property )
