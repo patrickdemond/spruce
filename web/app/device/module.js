@@ -57,6 +57,7 @@ cenozoApp.defineModule({
       form: {
         title: "Is Form",
         type: "boolean",
+        help: "Set to true if the device is a form that needs to be sent to Mastodon's data entry system.",
       },
     });
 
