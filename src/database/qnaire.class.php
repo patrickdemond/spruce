@@ -1028,7 +1028,6 @@ class qnaire extends \cenozo\database\record
     set_time_limit( 900 ); // 15 minutes max
 
     $response_stage_pause_class_name = lib::get_class_name( 'database\response_stage_pause' );
-    $answer_pause_class_name = lib::get_class_name( 'database\answer_pause' );
 
     $setting_manager = lib::create( 'business\setting_manager' );
     if( !$setting_manager->get_setting( 'general', 'detached' ) || is_null( PARENT_INSTANCE_URL ) ) return;
@@ -1041,20 +1040,19 @@ class qnaire extends \cenozo\database\record
     $participant_data = [];
     $respondent_data = [];
 
-    // get a list of all device questions
+    // get a list of all file and form data from device and audio questions
     $file_data = [];
     $form_question_list = [];
     if( $this->stages )
     {
-      // now define which of those are forms
-      $form_sel = lib::create( 'database\select' );
-      $form_sel->add_table_column( 'question', 'name' );
-      $form_sel->add_table_column( 'device', 'form' );
-      $form_mod = lib::create( 'database\modifier' );
-      $form_mod->join( 'page', 'module.id', 'page.module_id' );
-      $form_mod->join( 'question', 'page.id', 'question.page_id' );
-      $form_mod->join( 'device', 'question.device_id', 'device.id' );
-      foreach( $this->get_module_list( $form_sel, $form_mod ) as $row )
+      $select = lib::create( 'database\select' );
+      $select->add_table_column( 'question', 'name' );
+      $select->add_table_column( 'device', 'form' );
+      $modifier = lib::create( 'database\modifier' );
+      $modifier->join( 'page', 'module.id', 'page.module_id' );
+      $modifier->join( 'question', 'page.id', 'question.page_id' );
+      $modifier->join( 'device', 'question.device_id', 'device.id' );
+      foreach( $this->get_module_list( $select, $modifier ) as $row )
       {
         if( $row['form'] )
         {
@@ -1064,6 +1062,17 @@ class qnaire extends \cenozo\database\record
         {
           $file_data[$row['name']] = [];
         }
+      }
+
+      $select = lib::create( 'database\select' );
+      $select->add_table_column( 'question', 'name' );
+      $modifier = lib::create( 'database\modifier' );
+      $modifier->join( 'page', 'module.id', 'page.module_id' );
+      $modifier->join( 'question', 'page.id', 'question.page_id' );
+      $modifier->where( 'question.type', '=', 'audio' );
+      foreach( $this->get_module_list( $select, $modifier ) as $row )
+      {
+        $file_data[$row['name']] = [];
       }
     }
 
@@ -1230,20 +1239,22 @@ class qnaire extends \cenozo\database\record
             if( 0 < count( $file_list ) )
             {
               // get all files and only add to the form list if there is at least one
-              $file_data_list = [];
+              $form_data_list = [];
               foreach( $file_list as $filename )
-                $file_data_list[basename( $filename )] = base64_encode( file_get_contents( $filename ) );
-              if( 0 < count( $file_data_list ) )
+                $form_data_list[basename( $filename )] = base64_encode( file_get_contents( $filename ) );
+              if( 0 < count( $form_data_list ) )
               {
                 $form_list[] = [
                   'name' => $answer['question'],
                   'data' => $value,
-                  'file_list' => $file_data_list
+                  'file_list' => $form_data_list
                 ];
               }
             }
           }
         }
+
+        if( 0 < count( $form_list ) ) $participant['form_list'] = $form_list;
 
         if( $this->stages )
         {
@@ -1297,7 +1308,7 @@ class qnaire extends \cenozo\database\record
             unset( $response_stage_list[$index]['id'] );
           }
 
-          if( 0 < count( $form_list ) ) $participant['form_list'] = $form_list;
+          $response['stage_list'] = $response_stage_list;
         }
 
         $respondent['response_list'][] = $response;
