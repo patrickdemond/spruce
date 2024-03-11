@@ -226,8 +226,8 @@ class response extends \cenozo\database\has_rank
         'response record\'s start datetime.',
         $db_respondent->id,
         $db_respondent->start_datetime->format( 'Y-m-d H:i:s' ),
-        $db_response->id,
-        $db_response->start_datetime->format( 'Y-m-d H:i:s' )
+        $this->id,
+        $this->start_datetime->format( 'Y-m-d H:i:s' )
       ) );
       $db_respondent->start_datetime = $this->start_datetime;
       $db_respondent->save();
