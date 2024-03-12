@@ -45,6 +45,7 @@ class answer_device extends \cenozo\database\record
    */
   public function launch()
   {
+    $session = lib::create( 'business\session' );
     $db_device = $this->get_device();
     $cypress_manager = lib::create( 'business\cypress_manager', $db_device );
     $db_answer = $this->get_answer();
@@ -68,7 +69,7 @@ class answer_device extends \cenozo\database\record
       'answer_id' => $db_answer->id,
       'barcode' => $db_response->get_respondent()->token,
       'language' => $db_response->get_language()->code,
-      'interviewer' => $db_answer->get_user()->name
+      'interviewer' => $session->get_user()->name
     );
 
     // then include any other data
