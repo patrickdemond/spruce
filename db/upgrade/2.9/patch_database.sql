@@ -25,6 +25,7 @@ SOURCE qnaire_participant_trigger.sql
 SOURCE qnaire_collection_trigger.sql
 SOURCE qnaire_equipment_type_trigger.sql
 SOURCE qnaire_event_type_trigger.sql
+SOURCE timestamps.sql
 
 SOURCE update_version_number.sql
 
