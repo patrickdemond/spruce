@@ -1306,6 +1306,17 @@ class response extends \cenozo\database\has_rank
     {
       $compiled = NULL;
       $object_path = $device_matches[1];
+
+      // NOTE: the .length property in flow/jsonpath is broken so we have to emulate it here
+      // TODO: once replacing flow with another lib this can be removed
+      $is_length = false;
+      $matches = [];
+      if( preg_match( '/(.+)\.length$/', $object_path, $matches ) )
+      {
+        $is_length = true;
+        $object_path = $matches[1];
+      }
+
       $data = (new JSONPath( $value ))->find( sprintf( '$.%s', $object_path ) )->data();
       if( !is_array( $data ) || 0 == count( $data ) )
       {
@@ -1314,6 +1325,7 @@ class response extends \cenozo\database\has_rank
       else
       {
         $compiled = (new JSONPath( $value ))->find( sprintf( '$.%s', $object_path ) )->data()[0];
+        if( $is_length ) $compiled = count( $compiled );
       }
     }
 
