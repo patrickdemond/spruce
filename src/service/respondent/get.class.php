@@ -132,18 +132,56 @@ class get extends \cenozo\service\get
     parent::finish();
 
     // show any attribute errors as a notice when in debug mode
-    if( !is_null( $this->db_response ) && $this->db_response->get_qnaire()->debug )
+    if( !is_null( $this->db_response ) )
     {
-      $error_list = lib::create( 'business\session' )->attribute_error_list;
-      if( 0 < count( $error_list ) )
+      if( $this->db_response->get_qnaire()->debug )
       {
-        $notice = "The following errors occurred while creating the participant's attribute values:\n\n";
-        foreach( $error_list as $name => $error ) $notice .= sprintf( "\"%s\": %s\n", $name, $error );
-        $notice .=
-          "\n".
-          'Empty values have been created so you can proceed with the questionnaire by reloading the page.'.
-          "\n\n";
-        throw lib::create( 'exception\notice', $notice, __METHOD__ );
+        $error_list = lib::create( 'business\session' )->attribute_error_list;
+        if( 0 < count( $error_list ) )
+        {
+          $notice = "The following errors occurred while creating the participant's attribute values:\n\n";
+          foreach( $error_list as $name => $error ) $notice .= sprintf( "\"%s\": %s\n", $name, $error );
+          $notice .=
+            "\n".
+            'Empty values have been created so you can proceed with the questionnaire by reloading the page.'.
+            "\n\n";
+          throw lib::create( 'exception\notice', $notice, __METHOD__ );
+        }
+      }
+
+      // NOTE: There is currently a bug in the out-of-sync logic that will set a response to be in
+      // stage-selection mode despite a stage currently being active (ie: response.page_id is null
+      // and active response_stage.page_id is not null).
+      // In this situation we must immediately correct the response and update the data with the
+      // newly corrected values.
+      if(
+        array_key_exists( 'response_stage_id', $this->data ) &&
+        !is_null( $this->data['response_stage_id'] ) &&
+        array_key_exists( 'page_id', $this->data ) &&
+        is_null( $this->data['page_id'] )
+      ){
+        $db_respondent = $this->get_leaf_record();
+        $db_participant = $db_respondent->get_participant();
+        $db_response_stage = lib::create( 'database\response_stage', $this->data['response_stage_id'] );
+
+        // warn that we're going to fix the response record
+        log::warning( sprintf(
+          'Response/stage page mismatch detected and corrected for %s in %s stage.',
+          is_null( $db_participant ) ?
+            $db_respondent->token :
+            sprintf( '%s (%s)', $db_participant->uid, $db_respondent->token ),
+            $db_response_stage->get_stage()->name
+        ) );
+
+        // update the response record
+        $this->db_response->page_id = $db_response_stage->page_id;
+        $this->db_response->stage_selection = false;
+        $this->db_response->save();
+
+        // update the service data
+        $this->data['page_id'] = $db_response_stage->page_id;
+        $this->data['stage_selection'] = 0;
+        $this->set_data( $this->data );
       }
     }
   }
