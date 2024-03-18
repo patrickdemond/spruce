@@ -1028,6 +1028,7 @@ class qnaire extends \cenozo\database\record
     set_time_limit( 900 ); // 15 minutes max
 
     $response_stage_pause_class_name = lib::get_class_name( 'database\response_stage_pause' );
+    $answer_device_class_name = lib::get_class_name( 'database\answer_device' );
 
     $setting_manager = lib::create( 'business\setting_manager' );
     if( !$setting_manager->get_setting( 'general', 'detached' ) || is_null( PARENT_INSTANCE_URL ) ) return;
@@ -1155,7 +1156,8 @@ class qnaire extends \cenozo\database\record
           'last_datetime' => $db_response->last_datetime->format( 'c' ),
           'comments' => $db_response->comments,
           'page_time_list' => [],
-          'answer_list' => []
+          'answer_list' => [],
+          'answer_device_list' => []
         ];
 
         if( $db_qnaire->stages ) $response['interview_type'] = $db_response->interview_type;
@@ -1184,6 +1186,7 @@ class qnaire extends \cenozo\database\record
         $form_list = [];
 
         $answer_sel = lib::create( 'database\select' );
+        $answer_sel->add_column( 'id' );
         $answer_sel->add_table_column( 'question', 'name', 'question' );
         $answer_sel->add_table_column( 'question', 'type' );
         $answer_sel->add_table_column( 'language', 'code', 'language' );
@@ -1219,11 +1222,28 @@ class qnaire extends \cenozo\database\record
             }
           }
 
-          $response['answer_list'][] = [
+          $answer_data = [
             'question' => $answer['question'],
             'language' => $answer['language'],
             'value' => $value
           ];
+
+          if( 'device' == $answer['type'] )
+          {
+            // store answer-device data directly with the answer data
+            $db_answer_device = $answer_device_class_name::get_unique_record( 'answer_id', $answer['id'] );
+            if( !is_null( $db_answer_device ) )
+            {
+              $answer_data['answer_device'] = [
+                'uuid' => $db_answer_device->uuid,
+                'status' => $db_answer_device->status,
+                'start_datetime' => $db_answer_device->start_datetime,
+                'end_datetime' => $db_answer_device->end_datetime
+              ];
+            }
+          }
+
+          $response['answer_list'][] = $answer_data;
 
           if( in_array( $answer['question'], $form_question_list ) && 'null' != $value )
           {
@@ -2258,6 +2278,16 @@ class qnaire extends \cenozo\database\record
             $db_answer->language_id = $language_class_name::get_unique_record( 'code', $answer->language )->id;
             $db_answer->value = $value;
             $db_answer->save();
+
+            if( 'device' == $db_answer->type && property_exists( 'answer_device', $answer ) )
+            {
+              $db_answer_device = $db_answer->get_answer_device();
+              $db_answer_device->uuid = $answer->answer_device->uuid;
+              $db_answer_device->status = $answer->answer_device->status;
+              $db_answer_device->start_datetime = $answer->answer_device->start_datetime;
+              $db_answer_device->end_datetime = $answer->answer_device->end_datetime;
+              $db_answer_device->save();
+            }
           }
 
           if( $this->stages )
