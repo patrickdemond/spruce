@@ -1156,8 +1156,7 @@ class qnaire extends \cenozo\database\record
           'last_datetime' => $db_response->last_datetime->format( 'c' ),
           'comments' => $db_response->comments,
           'page_time_list' => [],
-          'answer_list' => [],
-          'answer_device_list' => []
+          'answer_list' => []
         ];
 
         if( $db_qnaire->stages ) $response['interview_type'] = $db_response->interview_type;
@@ -1237,8 +1236,8 @@ class qnaire extends \cenozo\database\record
               $answer_data['answer_device'] = [
                 'uuid' => $db_answer_device->uuid,
                 'status' => $db_answer_device->status,
-                'start_datetime' => $db_answer_device->start_datetime,
-                'end_datetime' => $db_answer_device->end_datetime
+                'start_datetime' => $db_answer_device->start_datetime->format( 'c' ),
+                'end_datetime' => $db_answer_device->end_datetime->format( 'c' )
               ];
             }
           }
@@ -2279,7 +2278,7 @@ class qnaire extends \cenozo\database\record
             $db_answer->value = $value;
             $db_answer->save();
 
-            if( 'device' == $db_answer->type && property_exists( 'answer_device', $answer ) )
+            if( 'device' == $db_question->type && property_exists( 'answer_device', $answer ) )
             {
               $db_answer_device = $db_answer->get_answer_device();
               $db_answer_device->uuid = $answer->answer_device->uuid;
