@@ -2278,7 +2278,7 @@ class qnaire extends \cenozo\database\record
             $db_answer->value = $value;
             $db_answer->save();
 
-            if( 'device' == $db_question->type && property_exists( 'answer_device', $answer ) )
+            if( 'device' == $db_question->type && property_exists( $answer, 'answer_device' ) )
             {
               $db_answer_device = $db_answer->get_answer_device();
               $db_answer_device->uuid = $answer->answer_device->uuid;
