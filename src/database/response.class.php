@@ -1069,6 +1069,7 @@ class response extends \cenozo\database\has_rank
             array( $this->id, $db_question->id )
           );
           $value = is_null( $db_answer ) ? NULL : util::json_decode( $db_answer->value );
+          $compiled = NULL;
 
           if( !is_null( $db_answer ) && $answer_class_name::DKNA == $db_answer->value )
           {
@@ -1198,12 +1199,24 @@ class response extends \cenozo\database\has_rank
               {
                 // send as a base64 encoded audio string for the <audio> tag's src attribute
                 $value = sprintf( 'data:audio/wav;base64,%s', base64_encode( $file ) );
+                $compiled = sprintf(
+                  '<audio controls class="full-width" style="height: 40px;" src="%s"></audio>',
+                  $value
+                );
               }
             }
-            $compiled = sprintf(
-              '<audio controls class="full-width" style="height: 40px;" src="%s"></audio>',
-              $value
-            );
+
+            if( is_null( $compiled ) )
+            {
+              // if the answer shows a filesize then show that and report that the file is missing
+              if( is_object( $value ) && property_exists( $value, 'filesize' ) )
+              {
+                $compiled = sprintf(
+                  '<strong>%s of audio recorded but file is not available</strong>',
+                  util::human_file_size( $value->filesize )
+                );
+              }
+            }
           }
           else if( 'device' == $db_question->type )
           {
@@ -1218,7 +1231,7 @@ class response extends \cenozo\database\has_rank
             $compiled = $value;
           }
 
-          $description = str_replace( $matched_expression, $compiled, $description );
+          if( !is_null( $compiled ) ) $description = str_replace( $matched_expression, $compiled, $description );
         }
       }
 
