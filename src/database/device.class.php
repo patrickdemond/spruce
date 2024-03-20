@@ -39,6 +39,7 @@ class device extends \cenozo\database\record
     $db_device->name = $device->name;
     $db_device->url = $device->url;
     $db_device->emulate = $device->emulate;
+    $db_device->form = $device->form;
     $db_device->save();
 
     // add all device data

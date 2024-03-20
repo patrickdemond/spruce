@@ -381,6 +381,7 @@ class qnaire extends \cenozo\database\record
       $db_device->name = $db_source_device->name;
       $db_device->url = $db_source_device->url;
       $db_device->emulate = $db_source_device->emulate;
+      $db_device->form = $db_source_device->form;
       $db_device->save();
 
       // copy all device data
@@ -5506,6 +5507,7 @@ class qnaire extends \cenozo\database\record
           'name' => $db_device->name,
           'url' => $db_device->url,
           'emulate' => $db_device->emulate,
+          'form' => $db_device->form,
           'device_data_list' => []
         ];
 
