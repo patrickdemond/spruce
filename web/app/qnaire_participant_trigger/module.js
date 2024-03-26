@@ -23,7 +23,7 @@ cenozoApp.defineModule({
           title: "Required Answer",
         },
         column_name: {
-          title: "Particiapnt Column",
+          title: "Participant Column",
         },
         value: {
           title: "Value",
