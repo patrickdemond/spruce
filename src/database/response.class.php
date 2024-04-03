@@ -220,15 +220,6 @@ class response extends \cenozo\database\has_rank
       !is_null( $this->start_datetime ) &&
       $db_respondent->start_datetime > $this->start_datetime
     ) {
-      log::warning( sprintf(
-        'Respondent record (id:%d) has start datetime "%s" which comes after the first response (id:%d) '.
-        'record\'s start datetime "%s".  Setting the respondent record\'s start datetime to match the '.
-        'response record\'s start datetime.',
-        $db_respondent->id,
-        $db_respondent->start_datetime->format( 'Y-m-d H:i:s' ),
-        $this->id,
-        $this->start_datetime->format( 'Y-m-d H:i:s' )
-      ) );
       $db_respondent->start_datetime = $this->start_datetime;
       $db_respondent->save();
     }
