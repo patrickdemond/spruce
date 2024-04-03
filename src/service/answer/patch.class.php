@@ -102,16 +102,22 @@ class patch extends \cenozo\service\patch
     $db_answer = $this->get_leaf_record();
     $filename = $this->get_argument( 'filename', NULL );
 
-    // if the site was specified then update the response's site
-    $site = $this->get_argument( 'site', NULL );
-    if( !is_null( $site ) )
+    // possibly set or change the response's site
+    $db_response = $db_answer->get_response();
+    if( is_null( $db_response->site_id ) )
     {
-      $db_site = $site_class_name::get_unique_record( 'name', $site );
-      if( !is_null( $db_site ) && $db_site->id != $db_answer->response_id )
+      $site_id = NULL;
+      $site = $this->get_argument( 'site', NULL );
+      if( !is_null( $site ) )
       {
-        $db_response = $db_answer->get_response();
-        $db_response->site_id = $db_site->id;
+        $db_site = $site_class_name::get_unique_record( 'name', $site );
+        if( !is_null( $db_site ) ) $site_id = $db_site->id;
       }
+
+      // if there is no site argument then use the session's site
+      if( is_null( $site_id ) ) $site_id = lib::create( 'business\session' )->get_site()->id;
+      $db_response->site_id = $site_id;
+      $db_response->save();
     }
 
     if( !is_null( $filename ) )
