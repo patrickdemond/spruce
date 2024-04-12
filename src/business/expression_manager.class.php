@@ -221,14 +221,15 @@ class expression_manager extends \cenozo\singleton
     try
     {
       // loop through the precondition one character at a time
+      $last_char = NULL;
       foreach( str_split( strtolower( $precondition ) ) as $index => $char )
       {
         $process_char = true;
 
         if( 'string' == $this->active_term )
         { // ignore characters until the string has closed
-          if( $this->quote != $char ) $this->term .= $char;
-          else $compiled .= $this->process_string();
+          if( $this->quote === $char && '\\' !== $last_char ) $compiled .= $this->process_string();
+          else $this->term .= $char;
           $process_char = false;
         }
         else if( 'number' == $this->active_term )
@@ -292,6 +293,7 @@ class expression_manager extends \cenozo\singleton
         }
 
         if( $process_char ) $compiled .= $this->process_character( $char );
+        $last_char = $char;
       }
 
       if( 0 != $this->open_bracket ) 
@@ -365,7 +367,8 @@ class expression_manager extends \cenozo\singleton
     $this->active_term = NULL;
     $this->quote = NULL;
 
-    return sprintf( '"%s"', addslashes( $this->term ) );
+    // enclose the term in double quotes, making sure to escape any un-escaped double quote in the term
+    return sprintf( '"%s"', preg_replace( '/^"|([^\\\])"/', '\1\"', $this->term ) );
   }
 
   /**
@@ -588,9 +591,8 @@ class expression_manager extends \cenozo\singleton
         }
         else
         {
-          $compiled = is_null( $this->db_response_attribute->value )
-                    ? 'null'
-                    : sprintf( '%s', addslashes( $this->db_response_attribute->value ) );
+          $compiled = is_null( $this->db_response_attribute->value ) ?
+            'null' : addslashes( $this->db_response_attribute->value );
 
           // add quotes if required
           if( 'null' != $compiled &&
