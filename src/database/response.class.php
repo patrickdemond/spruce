@@ -924,6 +924,18 @@ class response extends \cenozo\database\has_rank
       }
     }
 
+    // now replace string(A) with "B" (where B => A with \ and " replaced with \\ and \", respectively
+    $matches = [];
+    if( preg_match_all( '/string\((.*)\)/U', $expression, $matches ) )
+    {
+      foreach( $matches[0] as $index => $exp )
+      {
+        $replace = str_replace( ['\\','"'], ['\\\\','\"'], $matches[1][$index] );
+        $expression = str_replace( $exp, $replace, $expression );
+      }
+      $expression = sprintf( '"%s"', $expression );
+    }
+
     // now evaluate the expression
     $value = $expression_manager->evaluate( $expression );
     if( is_numeric( $value ) ) $value = round( $value, 2 );
