@@ -1752,6 +1752,7 @@ class qnaire extends \cenozo\database\record
         }
 
         $db_response->submitted = $metadata['submitted'];
+        if( $db_response->submitted && $this->stages ) $db_response->checked_in = true;
         $db_response->comments = 'Imported from CSV';
 
         if( array_key_exists( 'start_datetime', $metadata ) )
@@ -2343,6 +2344,7 @@ class qnaire extends \cenozo\database\record
           if( $response->submitted )
           {
             $db_response->submitted = $response->submitted;
+            if( $db_response->submitted && $this->stages ) $db_response->checked_in = true;
             $db_response->save();
           }
         }
