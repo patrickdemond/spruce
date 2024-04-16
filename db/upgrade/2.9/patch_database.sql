@@ -2,6 +2,9 @@
 
 SET AUTOCOMMIT=0;
 
+-- TEMPORARY FIX TO RE-ENBLE FRENCH LANGUAGE ON LAPTOPS
+SOURCE fix_language.sql
+
 SOURCE custom_report.sql
 SOURCE role_has_custom_report.sql
 SOURCE embedded_file.sql
