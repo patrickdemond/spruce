@@ -3,14 +3,6 @@ DELIMITER //
 CREATE PROCEDURE patch_device()
   BEGIN
 
-    -- determine the @cenozo database name
-    SET @cenozo = (
-      SELECT unique_constraint_schema
-      FROM information_schema.referential_constraints
-      WHERE constraint_schema = DATABASE()
-      AND constraint_name = "fk_access_site_id"
-    );
-
     SELECT "Adding equipment_type columns to device table" AS "";
 
     SELECT COUNT(*) INTO @test

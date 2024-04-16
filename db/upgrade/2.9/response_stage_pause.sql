@@ -34,7 +34,6 @@ CREATE PROCEDURE patch_response_stage_pause()
 
     SELECT "Replacing user_id with username in response_stage_pause table" AS "";
 
-    -- determine the @cenozo database name
     SELECT COUNT(*) INTO @test
     FROM information_schema.COLUMNS
     WHERE table_schema = DATABASE()
