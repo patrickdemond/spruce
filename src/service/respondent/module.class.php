@@ -16,6 +16,39 @@ class module extends \cenozo\service\module
   /**
    * Extend parent method
    */
+  public function validate()
+  {
+    parent::validate();
+
+    if( $this->service->may_continue() )
+    {
+      // only allow interviewers to delete respondents with no answers
+      $db_role = lib::create( 'business\session' )->get_role();
+      if( 'interviewer' == $db_role->name && 'DELETE' == $this->get_method() )
+      {
+        $db_respondent = $this->get_resource();
+        if( !is_null( $db_respondent ) )
+        {
+          foreach( $db_respondent->get_response_object_list() as $db_response )
+          {
+            $answer_mod = lib::create( 'database\modifier' );
+            $answer_mod->where( 'value', '!=', 'null' );
+            $answer_mod->order_desc( 'response.rank' );
+            if( 0 < $db_response->get_answer_count( $answer_mod ) )
+            {
+              $this->get_status()->set_code( 306 );
+              $this->set_data( 'Only adminsitrators can delete respondents that have started their interview.' );
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Extend parent method
+   */
   public function prepare_read( $select, $modifier )
   {
     $detached = lib::create( 'business\setting_manager' )->get_setting( 'general', 'detached' );
@@ -30,7 +63,7 @@ class module extends \cenozo\service\module
 
     if( $select->has_column( 'status' ) )
     {
-      $column_value = 
+      $column_value =
         'IF( respondent.end_datetime IS NOT NULL, "Completed", '.
         'IF( response.id IS NULL, "Not Started", '.
         'IF( response.page_id IS NOT NULL, "In Progress", '.

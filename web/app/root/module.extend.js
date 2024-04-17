@@ -51,11 +51,10 @@ cenozoApp.extendModule({
 
                   if (angular.isUndefined(data.modifier) ) data.modifier = {};
                   if (angular.isUndefined(data.modifier.w) ) data.modifier.w = [];
-                  data.modifier.w.push({
-                    c: "respondent.start_datetime",
-                    op: "LIKE",
-                    v: moment().format("YYYY-MM-DD") + " %",
-                  });
+                  data.modifier.w.push(
+                    { c: "qnaire.closed", op: "=", v: false },
+                    { c: "respondent.start_datetime", op: "LIKE", v: moment().format("YYYY-MM-DD") + " %" }
+                  );
 
                   return data;
                 },
@@ -68,6 +67,17 @@ cenozoApp.extendModule({
               angular.extend($scope.inProgressRespondentModel, {
                 // get a list of all respondents for all qnaires
                 getServiceCollectionPath: (ignoreParent) => "respondent",
+
+                // restrict the respondent list to those starting today
+                getServiceData: function (type, columnRestrictLists) {
+                  let data = this.$$getServiceData(type, columnRestrictLists);
+
+                  if (angular.isUndefined(data.modifier) ) data.modifier = {};
+                  if (angular.isUndefined(data.modifier.w) ) data.modifier.w = [];
+                  data.modifier.w.push({ c: "qnaire.closed", op: "=", v: false });
+
+                  return data;
+                },
               });
             },
           });
