@@ -596,7 +596,7 @@ cenozoApp.defineModule({
                   CnTranslationHelper.translate("misc.outOfSync.description", this.currentLanguage),
                 error: true,
               }).show();
-              await this.parentModel.reloadState(true);
+              await this.parentModel.reloadState(true, true, true, true);
             },
 
             cancelDevicePromises: function() {
@@ -2890,7 +2890,7 @@ cenozoApp.defineModule({
 
                   // update the server with any changes
                   await CnHttpFactory.instance(httpObj).patch();
-                  await this.parentModel.reloadState(true);
+                  await this.parentModel.reloadState(true, true, true, true);
                 });
               } finally {
                 this.working = false;
@@ -2938,7 +2938,7 @@ cenozoApp.defineModule({
                         else CnModalMessageFactory.httpError(error);
                       },
                     }).patch();
-                    await this.parentModel.reloadState(true);
+                    await this.parentModel.reloadState(true, true, true, true);
                   });
                 }
               } finally {
@@ -2969,7 +2969,7 @@ cenozoApp.defineModule({
                         else CnModalMessageFactory.httpError(error);
                       },
                     }).patch();
-                    await this.parentModel.reloadState(true);
+                    await this.parentModel.reloadState(true, true, true, true);
                   });
                 } finally {
                   this.working = false;
@@ -2990,7 +2990,7 @@ cenozoApp.defineModule({
                       else CnModalMessageFactory.httpError(error);
                     },
                   }).patch();
-                  await this.parentModel.reloadState(true);
+                  await this.parentModel.reloadState(true, true, true, true);
                 });
               } finally {
                 this.working = false;
@@ -3010,7 +3010,7 @@ cenozoApp.defineModule({
                       else CnModalMessageFactory.httpError(error);
                     },
                   }).patch();
-                  await this.parentModel.reloadState(true);
+                  await this.parentModel.reloadState(true, true, true, true);
                 });
               } finally {
                 this.working = false;
@@ -3030,7 +3030,7 @@ cenozoApp.defineModule({
                       else CnModalMessageFactory.httpError(error);
                     },
                   }).patch();
-                  await this.parentModel.reloadState(true);
+                  await this.parentModel.reloadState(true, true, true, true);
                 });
               } finally {
                 this.working = false;
