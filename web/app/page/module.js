@@ -523,6 +523,8 @@ cenozoApp.defineModule({
             parentModel: parentModel,
             participantModel: CnParticipantModelFactory.root,
             addressModel: CnAddressModelFactory.root,
+            participantInputList: [],
+            addressInputList: [],
             prevModuleList: [],
             nextModuleList: [],
             working: false,
@@ -1136,76 +1138,33 @@ cenozoApp.defineModule({
                   null == this.data.token.match(/^[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}$/) ?
                   this.data.token : null;
 
-                // get the stage list if there is one:
-                //   not ready or not applicable: nothing
-                //   ready: launch, skip
-                //   active: nothing (it will never show in the list)
-                //   paused: resume, skip, reset
-                //   skipped: reset
-                //   parent skipped: nothing
-                //   completed: re-open, reset
                 if (this.data.stages) {
+                  // get the stage list if there is one:
+                  //   not ready or not applicable: nothing
+                  //   ready: launch, skip
+                  //   active: nothing (it will never show in the list)
+                  //   paused: resume, skip, reset
+                  //   skipped: reset
+                  //   parent skipped: nothing
+                  //   completed: re-open, reset
                   var [
                     responseStageResponse,
-                    consentResponse,
                     deviationTypeResponse,
                     qnaireReportResponse,
-                    participantResponse,
-                    addressResponse,
                   ] = await Promise.all([
                     CnHttpFactory.instance({
                       path: ["response", this.data.response_id, "response_stage"].join("/"),
                       data: {
                         select: {
                           column: [
-                            "id",
-                            "status",
-                            "start_datetime",
-                            "end_datetime",
-                            "deviation_type_id",
-                            "deviation_comments",
-                            "comments",
+                            "id", "status", "start_datetime", "end_datetime",
+                            "deviation_type_id", "deviation_comments", "comments",
                             { table: "stage", column: "rank" },
                             { table: "stage", column: "name" },
-                            {
-                              table: "deviation_type",
-                              column: "name",
-                              alias: "deviation",
-                            },
+                            { table: "deviation_type", column: "name", alias: "deviation" },
                           ],
                         },
                         modifier: { order: "stage.rank" },
-                      },
-                    }).query(),
-
-                    CnHttpFactory.instance({
-                      path: ["respondent", "token=" + $state.params.token, "consent"].join("/"),
-                      data: {
-                        select: {
-                          column: [
-                            {
-                              table: "consent",
-                              column: "id",
-                              alias: "consent_id",
-                            },
-                            { table: "consent", column: "accept" },
-                            {
-                              table: "consent_type",
-                              column: "id",
-                              alias: "consent_type_id",
-                            },
-                            {
-                              table: "consent_type",
-                              column: "name",
-                              alias: "consent_type",
-                            },
-                            {
-                              table: "role_has_consent_type",
-                              column: "consent_type_id",
-                              alias: "access",
-                            },
-                          ],
-                        },
                       },
                     }).query(),
 
@@ -1218,9 +1177,6 @@ cenozoApp.defineModule({
                       path: ["qnaire", this.data.qnaire_id, "qnaire_report"].join("/"),
                       data: { select: { column: [{ table: 'language', column: 'code', alias: 'lang' }] } },
                     }).query(),
-
-                    this.participantModel.viewModel.onView(true),
-                    this.addressModel.viewModel.onView(true),
                   ]);
 
                   this.responseStageList = responseStageResponse.data;
@@ -1273,106 +1229,92 @@ cenozoApp.defineModule({
                     }
                   });
 
-                  this.consentList = consentResponse.data;
-
-                  // convert the access column (it will be null if the role doesn't have access)
-                  this.consentList.forEach((consent) => (consent.access = null != consent.access));
                   this.deviationTypeList = deviationTypeResponse.data;
                   this.qnaireReportList = qnaireReportResponse.data.map(qnaireReport => qnaireReport.lang);
 
                   // enum lists use value, so set the value to the deviation type's ID
                   this.deviationTypeList.forEach((deviationType) => { deviationType.value = deviationType.id; });
 
-                  // setup the participant and address input lists
-                  this.participantInputList = [
-                    {
-                      key: "honorific",
-                      title: "Honorific",
-                      type: "string",
-                      help:
-                        "English examples: Mr. Mrs. Miss Ms. Dr. Prof. Br. Sr. Fr. Rev. Pr. " +
-                        "French examples: M. Mme Dr Dre Prof. F. Sr P. Révérend Pasteur Pasteure Me",
-                    },
-                    {
-                      key: "first_name",
-                      title: "First Name",
-                      type: "string",
-                    },
-                    {
-                      key: "other_name",
-                      title: "Other/Nickname",
-                      type: "string",
-                    },
-                    {
-                      key: "last_name",
-                      title: "Last Name",
-                      type: "string",
-                    },
-                    {
-                      key: "date_of_birth",
-                      title: "Date of Birth",
-                      type: "dob",
-                      isConstant: true,
-                      max: "now",
-                    },
-                    {
-                      key: "sex",
-                      title: "Sex at Birth",
-                      type: "enum",
-                      isConstant: true,
-                      enumList: this.participantModel.metadata.columnList.sex.enumList,
-                    },
-                    {
-                      key: "current_sex",
-                      title: "Current Sex",
-                      type: "enum",
-                      enumList: this.participantModel.metadata.columnList.current_sex.enumList,
-                    },
-                    {
-                      key: "email",
-                      title: "Email",
-                      type: "string",
-                      format: "email",
-                      help: "Must be in the format &quot;account@domain.name&quot;.",
-                    },
-                  ];
+                  // fill in the participant and address input list details (only if needed)
+                  if (!this.data.closed && this.data.stages && !this.data.page_id && !this.data.checked_in) {
+                    // we need to call onView for both models to load the metadata
+                    var [ consentResponse, participantResponse, addressResponse ] = await Promise.all([
+                      CnHttpFactory.instance({
+                        path: ["respondent", "token=" + $state.params.token, "consent"].join("/"),
+                        data: {
+                          select: {
+                            column: [
+                              { table: "consent", column: "id", alias: "consent_id" },
+                              { table: "consent", column: "accept" },
+                              { table: "consent_type", column: "id", alias: "consent_type_id" },
+                              { table: "consent_type", column: "name", alias: "consent_type" },
+                              { table: "role_has_consent_type", column: "consent_type_id", alias: "access" },
+                            ],
+                          },
+                        },
+                      }).query(),
 
-                  this.addressInputList = [
-                    {
-                      key: "address1",
-                      title: "Address Line 1",
-                      type: "string",
-                      isConstant: true,
-                    },
-                    {
-                      key: "address2",
-                      title: "Address Line 2",
-                      type: "string",
-                      isConstant: true,
-                    },
-                    {
-                      key: "city",
-                      title: "City",
-                      type: "string",
-                      isConstant: true,
-                    },
-                    {
-                      key: "region_id",
-                      title: "Region",
-                      type: "enum",
-                      isConstant: true,
-                      enumList: this.addressModel.metadata.columnList.region_id.enumList,
-                      help:
-                        "The region cannot be changed directly, instead it is automatically " + 
-                        "updated based on the postcode.",
-                    },
-                    {
-                      key: "postcode",
-                      title: "Postcode",
-                      type: "string",
-                      isConstant: true,
-                    },
-                  ];
+                      this.participantModel.viewModel.onView(true),
+                      this.addressModel.viewModel.onView(true),
+                    ]);
+
+                    // convert the access column (it will be null if the role doesn't have access)
+                    this.consentList = consentResponse.data;
+                    this.consentList.forEach((consent) => (consent.access = null != consent.access));
+
+                    // setup the participant and address input lists
+                    this.participantInputList = [
+                      {
+                        key: "honorific",
+                        title: "Honorific",
+                        type: "string",
+                        help:
+                          "English examples: Mr. Mrs. Miss Ms. Dr. Prof. Br. Sr. Fr. Rev. Pr. " +
+                          "French examples: M. Mme Dr Dre Prof. F. Sr P. Révérend Pasteur Pasteure Me",
+                      },
+                      { key: "first_name", title: "First Name", type: "string" },
+                      { key: "other_name", title: "Other/Nickname", type: "string" },
+                      { key: "last_name", title: "Last Name", type: "string" },
+                      { key: "date_of_birth", title: "Date of Birth", type: "dob", isConstant: true, max: "now" },
+                      {
+                        key: "sex",
+                        title: "Sex at Birth",
+                        type: "enum",
+                        isConstant: true,
+                        enumList: this.participantModel.metadata.columnList.sex.enumList,
+                      },
+                      {
+                        key: "current_sex",
+                        title: "Current Sex",
+                        type: "enum",
+                        enumList: this.participantModel.metadata.columnList.current_sex.enumList,
+                      },
+                      {
+                        key: "email",
+                        title: "Email",
+                        type: "string",
+                        format: "email",
+                        help: "Must be in the format &quot;account@domain.name&quot;.",
+                      },
+                    ];
+
+                    this.addressInputList = [
+                      { key: "address1", title: "Address Line 1", type: "string", isConstant: true },
+                      { key: "address2", title: "Address Line 2", type: "string", isConstant: true },
+                      { key: "city", title: "City", type: "string", isConstant: true },
+                      {
+                        key: "region_id",
+                        title: "Region",
+                        type: "enum",
+                        isConstant: true,
+                        enumList: this.addressModel.metadata.columnList.region_id.enumList,
+                        help:
+                          "The region cannot be changed directly, instead it is automatically " + 
+                          "updated based on the postcode.",
+                      },
+                      { key: "postcode", title: "Postcode", type: "string", isConstant: true },
+                    ];
+                  }
                 }
 
                 // parse the intro, conclusion, close and problem descriptions
