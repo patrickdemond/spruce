@@ -2,12 +2,6 @@
 
 SET AUTOCOMMIT=0;
 
--- TEMPORARY FIX TO RE-ENBLE FRENCH LANGUAGE ON LAPTOPS
-SOURCE fix_language.sql
-
--- TEMPORARY FIX TO SET qnaire.parent_beartooth_url column on DCS servers and laptops
-SOURCE fix_qnaire_beartooth_url.sql
-
 SOURCE custom_report.sql
 SOURCE role_has_custom_report.sql
 SOURCE embedded_file.sql
@@ -34,5 +28,11 @@ SOURCE qnaire_event_type_trigger.sql
 SOURCE timestamps.sql
 
 SOURCE update_version_number.sql
+
+-- TEMPORARY FIX TO RE-ENBLE FRENCH LANGUAGE ON LAPTOPS
+SOURCE fix_language.sql
+
+-- TEMPORARY FIX TO SET qnaire.parent_beartooth_url column on DCS servers and laptops
+SOURCE fix_qnaire_beartooth_url.sql
 
 COMMIT;
