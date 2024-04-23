@@ -158,6 +158,7 @@ cenozoApp.defineModule({
         isExcluded: true,
       },
       has_devices: { type: "hidden", },
+      parent_beartooth_url: { column: "qnaire.parent_beartooth_url", type: "hidden", },
       parent_username: { column: "qnaire.parent_username", type: "hidden", },
     });
 
@@ -336,6 +337,7 @@ cenozoApp.defineModule({
       isIncluded: function ($state, model) {
         return (
           model.isDetached() &&
+          model.viewModel.record.parent_beartooth_url &&
           model.viewModel.record.parent_username &&
           null != model.viewModel.record.end_datetime &&
           "Exported" != model.viewModel.record.status
@@ -356,6 +358,7 @@ cenozoApp.defineModule({
       isIncluded: function ($state, model) {
         return (
           model.isDetached() &&
+          model.viewModel.record.parent_beartooth_url &&
           model.viewModel.record.parent_username &&
           model.isRole("administrator") &&
           "Exported" == model.viewModel.record.status
@@ -629,10 +632,13 @@ cenozoApp.defineModule({
                   "view" == this.getActionFromState()) {
                 const response = await CnHttpFactory.instance({
                   path: 'qnaire/' + $state.params.identifier,
-                  data: { select: { column: "parent_username" } }
+                  data: { select: { column: ["parent_beartooth_url", "parent_username"] } }
                 }).get();
 
-                this.hasParentUsername = null != response.data.parent_username;
+                this.hasParentUsername = (
+                  null != response.data.parent_beartooth_url &&
+                  null != response.data.parent_username
+                );
               } else {
                 this.hasParentUsername = null;
               }

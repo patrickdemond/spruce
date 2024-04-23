@@ -51,6 +51,18 @@ CREATE PROCEDURE patch_qnaire()
       ALTER TABLE qnaire DROP COLUMN beartooth_password;
     END IF;
 
+    SELECT "Adding parent_beartooth_url column to qnaire table" AS "";
+
+    SELECT COUNT(*) INTO @test
+    FROM information_schema.COLUMNS
+    WHERE table_schema = DATABASE()
+    AND table_name = "qnaire"
+    AND column_name = "parent_beartooth_url";
+
+    IF @test = 0 THEN
+      ALTER TABLE qnaire ADD COLUMN parent_beartooth_url VARCHAR(255) NULL DEFAULT NULL AFTER email_invitation;
+    END IF;
+
     SELECT "Removing beartooth column to qnaire table" AS "";
 
     SELECT COUNT(*) INTO @test
@@ -72,7 +84,7 @@ CREATE PROCEDURE patch_qnaire()
     AND column_name = "parent_username";
 
     IF @test = 0 THEN
-      ALTER TABLE qnaire ADD COLUMN parent_username VARCHAR(45) NULL DEFAULT NULL AFTER email_invitation;
+      ALTER TABLE qnaire ADD COLUMN parent_username VARCHAR(45) NULL DEFAULT NULL AFTER parent_beartooth_url;
     END IF;
 
     SELECT COUNT(*) INTO @test
@@ -94,7 +106,7 @@ CREATE PROCEDURE patch_qnaire()
     AND column_name = "appointment_type";
 
     IF @test = 0 THEN
-      ALTER TABLE qnaire ADD COLUMN appointment_type VARCHAR(45) NULL DEFAULT NULL AFTER beartooth;
+      ALTER TABLE qnaire ADD COLUMN appointment_type VARCHAR(45) NULL DEFAULT NULL AFTER parent_password;
     END IF;
 
     SELECT "Adding attributes_mandatory column to qnaire table" AS "";

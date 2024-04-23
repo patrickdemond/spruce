@@ -295,6 +295,16 @@ cenozoApp.defineModule({
     });
 
     module.addInputGroup("Detached Settings", {
+      parent_beartooth_url: {
+        title: "Parent Beartooth URL",
+        type: "string",
+        help: "The base Beartooth URL to fetch appointments from.<br/>\n" +
+              "WARNING: this information is never included in the import/export process. It must be set " +
+              "in every instance independently!",
+        isExcluded: function ($state, model) {
+          return model.isRole("interviewer") || !model.isDetached();
+        },
+      },
       parent_username: {
         title: "Parent Username",
         type: "string",
@@ -381,7 +391,11 @@ cenozoApp.defineModule({
     module.addExtraOperation("view", {
       title: "Test Connection",
       isIncluded: function ($state, model) {
-        return model.viewModel.record.parent_username && model.isDetached();
+        return (
+          model.viewModel.record.parent_beartooth_url &&
+          model.viewModel.record.parent_username &&
+          model.isDetached()
+        );
       },
       operation: function ($state, model) {
         model.viewModel.testConnection();
@@ -1152,10 +1166,12 @@ cenozoApp.defineModule({
                 await this.onView();
               }
               
-              if (angular.isDefined(data.parent_username)) {
-                if (angular.isDefined(this.respondentModel)) {
-                  await this.respondentModel.updateUsesParent();
-                }
+              if (
+                angular.isDefined(data.parent_beartooth_url) &&
+                angular.isDefined(data.parent_username) && 
+                angular.isDefined(this.respondentModel)
+              ){
+                await this.respondentModel.updateUsesParent();
               }
             },
 

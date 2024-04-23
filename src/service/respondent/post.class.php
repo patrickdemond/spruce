@@ -129,6 +129,7 @@ class post extends \cenozo\service\post
       // now update all qnaires
       $data = [];
       $modifier = lib::create( 'database\modifier' );
+      $modifier->where( 'parent_beartooth_url', '!=', NULL );
       $modifier->where( 'parent_username', '!=', NULL );
       foreach( $qnaire_class_name::select_objects( $modifier ) as $db_qnaire )
       {
@@ -143,6 +144,7 @@ class post extends \cenozo\service\post
     {
       $uid_list = [];
       $modifier = lib::create( 'database\modifier' );
+      $modifier->where( 'parent_beartooth_url', '!=', NULL );
       $modifier->where( 'parent_username', '!=', NULL );
       foreach( $qnaire_class_name::select_objects( $modifier ) as $db_qnaire )
       {

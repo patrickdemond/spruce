@@ -31,7 +31,7 @@ class post extends \cenozo\service\post
         if(
           !$setting_manager->get_setting( 'general', 'detached' ) ||
           is_null( PARENT_INSTANCE_URL ) ||
-          is_null( BEARTOOTH_INSTANCE_URL ) ||
+          is_null( $db_qnaire->parent_beartooth_url ) ||
           is_null( $db_qnaire->parent_username ) ||
           is_null( $db_qnaire->parent_password )
         ) {
