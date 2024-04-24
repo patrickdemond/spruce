@@ -11,11 +11,6 @@ use cenozo\lib, cenozo\log, pine\util;
 class patch extends \cenozo\service\patch
 {
   /**
-   * Extend parent property
-   */
-  protected static $base64_column_list = ['data' => 'application/octet-stream']; // allow any file type
-
-  /**
    * Extend parent method
    */
   public function execute()

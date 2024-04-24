@@ -11,11 +11,6 @@ use cenozo\lib, cenozo\log, pine\util;
 class patch extends \cenozo\service\patch
 {
   /**
-   * Extend parent property
-   */
-  protected static $base64_column_list = ['data' => 'application/octet-stream'];
-
-  /**
    * Extend parent method
    */
   public function execute()
@@ -27,7 +22,8 @@ class patch extends \cenozo\service\patch
     if( !is_null( $file ) )
     {
       $content_type = util::get_header( 'Content-Type' );
-      $mime_type = static::$base64_column_list[$file];
+      $base64_column_list = $this->get_leaf_module()->get_base64_column_list();
+      $mime_type = $base64_column_list[$file];
       if( in_array( $content_type, [$mime_type, 'application/octet-stream'] ) )
       {
         $filename = sprintf( '%s/%s', TEMP_PATH, bin2hex( openssl_random_pseudo_bytes( 8 ) ) );
