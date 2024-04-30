@@ -2605,7 +2605,7 @@ cenozoApp.defineModule({
                     } else if ("time" == option.extra) {
                       question.answer.optionList[option.id].formattedValueList[valueIndex] =
                         formatTime(value[optionIndex].value);
-                    } else if ("number with unit") {
+                    } else if ("number with unit" == option.extra) {
                       if (angular.isUndefined(value[optionIndex].value.value)) {
                         value[optionIndex].value.value = null;
                       }
