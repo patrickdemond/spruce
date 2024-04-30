@@ -915,26 +915,13 @@ cenozoApp.defineModule({
 
             getQuestionPrompt: function (question) {
               return $sce.trustAsHtml(
-                (question.popups[this.currentLanguage] ||
-                question.minimum ||
-                question.maximum
-                  ? '<b class="invert">ⓘ</b> '
-                  : "") + question.prompts[this.currentLanguage]
-              );
-            },
-
-            getQuestionPopup: function (question) {
-              return (
-                question.popups[this.currentLanguage] +
-                ((question.minimum || question.maximum ? " [" : "") +
-                  (question.minimum
-                    ? "Min: " + this.evaluateLimit(question.minimum)
-                    : "") +
-                  (question.minimum && question.maximum ? ", " : "") +
-                  (question.maximum
-                    ? "Max: " + this.evaluateLimit(question.maximum)
-                    : "") +
-                  (question.minimum || question.maximum ? "]" : ""))
+                (
+                  question.popups[this.currentLanguage] ||
+                  question.minimum ||
+                  question.maximum ?
+                  '<b class="invert">ⓘ</b> ' : ""
+                ) +
+                question.prompts[this.currentLanguage]
               );
             },
 
@@ -962,19 +949,39 @@ cenozoApp.defineModule({
               );
             },
 
-            getOptionPopup: function (option) {
-              return (
-                option.popups[this.currentLanguage] +
-                ((option.minimum || option.maximum ? " [" : "") +
-                  (option.minimum
-                    ? "Min: " + this.evaluateLimit(option.minimum)
-                    : "") +
-                  (option.minimum && option.maximum ? ", " : "") +
-                  (option.maximum
-                    ? "Max: " + this.evaluateLimit(option.maximum)
-                    : "") +
-                  (option.minimum || option.maximum ? "]" : ""))
-              );
+            getPopupText: function (questionOrOption) {
+              const type =
+                angular.isDefined(questionOrOption.type) ?
+                questionOrOption.type :
+                questionOrOption.extra;
+              const min =
+                angular.isDefined(questionOrOption.minimum) && null != questionOrOption.minimum ?
+                this.evaluateLimit(questionOrOption.minimum) :
+                null;
+              const max =
+                angular.isDefined(questionOrOption.maximum) && null != questionOrOption.maximum ?
+                this.evaluateLimit(questionOrOption.maximum) :
+                null;
+
+              // start with the popup text
+              let popup = questionOrOption.popups[this.currentLanguage];
+
+              // now add any min/max details
+              if (["string", "text"].includes(type)) {
+                // string/text extra options only use the max value to limit the length of the input string
+                if (null != max) {
+                  const char = CnTranslationHelper.translate( "misc.characters", this.currentLanguage );
+                  popup += " [maximum " + max + " " + char + "]";
+                }
+              } else {
+                // other extra option types use both min and max to limit the input value
+                let minMax = [];
+                if (null != min) minMax.push("min: " + min);
+                if (null != max) minMax.push("max: " + max);
+                if (0 < minMax.length) popup += " [" + minMax.join(", ") + "]";
+              }
+
+              return popup;
             },
 
             getLookupValues: async function(question, viewValue) {
@@ -1309,7 +1316,7 @@ cenozoApp.defineModule({
                         isConstant: true,
                         enumList: this.addressModel.metadata.columnList.region_id.enumList,
                         help:
-                          "The region cannot be changed directly, instead it is automatically " + 
+                          "The region cannot be changed directly, instead it is automatically " +
                           "updated based on the postcode.",
                       },
                       { key: "postcode", title: "Postcode", type: "string", isConstant: true },
@@ -1344,14 +1351,14 @@ cenozoApp.defineModule({
                     return { type: parts[0], number: parts[1] };
                   }),
                 });
-                
+
                 for( const lang in this.data.problemPromptList ) {
                   if( 0 == this.data.problemPromptList[lang].length ) {
                     this.data.problemPromptList[lang] =
                       CnTranslationHelper.translate( "misc.reportProblem.promptMessage", lang );
                   }
                 }
-                
+
                 for( const lang in this.data.problemConfirmList ) {
                   if( 0 == this.data.problemConfirmList[lang].length ) {
                     this.data.problemConfirmList[lang] =
@@ -2503,7 +2510,7 @@ cenozoApp.defineModule({
                     maxDate: getDate(this.evaluateLimit(null != option ? option.maximum : question.maximum)),
                   });
                 }
-                  
+
                 var response = await CnModalDatetimeFactory.instance(modalObj).show();
 
                 if (false !== response) {

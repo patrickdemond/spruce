@@ -46,15 +46,17 @@ cenozoApp.defineModule({
           ? true
           : "add";
       },
+      help: "The minimum possible value for this option's extra value.",
     });
     module.addInput("", "maximum", {
       title: "Maximum",
       type: "string",
       isExcluded: function ($state, model) {
-        return !["date", "number", "number with unit"].includes(model.viewModel.record.extra)
+        return !["date", "number", "number with unit", "string", "text"].includes(model.viewModel.record.extra)
           ? true
           : "add";
       },
+      help: "The maximum possible value for this question's extra value, or the maximum number of characters for string or text.",
     });
     module.addInput("", "parent_name", {
       column: "question.name",
@@ -174,7 +176,7 @@ cenozoApp.defineModule({
                   if ("number with unit" != object.record.extra) object.record.unit_list = null;
                   if (!["date", "number", "number with unit"].includes(data.extra)) {
                     object.record.minimum = "";
-                    object.record.maximum = "";
+                    if (!["string", "text"].includes(data.extra)) object.record.maximum = "";
                   }
                 }
               }

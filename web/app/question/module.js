@@ -122,13 +122,13 @@ cenozoApp.defineModule({
       title: "Maximum",
       type: "string",
       isExcluded: function ($state, model) {
-        return !["audio", "date", "number", "number with unit"].includes(
+        return !["audio", "date", "number", "number with unit", "string", "text"].includes(
           model.viewModel.record.type
         )
           ? true
           : "add";
       },
-      help: "The maximum possible value for this question (or maximum number of seconds for audio recordings).",
+      help: "The maximum possible value for this question, maximum number of seconds for audio recordings, or the maximum number of characters for string or text questions.",
     });
     module.addInput("", "default_answer", {
       title: "Default Answer",
@@ -309,7 +309,7 @@ cenozoApp.defineModule({
                   if ("number with unit" != object.record.type) object.record.unit_list = null;
                   if (!["date", "number","number with unit"].includes(object.record.type)) {
                     object.record.minimum = null;
-                    object.record.maximum = null;
+                    if (!["string", "text"].includes(object.record.type)) object.record.maximum = null;
                   }
                 }
 

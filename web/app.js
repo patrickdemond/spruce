@@ -788,6 +788,7 @@ cenozo.service("CnTranslationHelper", [
           previous: { en: "Previous", fr: "Précédent" },
           pause: { en: "Pause", fr: "Interrompre" },
           submit: { en: "Submit", fr: "Envoyer" },
+          characters: { en: "characters", fr: "caractères" },
           submitWaitTitle: { en: "Please Wait", fr: "Veuillez patienter" },
           submitWaitMessage: {
             en: "Please wait while the questionnaire is submitted.",

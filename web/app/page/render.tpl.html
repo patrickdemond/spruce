@@ -346,7 +346,7 @@
                      }"
                      ng-bind-html="model.renderModel.getQuestionPrompt( question )"
                      tooltip-class="tooltip-1000wide"
-                     uib-tooltip-html="model.renderModel.getQuestionPopup( question )">
+                     uib-tooltip-html="model.renderModel.getPopupText( question )">
                 </div>
                 <div class="horizontal-spacer"
                      ng-class="{
@@ -502,7 +502,7 @@
                           model.renderModel.removeOption( question, option )"
                         ng-bind-html="model.renderModel.getOptionPrompt( question, option )"
                         tooltip-class="tooltip-1000wide"
-                        uib-tooltip-html="model.renderModel.getOptionPopup( option )"
+                        uib-tooltip-html="model.renderModel.getPopupText( option )"
                         uib-btn-checkbox>
                       </label>
                     </div>
@@ -514,7 +514,7 @@
                         ng-style="{ 'font-style': option.exclusive ? 'italic' : 'normal', 'font-weight': 'normal' }"
                         ng-bind-html="model.renderModel.getOptionPrompt( question, option )"
                         tooltip-class="tooltip-1000wide"
-                        uib-tooltip-html="model.renderModel.getOptionPopup( option )"
+                        uib-tooltip-html="model.renderModel.getPopupText( option )"
                         ng-click="model.renderModel.addAnswerValue( question, option )">
                       </label>
                     </div>
@@ -587,6 +587,7 @@
                           ng-model="value"
                           cn-change="model.renderModel.setAnswerValue( question, option, $index, value )"
                           ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
+                          maxlength="{{ option.maximum }}"
                           class="form-control rounded-bottom-left rounded-bottom-right larger"></input>
                         <textarea ng-switch-when="text"
                           cn-elastic
@@ -596,6 +597,7 @@
                           ng-model="value"
                           cn-change="model.renderModel.setAnswerValue( question, option, $index, value )"
                           ng-disabled="!option.multiple_answers && !question.answer.optionList[option.id].selected"
+                          maxlength="{{ option.maximum }}"
                           class="form-control rounded-bottom-left rounded-bottom-right larger"></textarea>
                       </div>
                       <button type="button"
@@ -677,6 +679,7 @@
                     ng-class="{ 'color-red': true === question.incomplete }"
                     ng-model="question.answer.value"
                     cn-change="model.renderModel.setAnswer( question, question.answer.value )"
+                    maxlength="{{ question.maximum }}"
                     autocomplete="off">
                   </input>
                   <textarea ng-switch-when="text"
@@ -686,6 +689,7 @@
                     ng-class="{ 'color-red': true === question.incomplete }"
                     ng-model="question.answer.value"
                     cn-change="model.renderModel.setAnswer( question, question.answer.value )"
+                    maxlength="{{ question.maximum }}"
                     cn-elastic>
                   </textarea>
                   <div ng-class="{
