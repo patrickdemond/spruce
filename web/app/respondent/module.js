@@ -30,7 +30,7 @@ cenozoApp.defineModule({
         },
         last_name: {
           column: "participant.last_name",
-          title: "First Name",
+          title: "Last Name",
         },
         token: {
           title: "Token",
