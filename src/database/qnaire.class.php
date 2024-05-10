@@ -1431,15 +1431,6 @@ class qnaire extends \cenozo\database\record
           __METHOD__
         );
       }
-      else
-      {
-        // mark the respondents as exported
-        foreach( $respondent_list as $db_respondent )
-        {
-          $db_respondent->export_datetime = util::get_datetime_object();
-          $db_respondent->save();
-        }
-      }
     }
 
     $result = [];
@@ -1490,6 +1481,13 @@ class qnaire extends \cenozo\database\record
 
       // return a list of all exported UIDs
       foreach( $participant_data as $participant ) $result[] = $participant['uid'];
+    }
+
+    // mark the respondents as exported
+    foreach( $respondent_list as $db_respondent )
+    {
+      $db_respondent->export_datetime = util::get_datetime_object();
+      $db_respondent->save();
     }
 
     return $result;
