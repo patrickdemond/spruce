@@ -29,6 +29,7 @@ cenozoApp.extendModule({
                       "last_name",
                       "date_of_birth",
                       "sex",
+                      "current_sex",
                       "email",
                     ],
                   },
