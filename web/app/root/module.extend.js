@@ -49,11 +49,16 @@ cenozoApp.extendModule({
                 getServiceData: function (type, columnRestrictLists) {
                   let data = this.$$getServiceData(type, columnRestrictLists);
 
+                  // restrict to the user's definition of "today" based on their timezone
+                  let minTime = moment().tz(CnSession.user.timezone).hour(0).minute(0).second(0).tz("UTC");
+                  let maxTime = minTime.clone().add(1, "days");
+
                   if (angular.isUndefined(data.modifier) ) data.modifier = {};
                   if (angular.isUndefined(data.modifier.w) ) data.modifier.w = [];
                   data.modifier.w.push(
                     { c: "qnaire.closed", op: "=", v: false },
-                    { c: "respondent.start_datetime", op: "LIKE", v: moment().format("YYYY-MM-DD") + " %" }
+                    { c: "respondent.start_datetime", op: ">=", v: minTime.format("YYYY-MM-DD HH:mm:ss") },
+                    { c: "respondent.start_datetime", op: "<", v: maxTime.format("YYYY-MM-DD HH:mm:ss") },
                   );
 
                   return data;
