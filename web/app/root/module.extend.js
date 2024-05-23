@@ -37,6 +37,9 @@ cenozoApp.extendModule({
 
               // setup today's respondent list
               $scope.todayRespondentModel = CnRespondentModelFactory.instance();
+
+              // change the default ordering to the start datetime
+              $scope.todayRespondentModel.module.defaultOrder = { column: "start_datetime", reverse: true };
               $scope.todayRespondentModel.listModel.heading =
                 "Today's " + $scope.todayRespondentModel.listModel.heading;
               angular.extend($scope.todayRespondentModel, {
@@ -54,11 +57,19 @@ cenozoApp.extendModule({
                   let maxTime = minTime.clone().add(1, "days");
 
                   if (angular.isUndefined(data.modifier) ) data.modifier = {};
-                  if (angular.isUndefined(data.modifier.w) ) data.modifier.w = [];
-                  data.modifier.w.push(
-                    { c: "qnaire.closed", op: "=", v: false },
-                    { c: "respondent.start_datetime", op: ">=", v: minTime.format("YYYY-MM-DD HH:mm:ss") },
-                    { c: "respondent.start_datetime", op: "<", v: maxTime.format("YYYY-MM-DD HH:mm:ss") },
+                  if (angular.isUndefined(data.modifier.where) ) data.modifier.where = [];
+                  data.modifier.where.push(
+                    { column: "qnaire.closed", operator: "=", value: false },
+                    {
+                      column: "respondent.start_datetime",
+                      operator: ">=",
+                      value: minTime.format("YYYY-MM-DD HH:mm:ss"),
+                    },
+                    {
+                      column: "respondent.start_datetime",
+                      operator: "<",
+                      value: maxTime.format("YYYY-MM-DD HH:mm:ss"),
+                    },
                   );
 
                   return data;
@@ -67,6 +78,9 @@ cenozoApp.extendModule({
 
               // setup the full respondent list
               $scope.inProgressRespondentModel = CnRespondentModelFactory.instance();
+
+              // change the default ordering to the start datetime
+              $scope.inProgressRespondentModel.module.defaultOrder = { column: "start_datetime", reverse: true };
               $scope.inProgressRespondentModel.listModel.heading =
                 "Full " + $scope.inProgressRespondentModel.listModel.heading;
               angular.extend($scope.inProgressRespondentModel, {
@@ -77,9 +91,10 @@ cenozoApp.extendModule({
                 getServiceData: function (type, columnRestrictLists) {
                   let data = this.$$getServiceData(type, columnRestrictLists);
 
-                  if (angular.isUndefined(data.modifier) ) data.modifier = {};
-                  if (angular.isUndefined(data.modifier.w) ) data.modifier.w = [];
-                  data.modifier.w.push({ c: "qnaire.closed", op: "=", v: false });
+                  // restrict to non closed qnaires
+                  if (angular.isUndefined(data.modifier)) data.modifier = {};
+                  if (angular.isUndefined(data.modifier.where)) data.modifier.where = [];
+                  data.modifier.where.push({ column: "qnaire.closed", operator: "=", value: false });
 
                   return data;
                 },
