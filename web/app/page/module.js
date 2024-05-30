@@ -1200,9 +1200,9 @@ cenozoApp.defineModule({
                       responseStage.operations.push({
                         name: "launch",
                         title:
-                          "completed" == responseStage.status ? "Re-Open"
-                            : "paused" == responseStage.status ? "Resume"
-                            : "Launch",
+                          "completed" == responseStage.status ? "Re-Open" :
+                          "paused" == responseStage.status ? "Resume" :
+                          "Launch",
                         // The launch operation may be an order deviation if another stage
                         // before this one is ready or paused
                         getDeviation: function () {
@@ -1212,6 +1212,7 @@ cenozoApp.defineModule({
                             "order" : null;
                         },
                       });
+
                     }
 
                     if (
@@ -1322,6 +1323,14 @@ cenozoApp.defineModule({
                       { key: "postcode", title: "Postcode", type: "string", isConstant: true },
                     ];
                   }
+
+                  // highlight the next stage's operation buttons
+                  this.responseStageList.some((responseStage) => {
+                    responseStage.highlight =
+                      responseStage.operations.some(op => ["Launch", "Resume"].includes(op.title)) &&
+                      this.isStageOperationEnabled(responseStage.id, "launch");
+                    return responseStage.highlight;
+                  });
                 }
 
                 // parse the intro, conclusion, close and problem descriptions

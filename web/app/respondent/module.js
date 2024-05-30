@@ -58,6 +58,7 @@ cenozoApp.defineModule({
         status: {
           title: "Status",
           type: "string",
+          highlight: "In Progress",
         },
         qnaire_progress: {
           title: "Progress",
