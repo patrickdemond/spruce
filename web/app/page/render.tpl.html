@@ -267,7 +267,11 @@
                     <td ng-if="null == model.renderModel.data.end_datetime" style="line-height: 26px;">
                       <button type="button"
                               class="btn btn-narrow btn-thin full-width"
-                              ng-class="responseStage.highlight ? 'btn-success' : 'btn-default'"
+                              ng-class="{
+                                'btn-success': 'launch' == responseStage.highlight,
+                                'btn-warning': 'resume' == responseStage.highlight,
+                                'btn-default': '' == responseStage.highlight
+                              }"
                               ng-if="!['not ready', 'not applicable', 'skipped', 'parent skipped'].includes( responseStage.status )"
                               ng-click="model.renderModel.showStageComments( responseStage.id )"
                               ng-bind-html="'Comments' +
@@ -281,7 +285,11 @@
                                 ng-style="{ 'width': 1 == responseStage.operations.length ? '100%' :
                                                      2 == responseStage.operations.length ? '50%' : '33%' }"
                                 class="btn btn-narrow btn-thin"
-                                ng-class="responseStage.highlight ? 'btn-success' : 'btn-default'"
+                                ng-class="{
+                                  'btn-success': 'launch' == responseStage.highlight,
+                                  'btn-warning': 'resume' == responseStage.highlight,
+                                  'btn-default': '' == responseStage.highlight
+                                }"
                                 ng-bind-html="operation.title"
                                 ng-disabled="!model.renderModel.isStageOperationEnabled( responseStage.id, operation.name )"
                                 ng-click="model.renderModel.runStageOperation( responseStage.id, operation.name )"></button>

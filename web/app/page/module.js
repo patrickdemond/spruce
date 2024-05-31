@@ -1325,11 +1325,24 @@ cenozoApp.defineModule({
                   }
 
                   // highlight the next stage's operation buttons
-                  this.responseStageList.some((responseStage) => {
-                    responseStage.highlight =
-                      responseStage.operations.some(op => ["Launch", "Resume"].includes(op.title)) &&
+                  let firstLaunch = false;
+                  this.responseStageList.forEach((responseStage) => {
+                    const resumeButton = responseStage.operations.findByProperty("title", "Resume");
+                    const launchButton = responseStage.operations.findByProperty("title", "Launch");
+                    const enabled =
+                      (resumeButton || launchButton) &&
                       this.isStageOperationEnabled(responseStage.id, "launch");
-                    return responseStage.highlight;
+
+                    // highlight resume buttons (if they are enabled)
+                    if (enabled && resumeButton) responseStage.highlight = "resume";
+                    // highlight the first launch button (if it is enabled)
+                    else if (enabled && launchButton && !firstLaunch) {
+                      responseStage.highlight = "launch";
+                      firstLaunch = true;
+                    } else {
+                      // don't highlight anything else
+                      responseStage.highlight = '';
+                    }
                   });
                 }
 
