@@ -1836,11 +1836,13 @@ class qnaire extends \cenozo\database\record
             {
               // this unit belongs to extra data in a "list" question
               $new_value = util::json_decode( $db_answer->value );
+
+              // make sure the answer is an array
               if( !is_array( $new_value ) )
               {
                 throw lib::create( 'exception\notice',
                   sprintf(
-                    'Can\'t set unit value, value for answer to %s on row %d is not an array!',
+                    'Can\'t set unit value for %s on row %d, it is not an array.',
                     $db_answer->get_question()->name,
                     $row_index + 1
                   ),
@@ -1860,11 +1862,13 @@ class qnaire extends \cenozo\database\record
             else
             {
               $temp_value = util::json_decode( $db_answer->value );
+
+              // if the answer is an object then it has already been set to DK_NA or MISSING
               if( is_object( $temp_value ) )
               {
                 throw lib::create( 'exception\notice',
                   sprintf(
-                    'Can\'t set unit value, value for answer to %s on row %d is set to DK_NA or MISSING!',
+                    'Can\'t set unit value for %s on row %d as the value is already DK_NA or MISSING.',
                     $db_answer->get_question()->name,
                     $row_index + 1
                   ),
@@ -1910,6 +1914,20 @@ class qnaire extends \cenozo\database\record
             {
               $a = util::json_decode( $db_answer->value );
               if( is_null( $a ) ) $a = [];
+
+              // if the answer is an object then it has already been set to DK_NA or MISSING
+              if( is_object( $a ) )
+              {
+                throw lib::create( 'exception\notice',
+                  sprintf(
+                    'Can\'t set value for %s on row %d as the value is already DK_NA or MISSING.',
+                    $db_answer->get_question()->name,
+                    $row_index + 1
+                  ),
+                  __METHOD__
+                );
+              }
+
               $v_index = NULL;
               foreach( $a as $i => $v )
               {
