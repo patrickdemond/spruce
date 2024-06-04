@@ -388,7 +388,8 @@ class qnaire extends \cenozo\database\record
       $device_data_sel = lib::create( 'database\select' );
       $device_data_sel->add_column( 'name' );
       $device_data_sel->add_column( 'code' );
-      $device_mod->order( 'device_data.id' );
+      $device_data_mod = lib::create( 'database\modifier' );
+      $device_data_mod->order( 'device_data.id' );
       foreach( $db_source_device->get_device_data_list( $device_data_sel, $device_data_mod ) as $device_data )
       {
         $db_device_data = lib::create( 'database\device_data' );
@@ -415,8 +416,9 @@ class qnaire extends \cenozo\database\record
       $rdata_sel = lib::create( 'database\select' );
       $rdata_sel->add_column( 'name' );
       $rdata_sel->add_column( 'code' );
+      $rdata_mod = lib::create( 'database\modifier' );
       $rdata_mod->order( 'qnaire_report_data.id' );
-      foreach( $db_source_qnaire_report->get_report_data_list( $rdata_sel, $rdata_mod ) as $report_data )
+      foreach( $db_source_qnaire_report->get_qnaire_report_data_list( $rdata_sel, $rdata_mod ) as $report_data )
       {
         $db_qnaire_report_data = lib::create( 'database\qnaire_report_data' );
         $db_qnaire_report_data->qnaire_report_id = $db_qnaire_report->id;
