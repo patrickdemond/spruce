@@ -3309,6 +3309,7 @@ class qnaire extends \cenozo\database\record
             }
             else if( $non_exclusive_list ||
                      array_key_exists( 'option_list', $column ) ||
+                     array_key_exists( 'boolean_list', $column ) ||
                      array_key_exists( 'missing_list', $column ) )
             {
               $row_value = 'DK_NA';
