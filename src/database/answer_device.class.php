@@ -52,7 +52,7 @@ class answer_device extends \cenozo\database\record
    */
   public function launch()
   {
-    $session = lib::create( 'business\session' );
+    $db_user = lib::create( 'business\session' )->get_user();
     $db_device = $this->get_device();
     $cypress_manager = lib::create( 'business\cypress_manager', $db_device );
     $db_answer = $this->get_answer();
@@ -75,7 +75,8 @@ class answer_device extends \cenozo\database\record
       'uid' => $db_participant->uid,
       'barcode' => $db_respondent->token,
       'language' => $db_response->get_language()->code,
-      'interviewer' => $session->get_user()->name,
+      'interviewer' => $db_user->name,
+      'interviewer_name' => sprintf( '%s %s', $db_user->first_name, $db_user->last_name ),
       'date' => $now->format( 'Y-m-d' )
     );
 
