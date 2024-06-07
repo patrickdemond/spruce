@@ -57,6 +57,9 @@ class answer_device extends \cenozo\database\record
     $cypress_manager = lib::create( 'business\cypress_manager', $db_device );
     $db_answer = $this->get_answer();
     $db_response = $db_answer->get_response();
+    $db_respondent = $db_response->get_respondent();
+    $db_participant = $db_respondent->get_participant();
+    $now = util::get_datetime_object();
 
     // if already completed then delete answer data
     if( 'completed' == $this->status )
@@ -69,9 +72,11 @@ class answer_device extends \cenozo\database\record
     // always include the token and language
     $data = array(
       'answer_id' => $db_answer->id,
-      'barcode' => $db_response->get_respondent()->token,
+      'uid' => $db_participant->uid,
+      'barcode' => $db_respondent->token,
       'language' => $db_response->get_language()->code,
-      'interviewer' => $session->get_user()->name
+      'interviewer' => $session->get_user()->name,
+      'date' => $now->format( 'Y-m-d' )
     );
 
     // then include any other data
@@ -81,7 +86,7 @@ class answer_device extends \cenozo\database\record
     $this->uuid = $db_device->emulate ?
       str_replace( '.', '-', uniqid( 'emulate.', true ) ) : // emulate a response from cypress
       $cypress_manager->launch( $data );
-    $this->start_datetime = util::get_datetime_object();
+    $this->start_datetime = $now;
     $this->end_datetime = NULL;
     $this->status = 'in progress';
     $this->save();
