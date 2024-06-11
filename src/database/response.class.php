@@ -195,7 +195,6 @@ class response extends \cenozo\database\has_rank
         $db_respondent->remove_unsent_mail();
 
         // execute all qnaire triggers
-        // TODO: don't do this after re-opening and re-submitting qnaire
         foreach( $db_qnaire->get_qnaire_participant_trigger_object_list() as $db_trigger )
           $db_trigger->execute( $this );
         foreach( $db_qnaire->get_qnaire_collection_trigger_object_list() as $db_trigger )
