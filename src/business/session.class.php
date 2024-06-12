@@ -150,7 +150,10 @@ class session extends \cenozo\business\session
     if( array_key_exists( 'username', $_COOKIE ) )
       $this->db_referring_user = $user_class_name::get_unique_record( 'name', $_COOKIE['username'] );
     if( array_key_exists( 'alternate_id', $_COOKIE ) )
-      $this->db_referring_alternate = lib::create( 'database\alternate', $_COOKIE['alternate_id'] );
+    {
+      try { $this->db_referring_alternate = lib::create( 'database\alternate', $_COOKIE['alternate_id'] ); }
+      catch( \cenozo\exception\runtime $e ) {} // ignore invalid alternate ids
+    }
   }
 
   /**
