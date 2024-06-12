@@ -144,16 +144,13 @@ class session extends \cenozo\business\session
         $_SESSION['access.id'] == $respondent_access_id ) $no_activity = true;
     parent::initialize( $no_activity );
 
-    // convert site and username from the query string to referring site/user
-    if( array_key_exists( 'REDIRECT_QUERY_STRING', $_SERVER ) )
-    {
-      $query_params = [];
-      parse_str( $_SERVER['REDIRECT_QUERY_STRING'], $query_params );
-      if( array_key_exists( 'site', $query_params ) )
-        $this->db_referring_site = $site_class_name::get_unique_record( 'name', $query_params['site'] );
-      if( array_key_exists( 'username', $query_params ) )
-        $this->db_referring_user = $user_class_name::get_unique_record( 'name', $query_params['username'] );
-    }
+    // convert cookie variables to records
+    if( array_key_exists( 'site', $_COOKIE ) )
+      $this->db_referring_site = $site_class_name::get_unique_record( 'name', $_COOKIE['site'] );
+    if( array_key_exists( 'username', $_COOKIE ) )
+      $this->db_referring_user = $user_class_name::get_unique_record( 'name', $_COOKIE['username'] );
+    if( array_key_exists( 'alternate_id', $_COOKIE ) )
+      $this->db_referring_alternate = lib::create( 'database\alternate', $_COOKIE['alternate_id'] );
   }
 
   /**
@@ -197,6 +194,15 @@ class session extends \cenozo\business\session
   }
 
   /**
+   * Get the referring alternate.
+   * 
+   * Note that the referring alternate is only set when running a respondent record (URL: respondent/run/*)
+   * @return database\alternate
+   * @access public
+   */
+  public function get_referring_alternate() { return $this->db_referring_alternate; }
+
+  /**
    * An array of errors found while generating attributes (only used when in debug mode)
    * @var array(string)
    */
@@ -225,4 +231,10 @@ class session extends \cenozo\business\session
    * @var database\user
    */
   private $db_referring_user = NULL;
+
+  /**
+   * Stores the referring alternate record (if there is one)
+   * @var database\alternate
+   */
+  private $db_referring_alternate = NULL;
 }

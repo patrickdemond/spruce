@@ -18,14 +18,19 @@ class patch extends \cenozo\service\patch
     $user_class_name = lib::get_class_name( 'database\user' );
     $language_class_name = lib::get_class_name( 'database\language' );
 
-    // replace username with a user_id (if the user exists)
+    // if the object has no user_id and there's a referring user then use it
     $patch_object = parent::get_file_as_object();
 
-    $username = $this->get_argument( 'username', NULL );
-    if( !is_null( $username ) )
+    if( !property_exists( $patch_object, 'user_id' ) )
     {
-      $db_user = $user_class_name::get_unique_record( 'name', $username );
-      if( !is_null( $db_user ) ) $patch_object->user_id = $db_user->id;
+      $db_referring_user = lib::create( 'business\session' )->get_referring_user();
+      if( !is_null( $db_referring_user ) ) $patch_object->user_id = $db_referring_user->id;
+    }
+
+    if( !property_exists( $patch_object, 'alternate_id' ) )
+    {
+      $db_referring_alternate = lib::create( 'business\session' )->get_referring_alternate();
+      if( !is_null( $db_referring_alternate ) ) $patch_object->alternate_id = $db_referring_alternate->id;
     }
 
     if( property_exists( $patch_object, 'language' ) )
@@ -106,17 +111,7 @@ class patch extends \cenozo\service\patch
     $db_response = $db_answer->get_response();
     if( is_null( $db_response->site_id ) )
     {
-      $site_id = NULL;
-      $site = $this->get_argument( 'site', NULL );
-      if( !is_null( $site ) )
-      {
-        $db_site = $site_class_name::get_unique_record( 'name', $site );
-        if( !is_null( $db_site ) ) $site_id = $db_site->id;
-      }
-
-      // if there is no site argument then use the session's site
-      if( is_null( $site_id ) ) $site_id = lib::create( 'business\session' )->get_site()->id;
-      $db_response->site_id = $site_id;
+      $db_response->site_id = lib::create( 'business\session' )->get_effective_site()->id;
       $db_response->save();
     }
 

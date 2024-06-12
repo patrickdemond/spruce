@@ -148,6 +148,7 @@ class expression_manager extends \cenozo\singleton
    *   $respondent.interview_type$ (will be empty if there is no special interview_type)
    *   $respondent.language$ (gets the current language code)
    *   $respondent.start_date$ (gets the date the response was launched in YYYY-MM-DD format)
+   *   $respondent.isAlternateType(type) (true if the respondent is an alternate of the given type)
    *   showhidden true if showing hidden elements (launched by phone) false if not (launched by web)
    *   current_year The current year in YYYY format
    *   current_month The current month in MM format
@@ -214,7 +215,7 @@ class expression_manager extends \cenozo\singleton
     $this->reset();
 
     // empty preconditions always pass
-    if( is_null( $precondition ) ) return true; 
+    if( is_null( $precondition ) ) return true;
 
     $compiled = '';
 
@@ -296,7 +297,7 @@ class expression_manager extends \cenozo\singleton
         $last_char = $char;
       }
 
-      if( 0 != $this->open_bracket ) 
+      if( 0 != $this->open_bracket )
       {
         throw lib::create( 'exception\runtime',
           sprintf(
@@ -623,7 +624,25 @@ class expression_manager extends \cenozo\singleton
    */
   private function process_respondent_value( $variable )
   {
-    if( 'token' == $variable )
+    // almost all answers are string-based
+    $is_string = true;
+
+    $matches = NULL;
+    if( preg_match( '/isalternatetype\( *"([^"]+)" *\)/', $variable, $matches ) )
+    {
+      $db_alternate = lib::create( 'business\session' )->get_referring_alternate();
+      $is_string = false; // this is the only non-string based value
+      $compiled = 'false';
+
+      if( !is_null( $db_alternate ) )
+      {
+        $alternate_type = $matches[1];
+        $modifier = lib::create('database\modifier' );
+        $modifier->where( 'alternate_type.name', '=', $alternate_type );
+        if( 0 < $db_alternate->get_alternate_type_count( $modifier ) ) $compiled = 'true';
+      }
+    }
+    else if( 'token' == $variable )
     {
       $compiled = is_null( $this->db_response ) ? '' : $this->db_response->get_respondent()->token;
     }
@@ -656,8 +675,9 @@ class expression_manager extends \cenozo\singleton
     $this->last_term = 'operator' == $this->last_term ? 'boolean' : $this->active_term;
     $this->active_term = NULL;
 
-    // always wrap the response in quotes since all possible values are string-based
-    return sprintf( '"%s"', $compiled );
+    // wrap the response in quotes if the answer is a string
+    if( $is_string ) $compiled = sprintf( '"%s"', $compiled );
+    return $compiled;
   }
 
   /**
@@ -1114,13 +1134,13 @@ class expression_manager extends \cenozo\singleton
    * @var string $quote
    */
   private $quote;
-  
+
   /**
    * Stores whether some element is being declared (string, number, attribute, variable, constant or operator)
    * @var string $active_term
    */
   private $active_term;
-  
+
   /**
    * Stores the active term as it is read
    * @var string $term

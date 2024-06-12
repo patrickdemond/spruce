@@ -567,8 +567,6 @@ cenozoApp.defineModule({
             languageList: null,
             showHidden: false,
             alternateId: null,
-            site: null,
-            username: null,
             focusQuestionId: null,
             hotKeyDisabled: false,
             upperDigitsActivated: false,
@@ -1064,6 +1062,7 @@ cenozoApp.defineModule({
             },
 
             onReady: async function () {
+              const cookiePath = CnSession.application.url.replace(/^https:\/\/[^\/]+/, "");
               this.previewMode = "respondent" != parentModel.getSubjectFromState();
 
               // We show hidden stuff when previewing or when there is a state parameter asking for it
@@ -1073,17 +1072,11 @@ cenozoApp.defineModule({
                 ? $state.params.show_hidden
                 : false;
 
-              this.alternateId = angular.isDefined($state.params.alternate_id)
-                ? $state.params.alternate_id
-                : null;
-
-              this.site = angular.isDefined($state.params.site)
-                ? $state.params.site
-                : null;
-
-              this.username = angular.isDefined($state.params.username)
-                ? $state.params.username
-                : null;
+              const cookieList = ["site", "username", "alternate_id"].forEach( name => {
+                let cookieParts = [name + "=" + $state.params[name], "path=" + cookiePath];
+                if (!$state.params[name]) cookieParts.push("expires=Thu, 01 Jan 1970 00:00:00 UTC");
+                document.cookie = cookieParts.join(";");
+              });
 
               if (!this.previewMode) {
                 angular.extend(this, {
@@ -2357,13 +2350,6 @@ cenozoApp.defineModule({
                       }).patch();
                     }
 
-                    let path = "answer/" + question.answer_id;
-
-                    // add the site and username parameters, if they exist
-                    let queryArray = [];
-                    if( this.site ) queryArray.push("site=" + encodeURIComponent(this.site));
-                    if( this.username ) queryArray.push("username=" + encodeURIComponent(this.username));
-                    if( 0 < queryArray.length ) path += "?" + queryArray.join("&");
 
                     let data = {
                       value: angular.toJson(
@@ -2379,7 +2365,7 @@ cenozoApp.defineModule({
 
                     // set the answer's value on the server
                     await CnHttpFactory.instance({
-                      path: path,
+                      path: "answer/" + question.answer_id,
                       data: data,
                       onError: function (error) {
                         if (409 == error.status) self.outOfSync(JSON.parse(error.data));
@@ -2896,14 +2882,11 @@ cenozoApp.defineModule({
                   // proceed to the respondent's next valid page
                   await this.runQuery(async () => {
                     if (null === record.next_id) modal.show(); // show a wait dialog when submitting the qnaire
-                    let path =
-                      "respondent/token=" + $state.params.token +
-                      "?action=proceed&page_id=" + this.data.page_id;
-                    if( this.site ) path += "&site=" + encodeURIComponent(this.site);
-                    if( this.username ) path += "&username=" + encodeURIComponent(this.username);
                     const self = this;
                     await CnHttpFactory.instance({
-                      path: path,
+                      path: 
+                        "respondent/token=" + $state.params.token +
+                        "?action=proceed&page_id=" + this.data.page_id,
                       onError: function (error) {
                         if (409 == error.status) self.outOfSync(JSON.parse(error.data));
                         else CnModalMessageFactory.httpError(error);
