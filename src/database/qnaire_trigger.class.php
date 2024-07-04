@@ -105,7 +105,11 @@ abstract class qnaire_trigger extends \cenozo\database\record
             array( 'question_id', 'name' ),
             array( $db_question->id, $this->answer_value )
           );
-          $create = !is_null( $db_question_option ) && in_array( $db_question_option->id, $answer_value );
+          $create = (
+            !is_null( $db_question_option ) &&
+            is_array( $answer_value ) &&
+            in_array( $db_question_option->id, $answer_value )
+          );
         }
         else if( 'number' == $db_question->type )
         {
