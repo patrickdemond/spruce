@@ -3225,7 +3225,7 @@ class qnaire extends \cenozo\database\record
       false
     );
     $response_sel->add_table_column( 'participant', 'uid' );
-    if( $use_relation ) $select->add_table_column( 'relation_type', 'name', 'relation_type' );
+    if( $use_relation ) $response_sel->add_table_column( 'relation_type', 'name', 'relation_type' );
 
     $response_attribute_data = array();
     if( $attributes )
