@@ -3179,6 +3179,7 @@ class qnaire extends \cenozo\database\record
     $response_class_name = lib::get_class_name( 'database\response' );
     $answer_class_name = lib::get_class_name( 'database\answer' );
     $response_attribute_class_name = lib::get_class_name( 'database\response_attribute' );
+    $use_relation = lib::create( 'business\setting_manager' )->get_setting( 'general', 'use_relation' );
     $column_list = $this->get_output_column_list( false, $exporting ); // exclude questions not marked for export
     $attribute_list = [];
 
@@ -3191,6 +3192,11 @@ class qnaire extends \cenozo\database\record
     $response_mod->left_join( 'site', 'response.site_id', 'site.id' );
     $response_mod->where( 'respondent.qnaire_id', '=', $this->id );
     $response_mod->order( 'respondent.end_datetime' );
+    if( $use_relation )
+    {
+      $response_mod->left_join( 'relation', 'participant.id', 'relation.participant_id' );
+      $response_mod->left_join( 'relation_type', 'relation.relation_type_id', 'relation_type.id' );
+    }
 
     if( !is_null( $modifier ) )
     {
@@ -3219,6 +3225,7 @@ class qnaire extends \cenozo\database\record
       false
     );
     $response_sel->add_table_column( 'participant', 'uid' );
+    if( $use_relation ) $select->add_table_column( 'relation_type', 'name', 'relation_type' );
 
     $response_attribute_data = array();
     if( $attributes )
@@ -3284,6 +3291,7 @@ class qnaire extends \cenozo\database\record
       if( $answers_only && is_null( $answer_list ) ) continue;
 
       $data_row = [$response['uid'], $response['token'], $response['rank']];
+      if( $use_relation ) $data_row[] = $response['relation_type'];
       if( $this->stages ) $data_row[] = $response['interview_type'];
       $data_row = array_merge( $data_row, [
         $response['qnaire_version'],
@@ -3430,6 +3438,7 @@ class qnaire extends \cenozo\database\record
     }
 
     $header = ['uid', 'token', 'rank'];
+    if( $use_relation ) $header[] = 'relation_type';
     if( $this->stages ) $header[] = 'interview_type';
     $header = array_merge(
       $header,

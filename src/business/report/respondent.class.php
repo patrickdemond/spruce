@@ -20,6 +20,7 @@ class respondent extends \cenozo\business\report\base_report
   protected function build()
   {
     $respondent_class_name = lib::get_class_name( 'database\respondent' );
+    $use_relation = lib::create( 'business\setting_manager' )->get_setting( 'general', 'use_relation' );
 
     $modifier = lib::create( 'database\modifier' );
     $modifier->left_join( 'participant', 'respondent.participant_id', 'participant.id' );
@@ -30,6 +31,12 @@ class respondent extends \cenozo\business\report\base_report
     $select->add_column( 'language.name', 'Language', false );
     $select->add_column( 'participant.uid', 'UID', false );
     $this->add_application_identifier_columns( $select, $modifier );
+    if( $use_relation )
+    {
+      $modifier->left_join( 'relation', 'participant.id', 'relation.participant_id' );
+      $modifier->left_join( 'relation_type', 'relation.relation_type_id', 'relation_type.id' );
+      $select->add_column( 'relation_type.name', 'Relation Type', false );
+    }
     $select->add_column( 'IF( response.submitted, "Yes", "No" )', 'Submitted', false );
     $select->add_column( $this->get_datetime_column( 'respondent.start_datetime' ), 'Start', false );
     $select->add_column( $this->get_datetime_column( 'response.last_datetime' ), 'Last', false );
