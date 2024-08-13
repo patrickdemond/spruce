@@ -15,6 +15,18 @@ CREATE PROCEDURE patch_qnaire()
       ALTER TABLE qnaire ADD COLUMN anonymous TINYINT(1) NOT NULL DEFAULT 0 AFTER readonly;
     END IF;
 
+    SELECT "Adding show_progress column to qnaire table" AS "";
+
+    SELECT COUNT(*) INTO @test
+    FROM information_schema.COLUMNS
+    WHERE table_schema = DATABASE()
+    AND table_name = "qnaire"
+    AND column_name = "show_progress";
+
+    IF @test = 0 THEN
+      ALTER TABLE qnaire ADD COLUMN show_progress TINYINT(1) NOT NULL DEFAULT 1 AFTER anonymous;
+    END IF;
+
     SELECT "Removing beartooth_url column from qnaire table" AS "";
 
     SELECT COUNT(*) INTO @test

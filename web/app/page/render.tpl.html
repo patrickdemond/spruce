@@ -309,7 +309,7 @@
       <div ng-if="model.viewModel.record.debug" class="form-footer text-right bg-info">
         <cn-page-navigator model="model" is-complete="isComplete" text="text"></cn-page-navigator>
       </div>
-      <div class="progress no-rounding" style="margin-bottom: 0;">
+      <div ng-if="model.renderModel.data.show_progress" class="progress no-rounding" style="margin-bottom: 0;">
         <div class="progress-bar larger"
              role="progressbar"
              style="width: {{ model.renderModel.progress }}%; -webkit-transition: none; transition: none;"

@@ -151,6 +151,14 @@ cenozoApp.defineModule({
           return !model.viewModel.record.anonymous ? true : "add";
         },
       },
+      show_progress: {
+        title: "Show Progress Bar",
+        type: "boolean",
+        help: "Whether to show the progress bar to the respondent.",
+        isExcluded: function ($state, model) {
+          return model.isRole("interviewer");
+        },
+      },
       allow_in_hold: {
         title: "Allow when in Hold",
         type: "boolean",
