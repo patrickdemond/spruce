@@ -6436,23 +6436,18 @@ class qnaire extends \cenozo\database\record
       }
     }
 
-    foreach( $qnaire_object->qnaire_consent_type_confirm_list as $qnaire_consent_type_confirm )
+    foreach( $qnaire_object->qnaire_consent_type_confirm_list as $confirm )
     {
-      $db_consent_type =
-        $consent_type_class_name::get_unique_record( 'name', $qnaire_consent_type_confirm->consent_type_name );
+      $db_consent_type = $consent_type_class_name::get_unique_record( 'name', $confirm->consent_type_name );
       if( is_null( $db_consent_type ) )
       {
-        throw lib::create( 'exception\notice',
-          sprintf(
-            'Unable to import questionnaire since it has a consent confirm '.
-            'for consent type "%s" which does not exist.',
-            $qnaire_consent_type_confirm->consent_type_name
-          ),
-          __METHOD__
-        );
+        // create the missing consent type
+        $db_consent_type = lib::create( 'database\consent_type' );
+        $db_consent_type->name = $confirm->consent_type_name;
+        $db_consent_type->save();
       }
 
-      $qnaire_consent_type_confirm_class_name::create_from_object( $qnaire_consent_type_confirm, $db_qnaire );
+      $qnaire_consent_type_confirm_class_name::create_from_object( $confirm, $db_qnaire );
     }
 
     foreach( $qnaire_object->qnaire_participant_trigger_list as $qnaire_participant_trigger )
@@ -6461,151 +6456,109 @@ class qnaire extends \cenozo\database\record
       $qnaire_participant_trigger_class_name::create_from_object( $qnaire_participant_trigger, $db_question );
     }
 
-    foreach( $qnaire_object->qnaire_collection_trigger_list as $qnaire_collection_trigger )
+    foreach( $qnaire_object->qnaire_collection_trigger_list as $trigger )
     {
-      $db_collection = $collection_class_name::get_unique_record(
-        'name',
-        $qnaire_collection_trigger->collection_name
-      );
+      $db_collection = $collection_class_name::get_unique_record( 'name', $trigger->collection_name );
       if( is_null( $db_collection ) )
       {
-        throw lib::create( 'exception\notice',
-          sprintf(
-            'Unable to import questionnaire since it has a collection trigger '.
-            'for collection type "%s" which does not exist.',
-            $qnaire_collection_trigger->collection_name
-          ),
-          __METHOD__
-        );
+        // create the missing collection
+        $db_collection = lib::create( 'database\collection' );
+        $db_collection->name = $trigger->collection_name;
+        $db_collection->save();
       }
 
-      $db_question = $db_qnaire->get_question( $qnaire_collection_trigger->question_name );
-      $qnaire_collection_trigger_class_name::create_from_object( $qnaire_collection_trigger, $db_question );
+      $db_question = $db_qnaire->get_question( $trigger->question_name );
+      $qnaire_collection_trigger_class_name::create_from_object( $trigger, $db_question );
     }
 
-    foreach( $qnaire_object->qnaire_consent_type_trigger_list as $qnaire_consent_type_trigger )
+    foreach( $qnaire_object->qnaire_consent_type_trigger_list as $trigger )
     {
-      $db_consent_type = $consent_type_class_name::get_unique_record(
-        'name',
-        $qnaire_consent_type_trigger->consent_type_name
-      );
+      $db_consent_type = $consent_type_class_name::get_unique_record( 'name', $trigger->consent_type_name );
       if( is_null( $db_consent_type ) )
       {
-        throw lib::create( 'exception\notice',
-          sprintf(
-            'Unable to import questionnaire since it has a consent trigger '.
-            'for consent type "%s" which does not exist.',
-            $qnaire_consent_type_trigger->consent_type_name
-          ),
-          __METHOD__
-        );
+        // create the missing consent type
+        $db_consent_type = lib::create( 'database\consent_type' );
+        $db_consent_type->name = $trigger->consent_type_name;
+        $db_consent_type->save();
       }
 
-      $db_question = $db_qnaire->get_question( $qnaire_consent_type_trigger->question_name );
-      $qnaire_consent_type_trigger_class_name::create_from_object( $qnaire_consent_type_trigger, $db_question );
+      $db_question = $db_qnaire->get_question( $trigger->question_name );
+      $qnaire_consent_type_trigger_class_name::create_from_object( $trigger, $db_question );
     }
 
-    foreach( $qnaire_object->qnaire_event_type_trigger_list as $qnaire_event_type_trigger )
+    foreach( $qnaire_object->qnaire_event_type_trigger_list as $trigger )
     {
-      $db_event_type = $event_type_class_name::get_unique_record(
-        'name',
-        $qnaire_event_type_trigger->event_type_name
-      );
+      $db_event_type = $event_type_class_name::get_unique_record( 'name', $trigger->event_type_name );
       if( is_null( $db_event_type ) )
       {
-        throw lib::create( 'exception\notice',
-          sprintf(
-            'Unable to import questionnaire since it has a event trigger '.
-            'for event type "%s" which does not exist.',
-            $qnaire_event_type_trigger->event_type_name
-          ),
-          __METHOD__
-        );
+        // create the missing event type
+        $db_event_type = lib::create( 'database\event_type' );
+        $db_event_type->name = $trigger->event_type_name;
+        $db_event_type->save();
       }
 
-      $db_question = $db_qnaire->get_question( $qnaire_event_type_trigger->question_name );
-      $qnaire_event_type_trigger_class_name::create_from_object( $qnaire_event_type_trigger, $db_question );
+      $db_question = $db_qnaire->get_question( $trigger->question_name );
+      $qnaire_event_type_trigger_class_name::create_from_object( $trigger, $db_question );
     }
 
-    foreach( $qnaire_object->qnaire_alternate_consent_type_trigger_list
-      as $qnaire_alternate_consent_type_trigger )
+    foreach( $qnaire_object->qnaire_alternate_consent_type_trigger_list as $trigger )
     {
       $db_alternate_consent_type = $alternate_consent_type_class_name::get_unique_record(
         'name',
-        $qnaire_alternate_consent_type_trigger->alternate_consent_type_name
+        $trigger->alternate_consent_type_name
       );
       if( is_null( $db_alternate_consent_type ) )
       {
-        throw lib::create( 'exception\notice',
-          sprintf(
-            'Unable to import questionnaire since it has a alternate_consent trigger for '.
-            'alternate_consent type "%s" which does not exist.',
-            $qnaire_alternate_consent_type_trigger->alternate_consent_type_name
-          ),
-          __METHOD__
-        );
+        // create the missing alternate consent type
+        $db_alternate_consent_type = lib::create( 'database\alternate_consent_type' );
+        $db_alternate_consent_type->name = $trigger->alternate_consent_type_name;
+        $db_alternate_consent_type->save();
       }
 
-      $db_question = $db_qnaire->get_question( $qnaire_alternate_consent_type_trigger->question_name );
-      $qnaire_aconsent_type_trigger_class_name::create_from_object(
-        $qnaire_alternate_consent_type_trigger,
-        $db_question
-      );
+      $db_question = $db_qnaire->get_question( $trigger->question_name );
+      $qnaire_aconsent_type_trigger_class_name::create_from_object( $trigger, $db_question );
     }
 
-    foreach( $qnaire_object->qnaire_proxy_type_trigger_list as $qnaire_proxy_type_trigger )
+    foreach( $qnaire_object->qnaire_proxy_type_trigger_list as $trigger )
     {
       $db_proxy_type = NULL;
-      if( $qnaire_proxy_type_trigger->proxy_type_name )
+      if( $trigger->proxy_type_name )
       {
-        $db_proxy_type = $proxy_type_class_name::get_unique_record(
-          'name',
-          $qnaire_proxy_type_trigger->proxy_type_name
-        );
+        $db_proxy_type = $proxy_type_class_name::get_unique_record( 'name', $trigger->proxy_type_name );
         if( is_null( $db_proxy_type ) )
         {
-          throw lib::create( 'exception\notice',
-            sprintf(
-              'Unable to import questionnaire since it has a proxy trigger '.
-              'for proxy type "%s" which does not exist.',
-              $qnaire_proxy_type_trigger->proxy_type_name
-            ),
-            __METHOD__
-          );
+          // create themissing proxy type
+          $db_proxy_type = lib::create( 'database\proxy_type' );
+          $db_proxy_type->name = $trigger->proxy_type_name;
+          $db_proxy_type->description = 'Imported for questionnaire.';
+          $db_proxy_type->save();
         }
       }
 
-      $db_question = $db_qnaire->get_question( $qnaire_proxy_type_trigger->question_name );
-      $qnaire_proxy_type_trigger_class_name::create_from_object( $qnaire_proxy_type_trigger, $db_question );
+      $db_question = $db_qnaire->get_question( $trigger->question_name );
+      $qnaire_proxy_type_trigger_class_name::create_from_object( $trigger, $db_question );
     }
 
-    foreach( $qnaire_object->qnaire_equipment_type_trigger_list as $qnaire_equipment_type_trigger )
+    foreach( $qnaire_object->qnaire_equipment_type_trigger_list as $trigger )
     {
       $db_equipment_type = NULL;
-      if( $qnaire_equipment_type_trigger->equipment_type_name )
+      if( $trigger->equipment_type_name )
       {
         $db_equipment_type = $equipment_type_class_name::get_unique_record(
           'name',
-          $qnaire_equipment_type_trigger->equipment_type_name
+          $trigger->equipment_type_name
         );
         if( is_null( $db_equipment_type ) )
         {
-          throw lib::create( 'exception\notice',
-            sprintf(
-              'Unable to import questionnaire since it has a equipment trigger '.
-              'for equipment type "%s" which does not exist.',
-              $qnaire_equipment_type_trigger->equipment_type_name
-            ),
-            __METHOD__
-          );
+          // create the missing equipment type
+          $db_equipment_type = lib::create( 'database\equipment_type' );
+          $db_equipment_type->name = $trigger->equipment_type_name;
+          $db_equipment_type->save();
         }
       }
 
-      $db_question = $db_qnaire->get_question( $qnaire_equipment_type_trigger->question_name );
-      $qnaire_equipment_type_trigger_class_name::create_from_object(
-        $qnaire_equipment_type_trigger,
-        $db_question
-      );
+      $db_question = $db_qnaire->get_question( $trigger->question_name );
+      $qnaire_equipment_type_trigger_class_name::create_from_object( $trigger, $db_question );
     }
 
     if( $qnaire_object->readonly )
