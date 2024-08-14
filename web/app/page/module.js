@@ -1074,7 +1074,11 @@ cenozoApp.defineModule({
                 : false;
 
               const cookieList = ["site", "username", "alternate_id"].forEach( name => {
-                let cookieParts = [name + "=" + $state.params[name], "path=" + cookiePath];
+                let cookieParts = [
+                  name + "=" + $state.params[name],
+                  "path=" + cookiePath,
+                  "SameSite=Lax"
+                ];
                 if (!$state.params[name]) cookieParts.push("expires=Thu, 01 Jan 1970 00:00:00 UTC");
                 document.cookie = cookieParts.join(";");
               });
