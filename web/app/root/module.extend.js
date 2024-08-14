@@ -43,7 +43,7 @@ cenozoApp.extendModule({
               $scope.todayRespondentModel.listModel.heading =
                 "Today's " + $scope.todayRespondentModel.listModel.heading;
               angular.extend($scope.todayRespondentModel, {
-                subList: "today",  
+                subList: "today",
 
                 // get a list of all respondents for all qnaires
                 getServiceCollectionPath: (ignoreParent) => "respondent",
@@ -81,8 +81,19 @@ cenozoApp.extendModule({
 
               // change the default ordering to the start datetime
               $scope.inProgressRespondentModel.module.defaultOrder = { column: "start_datetime", reverse: true };
-              $scope.inProgressRespondentModel.listModel.heading =
-                "Full " + $scope.inProgressRespondentModel.listModel.heading;
+              angular.extend($scope.inProgressRespondentModel.listModel, {
+                heading: "Full " + $scope.inProgressRespondentModel.listModel.heading,
+
+                // update the today respondent list anytime the inProgress list is updated
+                onList: async function (replace) {
+                  await this.$$onList(replace);
+                  await this.parentModel.updateUsesParent();
+
+                  await $scope.todayRespondentModel.listModel.onList(replace);
+                  await $scope.todayRespondentModel.updateUsesParent();
+                },
+              });
+
               angular.extend($scope.inProgressRespondentModel, {
                 // get a list of all respondents for all qnaires
                 getServiceCollectionPath: (ignoreParent) => "respondent",
