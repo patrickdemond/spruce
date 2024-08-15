@@ -506,8 +506,7 @@ cenozo.directive("cnQnaireNavigator", [
         async function viewQnairePart(subject, id) {
           var keys = null;
           if (subject + "_description.view" == $state.current.name) {
-            var languageMatch =
-              $state.params.identifier.match(/language_id=([0-9]+)/);
+            var languageMatch = $state.params.identifier.match(/language_id=([0-9]+)/);
             var typeMatch = $state.params.identifier.match(/type=([a-z]+)/);
             if (null == languageMatch || null == typeMatch) {
               var response = await CnHttpFactory.instance({
@@ -525,14 +524,8 @@ cenozo.directive("cnQnaireNavigator", [
           }
 
           // if we are returned description keys then use them to navigate to the sister description
-          var identifier =
-            null != keys
-              ? [
-                  subject + "_id=" + id,
-                  "language_id=" + keys.language_id,
-                  "type=" + keys.type,
-                ].join(";")
-              : id;
+          var identifier = null != keys ?
+            [subject + "_id=" + id, "language_id=" + keys.language_id, "type=" + keys.type].join(";") : id;
           await $state.go(
             (null != keys ? subject + "_description" : subject) + ".view",
             { identifier: identifier },
@@ -553,11 +546,7 @@ cenozo.directive("cnQnaireNavigator", [
           questionList: [],
 
           viewQnaire: async function (id) {
-            await $state.go(
-              "qnaire.view",
-              { identifier: id },
-              { reload: true }
-            );
+            await $state.go("qnaire.view", { identifier: id }, { reload: true });
           },
           viewModule: async function (id) {
             await viewQnairePart("module", id);
@@ -625,12 +614,8 @@ cenozo.directive("cnQnaireNavigator", [
         }).get();
 
         $scope.currentQnaire = {
-          id: response.data.qnaire_id
-            ? response.data.qnaire_id
-            : response.data.id,
-          name: response.data.qnaire_name
-            ? response.data.qnaire_name
-            : response.data.name,
+          id: response.data.qnaire_id ? response.data.qnaire_id : response.data.id,
+          name: response.data.qnaire_name ? response.data.qnaire_name : response.data.name,
         };
 
         if (moduleDetails) {
