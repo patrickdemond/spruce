@@ -3207,6 +3207,12 @@ class qnaire extends \cenozo\database\record
     {
       $response_mod->left_join( 'relation', 'participant.id', 'relation.participant_id' );
       $response_mod->left_join( 'relation_type', 'relation.relation_type_id', 'relation_type.id' );
+      $response_mod->left_join(
+        'participant',
+        'relation.primary_participant_id',
+        'primary_participant.id',
+        'primary_participant'
+      );
     }
 
     if( !is_null( $modifier ) )
@@ -3236,7 +3242,11 @@ class qnaire extends \cenozo\database\record
       false
     );
     $response_sel->add_table_column( 'participant', 'uid' );
-    if( $use_relation ) $response_sel->add_table_column( 'relation_type', 'name', 'relation_type' );
+    if( $use_relation )
+    {
+      $response_sel->add_table_column( 'relation_type', 'name', 'relation_type' );
+      $response_sel->add_table_column( 'primary_participant', 'uid', 'primary_uid' );
+    }
 
     $response_attribute_data = array();
     if( $attributes )
@@ -3301,8 +3311,13 @@ class qnaire extends \cenozo\database\record
       // if requested, don't add responses with no answers
       if( $answers_only && is_null( $answer_list ) ) continue;
 
-      $data_row = [$response['uid'], $response['token'], $response['rank']];
-      if( $use_relation ) $data_row[] = $response['relation_type'];
+      $data_row = [$response['uid'], $response['token']];
+      if( $use_relation )
+      {
+        $data_row[] = $response['relation_type'];
+        $data_row[] = $response['primary_uid'];
+      }
+      $data_row[] = $response['rank'];
       if( $this->stages ) $data_row[] = $response['interview_type'];
       $data_row = array_merge( $data_row, [
         $response['qnaire_version'],
@@ -3448,8 +3463,13 @@ class qnaire extends \cenozo\database\record
       $data[] = $data_row;
     }
 
-    $header = ['uid', 'token', 'rank'];
-    if( $use_relation ) $header[] = 'relation_type';
+    $header = ['uid', 'token'];
+    if( $use_relation )
+    {
+      $header[] = 'relation_type';
+      $header[] = 'primary_uid';
+    }
+    $header[] = 'rank';
     if( $this->stages ) $header[] = 'interview_type';
     $header = array_merge(
       $header,
