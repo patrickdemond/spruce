@@ -719,13 +719,24 @@ class qnaire extends \cenozo\database\record
       );
     }
 
-    // update all stages
+    // update all stages (both precondition and token_check_precondition)
     $where_mod = lib::create( 'database\modifier' );
     $where_mod->where( 'stage.precondition', 'RLIKE', $match );
     $where_mod->where( 'stage.qnaire_id', '=', $this->id );
 
     $sql = sprintf(
       'UPDATE stage SET stage.precondition = %s %s',
+      sprintf( $replace, 'stage' ),
+      $where_mod->get_sql()
+    );
+    static::db()->execute( $sql );
+
+    $where_mod = lib::create( 'database\modifier' );
+    $where_mod->where( 'stage.token_check_precondition', 'RLIKE', $match );
+    $where_mod->where( 'stage.qnaire_id', '=', $this->id );
+
+    $sql = sprintf(
+      'UPDATE stage SET stage.token_check_precondition = %s %s',
       sprintf( $replace, 'stage' ),
       $where_mod->get_sql()
     );
@@ -4248,6 +4259,7 @@ class qnaire extends \cenozo\database\record
               $db_stage->rank = $stage->rank;
               $db_stage->name = sprintf( '%s_%s', $stage->name, $name_suffix );
               $db_stage->precondition = $stage->precondition;
+              $db_stage->token_check_precondition = $stage->token_check_precondition;
               $db_stage->process_patch( $stage, $name_suffix, $apply );
               $db_stage->save();
             }
@@ -5831,6 +5843,7 @@ class qnaire extends \cenozo\database\record
       $stage_sel->add_table_column( 'first_module', 'rank', 'first_module_rank' );
       $stage_sel->add_table_column( 'last_module', 'rank', 'last_module_rank' );
       $stage_sel->add_column( 'precondition' );
+      $stage_sel->add_column( 'token_check_precondition' );
       $stage_mod = lib::create( 'database\modifier' );
       $stage_mod->join( 'module', 'stage.first_module_id', 'first_module.id', '', 'first_module' );
       $stage_mod->join( 'module', 'stage.last_module_id', 'last_module.id', '', 'last_module' );
@@ -6407,6 +6420,7 @@ class qnaire extends \cenozo\database\record
         $db_stage->first_module_id = $db_first_module->id;
         $db_stage->last_module_id = $db_last_module->id;
         $db_stage->precondition = $stage->precondition;
+        $db_stage->token_check_precondition = $stage->token_check_precondition;
 
         // There may already be a stage by this name automatically created when modules were imported.
         // If so we must delete it before saving this record

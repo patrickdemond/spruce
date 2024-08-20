@@ -59,7 +59,13 @@ cenozoApp.defineModule({
       precondition: {
         title: "Precondition",
         type: "text",
-        help: "A special expression which restricts whether or not the stage can proceed.",
+        help: "An expression which restricts whether or not the stage can proceed.",
+      },
+      token_check_precondition: {
+        title: "Token Check Precondition",
+        type: "text",
+        help:
+          "An expression which determines if the interviewer must provide the token before launching the stage.",
       },
       first_module_id: {
         title: "First Module",

@@ -16,6 +16,7 @@ SOURCE answer_device.sql
 SOURCE response_device.sql
 SOURCE answer.sql
 SOURCE question.sql
+SOURCE stage.sql
 SOURCE service.sql
 SOURCE role_has_service.sql
 SOURCE reminder.sql

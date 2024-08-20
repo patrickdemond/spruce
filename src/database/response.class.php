@@ -286,7 +286,7 @@ class response extends \cenozo\database\has_rank
   }
 
   /**
-   * Updates the status of the response (this is only used by stage-based qnaires
+   * Updates the status of the response (this is only used by stage-based qnaires)
    */
   public function update_status()
   {
@@ -300,7 +300,8 @@ class response extends \cenozo\database\has_rank
     $response_stage_mod = lib::create( 'database\modifier' );
     $response_stage_mod->join( 'stage', 'response_stage.stage_id', 'stage.id' );
     $response_stage_mod->order( 'stage.rank' );
-    foreach( $this->get_response_stage_object_list( $response_stage_mod ) as $db_response_stage ) $db_response_stage->update_status();
+    foreach( $this->get_response_stage_object_list( $response_stage_mod ) as $db_response_stage )
+      $db_response_stage->update_status();
 
     // update the submitted status if there are no incomplete stages left
     if( !$this->has_unfinished_stages() )

@@ -107,7 +107,7 @@ cenozoApp.initQnairePartModule = function (module, type) {
       title: "Precondition",
       type: "text",
       help:
-        "A special expression which restricts whether or not to show this " +
+        "An expression which restricts whether or not to show this " +
         type.replace(/_/g, " ") +
         ".",
     },

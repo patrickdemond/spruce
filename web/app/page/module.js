@@ -1164,7 +1164,7 @@ cenozoApp.defineModule({
                         select: {
                           column: [
                             "id", "status", "start_datetime", "end_datetime",
-                            "deviation_type_id", "deviation_comments", "comments",
+                            "deviation_type_id", "deviation_comments", "comments", "token_check",
                             { table: "stage", column: "rank" },
                             { table: "stage", column: "name" },
                             { table: "deviation_type", column: "name", alias: "deviation" },
@@ -1186,6 +1186,7 @@ cenozoApp.defineModule({
                   ]);
 
                   this.responseStageList = responseStageResponse.data;
+                  console.log(this.responseStageList);
                   if (0 == this.responseStageList.length) {
                     throw new Error("Questionnaire has not stages, unable to proceed.");
                   }
@@ -2813,6 +2814,8 @@ cenozoApp.defineModule({
                 // only run the pre-stage check if there is a deviation we we have to check the token
                 if (deviation || this.data.token_check) {
                   // now show the pre-stage dialog
+                  // (only checking for the token if both the qnaire and stage both require it)
+                  const checkToken = this.data.token_check && responseStage.token_check;
                   var response = await CnModalPreStageFactory.instance({
                     title: responseStage.name + ": " + operation.ucWords(),
                     warning: warning,
@@ -2822,8 +2825,8 @@ cenozoApp.defineModule({
                       null,
                     validToken: $state.params.token,
                     // if we're not checking the token then set it now so the user doesn't have to
-                    token: this.data.token_check ? null : $state.params.token,
-                    tokenReadOnly: !this.data.token_check,
+                    token: checkToken ? null : $state.params.token,
+                    tokenReadOnly: !checkToken,
                     deviationTypeId: responseStage.deviation_type_id,
                     deviationComments: responseStage.deviation_comments,
                     comments: responseStage.comments,

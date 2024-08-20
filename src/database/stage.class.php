@@ -198,6 +198,7 @@ class stage extends \cenozo\database\has_rank
     $module_class_name = lib::get_class_name( 'database\module' );
 
     $this->precondition = $db_stage->precondition;
+    $this->token_check_precondition = $db_stage->token_check_precondition;
 
     // find the coinciding first/last modules by rank
     $this->first_module_id = $module_class_name::get_unique_record(

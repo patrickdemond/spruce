@@ -42,5 +42,17 @@ class module extends \cenozo\service\module
         false
       );
     }
+
+    // If the token_check column is request then set it as false and leave it up to the
+    // service\response\response_stage\query class to compute.  Note that this is not done in
+    // service\response_stage\query so it would need to be added if required by that service.
+    if( $select->has_column( 'token_check' ) )
+    {
+      // we'll need the precondition to evaluate
+      $select->add_table_column( 'stage', 'token_check_precondition' );
+
+      // and set the value to true by default
+      $select->add_constant( true, 'token_check', 'boolean' );
+    }
   }
 }
