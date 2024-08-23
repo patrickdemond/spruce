@@ -56,6 +56,9 @@ class response_stage extends \cenozo\database\record
         // if the status is not applicable due to a parent stage being skipped then use the "parent skipped" status
         if( 'not applicable' == $this->status )
         {
+          // first, delete all answers since the stage is no longer applicable
+          $this->delete_answers();
+
           $matches = array();
           if( preg_match_all( '/#[^#]+#/', $db_stage->precondition, $matches ) )
           {
