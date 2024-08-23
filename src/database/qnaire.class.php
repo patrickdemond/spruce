@@ -2255,7 +2255,7 @@ class qnaire extends \cenozo\database\record
 
               if( is_null( $db_response_attribute ) )
               {
-                $db_response_attribute = lib::create( 'database\reponse_attribute' );
+                $db_response_attribute = lib::create( 'database\response_attribute' );
                 $db_response_attribute->response_id = $db_response->id;
                 $db_response_attribute->attribute_id = $db_attribute->id;
               }
