@@ -121,7 +121,10 @@ class response extends \cenozo\database\has_rank
     parent::save();
 
     // create the response's attributes
-    if( $is_new )
+    // NOTE: we don't do this if the respondent is finished as that indicates that indicates the response
+    // record is being imported and is already complete
+    $importing = !is_null( $db_respondent ) && !is_null( $db_respondent->end_datetime );
+    if( $is_new && !$importing )
     {
       if( !$this->create_attributes() )
       {

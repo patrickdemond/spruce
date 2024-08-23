@@ -1172,11 +1172,25 @@ class qnaire extends \cenozo\database\record
           'start_datetime' => $db_response->start_datetime->format( 'c' ),
           'last_datetime' => $db_response->last_datetime->format( 'c' ),
           'comments' => $db_response->comments,
+          'response_attribute_list' => [],
           'page_time_list' => [],
           'answer_list' => []
         ];
 
         if( $db_qnaire->stages ) $response['interview_type'] = $db_response->interview_type;
+
+        $attribute_sel = lib::create( 'database\select' );
+        $attribute_sel->add_table_column( 'attribute', 'name' );
+        $attribute_sel->add_column( 'value' );
+        $attribute_mod = lib::create( 'database\modifier' );
+        $attribute_mod->join( 'attribute', 'response_attribute.attribute_id', 'attribute.id' );
+        foreach( $db_response->get_response_attribute_list( $attribute_sel, $attribute_mod ) as $attribute )
+        {
+          $response['response_attribute_list'][] = [
+            'name' => $attribute['name'],
+            'value' => $attribute['value']
+          ];
+        }
 
         $page_time_sel = lib::create( 'database\select' );
         $page_time_sel->add_table_column( 'module', 'name', 'module' );
@@ -2133,6 +2147,8 @@ class qnaire extends \cenozo\database\record
     $page_time_class_name = lib::get_class_name( 'database\page_time' );
     $answer_class_name = lib::get_class_name( 'database\answer' );
     $question_option_class_name = lib::get_class_name( 'database\question_option' );
+    $attribute_class_name = lib::get_class_name( 'database\attribute' );
+    $response_attribute_class_name = lib::get_class_name( 'database\response_attribute' );
     $stage_class_name = lib::get_class_name( 'database\stage' );
     $response_stage_class_name = lib::get_class_name( 'database\response_stage' );
     $deviation_type_class_name = lib::get_class_name( 'database\deviation_type' );
@@ -2223,6 +2239,31 @@ class qnaire extends \cenozo\database\record
           $db_response->last_datetime = $response->last_datetime;
           $db_response->comments = $response->comments;
           $db_response->save();
+
+          foreach( $response->response_attribute_list as $response_attribute )
+          {
+            $db_attribute = $attribute_class_name::get_unique_record(
+              ['qnaire_id', 'name'],
+              $this->id, $response_attribute['name']
+            );
+            if( !is_null( $db_attribute ) )
+            {
+              $db_response_attribute = $response_attribute_class_name::get_unique_record(
+                ['response_id', 'attribute_id'],
+                [$db_response->id, $db_attribute->id]
+              );
+
+              if( is_null( $db_response_attribute ) )
+              {
+                $db_response_attribute = lib::create( 'database\reponse_attribute' );
+                $db_response_attribute->response_id = $db_response->id;
+                $db_response_attribute->attribute_id = $db_attribute->id;
+              }
+
+              $db_response_attribute->value = $response_attribute['value'];
+              $db_response_attribute->save();
+            }
+          }
 
           foreach( $response->page_time_list as $page_time )
           {
