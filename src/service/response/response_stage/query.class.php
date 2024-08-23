@@ -58,7 +58,6 @@ class query extends \cenozo\service\query
 
           throw $e;
         }
-        log::debug( $list[$index]['id'], $list[$index]['token_check'] );
       }
     }
 
