@@ -2244,7 +2244,7 @@ class qnaire extends \cenozo\database\record
           {
             $db_attribute = $attribute_class_name::get_unique_record(
               ['qnaire_id', 'name'],
-              $this->id, $response_attribute['name']
+              $this->id, $response_attribute->name
             );
             if( !is_null( $db_attribute ) )
             {
@@ -2260,7 +2260,7 @@ class qnaire extends \cenozo\database\record
                 $db_response_attribute->attribute_id = $db_attribute->id;
               }
 
-              $db_response_attribute->value = $response_attribute['value'];
+              $db_response_attribute->value = $response_attribute->value;
               $db_response_attribute->save();
             }
           }
