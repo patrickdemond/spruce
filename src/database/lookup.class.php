@@ -31,11 +31,12 @@ class lookup extends \cenozo\database\record
     $lookup_item_class_name = lib::get_class_name( 'database\lookup_item' );
     $indicator_class_name = lib::get_class_name( 'database\indicator' );
 
-    $result_data = array(
-      'lookup_item' => array( 'exists' => 0, 'created' => 0 ),
-      'indicator_list' => array()
-    );
+    $result_data = [
+      'lookup_item' => ['exists' => 0, 'created' => 0],
+      'indicator_list' => []
+    ];
 
+    // process all rows to create new lookup items and build list of add/remove operations for indicators
     foreach( $data as $index => $row )
     {
       // skip the header row
@@ -44,9 +45,9 @@ class lookup extends \cenozo\database\record
       $identifier = $row[0];
       $name = $row[1];
       $description = $row[2];
-      $indicators = $row[3];
-
-      $lookup_item_is_new = false;
+      $new_indicator_list = [];
+      if( !is_null( $row[3] ) && 'NULL' != $row[3] && 0 < strlen( $row[3] ) )
+        $new_indicator_list = explode( ';', $row[3] );
 
       $db_lookup_item = $lookup_item_class_name::get_unique_record(
         array( 'lookup_id', 'identifier' ),
@@ -55,7 +56,6 @@ class lookup extends \cenozo\database\record
 
       if( is_null( $db_lookup_item ) )
       {
-        $lookup_item_is_new = true;
         $result_data['lookup_item']['created']++;
 
         if( $apply )
@@ -73,48 +73,62 @@ class lookup extends \cenozo\database\record
         $result_data['lookup_item']['exists']++;
       }
 
-      // process all indicators
-      if( !is_null( $indicators ) && 'NULL' != $indicators && 0 < strlen( $indicators ) )
+      // get a list of the lookup item's current indicators
+      $indicator_sel = lib::create( 'database\select' );
+      $indicator_sel->add_table_column( 'indicator', 'name' );
+      $old_indicator_list = [];
+      if( !is_null( $db_lookup_item ) )
+        foreach( $db_lookup_item->get_indicator_list() as $row ) $old_indicator_list[] = $row['name'];
+
+      // indicators that are being added
+      $created_array = array_diff( $new_indicator_list, $old_indicator_list );
+      foreach( $created_array as $indicator )
       {
-        $indicator_id_list = array();
-        foreach( explode( ';', $indicators ) as $indicator )
+        if( !array_key_exists( $indicator, $result_data['indicator_list'] ) )
+          $result_data['indicator_list'][$indicator] = ['add' => [], 'remove' => []];
+        $result_data['indicator_list'][$indicator]['add'][] =
+          is_null( $db_lookup_item ) ? $identifier : $db_lookup_item->id;
+      }
+
+      // indicators that are being removed
+      $removed_array = array_diff( $old_indicator_list, $new_indicator_list );
+      foreach( $removed_array as $indicator )
+      {
+        if( !array_key_exists( $indicator, $result_data['indicator_list'] ) )
+          $result_data['indicator_list'][$indicator] = ['add' => [], 'remove' => []];
+        $result_data['indicator_list'][$indicator]['remove'][] =
+          is_null( $db_lookup_item ) ? $identifier : $db_lookup_item->id;
+      }
+    }
+
+    // now update the indicator lookup-item lists
+    foreach( $result_data['indicator_list'] as $indicator => $op )
+    {
+      // create the indicator if it doesn't exist already
+      $db_indicator = $indicator_class_name::get_unique_record(
+        array( 'lookup_id', 'name' ),
+        array( $this->id, $indicator )
+      );
+
+      // rebuild the result data array for the UI
+      $result_data['indicator_list'][$indicator] = [
+        'new' => is_null( $db_indicator ),
+        'created' => count( $op['add'] ),
+        'removed' => count( $op['remove'] )
+      ];
+
+      if( $apply )
+      {
+        if( is_null( $db_indicator ) )
         {
-          $indicator = trim( $indicator );
-          if( !array_key_exists( $indicator, $result_data['indicator_list'] ) )
-          {
-            $result_data['indicator_list'][$indicator] = array(
-              'new' => false,
-              'exists' => 0,
-              'created' => 0
-            );
-          }
-          $result_data['indicator_list'][$indicator][$lookup_item_is_new ? 'created' : 'exists']++;
-
-          $db_indicator = $indicator_class_name::get_unique_record(
-            array( 'lookup_id', 'name' ),
-            array( $this->id, $indicator )
-          );
-
-          if( is_null( $db_indicator ) )
-          {
-            $result_data['indicator_list'][$indicator]['new'] = true;
-
-            if( $apply )
-            {
-              $db_indicator = lib::create( 'database\indicator' );
-              $db_indicator->lookup_id = $this->id;
-              $db_indicator->name = $indicator;
-              $db_indicator->save();
-            }
-          }
-
-          if( $apply ) $indicator_id_list[] = $db_indicator->id;
+          $db_indicator = lib::create( 'database\indicator' );
+          $db_indicator->lookup_id = $this->id;
+          $db_indicator->name = $indicator;
+          $db_indicator->save();
         }
 
-        if( $apply && 0 < count( $indicator_id_list ) )
-        {
-          $db_lookup_item->add_indicator( $indicator_id_list );
-        }
+        if( 0 < count( $op['remove'] ) ) $db_indicator->remove_lookup_item( $op['remove'] );
+        if( 0 < count( $op['add'] ) ) $db_indicator->add_lookup_item( $op['add'] );
       }
     }
 

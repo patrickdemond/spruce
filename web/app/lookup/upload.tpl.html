@@ -59,7 +59,9 @@
         <div ng-repeat="(indicator, data) in model.viewModel.dataSummary.indicator_list" class="row">
           <div class="form-group">
             <label class="col-sm-3 control-label">{{ indicator }} {{ data.new ? '(new)' : '' }}</label>
-            <div class="col-sm-9 form-text">{{ data.created }} new, {{ data.exists }} pre-existing associations</div>
+            <div class="col-sm-9 form-text">
+              adding {{ data.created }}, removing {{ data.removed }} lookup items
+            </div>
           </div>
         </div>
       </div>
