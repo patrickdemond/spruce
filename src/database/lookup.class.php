@@ -43,11 +43,15 @@ class lookup extends \cenozo\database\record
       if( 0 == $index && 'identifier' == $row[0] ) continue;
 
       $identifier = $row[0];
-      $name = $row[1];
-      $description = $row[2];
+      $name = util::utf8_encode( $row[1] );
+      $description = util::utf8_encode( $row[2] );
       $new_indicator_list = [];
       if( !is_null( $row[3] ) && 'NULL' != $row[3] && 0 < strlen( $row[3] ) )
+      {
         $new_indicator_list = explode( ';', $row[3] );
+        foreach( $new_indicator_list as $i => $indicator )
+          $new_indicator_list[$i] = util::utf8_encode( $indicator );
+      }
 
       $db_lookup_item = $lookup_item_class_name::get_unique_record(
         array( 'lookup_id', 'identifier' ),
