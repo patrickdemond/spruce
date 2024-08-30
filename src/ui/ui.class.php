@@ -243,6 +243,7 @@ class ui extends \cenozo\ui\ui
       $module->add_child( 'qnaire_proxy_type_trigger' );
       $module->add_child( 'qnaire_equipment_type_trigger' );
       $module->add_action( 'clone', '/{identifier}' );
+      $module->add_action( 'chart', '/{identifier}' );
     }
 
     $module = $this->get_module( 'question_option' );

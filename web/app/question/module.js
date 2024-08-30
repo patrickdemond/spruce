@@ -142,6 +142,70 @@ cenozoApp.defineModule({
     module.addInput("", "question_option_count", { isExcluded: true });
     module.addInput("", "qnaire_id", { column: "qnaire.id", isExcluded: true });
 
+    module.addExtraOperation("view", {
+      title: "Visualize",
+      operation: async function ($state, model) {
+        await $state.go( "question.chart", { identifier: model.viewModel.record.getIdentifier() } );
+      },
+      isIncluded: function ($state, model) {
+        return (
+          "function" == typeof Chart &&
+          ["boolean", "list"].includes(model.viewModel.record.type)
+        );
+      }
+    });
+
+    /* ############################################################################################## */
+    cenozo.providers.directive("cnQuestionChart", [
+      "CnQuestionModelFactory",
+      "CnSession",
+      "$state",
+      function (CnQuestionModelFactory, CnSession, $state) {
+        return {
+          templateUrl: module.getFileUrl("chart.tpl.html"),
+          restrict: "E",
+          scope: { model: "=?" },
+          controller: async function ($scope) {
+            if (angular.isUndefined($scope.model)) $scope.model = CnQuestionModelFactory.root;
+
+            angular.extend($scope, {
+              isComplete: false,
+
+              refresh: async function () {
+                if ($scope.isComplete) {
+                  $scope.isComplete = false;
+
+                  try {
+                    await $scope.model.chartModel.onView();
+                  } finally {
+                    $scope.isComplete = true;
+                  }
+                }
+              },
+            });
+
+            try {
+              await $scope.model.chartModel.onView();
+              CnSession.setBreadcrumbTrail([
+                { title: "Question", },
+                {
+                  title: $scope.model.chartModel.record.name,
+                  go: async function () {
+                    await $state.go("question.view", {
+                      identifier: $scope.model.chartModel.record.id,
+                    });
+                  },
+                },
+                { title: "Answer Summary", },
+              ]);
+            } finally {
+              $scope.isComplete = true;
+            }
+          },
+        };
+      },
+    ]);
+
     /* ############################################################################################## */
     cenozo.providers.directive("cnQuestionClone", [
       "CnQnairePartCloneFactory",
@@ -199,6 +263,84 @@ cenozoApp.defineModule({
     ]);
 
     /* ############################################################################################## */
+    cenozo.providers.factory("CnQuestionChartFactory", [
+      "CnHttpFactory",
+      "$state",
+      function (CnHttpFactory, $state) {
+        var object = function (parentModel) {
+          angular.extend(this, {
+            installed: "function" == typeof Chart,
+            record: {},
+            parentModel: parentModel,
+            navigating: false,
+
+            total: null,
+            labels: [],
+            data: [],
+
+            transitionOnViewQuestion: async function () {
+              await this.parentModel.transitionToViewState(this.record);
+            },
+
+            viewPrevious: async function () {
+              if (!this.navigating && this.record.previous_id) {
+                try {
+                  this.navigating = true;
+                  await $state.go(
+                    "question.chart",
+                    { identifier: this.record.previous_id },
+                    { reload: true }
+                  );
+                } finally {
+                  this.navigating = false;
+                }
+              }
+            },
+
+            viewNext: async function () {
+              if (!this.navigating && this.record.next_id) {
+                try {
+                  this.navigating = true;
+                  await $state.go(
+                    "question.chart",
+                    { identifier: this.record.next_id },
+                    { reload: true }
+                  );
+                } finally {
+                  this.navigating = false;
+                }
+              }
+            },
+
+            onView: async function (force) {
+              const response = await CnHttpFactory.instance({
+                path: this.parentModel.getServiceResourcePath(),
+                data: { select: { column: ["id", "name", "type", "answer_summary", "previous_id", "next_id"] } },
+              }).get();
+
+              this.record = response.data;
+              this.record.getIdentifier = () => String(this.record.id);
+
+              if (this.installed) {
+                const answerSummary = JSON.parse(this.record.answer_summary);
+                this.data = Object.values(answerSummary).map(value => Number(value));
+                this.total = this.data.reduce((total, value) => { total += Number(value); return total; }, 0);
+                this.labels = Object.keys(answerSummary).map(
+                  (label, index) => label + " (" + (100*this.data[index]/this.total).toFixed(2) + "%)"
+                );
+              }
+            },
+          });
+        };
+        return {
+          instance: function (parentModel) {
+            return new object(parentModel);
+          },
+        };
+      },
+    ]);
+
+    /* ############################################################################################## */
     cenozo.providers.factory("CnQuestionListFactory", [
       "CnBaseListFactory",
       function (CnBaseListFactory) {
@@ -217,6 +359,7 @@ cenozoApp.defineModule({
       },
     ]);
 
+    /* ############################################################################################## */
     // extend the model factory
     cenozo.providers.decorator("CnQuestionViewFactory", [
       "$delegate",
@@ -324,8 +467,10 @@ cenozoApp.defineModule({
               }
             },
           });
+
           return object;
         };
+
 
         return $delegate;
       },
@@ -334,10 +479,12 @@ cenozoApp.defineModule({
     // extend the base model factory created by caling initQnairePartModule()
     cenozo.providers.decorator("CnQuestionModelFactory", [
       "$delegate",
+      "CnQuestionChartFactory",
       "CnHttpFactory",
-      function ($delegate, CnHttpFactory) {
+      function ($delegate, CnQuestionChartFactory, CnHttpFactory) {
         function extendModelObject(object) {
           angular.extend(object, {
+            chartModel: CnQuestionChartFactory.instance(object),
             getAddEnabled: function () {
               // don't allow the add button while viewing the qnaire
               return (
@@ -389,7 +536,7 @@ cenozoApp.defineModule({
                   }).query()
                 );
               }
-              
+
               const responseList = await Promise.all(queryList);
 
               this.metadata.columnList.equipment_type_id.enumList =

@@ -1,0 +1,73 @@
+<cn-qnaire-navigator></cn-qnaire-navigator>
+<div class="record-view rounded">
+  <div class="container-fluid bg-primary rounded-top">
+    <h4>
+      <div class="pull-right">
+        <i
+          class="glyphicon glyphicon-refresh glyph-hover btn-primary btn-header"
+          ng-if="!noRefresh && isComplete"
+          ng-click="refresh(); $event.stopPropagation()"
+          uib-tooltip="Click to refresh data"
+          tooltip-placement="left"
+        ></i>
+      </div>
+      {{
+        isComplete ?
+        "Answer Summary for " + model.chartModel.record.name + " (" + model.chartModel.total + " total)" :
+        "Loading..."
+      }}
+    </h4>
+  </div>
+  <div ng-if="!isComplete" style="padding: 2em;">
+    <div class="loading"></div>
+  </div>
+  <div ng-if="isComplete">
+    <div ng-if="0 == model.chartModel.labels.length" class="container-fluid">
+      <h3>There is no data to display.</h3>
+      <div class="panel panel-default">
+        <div class="panel-body">
+          <span class="text-danger">{{
+            !model.chartModel.installed ?
+            "The chart.js library has not been installed." :
+            "boolean" == model.chartModel.record.type || "list" == model.chartModel.record.type ?
+            "There are no answers to this question." : 
+            "This is a " + model.chartModel.record.type + " question.  " +
+            "Only boolean and list questions can be plotted."
+          }}</span>
+        </div>
+      </div>
+    </div>
+    <cn-chart
+      ng-if="model.chartModel.installed && 0 < model.chartModel.labels.length"
+      identifier="pie"
+      simple="true"
+      heading="Answer Summary"
+      type="pie"
+      labels="model.chartModel.labels"
+      data="model.chartModel.data"
+      chart-data="model.chartModel.chart"
+    ></cn-chart>
+  </div>
+  <div class="form-footer rounded-bottom bg-info">
+    <div class="btn-group">
+      <button
+        class="btn btn-info"
+        ng-disabled="model.chartModel.navigating || null == model.chartModel.record.previous_id"
+        ng-click="model.chartModel.viewPrevious()"
+      >
+        <i class="glyphicon glyphicon-chevron-left"></i>
+      </button>
+      <button
+        class="btn btn-info"
+        ng-disabled="model.chartModel.navigating || null == model.chartModel.record.next_id"
+        ng-click="model.chartModel.viewNext()"
+      >
+        <i class="glyphicon glyphicon-chevron-right"></i>
+      </button>
+    </div>
+    <button
+      class="btn btn-primary pull-right"
+      ng-click="model.chartModel.transitionOnViewQuestion()"
+    >View Question</button>
+  </div>
+</div>

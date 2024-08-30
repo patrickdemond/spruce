@@ -1,0 +1,47 @@
+<cn-qnaire-navigator></cn-qnaire-navigator>
+<div class="record-view rounded">
+  <div class="container-fluid bg-primary rounded-top">
+    <h4>
+      <div class="pull-right">
+        <i
+          class="glyphicon glyphicon-refresh glyph-hover btn-primary btn-header"
+          ng-if="!noRefresh && isComplete"
+          ng-click="refresh(); $event.stopPropagation()"
+          uib-tooltip="Click to refresh data"
+          tooltip-placement="left"
+        ></i>
+      </div>
+      Answer Summary for {{ model.chartModel.record.name }}
+    </h4>
+  </div>
+  <cn-chart
+    identifier="pie"
+    type="pie"
+    plot="model.chartModel.plot"
+    heading="Answer Summary"
+    loading="!isComplete"
+    simple="true"
+  ></cn-chart>
+  <div class="form-footer rounded-bottom bg-info">
+    <div class="btn-group">
+      <button
+        class="btn btn-info"
+        ng-disabled="model.chartModel.navigating || null == model.chartModel.record.previous_id"
+        ng-click="model.chartModel.viewPrevious()"
+      >
+        <i class="glyphicon glyphicon-chevron-left"></i>
+      </button>
+      <button
+        class="btn btn-info"
+        ng-disabled="model.chartModel.navigating || null == model.chartModel.record.next_id"
+        ng-click="model.chartModel.viewNext()"
+      >
+        <i class="glyphicon glyphicon-chevron-right"></i>
+      </button>
+    </div>
+    <button
+      class="btn btn-primary pull-right"
+      ng-click="model.chartModel.transitionOnViewQuestion()"
+    >View Question</button>
+  </div>
+</div>

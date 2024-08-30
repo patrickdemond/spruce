@@ -524,10 +524,11 @@ cenozo.directive("cnQnaireNavigator", [
           }
 
           // if we are returned description keys then use them to navigate to the sister description
-          var identifier = null != keys ?
+          const action = "question" == subject ? $state.current.name.split(".").pop() : "view";
+          const identifier = null != keys ?
             [subject + "_id=" + id, "language_id=" + keys.language_id, "type=" + keys.type].join(";") : id;
           await $state.go(
-            (null != keys ? subject + "_description" : subject) + ".view",
+            (null != keys ? subject + "_description" : subject) + "." + action,
             { identifier: identifier },
             { reload: true }
           );
