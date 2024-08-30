@@ -50,7 +50,7 @@ class lookup extends \cenozo\database\record
       {
         $new_indicator_list = explode( ';', $row[3] );
         foreach( $new_indicator_list as $i => $indicator )
-          $new_indicator_list[$i] = util::utf8_encode( $indicator );
+          $new_indicator_list[$i] = util::utf8_encode( trim( $indicator ) );
       }
 
       $db_lookup_item = $lookup_item_class_name::get_unique_record(
