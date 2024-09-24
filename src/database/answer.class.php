@@ -84,6 +84,8 @@ class answer extends \cenozo\database\record
     if( !$new )
     {
       $db_question = $this->get_question();
+      $db_page = $db_question->get_page();
+      $db_qnaire = $db_page->get_module()->get_qnaire();
 
       // There are two different types of data which needs to be removed if their precondition is no longer met
       // after setting this answer's value
@@ -96,7 +98,7 @@ class answer extends \cenozo\database\record
       $question_sel->add_column( 'precondition' );
       $question_mod = lib::create( 'database\modifier' );
       $question_mod->where( 'question.precondition', 'RLIKE', sprintf( '\\$%s(:[^$]+)?\\$', $db_question->name ) );
-      foreach( $db_question->get_page()->get_question_list( $question_sel, $question_mod ) as $question )
+      foreach( $db_page->get_question_list( $question_sel, $question_mod ) as $question )
       {
         $db_answer = static::get_unique_record(
           array( 'response_id', 'question_id' ),
