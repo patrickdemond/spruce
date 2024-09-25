@@ -105,7 +105,7 @@ class post extends \cenozo\service\post
     if( 'get_respondents' == $action )
     {
       $study_class_name = lib::get_class_name( 'database\study' );
-      $identifier_class_name = lib::get_class_name( 'database\study' );
+      $identifier_class_name = lib::get_class_name( 'database\identifier' );
       $collection_class_name = lib::get_class_name( 'database\collection' );
       $consent_type_class_name = lib::get_class_name( 'database\consent_type' );
       $event_type_class_name = lib::get_class_name( 'database\event_type' );
