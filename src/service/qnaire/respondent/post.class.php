@@ -101,6 +101,7 @@ class post extends \cenozo\service\post
    */
   protected function execute()
   {
+    $db_qnaire = $this->get_parent_record();
     $action = $this->get_argument( 'action', NULL );
     if( 'get_respondents' == $action )
     {
@@ -124,21 +125,21 @@ class post extends \cenozo\service\post
       $lookup_class_name::sync_with_parent();
       $equipment_type_class_name::sync_with_parent();
 
-      $db_qnaire = $this->get_parent_record();
       $db_qnaire->sync_with_parent();
       $result = $db_qnaire->get_respondents_from_beartooth();
       $result['qnaire'] = $db_qnaire->name;
       $this->set_data( [$result] );
     }
-    else if( 'import' == $action )
+    else if( 'import_responses' == $action )
     {
-      $db_qnaire = $this->get_parent_record();
-      $data = $this->get_file_as_object();
-      $this->set_data( $db_qnaire->import_response_data( $data->respondents, $data->files ) );
+      $this->set_data( $db_qnaire->import_response_data( $this->get_file_as_object() ) );
+    }
+    else if( 'import_files' == $action )
+    {
+      $this->set_data( $db_qnaire->import_device_files( $this->get_file_as_object() ) );
     }
     else if( 'export' == $action )
     {
-      $db_qnaire = $this->get_parent_record();
       $db_qnaire->sync_with_parent();
       $this->set_data( $db_qnaire->export_respondent_data() );
     }

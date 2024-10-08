@@ -27,6 +27,9 @@ $SETTINGS['general']['detached'] = false;
 // used to change response_stage username to the remote username (for detached instances with generic users)
 $SETTINGS['general']['generic_username'] = false;
 
+// how large a file export can become before it is sent (in bytes, default 50M)
+$SETTINGS['general']['file_export_threshold'] = 50 * 1024 * 1024;
+
 // the parent instance of pine that this instance will sync its qnaires with (for detached only)
 $SETTINGS['url']['PARENT_INSTANCE'] = NULL;
 

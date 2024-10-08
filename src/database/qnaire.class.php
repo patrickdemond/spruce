@@ -1053,13 +1053,15 @@ class qnaire extends \cenozo\database\record
     if( !$setting_manager->get_setting( 'general', 'detached' ) || is_null( PARENT_INSTANCE_URL ) ) return;
 
     $generic_username = $setting_manager->get_setting( 'general', 'generic_username' );
+    $file_export_threshold = intval( $setting_manager->get_setting( 'general', 'file_export_threshold' ) );
 
     // encode all respondent and response data into an array
     $participant_data = [];
     $respondent_data = [];
+    $file_data = [];
 
     // get a list of all file and form data from device and audio questions
-    $file_data = [];
+    $data_question_list = [];
     $form_question_list = [];
     if( $this->stages )
     {
@@ -1078,7 +1080,7 @@ class qnaire extends \cenozo\database\record
         }
         else
         {
-          $file_data[$row['name']] = [];
+          $data_question_list[] = $row['name'];
         }
       }
 
@@ -1090,7 +1092,7 @@ class qnaire extends \cenozo\database\record
       $modifier->where( 'question.type', '=', 'audio' );
       foreach( $this->get_module_list( $select, $modifier ) as $row )
       {
-        $file_data[$row['name']] = [];
+        $data_question_list[] = $row['name'];
       }
     }
 
@@ -1278,7 +1280,7 @@ class qnaire extends \cenozo\database\record
           if( in_array( $answer['question'], $form_question_list ) && 'null' != $value )
           {
             // store forms in the form list
-            $file_list = glob(
+            $form_file_list = glob(
               sprintf(
                 '%s/%s/%s/*',
                 $this->get_data_directory(),
@@ -1286,11 +1288,11 @@ class qnaire extends \cenozo\database\record
                 $db_participant->uid
               )
             );
-            if( 0 < count( $file_list ) )
+            if( 0 < count( $form_file_list ) )
             {
               // get all files and only add to the form list if there is at least one
               $form_data_list = [];
-              foreach( $file_list as $filename )
+              foreach( $form_file_list as $filename )
                 $form_data_list[basename( $filename )] = base64_encode( file_get_contents( $filename ) );
               if( 0 < count( $form_data_list ) )
               {
@@ -1371,46 +1373,40 @@ class qnaire extends \cenozo\database\record
 
       if( $this->stages )
       {
-        // search for data files if needed
-        foreach( $file_data as $question_name => $unused )
+        // search for any files based on the data question list
+        foreach( $data_question_list as $question_name )
         {
-          $file_list = glob(
-            sprintf(
-              '%s/%s/%s/*',
-              $this->get_data_directory(),
-              $question_name,
-              $db_participant->uid
-            )
+          $path = sprintf(
+            '%s/%s/%s/*',
+            $this->get_data_directory(),
+            $question_name,
+            $db_participant->uid
           );
-          if( 0 < count( $file_list ) )
+
+          foreach( glob( $path ) as $filename )
           {
-            $file_data_list = [];
-            foreach( $file_list as $filename )
-              $file_data_list[basename( $filename )] = base64_encode( file_get_contents( $filename ) );
-            $file_data[$question_name][$db_participant->uid] = $file_data_list;
+            $file_data[] = [
+              'question' => $question_name,
+              'uid' => $db_participant->uid,
+              'name' => basename( $filename ),
+              'data' => base64_encode( file_get_contents( $filename ) )
+            ];
           }
         }
       }
     }
 
+    // First export the data to the master pine application
     if( 0 < count( $respondent_data ) )
     {
-      // First export the data to the master pine application
       $url = sprintf(
-        '%s/api/qnaire/name=%s/respondent?action=import',
+        '%s/api/qnaire/name=%s/respondent?action=import_responses',
         PARENT_INSTANCE_URL,
         util::full_urlencode( $this->name )
       );
       $curl = util::get_detached_curl_object( $url, $this->parent_username, $this->parent_password );
       curl_setopt( $curl, CURLOPT_POST, true );
-      curl_setopt(
-        $curl,
-        CURLOPT_POSTFIELDS,
-        util::json_encode( [
-          'respondents' => $respondent_data,
-          'files' => $file_data
-        ] )
-      );
+      curl_setopt( $curl, CURLOPT_POSTFIELDS, util::json_encode( $respondent_data ) );
 
       $curl_response = curl_exec( $curl );
       if( curl_errno( $curl ) )
@@ -1460,10 +1456,38 @@ class qnaire extends \cenozo\database\record
       }
     }
 
+    // Next, export any files to the master pine application (sending large files one at a time)
+    $url = sprintf(
+      '%s/api/qnaire/name=%s/respondent?action=import_files',
+      PARENT_INSTANCE_URL,
+      util::full_urlencode( $this->name )
+    );
+
+    $total_files = count( $file_data );
+    $current_size = 0;
+    $partial_file_data = [];
+    foreach( $file_data as $index => $file )
+    {
+      $partial_file_data[] = $file;
+      $current_size += strlen( $file['data'] );
+
+      // send the files once we've reached the threshold (or if we're on the last file)
+      if( $current_size >= $file_export_threshold || ($index+1) == $total_files )
+      {
+        $curl = util::get_detached_curl_object( $url, $this->parent_username, $this->parent_password );
+        curl_setopt( $curl, CURLOPT_POST, true );
+        curl_setopt( $curl, CURLOPT_POSTFIELDS, util::json_encode( $partial_file_data ) );
+
+        // start with a fresh file data array
+        $current_size = 0;
+        $partial_file_data = [];
+      }
+    }
+
+    // Finally, export the participant's details to beartooth
     $result = [];
     if( 0 < count( $participant_data ) )
     {
-      // Now export the participant's details to beartooth
       $url = sprintf( '%s/api/pine', $this->parent_beartooth_url );
       $curl = util::get_detached_curl_object( $url, $this->parent_username, $this->parent_password );
       curl_setopt( $curl, CURLOPT_POST, true );
@@ -2129,10 +2153,9 @@ class qnaire extends \cenozo\database\record
 
   /**
    * Imports response data from a child instance of Pine
-   * @param array $respondent_list Respondent questionnaire data
-   * @param array $file_list File data
+   * @paam array $respondent_list Respondent questionnaire data
    */
-  public function import_response_data( $respondent_list, $file_list )
+  public function import_response_data( $respondent_list )
   {
     ini_set( 'memory_limit', '-1' );
     set_time_limit( 900 ); // 15 minutes max
@@ -2423,33 +2446,40 @@ class qnaire extends \cenozo\database\record
         }
       }
     }
+  }
+
+  /**
+   * Imports response data from a child instance of Pine
+   * @param array $file_list File data
+   */
+  public function import_device_files( $file_list )
+  {
+    ini_set( 'memory_limit', '-1' );
+    set_time_limit( 900 ); // 15 minutes max
+
+    // get a list of directories for all device-based questions
+    $directory_list = [];
+    $question_mod = lib::create( 'database\modifier' );
+    $question_mod->where( 'type', '=', 'device' );
+    $question_mod->order( 'question.name' );
+    foreach( $this->get_question_object_list( $question_mod ) as $question )
+      $directory_list[$db_question->name] = $db_question->get_data_directory();
 
     // now import the file data
-    foreach( $file_list as $question_name => $participant )
+    foreach( $file_list as $file )
     {
-      $db_question = $this->get_question( $question_name );
-      if( is_null( $db_question ) )
+      if( !in_array( $file['question'], $directory_list ) )
       {
         log::warning( sprintf(
           'Tried to import file data for question "%s" which doesn\'t exist.',
-          $question_name
+          $file['question']
         ) );
         continue;
       }
 
-      $base_dir = $db_question->get_data_directory();
-      foreach( $participant as $uid => $file_list )
-      {
-        $directory = sprintf( '%s/%s', $base_dir, $uid );
-        if( !file_exists( $directory ) ) mkdir( $directory, 0755, true );
-        foreach( $file_list as $filename => $base64_file )
-        {
-          file_put_contents(
-            sprintf( '%s/%s', $directory, $filename ),
-            base64_decode( $base64_file )
-          );
-        }
-      }
+      $directory = sprintf( '%s/%s', $directory_list[$file['question']], $file['uid'] );
+      if( !file_exists( $directory ) ) mkdir( $directory, 0755, true );
+      file_put_contents( sprintf( '%s/%s', $directory, $file['name'] ), base64_decode( $file['data'] ) );
     }
   }
 
