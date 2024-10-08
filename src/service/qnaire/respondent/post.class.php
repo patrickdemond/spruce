@@ -24,7 +24,7 @@ class post extends \cenozo\service\post
     $action = $this->get_argument( 'action', NULL );
     if( !is_null( $action ) )
     {
-      if( 'import' != $action )
+      if( !in_array( $action, ['import_responses', 'import_files'] ) )
       {
         // make sure the qnaire has beartooth credentials
         $setting_manager = lib::create( 'business\setting_manager' );

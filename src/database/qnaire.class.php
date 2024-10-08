@@ -1043,6 +1043,63 @@ class qnaire extends \cenozo\database\record
    */
   public function export_respondent_data( $db_specific_respondent = NULL )
   {
+    // a private function for exporting data to parent pine instance
+    function send_data_to_parent_pine( $url, $data )
+    {
+      $curl = util::get_detached_curl_object( $url, $this->parent_username, $this->parent_password );
+      curl_setopt( $curl, CURLOPT_POST, true );
+      curl_setopt( $curl, CURLOPT_POSTFIELDS, util::json_encode( $data ) );
+
+      $curl_response = curl_exec( $curl );
+      if( curl_errno( $curl ) )
+      {
+        throw lib::create( 'exception\runtime',
+          sprintf( 'Got error code %s when exporting respondent data to parent instance.  Message: %s',
+                   curl_errno( $curl ),
+                   curl_error( $curl ) ),
+          __METHOD__
+        );
+      }
+
+      $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
+      if( 401 == $code )
+      {
+        throw lib::create( 'exception\notice',
+          'Unable to export respondent data to parent instance, invalid username and/or password.',
+          __METHOD__
+        );
+      }
+      else if( 404 == $code )
+      {
+        throw lib::create( 'exception\notice',
+          sprintf(
+            'Unable to export respondent data, questionnaire "%s" was not found in parent instance.',
+            $this->name
+          ),
+          __METHOD__
+        );
+      }
+      else if( 306 == $code )
+      {
+        throw lib::create( 'exception\notice',
+          sprintf(
+            "Parent Pine instance responded with the following notice\n\n\"%s\"",
+            util::json_decode( $curl_response )
+          ),
+          __METHOD__
+        );
+      }
+      else if( 204 == $code || 300 <= $code )
+      {
+        throw lib::create( 'exception\runtime',
+          sprintf( 'Got error code %s when exporting respondent data to parent instance.', $code ),
+          __METHOD__
+        );
+      }
+
+      return $code;
+    }
+
     ini_set( 'memory_limit', '-1' );
     set_time_limit( 900 ); // 15 minutes max
 
@@ -1399,61 +1456,14 @@ class qnaire extends \cenozo\database\record
     // First export the data to the master pine application
     if( 0 < count( $respondent_data ) )
     {
-      $url = sprintf(
-        '%s/api/qnaire/name=%s/respondent?action=import_responses',
-        PARENT_INSTANCE_URL,
-        util::full_urlencode( $this->name )
+      send_data_to_parent_pine(
+        sprintf(
+          '%s/api/qnaire/name=%s/respondent?action=import_responses',
+          PARENT_INSTANCE_URL,
+          util::full_urlencode( $this->name )
+        ),
+        $respondent_data
       );
-      $curl = util::get_detached_curl_object( $url, $this->parent_username, $this->parent_password );
-      curl_setopt( $curl, CURLOPT_POST, true );
-      curl_setopt( $curl, CURLOPT_POSTFIELDS, util::json_encode( $respondent_data ) );
-
-      $curl_response = curl_exec( $curl );
-      if( curl_errno( $curl ) )
-      {
-        throw lib::create( 'exception\runtime',
-          sprintf( 'Got error code %s when exporting respondent data to parent instance.  Message: %s',
-                   curl_errno( $curl ),
-                   curl_error( $curl ) ),
-          __METHOD__
-        );
-      }
-
-      $code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
-      if( 401 == $code )
-      {
-        throw lib::create( 'exception\notice',
-          'Unable to export respondent data to parent instance, invalid username and/or password.',
-          __METHOD__
-        );
-      }
-      else if( 404 == $code )
-      {
-        throw lib::create( 'exception\notice',
-          sprintf(
-            'Unable to export respondent data, questionnaire "%s" was not found in parent instance.',
-            $this->name
-          ),
-          __METHOD__
-        );
-      }
-      else if( 306 == $code )
-      {
-        throw lib::create( 'exception\notice',
-          sprintf(
-            "Parent Pine instance responded with the following notice\n\n\"%s\"",
-            util::json_decode( $curl_response )
-          ),
-          __METHOD__
-        );
-      }
-      else if( 204 == $code || 300 <= $code )
-      {
-        throw lib::create( 'exception\runtime',
-          sprintf( 'Got error code %s when exporting respondent data to parent instance.', $code ),
-          __METHOD__
-        );
-      }
     }
 
     // Next, export any files to the master pine application (sending large files one at a time)
@@ -1474,9 +1484,7 @@ class qnaire extends \cenozo\database\record
       // send the files once we've reached the threshold (or if we're on the last file)
       if( $current_size >= $file_export_threshold || ($index+1) == $total_files )
       {
-        $curl = util::get_detached_curl_object( $url, $this->parent_username, $this->parent_password );
-        curl_setopt( $curl, CURLOPT_POST, true );
-        curl_setopt( $curl, CURLOPT_POSTFIELDS, util::json_encode( $partial_file_data ) );
+        send_data_to_parent_pine( $url, $partial_file_data );
 
         // start with a fresh file data array
         $current_size = 0;
