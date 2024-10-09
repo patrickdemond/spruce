@@ -216,6 +216,8 @@ class util extends \cenozo\util
   public static function get_detached_curl_object( $url, $username = NULL, $password = NULL )
   {
     $setting_manager = lib::create( 'business\setting_manager' );
+    $version = $setting_manager->get_setting( 'general', 'version' );
+    $build = $setting_manager->get_setting( 'general', 'build' );
 
     // if no user/pass is provided then grab them from any open qnaire
     if( is_null( $username ) )
@@ -252,10 +254,8 @@ class util extends \cenozo\util
       $curl,
       CURLOPT_HTTPHEADER,
       [
-        sprintf(
-          'Authorization: Basic %s',
-          base64_encode( sprintf( '%s:%s', $username, $password ) )
-        )
+        sprintf( 'Authorization: Basic %s', base64_encode( sprintf( '%s:%s', $username, $password ) ) ),
+        sprintf( 'Pine-Version: %s %s', $version, $build )
       ]
     );
 

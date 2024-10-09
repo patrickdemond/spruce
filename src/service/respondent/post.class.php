@@ -116,6 +116,7 @@ class post extends \cenozo\service\post
     else if( 'get_respondents' == $action )
     {
       // first update table data
+      // Note: always sync study first (it will check that the parent Pine version matches)
       $study_class_name::sync_with_parent();
       $identifier_class_name::sync_with_parent();
       $collection_class_name::sync_with_parent();

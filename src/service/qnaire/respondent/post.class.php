@@ -26,6 +26,7 @@ class post extends \cenozo\service\post
     {
       if( 'import' == $action )
       {
+        // the "import" action was used in old versions only
         $this->status->set_code( 306 );
         $this->set_data( 'Your software is out of date.  Please update and try again.' );
       }
@@ -120,6 +121,7 @@ class post extends \cenozo\service\post
       $lookup_class_name = lib::get_class_name( 'database\lookup' );
       $equipment_type_class_name = lib::get_class_name( 'database\equipment_type' );
 
+      // Note: always sync study first (it will check that the parent Pine version matches)
       $study_class_name::sync_with_parent();
       $identifier_class_name::sync_with_parent();
       $collection_class_name::sync_with_parent();
