@@ -134,7 +134,6 @@ $output = <<<OUTPUT
  */
 define( 'ARGUMENT_PINE_BASE_ERRNO',   130000 );
 define( 'DATABASE_PINE_BASE_ERRNO',   230000 );
-define( 'LDAP_PINE_BASE_ERRNO',       330000 );
 define( 'NOTICE_PINE_BASE_ERRNO',     430000 );
 define( 'PERMISSION_PINE_BASE_ERRNO', 530000 );
 define( 'RUNTIME_PINE_BASE_ERRNO',    630000 );
@@ -155,12 +154,6 @@ $output .= <<<OUTPUT
  * "database" error codes
  * 
  * Since database errors already have codes this list is likely to stay empty.
- */
-
-/**
- * "ldap" error codes
- * 
- * Since ldap errors already have codes this list is likely to stay empty.
  */
 
 /**
