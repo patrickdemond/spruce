@@ -48,6 +48,45 @@ class post extends \cenozo\service\post
           );
         }
       }
+      else if( 'import_responses' == $action )
+      {
+        $participant_class_name = lib::get_class_name( 'database\participant' );
+        $respondent_class_name = lib::get_class_name( 'database\respondent' );
+
+        // check for conflicting tokens
+        $notice_list = [];
+        foreach( $this->get_file_as_object() as $respondent )
+        {
+          $db_participant = $participant_class_name::get_unique_record( 'uid', $respondent->uid );
+
+          if( is_null( $db_participant ) )
+          {
+            $notice_list[] = sprintf( 'Invalid UID "%s" cannot be imported.', $respondent->uid );
+          }
+          else
+          {
+            $db_respondent = $respondent_class_name::get_unique_record( 'token', $respondent->token );
+            if( !is_null( $db_respondent ) && $db_respondent->participant_id != $db_participant->id )
+            {
+              $notice_list[] = sprintf(
+                'Token "%s" cannot be used for participant "%s" as it is already in use by "%s".',
+                $respondent->token,
+                $respondent->uid,
+                $db_respondent->get_participant()->uid
+              );
+            }
+          }
+        }
+
+        if( 0 < count( $notice_list ) )
+        {
+          $this->status->set_code( 306 );
+          $this->set_data(
+            'Unable to proceed with export due to the following error(s):'."\n".
+            implode( "\n", $notice_list )
+          );
+        }
+      }
     }
     else if( $this->may_continue() )
     {

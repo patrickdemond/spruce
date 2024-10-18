@@ -2116,268 +2116,269 @@ class qnaire extends \cenozo\database\record
     foreach( $respondent_list as $respondent )
     {
       $db_participant = $participant_class_name::get_unique_record( 'uid', $respondent->uid );
-      if( !is_null( $db_participant ) )
-      {
-        $db_respondent = $respondent_class_name::get_unique_record(
-          ['qnaire_id', 'participant_id'],
-          [$this->id, $db_participant->id]
-        );
 
-        $new_respondent = false;
-        if( is_null( $db_respondent ) )
-        {
-          $new_respondent = true;
-          $db_respondent = lib::create( 'database\respondent' );
-          $db_respondent->qnaire_id = $this->id;
-          $db_respondent->participant_id = $db_participant->id;
-          $db_respondent->save();
+      // ignore invalid UIDs
+      if( is_null( $db_participant ) ) continue;
+
+      $db_respondent = $respondent_class_name::get_unique_record(
+        ['qnaire_id', 'participant_id'],
+        [$this->id, $db_participant->id]
+      );
+
+      $new_respondent = false;
+      if( is_null( $db_respondent ) )
+      {
+        $new_respondent = true;
+        $db_respondent = lib::create( 'database\respondent' );
+        $db_respondent->qnaire_id = $this->id;
+        $db_respondent->participant_id = $db_participant->id;
+        $db_respondent->save();
+      }
+
+      $db_respondent->start_datetime = $respondent->start_datetime;
+      $db_respondent->end_datetime = $respondent->end_datetime;
+      $db_respondent->token = $respondent->token;
+      $db_respondent->save();
+
+      foreach( $respondent->response_list as $response )
+      {
+        $db_response = NULL;
+        if( !$new_respondent )
+        { // only bother to check for an existing response if the respondent isn't new
+          $db_response = $response_class_name::get_unique_record(
+            ['respondent_id', 'rank'],
+            [$db_respondent->id, $response->rank]
+          );
         }
 
-        $db_respondent->start_datetime = $respondent->start_datetime;
-        $db_respondent->end_datetime = $respondent->end_datetime;
-        $db_respondent->token = $respondent->token;
-        $db_respondent->save();
-
-        foreach( $respondent->response_list as $response )
+        $new_response = false;
+        if( is_null( $db_response ) )
         {
-          $db_response = NULL;
-          if( !$new_respondent )
-          { // only bother to check for an existing response if the respondent isn't new
-            $db_response = $response_class_name::get_unique_record(
-              ['respondent_id', 'rank'],
-              [$db_respondent->id, $response->rank]
-            );
-          }
+          $new_response = true;
+          $db_response = lib::create( 'database\response' );
+          $db_response->respondent_id = $db_respondent->id;
+          $db_response->rank = $response->rank;
+          if( $this->stages ) $db_response->interview_type = $response->interview_type;
+          $db_response->qnaire_version = $response->qnaire_version;
+        }
 
-          $new_response = false;
-          if( is_null( $db_response ) )
+        $db_module = $module_class_name::get_unique_record(
+          ['qnaire_id', 'name'],
+          [$this->id, $response->module]
+        );
+        $db_page = is_null( $db_module )
+                 ? NULL
+                 : $page_class_name::get_unique_record(
+                     ['module_id', 'name'],
+                     [$db_module->id, $response->page]
+                   );
+
+        $db_response->language_id = $language_class_name::get_unique_record( 'code', $response->language )->id;
+
+        // the site may be NULL, so ignore it if it is
+        if( !is_null( $response->site ) )
+        {
+          // make sure the site exists and warn if it doesn't
+          $db_site = $site_class_name::get_unique_record( 'name', $response->site );
+          if( is_null( $db_site ) )
           {
-            $new_response = true;
-            $db_response = lib::create( 'database\response' );
-            $db_response->respondent_id = $db_respondent->id;
-            $db_response->rank = $response->rank;
-            if( $this->stages ) $db_response->interview_type = $response->interview_type;
-            $db_response->qnaire_version = $response->qnaire_version;
+            log::warning( sprintf(
+              'Invalid site name "%s" found while importing response data.',
+              $response->site
+            ) );
           }
+          else
+          {
+            $db_response->site_id = $db_site->id;
+          }
+        }
 
-          $db_module = $module_class_name::get_unique_record(
+        if( !is_null( $db_page ) ) $db_response->page_id = $db_page->id;
+        $db_response->show_hidden = $response->show_hidden;
+        $db_response->start_datetime = $response->start_datetime;
+        $db_response->last_datetime = $response->last_datetime;
+        $db_response->comments = $response->comments;
+        $db_response->save();
+
+        foreach( $response->response_attribute_list as $response_attribute )
+        {
+          $db_attribute = $attribute_class_name::get_unique_record(
             ['qnaire_id', 'name'],
-            [$this->id, $response->module]
+            [$this->id, $response_attribute->name]
           );
-          $db_page = is_null( $db_module )
-                   ? NULL
-                   : $page_class_name::get_unique_record(
-                       ['module_id', 'name'],
-                       [$db_module->id, $response->page]
-                     );
-
-          $db_response->language_id = $language_class_name::get_unique_record( 'code', $response->language )->id;
-
-          // the site may be NULL, so ignore it if it is
-          if( !is_null( $response->site ) )
+          if( !is_null( $db_attribute ) )
           {
-            // make sure the site exists and warn if it doesn't
-            $db_site = $site_class_name::get_unique_record( 'name', $response->site );
-            if( is_null( $db_site ) )
+            $db_response_attribute = $response_attribute_class_name::get_unique_record(
+              ['response_id', 'attribute_id'],
+              [$db_response->id, $db_attribute->id]
+            );
+
+            if( is_null( $db_response_attribute ) )
             {
-              log::warning( sprintf(
-                'Invalid site name "%s" found while importing response data.',
-                $response->site
-              ) );
+              $db_response_attribute = lib::create( 'database\response_attribute' );
+              $db_response_attribute->response_id = $db_response->id;
+              $db_response_attribute->attribute_id = $db_attribute->id;
             }
-            else
-            {
-              $db_response->site_id = $db_site->id;
-            }
+
+            $db_response_attribute->value = $response_attribute->value;
+            $db_response_attribute->save();
+          }
+        }
+
+        foreach( $response->page_time_list as $page_time )
+        {
+          $db_pt_module = $module_class_name::get_unique_record(
+            ['qnaire_id', 'name'],
+            [$this->id, $page_time->module]
+          );
+          $db_pt_page = $page_class_name::get_unique_record(
+            ['module_id', 'name'],
+            [$db_pt_module->id, $page_time->page]
+          );
+
+          $db_page_time = NULL;
+          if( !$new_response )
+          { // only bother to check for an existing page_time if the response isn't new
+            $db_page_time = $page_time_class_name::get_unique_record(
+              ['response_id', 'page_id'],
+              [$db_response->id, $db_pt_page->id]
+            );
           }
 
-          if( !is_null( $db_page ) ) $db_response->page_id = $db_page->id;
-          $db_response->show_hidden = $response->show_hidden;
-          $db_response->start_datetime = $response->start_datetime;
-          $db_response->last_datetime = $response->last_datetime;
-          $db_response->comments = $response->comments;
-          $db_response->save();
-
-          foreach( $response->response_attribute_list as $response_attribute )
+          if( is_null( $db_page_time ) )
           {
-            $db_attribute = $attribute_class_name::get_unique_record(
-              ['qnaire_id', 'name'],
-              [$this->id, $response_attribute->name]
-            );
-            if( !is_null( $db_attribute ) )
-            {
-              $db_response_attribute = $response_attribute_class_name::get_unique_record(
-                ['response_id', 'attribute_id'],
-                [$db_response->id, $db_attribute->id]
-              );
+            $db_page_time = lib::create( 'database\page_time' );
+            $db_page_time->response_id = $db_response->id;
+            $db_page_time->page_id = $db_pt_page->id;
+          }
 
-              if( is_null( $db_response_attribute ) )
+          $db_page_time->datetime = $page_time->datetime;
+          $db_page_time->microtime = $page_time->microtime;
+          $db_page_time->time = $page_time->time;
+          $db_page_time->save();
+        }
+
+        foreach( $response->answer_list as $answer )
+        {
+          $db_question = $this->get_question( $answer->question );
+          $db_answer = NULL;
+          if( !$new_response )
+          { // only bother to check for an existing answer if the response isn't new
+            $db_answer = $answer_class_name::get_unique_record(
+              ['response_id', 'question_id'],
+              [$db_response->id, $db_question->id]
+            );
+          }
+
+          if( is_null( $db_answer ) )
+          {
+            $db_answer = lib::create( 'database\answer' );
+            $db_answer->response_id = $db_response->id;
+            $db_answer->question_id = $db_question->id;
+          }
+
+          // list answers will have options encoded as names, so convert to IDs
+          $value = $answer->value;
+          if( 'list' == $db_question->type )
+          {
+            // only change array answers (the others don't have Names to convert)
+            if( '[' == substr( $value, 0, 1 ) )
+            {
+              $new_value = [];
+              foreach( util::json_decode( $value ) as $val )
               {
-                $db_response_attribute = lib::create( 'database\response_attribute' );
-                $db_response_attribute->response_id = $db_response->id;
-                $db_response_attribute->attribute_id = $db_attribute->id;
-              }
-
-              $db_response_attribute->value = $response_attribute->value;
-              $db_response_attribute->save();
-            }
-          }
-
-          foreach( $response->page_time_list as $page_time )
-          {
-            $db_pt_module = $module_class_name::get_unique_record(
-              ['qnaire_id', 'name'],
-              [$this->id, $page_time->module]
-            );
-            $db_pt_page = $page_class_name::get_unique_record(
-              ['module_id', 'name'],
-              [$db_pt_module->id, $page_time->page]
-            );
-
-            $db_page_time = NULL;
-            if( !$new_response )
-            { // only bother to check for an existing page_time if the response isn't new
-              $db_page_time = $page_time_class_name::get_unique_record(
-                ['response_id', 'page_id'],
-                [$db_response->id, $db_pt_page->id]
-              );
-            }
-
-            if( is_null( $db_page_time ) )
-            {
-              $db_page_time = lib::create( 'database\page_time' );
-              $db_page_time->response_id = $db_response->id;
-              $db_page_time->page_id = $db_pt_page->id;
-            }
-
-            $db_page_time->datetime = $page_time->datetime;
-            $db_page_time->microtime = $page_time->microtime;
-            $db_page_time->time = $page_time->time;
-            $db_page_time->save();
-          }
-
-          foreach( $response->answer_list as $answer )
-          {
-            $db_question = $this->get_question( $answer->question );
-            $db_answer = NULL;
-            if( !$new_response )
-            { // only bother to check for an existing answer if the response isn't new
-              $db_answer = $answer_class_name::get_unique_record(
-                ['response_id', 'question_id'],
-                [$db_response->id, $db_question->id]
-              );
-            }
-
-            if( is_null( $db_answer ) )
-            {
-              $db_answer = lib::create( 'database\answer' );
-              $db_answer->response_id = $db_response->id;
-              $db_answer->question_id = $db_question->id;
-            }
-
-            // list answers will have options encoded as names, so convert to IDs
-            $value = $answer->value;
-            if( 'list' == $db_question->type )
-            {
-              // only change array answers (the others don't have Names to convert)
-              if( '[' == substr( $value, 0, 1 ) )
-              {
-                $new_value = [];
-                foreach( util::json_decode( $value ) as $val )
+                if( is_string( $val ) )
                 {
-                  if( is_string( $val ) )
-                  {
-                    $new_value[] = $question_option_class_name::get_unique_record(
-                      ['question_id', 'name'],
-                      [$db_question->id, $val]
-                    )->id;
-                  }
-                  else if( is_object( $val ) )
-                  {
-                    $val->id = $question_option_class_name::get_unique_record(
-                      ['question_id', 'name'],
-                      [$db_question->id, $val->name]
-                    )->id;
-                    unset( $val->name );
-                    $new_value[] = $val;
-                  }
+                  $new_value[] = $question_option_class_name::get_unique_record(
+                    ['question_id', 'name'],
+                    [$db_question->id, $val]
+                  )->id;
                 }
-                $value = util::json_encode( $new_value );
+                else if( is_object( $val ) )
+                {
+                  $val->id = $question_option_class_name::get_unique_record(
+                    ['question_id', 'name'],
+                    [$db_question->id, $val->name]
+                  )->id;
+                  unset( $val->name );
+                  $new_value[] = $val;
+                }
               }
-            }
-
-            $db_answer->user_id = $db_current_user->id;
-            $db_answer->language_id = $language_class_name::get_unique_record( 'code', $answer->language )->id;
-            $db_answer->value = $value;
-            $db_answer->save();
-
-            if( 'device' == $db_question->type && property_exists( $answer, 'answer_device' ) )
-            {
-              $db_answer_device = $db_answer->get_answer_device();
-              $db_answer_device->uuid = $answer->answer_device->uuid;
-              $db_answer_device->status = $answer->answer_device->status;
-              $db_answer_device->start_datetime = $answer->answer_device->start_datetime;
-              $db_answer_device->end_datetime = $answer->answer_device->end_datetime;
-              $db_answer_device->save();
+              $value = util::json_encode( $new_value );
             }
           }
 
-          if( $this->stages )
+          $db_answer->user_id = $db_current_user->id;
+          $db_answer->language_id = $language_class_name::get_unique_record( 'code', $answer->language )->id;
+          $db_answer->value = $value;
+          $db_answer->save();
+
+          if( 'device' == $db_question->type && property_exists( $answer, 'answer_device' ) )
           {
-            foreach( $response->stage_list as $stage )
+            $db_answer_device = $db_answer->get_answer_device();
+            $db_answer_device->uuid = $answer->answer_device->uuid;
+            $db_answer_device->status = $answer->answer_device->status;
+            $db_answer_device->start_datetime = $answer->answer_device->start_datetime;
+            $db_answer_device->end_datetime = $answer->answer_device->end_datetime;
+            $db_answer_device->save();
+          }
+        }
+
+        if( $this->stages )
+        {
+          foreach( $response->stage_list as $stage )
+          {
+            $db_stage = $stage_class_name::get_unique_record(
+              ['qnaire_id', 'rank'],
+              [$this->id, $stage->stage]
+            );
+
+            $db_response_stage = $response_stage_class_name::get_unique_record(
+              ['response_id', 'stage_id'],
+              [$db_response->id, $db_stage->id]
+            );
+
+            $db_deviation_type = NULL;
+            if( !is_null( $stage->deviation_type ) )
             {
-              $db_stage = $stage_class_name::get_unique_record(
-                ['qnaire_id', 'rank'],
-                [$this->id, $stage->stage]
+              $db_deviation_type = $deviation_type_class_name::get_unique_record(
+                ['qnaire_id', 'type', 'name'],
+                [$this->id, $stage->deviation_type, $stage->deviation_name]
               );
+            }
 
-              $db_response_stage = $response_stage_class_name::get_unique_record(
-                ['response_id', 'stage_id'],
-                [$db_response->id, $db_stage->id]
-              );
+            $db_response_stage->username = $stage->username;
+            $db_response_stage->status = $stage->status;
+            $db_response_stage->deviation_type_id = is_null( $db_deviation_type )
+                                                  ? NULL
+                                                  : $db_deviation_type->id;
+            $db_response_stage->deviation_comments = $stage->deviation_comments;
+            $db_response_stage->start_datetime = $stage->start_datetime;
+            $db_response_stage->end_datetime = $stage->end_datetime;
+            $db_response_stage->comments = $stage->comments;
+            $db_response_stage->save();
 
-              $db_deviation_type = NULL;
-              if( !is_null( $stage->deviation_type ) )
-              {
-                $db_deviation_type = $deviation_type_class_name::get_unique_record(
-                  ['qnaire_id', 'type', 'name'],
-                  [$this->id, $stage->deviation_type, $stage->deviation_name]
-                );
-              }
-
-              $db_response_stage->username = $stage->username;
-              $db_response_stage->status = $stage->status;
-              $db_response_stage->deviation_type_id = is_null( $db_deviation_type )
-                                                    ? NULL
-                                                    : $db_deviation_type->id;
-              $db_response_stage->deviation_comments = $stage->deviation_comments;
-              $db_response_stage->start_datetime = $stage->start_datetime;
-              $db_response_stage->end_datetime = $stage->end_datetime;
-              $db_response_stage->comments = $stage->comments;
-              $db_response_stage->save();
-
-              // replace all pauses
-              $db_response_stage->remove_response_stage_pause( NULL );
-              foreach( $stage->pause_list as $pause )
-              {
-                $db_response_stage_pause = lib::create( 'database\response_stage_pause' );
-                $db_response_stage_pause->response_stage_id = $db_response_stage->id;
-                $db_response_stage_pause->username = $pause->username;
-                $db_response_stage_pause->start_datetime = $pause->start_datetime;
-                $db_response_stage_pause->end_datetime = $pause->end_datetime;
-                $db_response_stage_pause->save();
-              }
+            // replace all pauses
+            $db_response_stage->remove_response_stage_pause( NULL );
+            foreach( $stage->pause_list as $pause )
+            {
+              $db_response_stage_pause = lib::create( 'database\response_stage_pause' );
+              $db_response_stage_pause->response_stage_id = $db_response_stage->id;
+              $db_response_stage_pause->username = $pause->username;
+              $db_response_stage_pause->start_datetime = $pause->start_datetime;
+              $db_response_stage_pause->end_datetime = $pause->end_datetime;
+              $db_response_stage_pause->save();
             }
           }
+        }
 
-          // If the importing response is submitted do so now and safe the response again.
-          // This is necessary in order to get all triggers from the imported response to fire.
-          if( $response->submitted )
-          {
-            $db_response->submitted = $response->submitted;
-            if( $db_response->submitted && $this->stages ) $db_response->checked_in = true;
-            $db_response->save();
-          }
+        // If the importing response is submitted do so now and safe the response again.
+        // This is necessary in order to get all triggers from the imported response to fire.
+        if( $response->submitted )
+        {
+          $db_response->submitted = $response->submitted;
+          if( $db_response->submitted && $this->stages ) $db_response->checked_in = true;
+          $db_response->save();
         }
       }
     }
