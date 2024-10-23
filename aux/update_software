@@ -13,18 +13,14 @@ if( '/aux' == substr( getcwd(), -4 ) ) chdir( '..' );
 require_once 'settings.ini.php';
 require_once 'settings.local.ini.php';
 require_once $SETTINGS['path']['CENOZO'].'/src/initial.class.php';
-$initial = new \cenozo\initial( true );
-$settings = $initial->get_settings();
-define( 'USER', $settings['utility']['username'] );
-define( 'CENOZO_VERSION', $settings['general']['cenozo_version'] );
-define( 'APPLICATION_VERSION', $settings['general']['version'] );
+define( 'LOG_PATH', $SETTINGS['path']['LOG_FILE'] );
 
 // function for writing to the log
 function write_log( $message )
 {
   file_put_contents(
-    LOG_FILE_PATH,
-    sprintf( "%s  [cron] <%s> %s\n\n", date( 'Y-m-d (D) H:i:s' ), USER, $message ),
+    LOG_PATH,
+    sprintf( "%s  [cron] <%s> %s\n\n", date( 'Y-m-d (D) H:i:s' ), get_current_user(), $message ),
     FILE_APPEND
   );
 }
@@ -38,17 +34,39 @@ function execute( $command, $description )
 }
 
 write_log( 'Updating the framework and application software and database' );
-chdir( CENOZO_PATH );
+chdir( $SETTINGS['path']['CENOZO'] );
 $result = execute( 'git pull', 'update cenozo repository' );
 if( 0 != $result ) exit( $result );
-$result = execute( sprintf( 'aux/patch_database %s', CENOZO_VERSION ), 'patch cenozo database' );
-if( 0 != $result ) exit( $result );
 
-chdir( APPLICATION_PATH );
+chdir( $SETTINGS['path']['APPLICATION'] );
 $result = execute( 'git pull', 'update application repository' );
 if( 0 != $result ) exit( $result );
-$result = execute( sprintf( 'aux/patch_database %s', APPLICATION_VERSION ), 'patch application database' );
+
+$initial = new \cenozo\initial( true );
+$settings = $initial->get_settings();
+
+$result = execute(
+  sprintf(
+    'aux/patch_database %s',
+    $settings['general']['cenozo_version']
+  ),
+  'patch cenozo database'
+);
 if( 0 != $result ) exit( $result );
+
+// read the settings AFTER pulling the update
+chdir( APPLICATION_PATH );
+
+$result = execute(
+  sprintf(
+    'aux/patch_database %s',
+    $settings['general']['version']
+  ),
+  'patch application database'
+);
+if( 0 != $result ) exit( $result );
+
 $result = execute( 'aux/remove_cached_schema', 'remove the cached database schema' );
 if( 0 != $result ) exit( $result );
+
 write_log( 'Update completed successfully' );
