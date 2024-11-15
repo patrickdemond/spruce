@@ -404,7 +404,7 @@ cenozoApp.defineModule({
             // scan the precondition for active attributes (also include the showhidden constant)
             var list = [];
             if (angular.isString(precondition)) {
-              var matches = precondition.match(/@[^@ ]+@|\bshowhidden\b/g);
+              var matches = precondition.match(/@[A-Za-z0-9_]+@|\bshowhidden\b/g);
               if (null != matches && 0 < matches.length) list = matches.map((m) => m.replace(/@/g, ""));
             }
             return list;
@@ -1970,7 +1970,7 @@ cenozoApp.defineModule({
 
                 // replace any remaining expressions
                 expression = expression.replace(
-                  /@[^@ ]+@/g,
+                  /@([A-Za-z0-9_]+)(\.(name|description)\( *"?[^)"]+"? *\))?\@/g,
                   "precondition" == type ? "null" : "limit" == type ? null : ""
                 );
               }
