@@ -16,30 +16,32 @@ cenozoApp.defineModule({
       },
       columnList: {
         questionnaire: {
-          title: 'Questionnaire',
-          column: 'qnaire.name',
+          title: "Questionnaire",
+          column: "qnaire.name",
         },
         token: {
-          title: 'Token',
-          column: 'respondent.token',
+          title: "Token",
+          column: "respondent.token",
         },
         device: {
-          title: 'Device',
-          column: 'device.name',
+          title: "Device",
+          column: "device.name",
         },
         uuid: {
-          title: 'UUID',
+          title: "UUID",
         },
         status: {
-          title: 'Status',
+          title: "Status",
         },
         start_datetime: {
-          title: 'Start Date & Time',
-          type: 'datetime',
+          column: "answer_device.start_datetime",
+          title: "Start Date & Time",
+          type: "datetime",
         },
         end_datetime: {
-          title: 'End Date & Time',
-          type: 'datetime',
+          column: "answer_device.end_datetime",
+          title: "End Date & Time",
+          type: "datetime",
         },
       },
       defaultOrder: {

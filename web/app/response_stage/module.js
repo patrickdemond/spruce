@@ -36,10 +36,12 @@ cenozoApp.defineModule({
           column: "deviation_type.name",
         },
         start_datetime: {
+          column: "response_stage.start_datetime",
           title: "Start Date & Time",
           type: "datetimesecond",
         },
         end_datetime: {
+          column: "response_stage.start_datetime",
           title: "End Date & Time",
           type: "datetimesecond",
         },

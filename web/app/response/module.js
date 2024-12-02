@@ -55,16 +55,18 @@ cenozoApp.defineModule({
           type: "seconds",
         },
         start_datetime: {
+          column: "response.start_datetime",
           title: "Start",
           type: "datetime",
         },
         last_datetime: {
+          column: "response.start_datetime",
           title: "Last",
           type: "datetime",
         },
       },
       defaultOrder: {
-        column: "start_datetime",
+        column: "response.start_datetime",
         reverse: true,
       },
     });
