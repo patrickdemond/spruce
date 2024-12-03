@@ -66,6 +66,8 @@ class patch extends \cenozo\service\patch
     if( $action )
     {
       $db_respondent = $this->get_leaf_record();
+      $db_participant = $db_respondent->get_participant();
+      $db_qnaire = $db_respondent->get_qnaire();
 
       if( 'reopen' == $action )
       {
@@ -90,6 +92,10 @@ class patch extends \cenozo\service\patch
       {
         $db_response = $db_respondent->get_current_response();
 
+        // immediately expire all cached data when explicitely updating the attributes
+        $variable_cache_class_name = lib::get_class_name( 'database\variable_cache' );
+        $variable_cache_class_name::remove_by_participant( $db_participant );
+
         // if the response doesn't exist then create it now (this will create the attributes
         if( is_null( $db_response ) ) $db_respondent->get_current_response( true );
         // if the response exists then update the attributes
@@ -98,7 +104,6 @@ class patch extends \cenozo\service\patch
       else
       {
         // the following actions require the current response, but that record isn't guaranteed to exist
-        $db_participant = $db_respondent->get_participant();
         $db_response = $db_respondent->get_current_response();
         if( is_null( $db_response ) )
         {
@@ -107,7 +112,7 @@ class patch extends \cenozo\service\patch
             is_null( $db_participant ) ?
               sprintf( 'anonymous respondent %d', $db_respondent->id ) :
               sprintf( 'participant %s', $db_participant->uid ),
-            $db_respondent->get_qnaire()->name
+            $db_qnaire->name
           ), __METHOD__ );
         }
 
@@ -133,7 +138,6 @@ class patch extends \cenozo\service\patch
         }
         else if( 'export' == $action )
         {
-          $db_qnaire = $db_respondent->get_qnaire();
           $db_qnaire->sync_with_parent();
           $db_qnaire->export_respondent_data( $db_respondent );
         }
@@ -172,7 +176,6 @@ class patch extends \cenozo\service\patch
         }
         else if( 'rewind_stage' == $action )
         {
-          $db_qnaire = $db_respondent->get_qnaire();
           if( !$db_qnaire->stages )
           {
             log::warning( sprintf(
@@ -202,7 +205,6 @@ class patch extends \cenozo\service\patch
         }
         else if( 'fast_forward_stage' == $action )
         {
-          $db_qnaire = $db_respondent->get_qnaire();
           if( !$db_qnaire->stages )
           {
             log::warning( sprintf(
