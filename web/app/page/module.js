@@ -1186,7 +1186,6 @@ cenozoApp.defineModule({
                   ]);
 
                   this.responseStageList = responseStageResponse.data;
-                  console.log(this.responseStageList);
                   if (0 == this.responseStageList.length) {
                     throw new Error("Questionnaire has not stages, unable to proceed.");
                   }
@@ -2751,10 +2750,15 @@ cenozoApp.defineModule({
               const currentStage = response.data;
 
               if (currentStage.response_stage_id != this.data.response_stage_id) {
+                let who = (
+                  currentStage.username == CnSession.user.name ? " by your account" :
+                  null != currentStage.username ? (" by " + currentStage.username) :
+                  ""
+                );
                 await this.outOfSync(
-                  "Cannot " + operation + " the stage since the response has been changed by " + (
-                    currentStage.username != CnSession.user.name ? currentStage.username : "your account"
-                  ) + " in a different browser."
+                  "Cannot " + operation +
+                  " the stage since the response has been changed" + who +
+                  " in a different browser."
                 );
                 return;
               }

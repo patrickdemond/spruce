@@ -37,17 +37,24 @@ class patch extends \cenozo\service\patch
 
           if( !in_array( $db_response_stage->status, $valid_status_list ) )
           {
-            $db_user = $db_response_stage->get_user();
-            $db_current_user = lib::create( 'business\session' )->get_user();
-            $who = $db_current_user->id == $db_user->id
-                 ? 'your account'
-                 : sprintf( '%s %s', $db_user->first_name, $db_user->last_name );
+            $message = sprintf(
+              'Cannot %s the stage since the response has been changed in a different browser.',
+              $action
+            );
 
-            $this->set_data( sprintf(
-              'Cannot %s the stage since the response has been changed by %s in a different browser.',
-              $action,
-              $who
-            ) );
+            $db_user = $db_response_stage->get_user();
+            if( !is_null( $db_user ) )
+            {
+              $db_current_user = lib::create( 'business\session' )->get_user();
+              $message = sprintf(
+                'Cannot %s the stage since the response has been changed by %s in a different browser.',
+                $action,
+                $db_current_user->id == $db_user->id ?
+                  'your account' : sprintf( '%s %s', $db_user->first_name, $db_user->last_name )
+              );
+            }
+
+            $this->set_data( $message );
             $this->get_status()->set_code( 409 );
           }
         }
