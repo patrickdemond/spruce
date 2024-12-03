@@ -34,6 +34,8 @@ class equipment_type extends \cenozo\database\equipment_type
       $qnaire_name_list[] = util::full_urlencode( $db_qnaire->name );
     }
 
+    log::info( 'Synchronizing equipment types' );
+
     // update the equipment type list (restricting to a equipment type used by the given, or all qnaires)
     $url_postfix = sprintf(
       '?select={'.

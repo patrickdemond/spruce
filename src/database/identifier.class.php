@@ -17,6 +17,8 @@ class identifier extends \cenozo\database\identifier
   {
     if( is_null( PARENT_INSTANCE_URL ) ) return;
 
+    log::info( 'Synchronizing identifiers' );
+
     // update the identifier list
     $url_postfix =
       '?select={"column":["name","locked","regex","description"]}'.

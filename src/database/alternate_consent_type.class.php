@@ -19,6 +19,8 @@ class alternate_consent_type extends \cenozo\database\alternate_consent_type
 
     $role_class_name = lib::get_class_name( 'database\role' );
 
+    log::info( 'Synchronizing alternate consent types' );
+
     // update the alternate consent type list
     $url_postfix =
       '?select={"column":["name","description","role_list"]}'.

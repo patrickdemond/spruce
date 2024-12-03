@@ -19,6 +19,8 @@ class proxy_type extends \cenozo\database\proxy_type
 
     $role_class_name = lib::get_class_name( 'database\role' );
 
+    log::info( 'Synchronizing proxy types' );
+
     // update the proxy type list
     $url_postfix =
       '?select={"column":["name","description","prompt","role_list"]}'.

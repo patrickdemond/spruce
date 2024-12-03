@@ -19,6 +19,8 @@ class collection extends \cenozo\database\collection
 
     $user_class_name = lib::get_class_name( 'database\user' );
 
+    log::info( 'Synchronizing collections' );
+
     // update the collection list
     $url_postfix =
       '?select={"column":["name","description"]}'.

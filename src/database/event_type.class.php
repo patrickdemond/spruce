@@ -19,6 +19,8 @@ class event_type extends \cenozo\database\event_type
 
     $role_class_name = lib::get_class_name( 'database\role' );
 
+    log::info( 'Synchronizing event types' );
+
     // update the event type list
     $url_postfix =
       '?select={"column":["name","description","role_list"]}'.

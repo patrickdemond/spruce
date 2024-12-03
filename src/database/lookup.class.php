@@ -197,6 +197,8 @@ class lookup extends \cenozo\database\record
 
     $indicator_class_name = lib::get_class_name( 'database\indicator' );
 
+    log::info( 'Synchronizing lookups' );
+
     // get a list of all lookups on the remote server
     $url_postfix =
       '?select={'.

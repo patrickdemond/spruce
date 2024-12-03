@@ -161,6 +161,8 @@ class post extends \cenozo\service\post
       $equipment_type_class_name = lib::get_class_name( 'database\equipment_type' );
 
       // Note: always sync study first (it will check that the parent Pine version matches)
+      $start_time = util::get_elapsed_time();
+
       $study_class_name::sync_with_parent();
       $identifier_class_name::sync_with_parent();
       $collection_class_name::sync_with_parent();
@@ -175,6 +177,16 @@ class post extends \cenozo\service\post
       $result = $db_qnaire->get_respondents_from_beartooth();
       $result['qnaire'] = $db_qnaire->name;
       $this->set_data( [$result] );
+
+      $total_time = util::get_elapsed_time() - $start_time;
+      log::info( sprintf(
+        'Total processing time: %s',
+        86400 > $total_time ?
+          // less than a day
+          preg_replace( '/^00:/', '', gmdate("H:i:s", $total_time) ) :
+          // more than a day
+          sprintf( '%sd %s', gmdate('j', $total_time), gmdate("H:i:s", $total_time) ),
+      ) );
     }
     else if( 'import_responses' == $action )
     {

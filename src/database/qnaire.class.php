@@ -983,6 +983,8 @@ class qnaire extends \cenozo\database\record
   {
     if( is_null( PARENT_INSTANCE_URL ) ) return;
 
+    log::info( sprintf( 'Synchronizing "%s" questionnaire', $this->name ) );
+
     // update the qnaire (but only if the version is different)
     $url_postfix = sprintf(
       '/name=%s?select={"column":["version"]}',
@@ -1044,7 +1046,7 @@ class qnaire extends \cenozo\database\record
   public function export_respondent_data( $db_specific_respondent = NULL )
   {
     ini_set( 'memory_limit', '-1' );
-    set_time_limit( 900 ); // 15 minutes max
+    set_time_limit( 1800 ); // 30 minutes max
 
     $response_stage_pause_class_name = lib::get_class_name( 'database\response_stage_pause' );
     $answer_device_class_name = lib::get_class_name( 'database\answer_device' );
@@ -1054,6 +1056,9 @@ class qnaire extends \cenozo\database\record
 
     $generic_username = $setting_manager->get_setting( 'general', 'generic_username' );
     $file_export_threshold = intval( $setting_manager->get_setting( 'general', 'file_export_threshold' ) );
+
+    $start_time = util::get_elapsed_time();
+    log::info( sprintf( 'Exporting respondents for "%s"', $this->name ) );
 
     // encode all respondent and response data into an array
     $participant_data = [];
@@ -1397,12 +1402,21 @@ class qnaire extends \cenozo\database\record
     }
 
     // First export the data to the master pine application
-    if( 0 < count( $respondent_data ) ) $this->send_data_to_parent_pine( 'responses', $respondent_data );
+    if( 0 < count( $respondent_data ) )
+    {
+      $uid_list = [];
+      foreach( $respondent_data as $respondent ) $uid_list[] = $respondent['uid'];
+      log::info( sprintf( 'Sending responses to parent pine for %s', implode( ' ', $uid_list ) ) );
+
+      $this->send_data_to_parent_pine( 'responses', $respondent_data );
+    }
 
     // Next, export any files to the master pine application (sending large files one at a time)
     $total_files = count( $file_data );
     $current_size = 0;
     $partial_file_data = [];
+
+    if( 0 < $total_files ) log::info( sprintf( 'Sending %d files to parent pine', $total_files ) );
     foreach( $file_data as $index => $file )
     {
       $partial_file_data[] = $file;
@@ -1423,6 +1437,10 @@ class qnaire extends \cenozo\database\record
     $result = [];
     if( 0 < count( $participant_data ) )
     {
+      $uid_list = [];
+      foreach( $participant_data as $participant ) $uid_list[] = $participant['uid'];
+      log::info( sprintf( 'Sending update to parent beartooth for %s', implode( ' ', $uid_list ) ) );
+
       $url = sprintf( '%s/api/pine', $this->parent_beartooth_url );
       $curl = util::get_detached_curl_object( $url, $this->parent_username, $this->parent_password );
       curl_setopt( $curl, CURLOPT_POST, true );
@@ -1476,6 +1494,17 @@ class qnaire extends \cenozo\database\record
       $db_respondent->save();
     }
 
+    // track how long it took
+    $total_time = util::get_elapsed_time() - $start_time;
+    log::info( sprintf(
+      'Exporting respondents total time: %s',
+      86400 > $total_time ?
+        // less than a day
+        preg_replace( '/^00:/', '', gmdate("H:i:s", $total_time) ) :
+        // more than a day
+        sprintf( '%sd %s', gmdate('j', $total_time), gmdate("H:i:s", $total_time) ),
+    ) );
+
     return $result;
   }
 
@@ -1489,7 +1518,7 @@ class qnaire extends \cenozo\database\record
   public function import_response_data_from_csv( $csv_data, $apply = false, $new_only = false )
   {
     ini_set( 'memory_limit', '-1' );
-    set_time_limit( 900 ); // 15 minutes max
+    set_time_limit( 1800 ); // 30 minutes max
 
     // a private function for testing data values
     function test_value( $type, $value )
@@ -2093,7 +2122,7 @@ class qnaire extends \cenozo\database\record
   public function import_response_data( $respondent_list )
   {
     ini_set( 'memory_limit', '-1' );
-    set_time_limit( 900 ); // 15 minutes max
+    set_time_limit( 1800 ); // 30 minutes max
 
     $participant_class_name = lib::get_class_name( 'database\participant' );
     $respondent_class_name = lib::get_class_name( 'database\respondent' );
@@ -2471,6 +2500,10 @@ class qnaire extends \cenozo\database\record
       );
     }
 
+    $start_time = util::get_elapsed_time();
+    $total_opal_time = 0;
+    log::info( sprintf( 'Getting respondents for "%s"', $this->name ) );
+
     $url = sprintf(
       '%s/api/appointment%s',
       $this->parent_beartooth_url,
@@ -2843,7 +2876,9 @@ class qnaire extends \cenozo\database\record
           // 2) The questionnaires' attributes_mandatory setting is false
           //   The response record is created anyway with missing data
           //   The user will not be alerted
+          $current_time = util::get_elapsed_time();
           $db_response = $db_respondent->get_current_response( true );
+          $total_opal_time += ( util::get_elapsed_time() - $current_time );
         }
         else
         {
@@ -2858,7 +2893,9 @@ class qnaire extends \cenozo\database\record
             //   Any attribute that loaded successfully will be replaced
             //   Any attribute that failed to load will remain unchanged
             //   The user will not be alerted to any failures
+            $current_time = util::get_elapsed_time();
             $db_response->create_attributes( true );
+            $total_opal_time += ( util::get_elapsed_time() - $current_time );
           }
         }
 
@@ -2873,6 +2910,22 @@ class qnaire extends \cenozo\database\record
         $data['fail'][] = $participant->uid;
       }
     }
+
+    // track how long it took
+    $total_time = util::get_elapsed_time() - $start_time;
+    log::info( sprintf(
+      'Getting respondents total time (opal time): %s (%s)',
+      86400 > $total_time ?
+        // less than a day
+        preg_replace( '/^00:/', '', gmdate("H:i:s", $total_time) ) :
+        // more than a day
+        sprintf( '%sd %s', gmdate('j', $total_time), gmdate("H:i:s", $total_time) ),
+      86400 > $total_opal_time ?
+        // less than a day
+        preg_replace( '/^00:/', '', gmdate("H:i:s", $total_opal_time) ) :
+        // more than a day
+        sprintf( '%sd %s', gmdate('j', $total_opal_time), gmdate("H:i:s", $total_opal_time) ),
+    ) );
 
     return $data;
   }

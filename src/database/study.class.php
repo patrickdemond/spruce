@@ -19,6 +19,8 @@ class study extends \cenozo\database\study
 
     $stratum_class_name = lib::get_class_name( 'database\stratum' );
 
+    log::info( 'Synchronizing studies' );
+
     // update the study list
     $url_postfix =
       '?select={"column":["name","description","stratum_data"]}'.

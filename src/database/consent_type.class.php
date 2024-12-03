@@ -19,6 +19,8 @@ class consent_type extends \cenozo\database\consent_type
 
     $role_class_name = lib::get_class_name( 'database\role' );
 
+    log::info( 'Synchronizing consent types' );
+
     // update the consent type list
     $url_postfix =
       '?select={"column":["name","description","role_list"]}'.
