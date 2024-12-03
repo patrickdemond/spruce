@@ -83,10 +83,6 @@ class equipment_type extends \cenozo\database\equipment_type
         $db_equipment_type = new static();
         log::info( sprintf( 'Importing new "%s" equipment type from parent instance.', $equipment_type->name ) );
       }
-      else
-      {
-        log::info( sprintf( 'Updating "%s" equipment type from parent instance.', $equipment_type->name ) );
-      }
 
       $db_equipment_type->name = $equipment_type->name;
       $db_equipment_type->description = $equipment_type->description;
@@ -121,16 +117,21 @@ class equipment_type extends \cenozo\database\equipment_type
 
       $result = $db_equipment_type->import_from_array( $data, true );
 
-      log::info( sprintf(
-        'Done, imported %d new and %d updated equipment records',
-        $result->equipment['new'],
-        $result->equipment['update']
-      ) );
+      if( 0 < $result->equipment['new'] || 0 < $result->equipment['update'] )
+      {
+        log::info( sprintf(
+          'Imported %d new and %d updated "%s", equipment records',
+          $result->equipment['new'],
+          $result->equipment['update'],
+          $db_equipment_type->name
+        ) );
+      }
 
       if( 0 < count( $result->invalid ) )
       {
         log::info( sprintf(
-          "The following errors were detected during the import:\n%s",
+          "The following errors were detected during the \"%s\" import:\n%s",
+          $db_equipment_type->name,
           implode( "\n", $result->invalid )
         ) );
       }
