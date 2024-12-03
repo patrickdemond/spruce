@@ -92,6 +92,7 @@ class post extends \cenozo\service\post
     $qnaire_class_name = lib::get_class_name( 'database\qnaire' );
     $service_class_name = lib::get_class_name( 'service\service' );
 
+    $start_time = util::get_elapsed_time();
     $action = $this->get_argument( 'action', NULL );
     if( $this->get_argument( 'time_report', false ) )
     {
@@ -115,8 +116,6 @@ class post extends \cenozo\service\post
     }
     else if( 'get_respondents' == $action )
     {
-      $start_time = util::get_elapsed_time();
-
       // first update table data
       // Note: always sync study first (it will check that the parent Pine version matches)
       $study_class_name::sync_with_parent();
@@ -163,6 +162,16 @@ class post extends \cenozo\service\post
       {
         $db_qnaire->sync_with_parent();
         $uid_list = array_merge( $uid_list, $db_qnaire->export_respondent_data() );
+
+        $total_time = util::get_elapsed_time() - $start_time;
+        log::info( sprintf(
+          'Total processing time: %s',
+          86400 > $total_time ?
+            // less than a day
+            preg_replace( '/^00:/', '', gmdate("H:i:s", $total_time) ) : 
+            // more than a day
+          sprintf( '%sd %s', gmdate('j', $total_time), gmdate("H:i:s", $total_time) ),
+      ) );
       }
 
       // set the list of exported UIDs as the returned data

@@ -676,7 +676,8 @@ cenozoApp.defineModule({
             getRespondents: async function () {
               var modal = CnModalMessageFactory.instance({
                 title: "Communicating with Remote Server",
-                message: "Please wait while the respondent list is retrieved.",
+                message:
+                  "Please wait while synchronizing with the parent server and retrieving the respondent list.",
                 block: true,
               });
               modal.show();
@@ -716,7 +717,7 @@ cenozoApp.defineModule({
               var modal = CnModalMessageFactory.instance({
                 title: "Communicating with Remote Server",
                 message:
-                  "Please wait while the questionnaire data is exported.",
+                  "Please wait while synchronizing with the parent server and exporting respondent data.",
                 block: true,
               });
               modal.show();
