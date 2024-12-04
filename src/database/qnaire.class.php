@@ -1406,6 +1406,7 @@ class qnaire extends \cenozo\database\record
     {
       $uid_list = [];
       foreach( $respondent_data as $respondent ) $uid_list[] = $respondent['uid'];
+      sort( $uid_list );
       log::info( sprintf( 'Sending responses to parent pine for %s', implode( ' ', $uid_list ) ) );
 
       $this->send_data_to_parent_pine( 'responses', $respondent_data );
@@ -1439,6 +1440,7 @@ class qnaire extends \cenozo\database\record
     {
       $uid_list = [];
       foreach( $participant_data as $participant ) $uid_list[] = $participant['uid'];
+      sort( $uid_list );
       log::info( sprintf( 'Sending update to parent beartooth for %s', implode( ' ', $uid_list ) ) );
 
       $url = sprintf( '%s/api/pine', $this->parent_beartooth_url );

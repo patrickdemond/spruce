@@ -175,6 +175,7 @@ class post extends \cenozo\service\post
       }
 
       // set the list of exported UIDs as the returned data
+      sort( $uid_list );
       $this->set_data( $uid_list );
     }
     else parent::execute();

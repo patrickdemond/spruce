@@ -213,6 +213,18 @@ class response extends \cenozo\database\has_rank
         foreach( $db_qnaire->get_qnaire_equipment_type_trigger_object_list() as $db_trigger )
           $db_trigger->execute( $this );
       }
+
+      if( $db_qnaire->stages )
+      {
+        // remove any open answer stage records
+        $answer_device_class_name = lib::get_class_name( 'database\answer_device' );
+        $answer_device_mod = lib::create( 'database\modifier' );
+        $answer_device_mod->join( 'answer', 'answer_device.answer_id', 'answer.id' );
+        $answer_device_mod->where( 'answer.response_id', '=', $this->id );
+        $answer_device_mod->where( 'answer_device.end_datetime', '=', NULL );
+        foreach( $answer_device_class_name::select_objects( $answer_device_mod ) as $db_answer_device )
+          $db_answer_device->delete();
+      }
     }
 
     // If the respondent's start date comes after the first response's start date then we have to back
