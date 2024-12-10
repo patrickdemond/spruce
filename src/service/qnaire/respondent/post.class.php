@@ -24,7 +24,17 @@ class post extends \cenozo\service\post
     $action = $this->get_argument( 'action', NULL );
     if( !is_null( $action ) )
     {
-      if( 'import' == $action )
+      if( 'get_respondents' == $action )
+      {
+        if( $db_qnaire->closed )
+        {
+          $this->status->set_code( 306 );
+          $this->set_data(
+            'This questionnaire has been closed so it is no longer possible to update the respondents list.'
+          );
+        }
+      }
+      else if( 'import' == $action )
       {
         // the "import" action was used in old versions only
         $this->status->set_code( 306 );
@@ -84,16 +94,6 @@ class post extends \cenozo\service\post
           $this->set_data(
             'Unable to proceed with export due to the following error(s):'."\n".
             implode( "\n", $notice_list )
-          );
-        }
-      }
-      else if( 'get_respondents' == $action )
-      {
-        if( $db_qnaire->closed )
-        {
-          $this->status->set_code( 306 );
-          $this->set_data(
-            'This questionnaire has been closed so it is no longer possible to update the respondents list.'
           );
         }
       }

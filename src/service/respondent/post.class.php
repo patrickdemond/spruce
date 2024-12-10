@@ -133,6 +133,7 @@ class post extends \cenozo\service\post
       $modifier = lib::create( 'database\modifier' );
       $modifier->where( 'parent_beartooth_url', '!=', NULL );
       $modifier->where( 'parent_username', '!=', NULL );
+      $modifier->where( 'closed', '=', false );
       foreach( $qnaire_class_name::select_objects( $modifier ) as $db_qnaire )
       {
         $db_qnaire->sync_with_parent();
@@ -171,7 +172,7 @@ class post extends \cenozo\service\post
             preg_replace( '/^00:/', '', gmdate("H:i:s", $total_time) ) : 
             // more than a day
           sprintf( '%sd %s', gmdate('j', $total_time), gmdate("H:i:s", $total_time) ),
-      ) );
+        ) );
       }
 
       // set the list of exported UIDs as the returned data
