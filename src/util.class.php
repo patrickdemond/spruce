@@ -209,40 +209,35 @@ class util extends \cenozo\util
   /**
    * Returns a curl object used by detached instances
    * @param string $url The url to connect to
-   * @param string $username The username to use when connecting to the parent server
-   * @param string $password The password to use when connecting to the parent server
+   * @param string $db_qnaire The qnaire using the object (leave empty if all are using it)
    * @return cURL handle
    */
-  public static function get_detached_curl_object( $url, $username = NULL, $password = NULL )
+  public static function get_detached_curl_object( $url, $db_qnaire = NULL )
   {
     $setting_manager = lib::create( 'business\setting_manager' );
     $version = $setting_manager->get_setting( 'general', 'version' );
     $build = $setting_manager->get_setting( 'general', 'build' );
 
-    // if no user/pass is provided then grab them from any open qnaire
-    if( is_null( $username ) )
+    // if no user/pass is provided then grab them from the most recently created open qnaire
+    if( is_null( $db_qnaire ) )
     {
       $qnaire_class_name = lib::get_class_name( 'database\qnaire' );
-      $select = lib::create( 'database\select' );
-      $select->add_column( 'parent_username' );
-      $select->add_column( 'parent_password' );
       $modifier = lib::create( 'database\modifier' );
       $modifier->where( 'parent_username', '!=', NULL );
       $modifier->where( 'parent_password', '!=', NULL );
       $modifier->where( 'closed', '=', false );
+      $modifier->order_desc( 'create_timestamp' );
       $modifier->limit( 1 );
-      $qnaire_list = $qnaire_class_name::select( $select, $modifier );
+      $qnaire_list = $qnaire_class_name::select_objects( $modifier );
       if( 0 == count( $qnaire_list ) )
       {
         throw lib::create( 'exception\notice',
           'Unable to connect to parent servers since there are no active '.
-          'questionnaires setup to have a remote username and password.',
+          'questionnaires setup to have a parent username and password.',
           __METHOD__
         );
       }
-
-      $username = $qnaire_list[0]['parent_username'];
-      $password = $qnaire_list[0]['parent_password'];
+      $db_qnaire = current( $qnaire_list );
     }
 
     $curl = curl_init();
@@ -254,7 +249,10 @@ class util extends \cenozo\util
       $curl,
       CURLOPT_HTTPHEADER,
       [
-        sprintf( 'Authorization: Basic %s', base64_encode( sprintf( '%s:%s', $username, $password ) ) ),
+        sprintf(
+          'Authorization: Basic %s',
+          base64_encode( sprintf( '%s:%s', $db_qnaire->parent_username, $db_qnaire->parent_password ) )
+        ),
         sprintf( 'Pine-Version: %s %s', $version, $build )
       ]
     );
@@ -266,11 +264,10 @@ class util extends \cenozo\util
    * Utility function used to download data from the parent instance
    * @param string $subject The subject to download (study, consent_type, etc...)
    * @param string $url_postfix A string to add to the end of the remote URL (after api/<subject>)
-   * @param string $username The username to use when connecting to the parent server
-   * @param string $password The password to use when connecting to the parent server
+   * @param string $db_qnaire The qnaire getting the data (leave empty if all are checking the data)
    * @return $object (decoded json response from remote server)
    */
-  public static function get_data_from_parent( $subject, $url_postfix = '', $username = NULL, $password = NULL )
+  public static function get_data_from_parent( $subject, $url_postfix = '', $db_qnaire = NULL )
   {
     $setting_manager = lib::create( 'business\setting_manager' );
     if( !$setting_manager->get_setting( 'general', 'detached' ) || is_null( PARENT_INSTANCE_URL ) ) return NULL;
@@ -282,7 +279,7 @@ class util extends \cenozo\util
       $subject,
       $url_postfix
     );
-    $curl = static::get_detached_curl_object( $url, $username, $password );
+    $curl = static::get_detached_curl_object( $url, $db_qnaire );
 
     $response = curl_exec( $curl );
     if( curl_errno( $curl ) )
@@ -305,7 +302,7 @@ class util extends \cenozo\util
     if( 401 == $code )
     {
       throw lib::create( 'exception\notice',
-        'Unable to synchronize, invalid Beartooth username and/or password.',
+        'Unable to synchronize, parent username/password is invalid.',
         __METHOD__
       );
     }

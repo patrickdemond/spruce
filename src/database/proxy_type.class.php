@@ -12,8 +12,9 @@ class proxy_type extends \cenozo\database\proxy_type
 {
   /**
    * Synchronizes all records with a parent instance
+   * @param database\qnaire $db_qnaire Which questionnaire are we updating for
    */
-  public static function sync_with_parent()
+  public static function sync_with_parent( $db_qnaire = NULL )
   {
     if( is_null( PARENT_INSTANCE_URL ) ) return;
 
@@ -25,7 +26,7 @@ class proxy_type extends \cenozo\database\proxy_type
     $url_postfix =
       '?select={"column":["name","description","prompt","role_list"]}'.
       '&modifier={"limit":1000000}';
-    foreach( util::get_data_from_parent( 'proxy_type', $url_postfix ) as $proxy_type )
+    foreach( util::get_data_from_parent( 'proxy_type', $url_postfix, $db_qnaire ) as $proxy_type )
     {
       // see if the proxy type exists and create it if it doesn't
       $db_proxy_type = static::get_unique_record( 'name', $proxy_type->name );

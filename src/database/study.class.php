@@ -12,8 +12,9 @@ class study extends \cenozo\database\study
 {
   /**
    * Synchronizes all records with a parent instance
+   * @param database\qnaire $db_qnaire Which questionnaire are we updating for
    */
-  public static function sync_with_parent()
+  public static function sync_with_parent( $db_qnaire = NULL )
   {
     if( is_null( PARENT_INSTANCE_URL ) ) return;
 
@@ -25,7 +26,7 @@ class study extends \cenozo\database\study
     $url_postfix =
       '?select={"column":["name","description","stratum_data"]}'.
       '&modifier={"limit":1000000}';
-    foreach( util::get_data_from_parent( 'study', $url_postfix ) as $study )
+    foreach( util::get_data_from_parent( 'study', $url_postfix, $db_qnaire ) as $study )
     {
       // see if the study exists and create it if it doesn't
       $db_study = static::get_unique_record( 'name', $study->name );

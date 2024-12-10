@@ -12,7 +12,7 @@ class equipment_type extends \cenozo\database\equipment_type
 {
   /**
    * Synchronizes all records with a parent instance
-   * @param database\qnaire Restrict equipment types used by a particular qnaire
+   * @param database\qnaire $db_qnaire Which questionnaire are we updating for
    */
   public static function sync_with_parent( $db_qnaire = NULL )
   {
@@ -73,7 +73,7 @@ class equipment_type extends \cenozo\database\equipment_type
       implode( '","', $qnaire_name_list )
     );
 
-    foreach( util::get_data_from_parent( 'equipment_type', $url_postfix ) as $equipment_type )
+    foreach( util::get_data_from_parent( 'equipment_type', $url_postfix, $db_qnaire ) as $equipment_type )
     {
       $db_equipment_type = static::get_unique_record( 'name', $equipment_type->name );
 
@@ -101,7 +101,7 @@ class equipment_type extends \cenozo\database\equipment_type
         '&modifier={"limit":1000000}',
         util::full_urlencode( $db_equipment_type->name )
       );
-      $equipment_list = util::get_data_from_parent( 'equipment_type', $url_postfix );
+      $equipment_list = util::get_data_from_parent( 'equipment_type', $url_postfix, $db_qnaire );
 
       // convert the items into a CSV list so we can import them using the above ::import_from_array() method
       $data = [['active', 'serial_number', 'site', 'note']];

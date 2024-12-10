@@ -12,8 +12,9 @@ class collection extends \cenozo\database\collection
 {
   /**
    * Synchronizes all records with a parent instance
+   * @param database\qnaire $db_qnaire Which questionnaire are we updating for
    */
-  public static function sync_with_parent()
+  public static function sync_with_parent( $db_qnaire = NULL )
   {
     if( is_null( PARENT_INSTANCE_URL ) ) return;
 
@@ -25,7 +26,7 @@ class collection extends \cenozo\database\collection
     $url_postfix =
       '?select={"column":["name","description"]}'.
       '&modifier={"limit":1000000}';
-    foreach( util::get_data_from_parent( 'collection', $url_postfix ) as $collection )
+    foreach( util::get_data_from_parent( 'collection', $url_postfix, $db_qnaire ) as $collection )
     {
       // see if the collection exists and create it if it doesn't
       $db_collection = static::get_unique_record( 'name', $collection->name );

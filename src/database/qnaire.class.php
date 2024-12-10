@@ -903,7 +903,7 @@ class qnaire extends \cenozo\database\record
       $this->parent_beartooth_url,
       is_null( $this->appointment_type ) ? '' : sprintf( '?type=%s', $this->appointment_type )
     );
-    $curl = util::get_detached_curl_object( $url, $this->parent_username, $this->parent_password );
+    $curl = util::get_detached_curl_object( $url, $this );
 
     $curl_response = curl_exec( $curl );
     if( curl_errno( $curl ) )
@@ -938,7 +938,7 @@ class qnaire extends \cenozo\database\record
       PARENT_INSTANCE_URL,
       util::full_urlencode( $this->name )
     );
-    $curl = util::get_detached_curl_object( $url, $this->parent_username, $this->parent_password );
+    $curl = util::get_detached_curl_object( $url, $this );
 
     $curl_response = curl_exec( $curl );
     if( curl_errno( $curl ) )
@@ -978,8 +978,9 @@ class qnaire extends \cenozo\database\record
    * Synchronizes data with the parent instance
    * 
    * This includes studies, consent types, alternate consent types, proxy types, and qnaires
+   * @param database\qnaire $db_qnaire Which questionnaire are we updating for
    */
-  public function sync_with_parent()
+  public static function sync_with_parent( $db_qnaire = NULL )
   {
     if( is_null( PARENT_INSTANCE_URL ) ) return;
 
@@ -990,12 +991,7 @@ class qnaire extends \cenozo\database\record
       '/name=%s?select={"column":["version"]}',
       util::full_urlencode( $this->name )
     );
-    $parent_qnaire = util::get_data_from_parent(
-      'qnaire',
-      $url_postfix,
-      $this->parent_username,
-      $this->parent_password
-    );
+    $parent_qnaire = util::get_data_from_parent( 'qnaire', $url_postfix, $this );
 
     if( $this->version != $parent_qnaire->version )
     {
@@ -1007,12 +1003,7 @@ class qnaire extends \cenozo\database\record
         '/name=%s?output=export&download=true',
         util::full_urlencode( $this->name )
       );
-      $parent_qnaire = util::get_data_from_parent(
-        'qnaire',
-        $url_postfix,
-        $this->parent_username,
-        $this->parent_password
-      );
+      $parent_qnaire = util::get_data_from_parent( 'qnaire', $url_postfix, $this );
       $readonly = $this->readonly;
 
       // override the readonly property while syncing with the parent instance
@@ -1444,7 +1435,7 @@ class qnaire extends \cenozo\database\record
       log::info( sprintf( 'Sending update to parent beartooth for %s', implode( ' ', $uid_list ) ) );
 
       $url = sprintf( '%s/api/pine', $this->parent_beartooth_url );
-      $curl = util::get_detached_curl_object( $url, $this->parent_username, $this->parent_password );
+      $curl = util::get_detached_curl_object( $url, $this );
       curl_setopt( $curl, CURLOPT_POST, true );
       curl_setopt( $curl, CURLOPT_POSTFIELDS, util::json_encode( $participant_data ) );
 
@@ -2511,7 +2502,7 @@ class qnaire extends \cenozo\database\record
       $this->parent_beartooth_url,
       is_null( $this->appointment_type ) ? '' : sprintf( '?type=%s', $this->appointment_type )
     );
-    $curl = util::get_detached_curl_object( $url, $this->parent_username, $this->parent_password );
+    $curl = util::get_detached_curl_object( $url, $this );
 
     $curl_response = curl_exec( $curl );
     if( curl_errno( $curl ) )
@@ -6715,7 +6706,7 @@ class qnaire extends \cenozo\database\record
       $type
     );
 
-    $curl = util::get_detached_curl_object( $url, $this->parent_username, $this->parent_password );
+    $curl = util::get_detached_curl_object( $url, $this );
     curl_setopt( $curl, CURLOPT_POST, true );
     curl_setopt( $curl, CURLOPT_POSTFIELDS, util::json_encode( $data ) );
 

@@ -190,8 +190,9 @@ class lookup extends \cenozo\database\record
 
   /**
    * Synchronizes all records with a parent instance
+   * @param database\qnaire $db_qnaire Which questionnaire are we updating for
    */
-  public static function sync_with_parent()
+  public static function sync_with_parent( $db_qnaire = NULL )
   {
     if( is_null( PARENT_INSTANCE_URL ) ) return;
 
@@ -211,7 +212,7 @@ class lookup extends \cenozo\database\record
       '}'.
       '&modifier={"limit":1000000}';
 
-    foreach( util::get_data_from_parent( 'lookup', $url_postfix ) as $lookup )
+    foreach( util::get_data_from_parent( 'lookup', $url_postfix, $db_qnaire ) as $lookup )
     {
       $db_lookup = static::get_unique_record( 'name', $lookup->name );
 
@@ -248,7 +249,7 @@ class lookup extends \cenozo\database\record
         '&modifier={"limit":1000000}',
         util::full_urlencode( $db_lookup->name )
       );
-      $indicator_list = util::get_data_from_parent( 'lookup', $url_postfix );
+      $indicator_list = util::get_data_from_parent( 'lookup', $url_postfix, $db_qnaire );
 
       $indicator_mod = lib::create( 'database\modifier' );
       $indicator_mod->where( 'lookup_id', '=', $db_lookup->id );
@@ -279,7 +280,7 @@ class lookup extends \cenozo\database\record
         '&modifier={"limit":1000000}',
         util::full_urlencode( $db_lookup->name )
       );
-      $lookup_item_list = util::get_data_from_parent( 'lookup', $url_postfix );
+      $lookup_item_list = util::get_data_from_parent( 'lookup', $url_postfix, $db_qnaire );
 
       // convert the items into a CSV list so we can import them using the above ::import_from_array() method
       $data = [];

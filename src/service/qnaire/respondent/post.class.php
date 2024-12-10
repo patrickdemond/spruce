@@ -162,16 +162,15 @@ class post extends \cenozo\service\post
       $equipment_type_class_name = lib::get_class_name( 'database\equipment_type' );
 
       // Note: always sync study first (it will check that the parent Pine version matches)
-
-      $study_class_name::sync_with_parent();
-      $identifier_class_name::sync_with_parent();
-      $collection_class_name::sync_with_parent();
-      $consent_type_class_name::sync_with_parent();
-      $event_type_class_name::sync_with_parent();
-      $alternate_consent_type_class_name::sync_with_parent();
-      $proxy_type_class_name::sync_with_parent();
-      $lookup_class_name::sync_with_parent();
-      $equipment_type_class_name::sync_with_parent();
+      $study_class_name::sync_with_parent( $db_qnaire );
+      $identifier_class_name::sync_with_parent( $db_qnaire );
+      $collection_class_name::sync_with_parent( $db_qnaire );
+      $consent_type_class_name::sync_with_parent( $db_qnaire );
+      $event_type_class_name::sync_with_parent( $db_qnaire );
+      $alternate_consent_type_class_name::sync_with_parent( $db_qnaire );
+      $proxy_type_class_name::sync_with_parent( $db_qnaire );
+      $lookup_class_name::sync_with_parent( $db_qnaire );
+      $equipment_type_class_name::sync_with_parent( $db_qnaire );
 
       $db_qnaire->sync_with_parent();
       $result = $db_qnaire->get_respondents_from_beartooth();
