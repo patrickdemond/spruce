@@ -142,7 +142,7 @@ class post extends \cenozo\service\post
       }
       $this->set_data( $data );
 
-      $total_time = util::get_elapsed_time() - $start_time;
+      $total_time = round( util::get_elapsed_time() - $start_time );
       log::info( sprintf(
         'Total processing time: %s',
         86400 > $total_time ?
@@ -163,7 +163,7 @@ class post extends \cenozo\service\post
         $db_qnaire->sync_with_parent();
         $uid_list = array_merge( $uid_list, $db_qnaire->export_respondent_data() );
 
-        $total_time = util::get_elapsed_time() - $start_time;
+        $total_time = round( util::get_elapsed_time() - $start_time );
         log::info( sprintf(
           'Total processing time: %s',
           86400 > $total_time ?

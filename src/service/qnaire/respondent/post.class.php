@@ -87,6 +87,16 @@ class post extends \cenozo\service\post
           );
         }
       }
+      else if( 'get_respondents' == $action )
+      {
+        if( $db_qnaire->closed )
+        {
+          $this->status->set_code( 306 );
+          $this->set_data(
+            'This questionnaire has been closed so it is no longer possible to update the respondents list.'
+          );
+        }
+      }
     }
     else if( $this->may_continue() )
     {
@@ -177,7 +187,7 @@ class post extends \cenozo\service\post
       $result['qnaire'] = $db_qnaire->name;
       $this->set_data( [$result] );
 
-      $total_time = util::get_elapsed_time() - $start_time;
+      $total_time = round( util::get_elapsed_time() - $start_time );
       log::info( sprintf(
         'Total processing time: %s',
         86400 > $total_time ?
@@ -200,7 +210,7 @@ class post extends \cenozo\service\post
       $db_qnaire->sync_with_parent();
       $this->set_data( $db_qnaire->export_respondent_data() );
 
-      $total_time = util::get_elapsed_time() - $start_time;
+      $total_time = round( util::get_elapsed_time() - $start_time );
       log::info( sprintf(
         'Total processing time: %s',
         86400 > $total_time ?

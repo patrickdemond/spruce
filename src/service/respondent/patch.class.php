@@ -143,7 +143,7 @@ class patch extends \cenozo\service\patch
           $db_qnaire->sync_with_parent();
           $db_qnaire->export_respondent_data( $db_respondent );
 
-          $total_time = util::get_elapsed_time() - $start_time;
+          $total_time = round( util::get_elapsed_time() - $start_time );
           log::info( sprintf(
             'Total processing time: %s',
             86400 > $total_time ?

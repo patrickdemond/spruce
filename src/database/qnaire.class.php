@@ -980,7 +980,7 @@ class qnaire extends \cenozo\database\record
    * This includes studies, consent types, alternate consent types, proxy types, and qnaires
    * @param database\qnaire $db_qnaire Which questionnaire are we updating for
    */
-  public static function sync_with_parent( $db_qnaire = NULL )
+  public function sync_with_parent( $db_qnaire = NULL )
   {
     if( is_null( PARENT_INSTANCE_URL ) ) return;
 
@@ -1488,7 +1488,7 @@ class qnaire extends \cenozo\database\record
     }
 
     // track how long it took
-    $total_time = util::get_elapsed_time() - $start_time;
+    $total_time = round( util::get_elapsed_time() - $start_time );
     log::info( sprintf(
       'Exporting respondents total time: %s',
       86400 > $total_time ?
@@ -2905,7 +2905,8 @@ class qnaire extends \cenozo\database\record
     }
 
     // track how long it took
-    $total_time = util::get_elapsed_time() - $start_time;
+    $total_time = round( util::get_elapsed_time() - $start_time );
+    $total_opal_time = round( $total_opal_time );
     log::info( sprintf(
       'Getting respondents total time (opal time): %s (%s)',
       86400 > $total_time ?
