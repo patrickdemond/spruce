@@ -261,7 +261,7 @@ class respondent extends \cenozo\database\record
   public function send_all_mail()
   {
     // we don't send mail to anonymous respondents
-    if( is_null( $this->participant_id ) ) return;
+    if( is_null( $this->participant_id ) || !is_null( $this->end_datetime ) ) return;
 
     $db_qnaire = $this->get_qnaire();
     $number_of_iterations = $db_qnaire->repeated ? $db_qnaire->max_responses : 1;
