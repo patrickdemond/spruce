@@ -1958,7 +1958,25 @@ class qnaire extends \cenozo\database\record
               {
                 $a = util::json_decode( $db_answer->value );
                 if( is_null( $a ) ) $a = [];
-                if( !in_array( $question['option_id'], $a ) ) $a[] = $question['option_id'];
+
+                // if the answer is an object then it has already been set to DK_NA or MISSING
+                if( is_object( $a ) )
+                {
+                  throw lib::create( 'exception\notice',
+                    sprintf(
+                      'Can\'t set value for %s on row %d as the value is already DK_NA or MISSING.',
+                      $db_answer->get_question()->name,
+                      $row_index + 1
+                    ),
+                    __METHOD__
+                  );
+                }
+
+                // create an ID-only array from the current answer value
+                $option_id_list = [];
+                foreach( $a as $v ) $option_id_list[] = is_object( $v ) ? $v->id : $v;
+
+                if( !in_array( $question['option_id'], $option_id_list ) ) $a[] = $question['option_id'];
                 $db_answer->value = util::json_encode( $a );
                 $db_answer->save();
               }
