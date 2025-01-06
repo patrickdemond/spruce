@@ -17,7 +17,7 @@ class ui extends \cenozo\ui\ui
   /**
    * Extends the parent method
    */
-  public function get_interface( $maintenance = false, $error = NULL )
+  public function get_interface()
   {
     $session = lib::create( 'business\session' );
 
@@ -31,6 +31,10 @@ class ui extends \cenozo\ui\ui
 
       if( !is_null( $db_user ) && $qnaire_username == $db_user->name )
       {
+        // we'll need the main interface libraries
+        $this->add_base_libs();
+        $this->add_interface_libs();
+
         // get the incompatible description, if there is one
         $qnaire_description_class_name = lib::get_class_name( 'database\qnaire_description' );
         $db_language = $db_response->get_language();
@@ -41,28 +45,18 @@ class ui extends \cenozo\ui\ui
         $incompatible_title = 'fr' == $db_language->code ? 'Navigateur incompatible' : 'Incompatible Browser';
         if( is_null( $db_qnaire_description ) || is_null( $db_qnaire_description->value ) )
         {
-          $incompatible_message = 'fr' == $db_language->code
-                                ? 'Votre navigateur Web n’est pas compatible avec cette application.  Veuillez essayer de changer d’appareil, d’ordinateur ou de navigateur.'
-                                : 'Your web browser is not compatible with this application.  Please try using a different device, computer, or browser.';
+          $incompatible_message = 'fr' == $db_language->code ? (
+            'Votre navigateur Web n’est pas compatible avec cette application.  '.
+            'Veuillez essayer de changer d’appareil, d’ordinateur ou de navigateur.'
+          ) : (
+            'Your web browser is not compatible with this application.  '.
+            'Please try using a different device, computer, or browser.'
+          );
         }
         else
         {
           $incompatible_message = addslashes( preg_replace( '/[\r\n]/', '', $db_qnaire_description->value ) );
         }
-
-        // prepare the framework module list (used to identify which modules are provided by the framework)
-        $framework_module_list = $this->get_framework_module_list();
-        sort( $framework_module_list );
-
-        // prepare the module list (used to create all necessary states needed by the active role)
-        $this->build_module_list();
-        ksort( $this->module_list );
-
-        // create the json strings for the interface
-        $module_array = array();
-        foreach( $this->module_list as $module ) $module_array[$module->get_subject()] = $module->as_array();
-        $framework_module_string = util::json_encode( $framework_module_list );
-        $module_string = util::json_encode( $module_array );
 
         // build the interface
         ob_start();
@@ -70,20 +64,27 @@ class ui extends \cenozo\ui\ui
         return ob_get_clean();
       }
     }
-    else if( !$session->get_qnaire_has_stages() && array_key_exists( 'REDIRECT_URL', $_SERVER ) )
+
+    if( !$session->get_qnaire_has_stages() && array_key_exists( 'REDIRECT_URL', $_SERVER ) )
     {
       $self_path = substr( $_SERVER['PHP_SELF'], 0, strrpos( $_SERVER['PHP_SELF'], '/' ) + 1 );
       $path = str_replace( $self_path, '', $_SERVER['REDIRECT_URL'] );
       if( preg_match( '#\brun\b#', $path, $matches ) )
       {
         $error = array(
-          'title' => 'Please Note: 404 Page Not Found',
-          'message' => 'The address you have provided is either not valid or server was unable to find the page your are looking for.'
+          'title' => 'Page Not Found / TODO: TRANSLATE',
+          'message' =>
+            'The address you have provided is either not valid or the '.
+            'server was unable to find the page your are looking for.'.
+            "<br/>\n".
+            'TODO: TRANSLATE.'
         );
+        return parent::get_error_interface( $error );
       }
     }
 
-    return parent::get_interface( $maintenance, $error );
+    // if none of the above applies then load the regular interface
+    return parent::get_interface();
   }
 
   /**
@@ -303,4 +304,15 @@ class ui extends \cenozo\ui\ui
 
     return $list;
   }
+
+  /**
+   * Override the default maintenance title and message
+   */
+  protected $maintenance_title = 'System is Offline / TODO: TRANSLATE';
+  protected $maintenance_message =
+    'Sorry, our servers are currently unavailable. '.
+    'We apologize for the inconvenience, please try again at a later time.'.
+    "<br/>\n".
+    'TODO: TRANSLATE. '.
+    'TODO: TRANSLATE.';
 }
