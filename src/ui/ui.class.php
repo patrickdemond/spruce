@@ -64,20 +64,19 @@ class ui extends \cenozo\ui\ui
         return ob_get_clean();
       }
     }
-
-    if( !$session->get_qnaire_has_stages() && array_key_exists( 'REDIRECT_URL', $_SERVER ) )
+    else if( !$session->get_qnaire_has_stages() && array_key_exists( 'REDIRECT_URL', $_SERVER ) )
     {
       $self_path = substr( $_SERVER['PHP_SELF'], 0, strrpos( $_SERVER['PHP_SELF'], '/' ) + 1 );
       $path = str_replace( $self_path, '', $_SERVER['REDIRECT_URL'] );
       if( preg_match( '#\brun\b#', $path, $matches ) )
       {
         $error = array(
-          'title' => 'Page Not Found / TODO: TRANSLATE',
+          'title' => 'Page Not Found / Page non trouvée',
           'message' =>
             'The address you have provided is either not valid or the '.
-            'server was unable to find the page your are looking for.'.
+            'server was unable to find the page you are looking for.'.
             "<br/>\n".
-            'TODO: TRANSLATE.'
+            'L’adresse fournie n’est pas valide ou le serveur n’a pas pu trouver la page que vous recherchez.'
         );
         return parent::get_error_interface( $error );
       }
@@ -308,11 +307,11 @@ class ui extends \cenozo\ui\ui
   /**
    * Override the default maintenance title and message
    */
-  protected $maintenance_title = 'System is Offline / TODO: TRANSLATE';
+  protected $maintenance_title = 'System is Offline / Système hors ligne';
   protected $maintenance_message =
     'Sorry, our servers are currently unavailable. '.
     'We apologize for the inconvenience, please try again at a later time.'.
     "<br/>\n".
-    'TODO: TRANSLATE. '.
-    'TODO: TRANSLATE.';
+    'Désolé, nos serveurs ne sont pas disponibles pour le moment. '.
+    'Nous nous excusons pour ce désagrément, veuillez réessayer plus tard.';
 }
