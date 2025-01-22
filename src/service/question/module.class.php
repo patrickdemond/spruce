@@ -26,6 +26,9 @@ class module extends \pine\service\base_qnaire_part_module
     if( $select->has_column( 'question_option_count' ) )
       $this->add_count_column( 'question_option_count', 'question_option', $select, $modifier );
 
+    // will be converted the data filename in the post_read() method below
+    if( $select->has_column( 'type_filename' ) ) $select->add_column( 'type', 'type_filename' );
+
     $modifier->join( 'page', 'question.page_id', 'page.id' );
     $modifier->join( 'module', 'page.module_id', 'module.id' );
     $modifier->join( 'qnaire', 'module.qnaire_id', 'qnaire.id' );
@@ -103,6 +106,20 @@ class module extends \pine\service\base_qnaire_part_module
 
         $select->add_constant( util::json_encode( $answer_summary ), 'answer_summary' );
       }
+    }
+  }
+
+  /**
+   * Extends parent method
+   */
+  public function post_read( &$row )
+  {
+    if( array_key_exists( 'type_filename', $row ) )
+    {
+      $answer_class_name = lib::get_class_name( 'database\answer' );
+      $type = $row['type_filename'];
+      $row['type_filename'] = array_key_exists( $type, $answer_class_name::TYPE_FILENAME ) ?
+        $answer_class_name::TYPE_FILENAME[$type] : NULL;
     }
   }
 }

@@ -200,7 +200,7 @@ class answer extends \cenozo\database\record
     $db_question = $this->get_question();
     $expression_manager = lib::create( 'business\expression_manager', $this->get_response() );
     $value = util::json_decode( $this->value );
-    
+
     // comment and device questions are always complete
     if( in_array( $db_question->type, ['comment', 'device'] ) ) return true;
 
@@ -240,7 +240,7 @@ class answer extends \cenozo\database\record
                 !property_exists( $selected_option->value, 'value' ) ||
                 is_null( $selected_option->value->value ) ||
                 !property_exists( $selected_option->value, 'unit' ) ||
-                is_null( $selected_option->value->unit ) 
+                is_null( $selected_option->value->unit )
               ) return false;
             }
             else if( is_null( $selected_option->value ) )
@@ -450,6 +450,97 @@ class answer extends \cenozo\database\record
   }
 
   /**
+   * Returns the answer's file as a base64 encoded string
+   * Note: only used for audio and signature type questions
+   * @return string
+   */
+  public function get_base64_encoded_file()
+  {
+    $question_class_name = lib::get_class_name( 'database\question' );
+
+    // this method is only valid for audio and signature question types (where a single file is written)
+    $b64 = NULL;
+    $type = $this->get_question()->type;
+    if( array_key_exists( $type, self::TYPE_FILENAME ) )
+    {
+      $filename = sprintf( '%s/%s', $this->get_data_directory(), self::TYPE_FILENAME[$type] );
+      if( file_exists( $filename ) )
+      {
+        $file = file_get_contents( $filename );
+        if( false !== $file ) return base64_encode( $file );
+      }
+    }
+
+    return $b64;
+  }
+
+  /**
+   * Return's the src tag value when encoding the answer's file for an HTML element
+   * Note: only used for audio and signature type questions
+   * @return string
+   */
+  public function get_data_src()
+  {
+    $question_class_name = lib::get_class_name( 'database\question' );
+
+    $type = $this->get_question()->type;
+    if( !in_array( $type, ['audio', 'signature'] ) ) return NULL;
+
+    $src = NULL;
+    $b64 = $this->get_base64_encoded_file();
+    if( !is_null( $b64 ) )
+    {
+      $src = sprintf(
+        'data:%s;base64,%s',
+        str_replace( '.', '/', self::TYPE_FILENAME[$type] ),
+        $b64
+      );
+    }
+
+    return $src;
+  }
+
+  /**
+   * Returns the answer's file encoded into an HTML element
+   * Note: only used for audio and signature type questions
+   * @return string
+   */
+  public function get_data_html_element()
+  {
+    $type = $this->get_question()->type;
+    if( !in_array( $type, ['audio', 'signature'] ) ) return NULL;
+
+    $html_element = NULL;
+    $src = $this->get_data_src();
+    if( !is_null( $src ) )
+    {
+      // send as a base64 encoded string for the element's src attribute
+      $html_element = sprintf(
+        'audio' == $type ?
+          '<audio controls class="full-width" style="height: 40px;" src="%s"></audio>' :
+          '<img class="full-width src="%s"></img>',
+        $src
+      );
+    }
+
+    if( is_null( $html_element ) )
+    {
+      // if the answer shows a filesize then show that and report that the file is missing
+      $value = util::json_decode( $this->value );
+      if( is_object( $value ) && property_exists( $value, 'filesize' ) )
+      {
+        $html_element = sprintf(
+          '<strong>%s file of size %s captured but file is not available</strong>',
+          $type,
+          util::human_file_size( $value->filesize )
+        );
+      }
+    }
+
+    return $html_element;
+  }
+
+  /**
    * The JSON representation of "Don't Know / No Answer"
    * @const string
    */
@@ -460,4 +551,13 @@ class answer extends \cenozo\database\record
    * @const string
    */
   const REFUSE = '{"refuse":true}';
+
+  /**
+   * The filename used by question types that store a single file as answers
+   * @const array
+   */
+  const TYPE_FILENAME = [
+    'audio' => 'audio.wav',
+    'signature' => 'image.png',
+  ];
 }

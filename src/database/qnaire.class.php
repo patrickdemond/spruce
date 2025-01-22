@@ -1056,7 +1056,7 @@ class qnaire extends \cenozo\database\record
     $respondent_data = [];
     $file_data = [];
 
-    // get a list of all file and form data from device and audio questions
+    // get a list of all file and form data from device, audio and signature questions
     $data_question_list = [];
     $form_question_list = [];
     if( $this->stages )
@@ -1085,7 +1085,7 @@ class qnaire extends \cenozo\database\record
       $modifier = lib::create( 'database\modifier' );
       $modifier->join( 'page', 'module.id', 'page.module_id' );
       $modifier->join( 'question', 'page.id', 'question.page_id' );
-      $modifier->where( 'question.type', '=', 'audio' );
+      $modifier->where( 'question.type', 'IN', ['audio', 'signature'] );
       foreach( $this->get_module_list( $select, $modifier ) as $row )
       {
         $data_question_list[] = $row['name'];
@@ -1526,6 +1526,7 @@ class qnaire extends \cenozo\database\record
       else if( 'lookup' == $type ) return true;
       else if( 'number' == $type ) return util::string_matches_float( $value );
       else if( 'number with unit' == $type ) return util::string_matches_float( $value );
+      else if( 'signature' == $type ) return 'YES' == $value;
       else if( 'string' == $type ) return true;
       else if( 'text' == $type ) return true;
       else if( 'time' == $type ) return preg_match( '/^[01][0-9]:[0-5][0-9]$/', $value );
@@ -3478,9 +3479,9 @@ class qnaire extends \cenozo\database\record
             }
             else // the question can only have one answer
             {
-              if( in_array( $column['type'], ['audio', 'boolean'] ) )
+              if( in_array( $column['type'], ['audio', 'boolean', 'signature'] ) )
               {
-                // convert audio and boolean values from 0 and 1 to NO and YES
+                // convert audio/boolean/signature values to YES and NO
                 $row_value = $answer ? 'YES' : 'NO';
               }
               else if( 'list' == $column['type'] )

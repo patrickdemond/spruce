@@ -278,14 +278,20 @@ cenozoApp.defineModule({
                 this.dataList.forEach( module => {
                   module.page_list.forEach( page => {
                     page.question_list.forEach( question => {
-                      if( "audio" == question.type ) {
-                        // the recording is stored in the file property as a base64 audio string
-                        question.answer = $sce.trustAsHtml(
-                          '<audio controls class="full-width" style="height: 40px;" src="' +
-                          question.file + '"></audio>'
-                        );
-                      } else if( "list" == question.type ) {
+                      if("list" == question.type) {
                         question.isString = angular.isString(question.answer);
+                      } else if (["audio", "signature"].includes(question.type)) {
+                        // if the audio/signature answer is valid then setup the question.answer property
+                        if (!angular.isString(question.answer) && null != question.file) {
+                          question.answer = $sce.trustAsHtml(
+                            "audio" == question.type ? (
+                              '<audio controls class="full-width" style="height: 40px;" src="' +
+                              question.file + '"></audio>'
+                            ) : (
+                              '<img class="full-width" src="' + question.file + '"></img>'
+                            )
+                          );
+                        }
                       }
                     })
                   })

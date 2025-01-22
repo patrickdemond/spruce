@@ -156,6 +156,7 @@ cenozoApp.defineModule({
       "CnSession",
       "CnHttpFactory",
       "$state",
+      "$window",
       "$document",
       function (
         CnPageModelFactory,
@@ -163,6 +164,7 @@ cenozoApp.defineModule({
         CnSession,
         CnHttpFactory,
         $state,
+        $window,
         $document
       ) {
         return {
@@ -174,7 +176,7 @@ cenozoApp.defineModule({
               angular.isDefined(scope.model) && scope.model.renderModel.cancelDevicePromises()
             );
           },
-          controller: async function ($scope) {
+          controller: async function ($scope, $element) {
             if (angular.isUndefined($scope.model))
               $scope.model = CnPageModelFactory.root;
             angular.extend($scope, {
@@ -204,6 +206,14 @@ cenozoApp.defineModule({
                 }
               },
             });
+
+            function onResize() {
+              $scope.model.renderModel.onCanvasResize();
+            }
+
+            // bind resize (first unbind to prevent duplicates)
+            $window.removeEventListener("resize", onResize);
+            $window.addEventListener("resize", onResize);
 
             // bind keydown (first unbind to prevent duplicates)
             $document.unbind("keydown");
@@ -332,6 +342,7 @@ cenozoApp.defineModule({
       "CnAudioRecordingFactory",
       "CnParticipantModelFactory",
       "CnAddressModelFactory",
+      "$window",
       "$state",
       "$timeout",
       "$interval",
@@ -349,6 +360,7 @@ cenozoApp.defineModule({
         CnAudioRecordingFactory,
         CnParticipantModelFactory,
         CnAddressModelFactory,
+        $window,
         $state,
         $timeout,
         $interval,
@@ -880,6 +892,45 @@ cenozoApp.defineModule({
                   modal.close();
                 }
               }
+            },
+
+            showSigPad: function(question) {
+              // create the signature pad
+              const self = this;
+              const canvas = document.querySelector("#question" + question.id);
+              question.sigPad = new SignaturePad(canvas, { backgroundColor: "rgb(240,240,240)" });
+
+              question.onSigPadEndStroke = async function(endStroke) {
+                question.objectURL = question.sigPad.toDataURL();
+                question.file = cenozo.convertBase64ToBlob(
+                  question.objectURL,
+                  question.type_filename.replace(/\./, '/')
+                );
+                await self.setAnswer(question, {filesize: question.file.size});
+              }
+
+              question.sigPad.addEventListener("endStroke", question.onSigPadEndStroke);
+
+              // we have to resize the first time in a timeout (it won't work if not called in a timeout)
+              $timeout(() => { this.onCanvasResize(); }, 0);
+            },
+
+            onCanvasResize: function() {
+              this.questionList.filter(question => null != question.sigPad).forEach(question => {
+                const canvas = document.querySelector("#question" + question.id);
+                canvas.style.height = "10em";
+                canvas.style.width = "100%";
+                const ratio =  Math.max($window.devicePixelRatio || 1, 1);
+                canvas.width = canvas.offsetWidth * ratio;
+                canvas.height = canvas.offsetHeight * ratio;
+                canvas.getContext("2d").scale(ratio, ratio);
+
+                if (question.objectURL) {
+                  question.sigPad.fromDataURL(question.objectURL);
+                } else {
+                  question.sigPad.clear(); // otherwise isEmpty() might return incorrect value
+                }
+              });
             },
 
             getModulePrompt: function () {
@@ -1433,6 +1484,7 @@ cenozoApp.defineModule({
                           "precondition",
                           "prompts",
                           "popups",
+                          "type_filename",
                           "device_id",
                           { table: "device", column: "name", alias: "device" },
                           "equipment_type_id",
@@ -1589,7 +1641,10 @@ cenozoApp.defineModule({
                         // Convert the base64 encoded file provided by the server to a blob, then create
                         // an object URL for the <audio> tag's src attribute.  We can't use the base64 value
                         // directly since Angular will insert "unsafe" in the string (for security).
-                        question.file = cenozo.convertBase64ToBlob(question.file, "audio/wav");
+                        question.file = cenozo.convertBase64ToBlob(
+                          question.file,
+                          question.type_filename.replace(/\./, '/')
+                        );
                         question.objectURL = window.URL.createObjectURL(question.file);
                       }
                     } else if ("equipment" == question.type) {
@@ -1612,6 +1667,24 @@ cenozoApp.defineModule({
                         this.languageList,
                         this.parentModel.viewModel.record.base_language
                       );
+                    } else if ("signature" == question.type) {
+                      // note that the sigPad object is created after the user clicks the "click here" button
+                      question.sigPad = null;
+
+                      question.objectURL = null;
+                      if (null != question.file) {
+                        // Convert the base64 encoded file provided by the server to a blob, then create
+                        // an object URL for the signature pad.  We can't use the base64 value
+                        // directly since Angular will insert "unsafe" in the string (for security).
+                        question.file = cenozo.convertBase64ToBlob(
+                          question.file,
+                          question.type_filename.replace(/\./, '/')
+                        );
+                        question.objectURL = window.URL.createObjectURL(question.file);
+
+                        // Note: this could be a problem since it isn't event driven (is 100ms enough time?)
+                        $timeout(() => { this.showSigPad(question); }, 100);
+                      }
                     }
                     return list;
                   }, [])
@@ -2335,17 +2408,23 @@ cenozoApp.defineModule({
                     // communicate with the server (if we're working with a respondent)
                     const self = this;
 
-                    if ("audio" == question.type) {
+                    if (["audio", "signature"].includes(question.type)) {
                       if (!angular.isObject(value) || !angular.isDefined(value.filesize)) {
-                        // if the audio file's size isn't provided then delete the file
+                        // if the file's size isn't provided then delete the file
                         question.file = '';
                         question.objectURL = null;
+
+                        // and remove the signature pad if this is a signature question
+                        if ("signature" == question.type && null != question.sigPad) {
+                          question.sigPad.removeEventListener("endStroke", question.onSigPadEndStroke);
+                          question.sigPad = null;
+                        }
                       }
 
                       await CnHttpFactory.instance({
-                        path: "answer/" + question.answer_id + "?filename=audio.wav",
+                        path: "answer/" + question.answer_id + "?filename=" + question.type_filename,
                         data: question.file,
-                        format: "wav",
+                        format: "audio" == question.type ? "wav" : "png",
                         onError: function (error) {
                           if (409 == error.status) self.outOfSync(JSON.parse(error.data));
                           else {
@@ -2355,7 +2434,6 @@ cenozoApp.defineModule({
                         },
                       }).patch();
                     }
-
 
                     let data = {
                       value: angular.toJson(
@@ -2897,7 +2975,7 @@ cenozoApp.defineModule({
                     if (null === record.next_id) modal.show(); // show a wait dialog when submitting the qnaire
                     const self = this;
                     await CnHttpFactory.instance({
-                      path: 
+                      path:
                         "respondent/token=" + $state.params.token +
                         "?action=proceed&page_id=" + this.data.page_id,
                       onError: function (error) {

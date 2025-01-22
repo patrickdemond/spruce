@@ -14,8 +14,6 @@ use cenozo\lib, cenozo\log, pine\util;
 class qnaire_report extends \cenozo\database\has_data
 {
   /**
-   * 
-  /**
    * Creates a qnaire_report from an object
    * @param object $qnaire_report
    * @param database\qnaire $db_qnaire The qnaire to associate the qnaire_report to
@@ -56,6 +54,8 @@ class qnaire_report extends \cenozo\database\has_data
    */
   public function fill_and_write_form( $data, $filename )
   {
+    $answer_class_name = lib::get_class_name( 'database\answer' );
+
     // temporarily write the pdf report to disk
     $this->create_data_file();
 

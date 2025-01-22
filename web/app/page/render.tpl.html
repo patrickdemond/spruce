@@ -680,6 +680,24 @@
                       )">
                     </select>
                   </div>
+                  <div ng-switch-when="signature">
+                    <div ng-show="null != question.sigPad" class="form-control" style="height: 11em">
+                      <canvas ng-attr-id="question{{ question.id }}"></canvas>
+                    </div>
+                    <label
+                      class="btn btn-default full-width larger"
+                      ng-class="{ 'color-red': true === question.incomplete }"
+                      style="text-align: left; font-style: italic; font-weight: normal; white-space: normal;"
+                      ng-click="
+                        question.sigPad ?
+                        model.renderModel.setAnswer(question, null) :
+                        model.renderModel.showSigPad(question)
+                      "
+                    >
+                      <i class="glyphicon" ng-class="question.sigPad ? 'glyphicon-erase' : 'glyphicon-pencil'"></i>
+                      {{ text( 'misc.' + (question.sigPad ? 'remove' : 'add') + 'Signature' ) }}
+                    </label>
+                  </div>
                   <input ng-switch-when="string"
                     ng-attr-id="question{{ question.id }}"
                     cn-ignore-mouse-wheel

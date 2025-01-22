@@ -1206,35 +1206,9 @@ class response extends \cenozo\database\has_rank
               $compiled = $value ? 'Yes' : 'No';
             }
           }
-          else if( 'audio' == $db_question->type && !is_null( $db_answer ) )
+          else if( in_array( $db_question->type, ['audio', 'signature'] ) && !is_null( $db_answer ) )
           {
-            // audio files are stored on disk, not in the database
-            $filename = sprintf( '%s/audio.wav', $db_answer->get_data_directory() );
-            if( file_exists( $filename ) )
-            {
-              $file = file_get_contents( sprintf( '%s/audio.wav', $db_answer->get_data_directory() ) );
-              if( false !== $file )
-              {
-                // send as a base64 encoded audio string for the <audio> tag's src attribute
-                $value = sprintf( 'data:audio/wav;base64,%s', base64_encode( $file ) );
-                $compiled = sprintf(
-                  '<audio controls class="full-width" style="height: 40px;" src="%s"></audio>',
-                  $value
-                );
-              }
-            }
-
-            if( is_null( $compiled ) )
-            {
-              // if the answer shows a filesize then show that and report that the file is missing
-              if( is_object( $value ) && property_exists( $value, 'filesize' ) )
-              {
-                $compiled = sprintf(
-                  '<strong>%s of audio recorded but file is not available</strong>',
-                  util::human_file_size( $value->filesize )
-                );
-              }
-            }
+            $compiled = $db_answer->get_data_html_element();
           }
           else if( 'device' == $db_question->type )
           {

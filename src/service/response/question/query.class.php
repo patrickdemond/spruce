@@ -195,24 +195,11 @@ class query extends \cenozo\service\query
                   'answer' => is_null( $print_answer ) ? NULL : $print_answer
                 );
 
-                if( 'audio' == $question['type'] )
+                if( in_array( $question['type'], ['audio', 'signature'] ) )
                 {
-                  // audio files are stored on disk, not in the database
+                  // audio and signature files are stored on disk, not in the database
                   $db_answer = lib::create( 'database\answer', $question['answer_id'] );
-                  $question_data['file'] = NULL;
-                  $filename = sprintf( '%s/audio.wav', $db_answer->get_data_directory() );
-                  if( file_exists( $filename ) )
-                  {
-                    $file = file_get_contents( sprintf( '%s/audio.wav', $db_answer->get_data_directory() ) );
-                    if( false !== $file )
-                    {
-                      // send as a base64 encoded audio string for the <audio> tag's src attribute
-                      $question_data['file'] = sprintf(
-                        'data:audio/wav;base64,%s',
-                        base64_encode( $file )
-                      );
-                    }
-                  }
+                  $question_data['file'] = 'null' == $db_answer->value ? NULL : $db_answer->get_data_src();
                 }
                 else if( 'list' == $question['type'] )
                 {

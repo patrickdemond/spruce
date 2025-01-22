@@ -863,6 +863,14 @@ cenozo.service("CnTranslationHelper", [
             en: "no data received",
             fr: "aucune donnée reçue",
           },
+          addSignature: {
+            en: "Click to add signature",
+            fr: "Click to add signature", // TODO: TRANSLATE
+          },
+          removeSignature: {
+            en: "Remove signature",
+            fr: "Remove signature", // TODO: TRANSLATE
+          },
           outOfSync: {
             title: {
               en: "Out of Sync",
