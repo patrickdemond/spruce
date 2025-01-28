@@ -32,6 +32,17 @@ cenozoApp.defineModule({
         type: "enum",
         isConstant: 'view',
       },
+      title: {
+        title: "Title",
+        type: "string",
+        help: "When downloading the report this title will be used as the filename."
+      },
+      dpi: {
+        title: "DPI (resolution in pixels/inch)",
+        type: "string",
+        format: "integer",
+        help: "This value is only used when inserting signatures onto the report."
+      },
       data: {
         title: "PDF Template",
         type: "base64",

@@ -45,14 +45,24 @@
             model.renderModel.data.submitted ? model.renderModel.data.conclusionList[model.renderModel.currentLanguage] :
                              model.renderModel.data.introductionList[model.renderModel.currentLanguage]">
           </span>
-          <div ng-if="model.renderModel.data.submitted && model.renderModel.showDisplayResponseButton()">
+          <div ng-if="model.renderModel.data.submitted">
             <button
+              ng-if="model.renderModel.showDisplayResponseButton()"
               type="button"
               class="btn btn-default larger full-width vertical-spacer"
               ng-click="model.renderModel.transitionToDisplayResponse()"
-            >
-              Display Responses
-            </button>
+              ng-bind-html="text( 'misc.displayResponses' )"
+            ></button>
+            <button
+              ng-if="model.renderModel.isReportAvailable()"
+              type="button"
+              class="btn btn-default larger full-width vertical-spacer"
+              ng-click="model.renderModel.downloadReport()"
+              ng-bind-html="
+                text( 'misc.download' ) + ' ' +
+                model.renderModel.qnaireReportTitles[model.renderModel.currentLanguage]
+              "
+            ></button>
           </div>
         </div>
       </div>
@@ -216,11 +226,15 @@
                     </button>
                   </div>
                   <div ng-if="model.renderModel.isReportAvailable()" class="col-xs-6 col-slim">
-                    <button type="button"
-                            class="btn btn-default btn-thin full-width"
-                            ng-click="model.renderModel.downloadReport()">
-                      Download Report
-                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-default btn-thin full-width"
+                      ng-click="model.renderModel.downloadReport()"
+                      ng-bind-html="
+                        text( 'misc.download' ) + ' ' +
+                        model.renderModel.qnaireReportTitles[model.renderModel.currentLanguage]
+                      "
+                    ></button>
                   </div>
                 </div>
               </div>

@@ -738,6 +738,7 @@ class response extends \cenozo\database\has_rank
   public function generate_report()
   {
     $qnaire_report_class_name = lib::get_class_name( 'database\qnaire_report' );
+    $answer_class_name = lib::get_class_name( 'database\answer' );
 
     $db_qnaire = $this->get_qnaire();
     $language = $this->get_language()->code;
@@ -749,31 +750,92 @@ class response extends \cenozo\database\has_rank
     );
     if( is_null( $db_qnaire_report ) ) return NULL;
 
-    // create the data array to apply to the PDF template
+    // create the data and stamp arrays to apply to the PDF template
     $data = [];
+    $stamp_list = [];
+
     $data_sel = lib::create( 'database\select' );
     $data_sel->add_column( 'name' );
     $data_sel->add_column( 'code' );
     foreach( $db_qnaire_report->get_qnaire_report_data_list( $data_sel ) as $report_data )
     {
-      // compile variables as if they were default answers (forced in case the question is on the same page)
-      $value = NULL;
-      try
+      // check if this is a signature
+      $matches = [];
+      $re = '/^signature\((.*)\)$/';
+      if( preg_match( $re, $report_data['code'], $matches ) )
       {
-        $value = strtoupper( $this->compile_expression( $report_data['code'], true ) );
-      }
-      catch( \cenozo\exception\runtime $e )
-      {
-        // if the qnaire is in debug mode print the error to the log
-        if( $db_qnaire->debug ) log::warning( $e->get_raw_message() );
-      }
+        $args = [];
+        foreach( explode( ', ', $matches[1] ) as $arg ) $args[] = trim( $arg );
+        if( 6 != count( $args ) )
+        {
+          log::error( sprintf(
+            'Report data "%s" must contain exactly 6 parameters: question name, page, left, bottom, right, top.',
+            $report_data['code']
+          ) );
+          continue;
+        }
+        $question_name = $args[0];
+        $page = $args[1];
+        $left = $args[2];
+        $bottom = $args[3];
+        $right = $args[4];
+        $top = $args[5];
 
-      $data[$report_data['name']] = is_null( $value ) || 'NULL' == $value ? 'N/A' : $value;
+        $db_question = $db_qnaire->get_question( $question_name );
+        if( is_null( $db_question ) )
+        {
+          log::error( sprintf(
+            'Report data "%s" contains question "%s" which does not exist.',
+            $question_name
+          ) );
+          continue;
+        }
+
+        $db_answer = $answer_class_name::get_unique_record(
+          ['response_id', 'question_id'],
+          [$this->id, $db_question->id]
+        );
+        if( !is_null( $db_answer ) && 'null' != $db_answer->value )
+        {
+          $stamp_filename = sprintf(
+            '%s/%s',
+            $db_answer->get_data_directory(),
+            $answer_class_name::TYPE_FILENAME['signature']
+          );
+          if( file_exists( $stamp_filename ) ) $stamp_list[] = [
+            'filename' => $stamp_filename,
+            'page' => $page,
+            'left' => $left,
+            'bottom' => $bottom,
+            'right' => $right,
+            'top' => $top,
+          ];
+        }
+      }
+      else
+      {
+        // compile variables as if they were default answers (forced in case the question is on the same page)
+        $value = NULL;
+        try
+        {
+          $value = strtoupper( $this->compile_expression( $report_data['code'], true ) );
+
+          // PDF checkboxes require the answer to be "Yes" (case is important)
+          if( 'YES' == $value ) $value = 'Yes';
+        }
+        catch( \cenozo\exception\runtime $e )
+        {
+          // if the qnaire is in debug mode print the error to the log
+          if( $db_qnaire->debug ) log::warning( $e->get_raw_message() );
+        }
+
+        $data[$report_data['name']] = is_null( $value ) || 'NULL' == $value ? 'N/A' : $value;
+      }
     }
 
     // write the PDF template to disk (it's the only way for the pdf_writer class to read it)
     $report_filename = sprintf( '%s/qnaire_report_%d.pdf', TEMP_PATH, $this->id );
-    $error = $db_qnaire_report->fill_and_write_form( $data, $report_filename );
+    $error = $db_qnaire_report->fill_and_write_form( $report_filename, $data, $stamp_list );
     if( $error )
     {
       $db_respondent = $this->get_respondent();

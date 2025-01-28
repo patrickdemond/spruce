@@ -871,6 +871,14 @@ cenozo.service("CnTranslationHelper", [
             en: "Remove signature",
             fr: "Remove signature", // TODO: TRANSLATE
           },
+          displayResponses: {
+            en: "Display Responses",
+            fr: "Display Responses", // TODO: TRANSLATE
+          },
+          download: {
+            en: "Download",
+            fr: "Télécharger"
+          },
           outOfSync: {
             title: {
               en: "Out of Sync",

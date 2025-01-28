@@ -28,6 +28,8 @@ class qnaire_report extends \cenozo\database\has_data
     $db_qnaire_report = new static();
     $db_qnaire_report->qnaire_id = $db_qnaire->id;
     $db_qnaire_report->language_id = $db_language->id;
+    $db_qnaire_report->title = $qnaire_report->title;
+    $db_qnaire_report->dpi = $qnaire_report->dpi;
     $db_qnaire_report->data = $qnaire_report->data;
     $db_qnaire_report->save();
 
@@ -48,21 +50,43 @@ class qnaire_report extends \cenozo\database\has_data
   /**
    * Writes the filled report file to disk, returning any errors.
    * 
-   * @param array $data An array of key=>value pairs to fill into the PDF form
    * @param string $filename Where to write the filled-out PDF file
+   * @param array $data An array of key=>value pairs to fill into the PDF form
+   * @param array $stamp_list An array of stamps to apply to the PDF (containing the question name, page, left, bottom, right and top measurements)
    * @return string Any errors encountered while writing the PDF (NULL if there are none)
    */
-  public function fill_and_write_form( $data, $filename )
+  public function fill_and_write_form( $filename, $data, $stamp_list )
   {
     $answer_class_name = lib::get_class_name( 'database\answer' );
 
     // temporarily write the pdf report to disk
     $this->create_data_file();
 
+    // apply the data
     $pdf_writer = lib::create( 'business\pdf_writer' );
     $pdf_writer->set_template( $this->get_data_filename() );
     $pdf_writer->fill_form( $data );
+    $pdf_writer->flatten();
     $success = $pdf_writer->save( $filename );
+
+    // apply all stamps
+    if( $success )
+    {
+      foreach( $stamp_list as $stamp )
+      {
+        $success = $pdf_writer->stamp_image(
+          $filename,
+          $this->dpi,
+          $stamp['filename'],
+          $stamp['page'],
+          $stamp['left'],
+          $stamp['bottom'],
+          $stamp['right'],
+          $stamp['top'],
+        );
+        if( !$success ) break;
+      }
+    }
 
     // delete the temporary pdf template file
     $this->delete_data_file();

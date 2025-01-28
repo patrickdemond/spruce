@@ -409,6 +409,8 @@ class qnaire extends \cenozo\database\record
       $db_qnaire_report = lib::create( 'database\qnaire_report' );
       $db_qnaire_report->qnaire_id = $this->id;
       $db_qnaire_report->language_id = $db_source_qnaire_report->language_id;
+      $db_qnaire_report->title = $db_source_qnaire_report->title;
+      $db_qnaire_report->dpi = $db_source_qnaire_report->dpi;
       $db_qnaire_report->data = $db_source_qnaire_report->data;
       $db_qnaire_report->save();
 
@@ -5632,6 +5634,24 @@ class qnaire extends \cenozo\database\record
     foreach( $this->get_embedded_file_list( $embedded_file_sel ) as $item )
       $qnaire_data['embedded_file_list'][] = $item;
 
+    foreach( $this->get_qnaire_report_object_list() as $db_qnaire_report )
+    {
+      $item = [
+        'language' => $db_qnaire_report->get_language()->code,
+        'title' => $db_qnaire_report->title,
+        'dpi' => $db_qnaire_report->dpi,
+        'data' => $db_qnaire_report->data,
+        'qnaire_report_data_list' => []
+      ];
+
+      $data_sel = lib::create( 'database\select' );
+      $data_sel->add_column( 'name' );
+      $data_sel->add_column( 'code' );
+      foreach( $db_qnaire_report->get_qnaire_report_data_list( $data_sel ) as $data )
+        $item['qnaire_report_data_list'][] = $data;
+      $qnaire_data['qnaire_report_list'][] = $item;
+    }
+
     if( $this->stages )
     {
       foreach( $this->get_device_object_list() as $db_device )
@@ -5650,22 +5670,6 @@ class qnaire extends \cenozo\database\record
         foreach( $db_device->get_device_data_list( $data_sel ) as $data )
           $item['device_data_list'][] = $data;
         $qnaire_data['device_list'][] = $item;
-      }
-
-      foreach( $this->get_qnaire_report_object_list() as $db_qnaire_report )
-      {
-        $item = [
-          'language' => $db_qnaire_report->get_language()->code,
-          'data' => $db_qnaire_report->data,
-          'qnaire_report_data_list' => []
-        ];
-
-        $data_sel = lib::create( 'database\select' );
-        $data_sel->add_column( 'name' );
-        $data_sel->add_column( 'code' );
-        foreach( $db_qnaire_report->get_qnaire_report_data_list( $data_sel ) as $data )
-          $item['qnaire_report_data_list'][] = $data;
-        $qnaire_data['qnaire_report_list'][] = $item;
       }
 
       $deviation_type_sel = lib::create( 'database\select' );
@@ -6308,13 +6312,13 @@ class qnaire extends \cenozo\database\record
     foreach( $qnaire_object->embedded_file_list as $embedded_file )
       $embedded_file_class_name::create_from_object( $embedded_file, $db_qnaire );
 
+    foreach( $qnaire_object->qnaire_report_list as $qnaire_report )
+      $qnaire_report_class_name::create_from_object( $qnaire_report, $db_qnaire );
+
     if( $db_qnaire->stages )
     {
       foreach( $qnaire_object->device_list as $device )
         $device_class_name::create_from_object( $device, $db_qnaire );
-
-      foreach( $qnaire_object->qnaire_report_list as $qnaire_report )
-        $qnaire_report_class_name::create_from_object( $qnaire_report, $db_qnaire );
 
       foreach( $qnaire_object->deviation_type_list as $deviation_type )
         $deviation_type_class_name::create_from_object( $deviation_type, $db_qnaire );

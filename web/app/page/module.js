@@ -152,17 +152,13 @@ cenozoApp.defineModule({
     /* ############################################################################################## */
     cenozo.providers.directive("cnPageRender", [
       "CnPageModelFactory",
-      "CnTranslationHelper",
       "CnSession",
-      "CnHttpFactory",
       "$state",
       "$window",
       "$document",
       function (
         CnPageModelFactory,
-        CnTranslationHelper,
         CnSession,
-        CnHttpFactory,
         $state,
         $window,
         $document
@@ -576,7 +572,7 @@ cenozoApp.defineModule({
               { value: false, name: "No", disabled: false },
             ],
             deviationTypeList: null,
-            qnaireReportList: null,
+            qnaireReportTitles: null,
             languageList: null,
             showHidden: false,
             alternateId: null,
@@ -855,8 +851,8 @@ cenozoApp.defineModule({
 
             isReportAvailable: function () {
               return (
-                null != this.qnaireReportList &&
-                this.qnaireReportList.includes(this.currentLanguage)
+                null != this.qnaireReportTitles &&
+                angular.isDefined( this.qnaireReportTitles[this.currentLanguage] )
               );
             },
 
@@ -1195,6 +1191,15 @@ cenozoApp.defineModule({
                   null == this.data.token.match(/^[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}$/) ?
                   this.data.token : null;
 
+                const qnaireReportResponse = await CnHttpFactory.instance({
+                  path: ["qnaire", this.data.qnaire_id, "qnaire_report"].join("/"),
+                  data: { select: { column: ['title', { table: 'language', column: 'code', alias: 'lang' }] } },
+                }).query();
+                this.qnaireReportTitles = {};
+                qnaireReportResponse.data.forEach(report => {
+                  this.qnaireReportTitles[report.lang] = report.title;
+                } );
+
                 if (this.data.stages) {
                   // get the stage list if there is one:
                   //   not ready or not applicable: nothing
@@ -1204,10 +1209,9 @@ cenozoApp.defineModule({
                   //   skipped: reset
                   //   parent skipped: nothing
                   //   completed: re-open, reset
-                  var [
+                  const [
                     responseStageResponse,
                     deviationTypeResponse,
-                    qnaireReportResponse,
                   ] = await Promise.all([
                     CnHttpFactory.instance({
                       path: ["response", this.data.response_id, "response_stage"].join("/"),
@@ -1228,11 +1232,6 @@ cenozoApp.defineModule({
                     CnHttpFactory.instance({
                       path: ["qnaire", this.data.qnaire_id, "deviation_type"].join("/"),
                       data: { modifier: { order: "deviation_type.name" } },
-                    }).query(),
-
-                    CnHttpFactory.instance({
-                      path: ["qnaire", this.data.qnaire_id, "qnaire_report"].join("/"),
-                      data: { select: { column: [{ table: 'language', column: 'code', alias: 'lang' }] } },
                     }).query(),
                   ]);
 
@@ -1288,7 +1287,6 @@ cenozoApp.defineModule({
                   });
 
                   this.deviationTypeList = deviationTypeResponse.data;
-                  this.qnaireReportList = qnaireReportResponse.data.map(qnaireReport => qnaireReport.lang);
 
                   // enum lists use value, so set the value to the deviation type's ID
                   this.deviationTypeList.forEach((deviationType) => { deviationType.value = deviationType.id; });

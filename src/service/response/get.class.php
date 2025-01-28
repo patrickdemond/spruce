@@ -23,7 +23,19 @@ class get extends \cenozo\service\downloadable
    */
   protected function get_downloadable_public_name()
   {
-    return sprintf( 'Participant Report %s.pdf', $this->get_leaf_record()->get_respondent()->token );
+    $qnaire_report_class_name = lib::get_class_name( 'database\qnaire_report' );
+
+    $db_response = $this->get_leaf_record();
+    $db_respondent = $db_response->get_respondent();
+    $db_qnaire_report = $qnaire_report_class_name::get_unique_record(
+      ['qnaire_id', 'language_id'],
+      [$db_respondent->qnaire_id, $db_response->language_id]
+    );
+    return sprintf(
+      '%s %s.pdf',
+      is_null( $db_qnaire_report ) ? 'Report' : $db_qnaire_report->title,
+      $this->get_leaf_record()->get_respondent()->token
+    );
   }
 
   /**
