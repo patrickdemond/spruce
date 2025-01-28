@@ -865,15 +865,15 @@ cenozo.service("CnTranslationHelper", [
           },
           addSignature: {
             en: "Click to add signature",
-            fr: "Click to add signature", // TODO: TRANSLATE
+            fr: "Cliquez pour ajouter une signature",
           },
           removeSignature: {
             en: "Remove signature",
-            fr: "Remove signature", // TODO: TRANSLATE
+            fr: "Supprimer la signature",
           },
           displayResponses: {
             en: "Display Responses",
-            fr: "Display Responses", // TODO: TRANSLATE
+            fr: "Afficher les réponses",
           },
           download: {
             en: "Download",
