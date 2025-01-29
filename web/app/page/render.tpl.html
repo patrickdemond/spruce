@@ -498,6 +498,7 @@
                         uib-typeahead="item.identifier as item.description for item in model.renderModel.getLookupValues( question, $viewValue )"
                         typeahead-editable="false"
                         typeahead-on-select="model.renderModel.setAnswer( question, $item )"
+                        typeahead-loading="question.lookup.isLoading"
                         typeahead-min-length="3"
                         cn-change="model.renderModel.typeaheadChanged( question )"
                         ng-class="{ 'loading-small': question.lookup.isLoading }"

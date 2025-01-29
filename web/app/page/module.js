@@ -1033,6 +1033,30 @@ cenozoApp.defineModule({
             getLookupValues: async function(question, viewValue) {
               question.isLoading = true;
 
+              // search for every word in the view value in the identifier
+              let identifierWhereList = [];
+              let descriptionWhereList = [];
+              viewValue.split(/ +/).forEach(value => {
+                identifierWhereList.push({
+                  column: "lookup_item.identifier",
+                  operator: "like",
+                  value: "%" + value + "%"
+                });
+                descriptionWhereList.push({
+                  column: "lookup_item.description",
+                  operator: "like",
+                  value: "%" + value + "%"
+                });
+              });
+
+              let where = [];
+              where.push( { bracket: true, open: true } );
+              where = where.concat( identifierWhereList );
+              where.push( { bracket: true, open: false } );
+              where.push( { bracket: true, open: true, or: true } );
+              where = where.concat( descriptionWhereList );
+              where.push( { bracket: true, open: false } );
+
               let retVal = undefined;
               try {
                 const response = await CnHttpFactory.instance({
@@ -1049,16 +1073,7 @@ cenozoApp.defineModule({
                       ],
                     },
                     modifier: {
-                      where: [{
-                        column: "lookup_item.identifier",
-                        operator: "like",
-                        value: "%" + viewValue + "%"
-                      },{
-                        column: "lookup_item.description",
-                        operator: "like",
-                        value: "%" + viewValue + "%",
-                        or: true
-                      }],
+                      where: where,
                       order: { 'identifier': true },
                     },
                   }
