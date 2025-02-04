@@ -158,6 +158,8 @@ cenozoApp.defineModule({
         type: "string",
         isExcluded: true,
       },
+      qnaire_id: { column: "qnaire.id", type: "hidden", },
+      lang: { column: "language.code", type: "hidden", },
       has_devices: { type: "hidden", },
       parent_beartooth_url: { column: "qnaire.parent_beartooth_url", type: "hidden", },
       parent_username: { column: "qnaire.parent_username", type: "hidden", },
@@ -383,6 +385,20 @@ cenozoApp.defineModule({
     });
 
     module.addExtraOperation("view", {
+      title: "Download Report",
+      operation: async function ($state, model) {
+        await model.viewModel.downloadReport();
+      },
+      isDisabled: function ($state, model) { return model.viewModel.downloadingReport; },
+      isIncluded: function ($state, model) {
+        return (
+          null != model.viewModel.qnaireReportTitles &&
+          angular.isDefined( model.viewModel.qnaireReportTitles[model.viewModel.record.lang] )
+        );
+      },
+    });
+
+    module.addExtraOperation("view", {
       title: "Reopen",
       operation: async function ($state, model) {
         await model.viewModel.reopen();
@@ -502,9 +518,36 @@ cenozoApp.defineModule({
           CnBaseViewFactory.construct(this, parentModel, root);
 
           angular.extend(this, {
+            qnaireReportTitles: {},
+
+            downloadingReport: false,
+            downloadReport: async function () {
+              try {
+                this.downloadingReport = true;
+                await CnHttpFactory.instance({
+                  path: ["response", this.record.current_response_id].join("/"),
+                  format: "pdf",
+                }).file();
+              } finally {
+                this.downloadingReport = false;
+              }
+            },
+
             onView: async function (force) {
               this.defaultTab = null;
+
               await this.$$onView(force);
+
+              // get the qnaire's reports
+              const response = await CnHttpFactory.instance({
+                path: ["qnaire", this.record.qnaire_id, "qnaire_report"].join("/"),
+                data: { select: { column: ['title', { table: 'language', column: 'code', alias: 'lang' }] } },
+              }).query();
+              this.qnaireReportTitles = {};
+              response.data.forEach(report => {
+                this.qnaireReportTitles[report.lang] = report.title;
+              } );
+
               this.defaultTab = this.record.repeated
                 ? "response"
                 : this.record.stages

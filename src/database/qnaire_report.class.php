@@ -74,7 +74,7 @@ class qnaire_report extends \cenozo\database\has_data
     {
       foreach( $stamp_list as $stamp )
       {
-        $success = $pdf_writer->stamp_image(
+        $success = $pdf_writer->stamp_signature(
           $filename,
           $this->dpi,
           $stamp['filename'],

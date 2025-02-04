@@ -776,11 +776,17 @@ cenozoApp.defineModule({
               }
             },
 
+            downloadingReport: false,
             downloadReport: async function () {
-              await CnHttpFactory.instance({
-                path: ["response", this.data.response_id].join("/"),
-                format: "pdf",
-              }).file();
+              try {
+                this.downloadingReport = true;
+                await CnHttpFactory.instance({
+                  path: ["response", this.data.response_id].join("/"),
+                  format: "pdf",
+                }).file();
+              } finally {
+                this.downloadingReport = false;
+              }
             },
 
             text: function (address) {

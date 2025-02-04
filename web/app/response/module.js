@@ -158,6 +158,20 @@ cenozoApp.defineModule({
       },
     });
 
+    module.addExtraOperation("view", {
+      title: "Download Report",
+      operation: async function ($state, model) {
+        await model.viewModel.downloadReport();
+      },
+      isDisabled: function ($state, model) { return model.viewModel.downloadingReport; },
+      isIncluded: function ($state, model) {
+        return (
+          null != model.viewModel.qnaireReportTitles &&
+          angular.isDefined( model.viewModel.qnaireReportTitles[model.viewModel.record.lang] )
+        );
+      },
+    });
+
     /* ############################################################################################## */
     cenozo.providers.directive("cnResponseDisplay", [
       "CnResponseModelFactory",
@@ -322,15 +336,46 @@ cenozoApp.defineModule({
             "response_attribute"
           );
 
-          this.getChildList = function () {
-            return this.$$getChildList().filter( (child) =>
-              (!["response_stage", "answer_device"].includes(child.subject.snake)) ||
-              // show stage list if the qnaire has stages
-              ("response_stage" == child.subject.snake && this.record.stages) ||
-              // show device list if the qnaire has devices and the qnaire is only answered once
-              ("answer_device" == child.subject.snake && this.record.has_devices)
-            );
-          };
+          angular.extend(this, {
+            downloadingReport: false,
+            downloadReport: async function () {
+              try {
+                this.downloadingReport = true;
+                await CnHttpFactory.instance({
+                  path: ["response", this.record.getIdentifier()].join("/"),
+                  format: "pdf",
+                }).file();
+              } finally {
+                this.downloadingReport = false;
+              }
+            },
+
+            onView: async function (force) {
+              await this.$$onView(force);
+
+              this.defaultTab = null;
+
+              // get the qnaire's reports
+              const response = await CnHttpFactory.instance({
+                path: ["qnaire", this.record.qnaire_id, "qnaire_report"].join("/"),
+                data: { select: { column: ['title', { table: 'language', column: 'code', alias: 'lang' }] } },
+              }).query();
+              this.qnaireReportTitles = {};
+              response.data.forEach(report => {
+                this.qnaireReportTitles[report.lang] = report.title;
+              } );
+            },
+
+            getChildList: function () {
+              return this.$$getChildList().filter( (child) =>
+                (!["response_stage", "answer_device"].includes(child.subject.snake)) ||
+                // show stage list if the qnaire has stages
+                ("response_stage" == child.subject.snake && this.record.stages) ||
+                // show device list if the qnaire has devices and the qnaire is only answered once
+                ("answer_device" == child.subject.snake && this.record.has_devices)
+              );
+            },
+          });
         };
         return {
           instance: function (parentModel, root) {

@@ -58,6 +58,7 @@
               type="button"
               class="btn btn-default larger full-width vertical-spacer"
               ng-click="model.renderModel.downloadReport()"
+              ng-disabled="model.renderModel.downloadingReport"
               ng-bind-html="
                 text( 'misc.download' ) + ' ' +
                 model.renderModel.qnaireReportTitles[model.renderModel.currentLanguage]
@@ -229,6 +230,7 @@
                     <button
                       type="button"
                       class="btn btn-default btn-thin full-width"
+                      ng-disabled="model.renderModel.downloadingReport"
                       ng-click="model.renderModel.downloadReport()"
                       ng-bind-html="
                         text( 'misc.download' ) + ' ' +
