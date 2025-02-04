@@ -3463,9 +3463,14 @@ class qnaire extends \cenozo\database\record
                         $row_value = NULL;
                         if( property_exists( $a, 'value' ) )
                         {
-                          $row_value = array_key_exists( 'unit_list', $column )
-                                     ? $a->value->unit
-                                     : $a->value->value;
+                          if( array_key_exists( 'unit_list', $column ) )
+                          {
+                            if( property_exists( $a->value, 'unit' ) ) $row_value = $a->value->unit;
+                          }
+                          else
+                          {
+                            if( property_exists( $a->value, 'value' ) ) $row_value = $a->value->value;
+                          }
                         }
                       }
                       else
@@ -3505,7 +3510,14 @@ class qnaire extends \cenozo\database\record
               else if( 'number with unit' == $column['type'] )
               {
                 // if the column has a unit_list property then this is the UNIT column, otherwise it's the value
-                $row_value = array_key_exists( 'unit_list', $column ) ? $answer->unit : $answer->value;
+                if( array_key_exists( 'unit_list', $column ) )
+                {
+                  if( property_exists( $answer, 'unit' ) ) $row_value = $answer->unit;
+                }
+                else
+                {
+                  if( property_exists( $answer, 'value' ) ) $row_value = $answer->value;
+                }
               }
               else // date, number, string, text and time are all just direct answers
               {
