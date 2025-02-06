@@ -5596,6 +5596,7 @@ class qnaire extends \cenozo\database\record
       'attribute_list' => [],
       'qnaire_document_list' => [],
       'embedded_file_list' => [],
+      'qnaire_report_list' => [],
       'reminder_list' => [],
       'qnaire_description_list' => [],
       'lookup_list' => []
@@ -5604,7 +5605,6 @@ class qnaire extends \cenozo\database\record
     if( $this->stages )
     {
       $qnaire_data['device_list'] = [];
-      $qnaire_data['qnaire_report_list'] = [];
       $qnaire_data['deviation_type_list'] = [];
       $qnaire_data['stage_list'] = [];
     }
